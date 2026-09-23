@@ -13,7 +13,6 @@ Breaking Changes:
   header, and link requirements, and nested ``add_subdirectory`` /
   ``FetchContent`` builds no longer add CoolProp install rules by default.
   See the detailed CMake behavior changes below.
-
 * Reintroduced Java wrapper compilation. Java classes generated have been moved from default package, to "org.coolprop" package, in line with Java convention and recommended practice. Applications that previously used the Java wrappers will need to update their import references for CoolProp classes if switching to this version. Java wrappers are built with target Java 11, as Java 8 support has been deprecated. A JDK 11+ must be used to compile using these wrappers.
 
 Highlights:
@@ -132,7 +131,19 @@ Highlights:
     CoolProp's public C++ headers under ``include/CoolProp/third_party`` and
     publishes those directories as SYSTEM usage requirements. A downstream
     project which also exposes a different Eigen or fmt revision must avoid
-    mixing both revisions in one program.
+    mixing both revisions in one program. Distribution packagers can instead
+    configure with ``-DCOOLPROP_VENDOR_THIRD_PARTY=OFF`` to build against the
+    installed ``Eigen3`` (3.4 or newer) and ``fmt`` CMake packages; the
+    package then ships neither copy, and consumers must provide both packages.
+    Vendored builds fetch the pinned Eigen and fmt sources even with
+    ``CPM_USE_LOCAL_PACKAGES=ON``; explicit ``CPM_Eigen_SOURCE`` /
+    ``CPM_fmt_SOURCE`` overrides are honored.
+  - An empty ``COOLPROP_INSTALL_PREFIX``, or an empty explicit top-level
+    ``CMAKE_INSTALL_PREFIX``, is now a configure error. Install destinations
+    are relative, so either would otherwise install into the filesystem root.
+  - ``COOLPROP_EXTERNC_LIBRARY`` now adds ``EXTERNC`` to the library targets'
+    public compile definitions, so consumers of those targets compile with it
+    too.
   - An explicitly supplied top-level ``CMAKE_INSTALL_PREFIX`` is now honored.
     With no explicit prefix, a top-level CoolProp build keeps the historical
     ``<source>/install_root`` default; when CMake-package installation is

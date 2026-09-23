@@ -69,8 +69,8 @@ include(CheckIncludeFileCXX)
 # This MUST sit above the dependencies.cmake include below.  CMAKE_<LANG>_-
 # COMPILER_LAUNCHER is consumed when a target is created, and that include adds
 # every CPM package -- Catch2 alone is 106 of the Catch runner tree's 205
-# objects.  Setting the launcher after project() (line ~219) left those 106
-# compiling uncached, which measured as 99/205 objects covered.
+# objects.  Setting the launcher after that include left those 106 compiling
+# uncached, which measured as 99/205 objects covered.
 #
 # CCACHE_BASEDIR is load-bearing, not a tuning knob.  CoolProp's compile lines
 # bake in absolute paths: every -I into the source tree, the CPM _deps includes
@@ -104,16 +104,15 @@ include(CheckIncludeFileCXX)
 # Visual Studio and Xcode are excluded -- wiring it there is a silent no-op that
 # reads as support.  (CoolProp documents `cmake -G Xcode` for the iOS wrapper,
 # and already special-cases Xcode further down, so this is a live path.)
-# MSVC itself is NOT excluded: this runs before project(), so the MSVC variable
-# is not populated yet and cannot be tested here.  ccache has supported cl.exe
+# MSVC itself is NOT excluded.  ccache has supported cl.exe
 # since 4.6 under Ninja and Makefiles, though MSVC's default /Zi debug format is
 # uncacheable (/Z7 is required); opt out with -DCOOLPROP_USE_CCACHE=OFF.
 #
 # A launcher the caller already supplied (distcc, sccache, a CI wrapper) is
 # honoured rather than overwritten.  Both the -D form and the environment-
-# variable form are checked: CMake itself initializes the cache variable from
-# the environment, but only during project(), which is ~200 lines below here --
-# so testing the variable alone would silently discard an env-set launcher.
+# variable form are checked.  project(), just above, already initializes the
+# cache variable from the environment on CMake 3.17+, so the explicit
+# environment check only matters on the 3.15/3.16 this project still supports.
 # Either language being pre-set defers the whole block, so a caller who sets
 # only CXX does not end up with a mismatched C launcher.
 option(COOLPROP_USE_CCACHE "Route compiles through ccache when available" ON)
