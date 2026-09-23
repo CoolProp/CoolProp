@@ -6,6 +6,13 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
+  workflow_dispatch:
+    inputs:
+      npm_dry_run:
+        description: 'Only run npm publish --dry-run (no upload to the registry)'
+        required: false
+        type: boolean
+        default: true
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -79,3 +86,56 @@ jobs:
     #     tag: ${{ github.ref }}
     #     overwrite: true
     #     file_glob: false
+
+  # Publishes the staged install tree (install_root/Javascript contains
+  # coolprop.js, coolprop.wasm, package.json, README.md, coolprop.d.ts and
+  # LICENSE) to npm as the 'coolprop' package -- gh discussion #2665.
+  # Requires the NPM_TOKEN repository secret (an npm granular access token
+  # with publish rights on the package).  Tag builds publish to the 'latest'
+  # dist-tag; manual dispatch runs dry-run by default, and a non-tag manual
+  # publish goes to the 'dev' dist-tag so `npm install coolprop` keeps
+  # tracking releases.
+  publish_npm:
+    name: Publish to npm
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # needed for npm publish --provenance
+    steps:
+    - name: Download the packaged module
+      uses: actions/download-artifact@v7
+      with:
+        name: Javascript
+        path: npm_pkg
+
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        registry-url: https://registry.npmjs.org
+
+    - name: Publish to npm
+      working-directory: npm_pkg
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.npm_dry_run }}
+      run: |
+        set -euo pipefail
+        # npm requires an explicit --tag when the version is a prerelease
+        # (e.g. 8.0.1-dev.0 from a dev/master build); tag builds carry a final
+        # version and go to the default 'latest' dist-tag.
+        version=$(node -p "require('./package.json').version")
+        if [ "$DRY_RUN" = "true" ]; then
+          echo "Dry run only: packaging checked, nothing is uploaded"
+          if [ "$IS_TAG" = "true" ]; then
+            npm publish --dry-run
+          else
+            npm publish --dry-run --tag dev
+          fi
+        elif [ "$IS_TAG" = "true" ]; then
+          npm publish --access public --provenance
+        else
+          npm publish --access public --provenance --tag dev
+        fi
