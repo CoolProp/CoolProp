@@ -130,6 +130,20 @@ jobs:
           fi
           echo "COOLPROP_SRC=${roots[0]}" >> "${GITHUB_ENV}"
 
+      # COOLPROP_VENDOR_THIRD_PARTY=OFF makes cmake/dependencies.cmake resolve
+      # Eigen and fmt with find_package instead of CPM, so they have to come
+      # from the system.  They are installed here, before the network is taken
+      # away, because that is exactly how a distribution build works: sbuild,
+      # mock and OBS install the declared BuildRequires into the chroot first
+      # and only then cut the network.  These two packages are the build-time
+      # half of the dependencies libcoolprop-devel and libcoolprop-dev already
+      # declare at install time.
+      - name: Install the build dependencies the distribution recipes declare
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libeigen3-dev libfmt-dev
+
       - name: Build and install with the network switched off
         run: |
           set -euo pipefail

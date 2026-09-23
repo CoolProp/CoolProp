@@ -76,6 +76,16 @@ branch was open.  A packaging build asks for it with three options:
   `/usr/include`; leaving it ON is right for a relocatable SDK and is the one
   thing a distribution will reject
 
+OFF is not free: it makes `cmake/dependencies.cmake` resolve Eigen and fmt with
+`find_package(... CONFIG REQUIRED)` instead of CPM, so both have to be
+installed at **build** time, not just depended on at install time.  A recipe
+that turns the option off without declaring them fails in the configure step
+with "Could not find a package configuration file provided by Eigen3".  That is
+why `coolprop.spec` carries `BuildRequires: eigen3-devel` and
+`BuildRequires: fmt-devel`, `debian.control` carries `libeigen3-dev` and
+`libfmt-dev` in `Build-Depends`, and `packaging_offline.yml` installs the same
+two packages before it takes the network away.
+
 That gives:
 
 | What | Where |
