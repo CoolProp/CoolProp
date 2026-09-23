@@ -586,7 +586,10 @@ EXPORT_CODE void CONVENTION AbstractState_set_mole_fractions(const long handle, 
         if (N < 0 || (N > 0 && fractions == nullptr)) {
             throw CoolProp::ValueError(format("Invalid fractions array (N=%ld)", N));
         }
-        std::vector<double> _fractions(fractions, fractions + N);
+        std::vector<double> _fractions;
+        if (N > 0) {
+            _fractions.assign(fractions, fractions + N);
+        }
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         AS->set_mole_fractions(_fractions);
     } catch (...) {
@@ -601,7 +604,10 @@ EXPORT_CODE void CONVENTION AbstractState_set_mass_fractions(const long handle, 
         if (N < 0 || (N > 0 && fractions == nullptr)) {
             throw CoolProp::ValueError(format("Invalid fractions array (N=%ld)", N));
         }
-        std::vector<double> _fractions(fractions, fractions + N);
+        std::vector<double> _fractions;
+        if (N > 0) {
+            _fractions.assign(fractions, fractions + N);
+        }
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         AS->set_mass_fractions(_fractions);
     } catch (...) {
