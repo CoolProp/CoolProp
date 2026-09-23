@@ -298,7 +298,7 @@ Where "mixture" is a predefined mixture name ending in .mix or .MIX. Mixture nam
 
     For R401A:   :math:`mf_{R401A}` := :math:`get\_predefined\_mixture\_fractions("R401A.mix")`  
 
-                         :math:`mf_{R401A}` = :math:`\begin{bmatrix} 0.578854 \\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
+                         :math:`mf_{R401A}` = :math:`\begin{bmatrix} 0.578854 \\ 0.185871 \\ 0.235274 \end{bmatrix}`
 
 .. note::
    A few predefined mixtures are missing binary interaction parameters for at least one component pair.  These mixtures are defined, but cannot be used, for now, for property calculations.
