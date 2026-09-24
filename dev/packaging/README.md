@@ -157,11 +157,18 @@ two cases are genuinely different:
 
 So a packaged build has no library-versus-consumer skew.  The hazard it does
 have is a different one, and it is worth stating precisely rather than as
-"version skew": CoolProp is developed and tested against Eigen 5.0.1, and a
-distribution build compiles it against whatever that distribution ships, which
-is 3.4.0 on every target listed above.  `cmake/dependencies.cmake` enforces a
-3.4 floor and the recipes now declare it, but "configures and compiles" is not
-"behaves identically", and nobody has run the test suite against Eigen 3.4.
+"version skew": CoolProp is developed and tested against its pinned Eigen
+5.0.1, and a distribution build compiles it against whatever that distribution
+ships instead.
+
+That is not one number, and it is not safe to assume it.  A rolling
+distribution may already carry the same 5.x CoolProp pins, in which case there
+is nothing to worry about; a stable release may sit near the 3.4 floor, which
+is a different major.  So the exposure has to be read per target, from the
+Eigen version that target actually packages, rather than assumed from this
+file.  `cmake/dependencies.cmake` enforces the 3.4 floor and the recipes
+declare it, but "configures and compiles" is not "behaves identically", and
+the test suite has only ever been run against the pinned version.
 
 `coolprop.pc` used to ship an empty `Requires:`, which meant
 `pkg-config --cflags coolprop` emitted no include path for Eigen, so a **C++**
