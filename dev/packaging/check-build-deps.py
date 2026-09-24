@@ -200,6 +200,36 @@ def packaging_is_lf_only(text):
     )
 
 
+def lto_is_disabled(spec_text, rules_text):
+    """Do both recipes switch link-time optimisation off?
+
+    CoolProp embeds dev/all_fluids.cbor with incbin, which emits a top-level
+    __asm__ holding a .incbin directive.  The assembler finds that file
+    through the -I paths of the compile step.  Under LTO the asm is streamed
+    into the LTO objects and re-assembled at link time by lto-wrapper, which
+    runs from /tmp without those -I paths, so the link dies with
+
+        /tmp/ccXXXXXX.s:46: Error: file not found: all_fluids.cbor
+
+    That failed real OBS builds on Tumbleweed x86_64 and i586, because
+    openSUSE and Fedora both put -flto=auto in %optflags.  Debian does not
+    enable LTO by default, so its guard is precautionary, but both are checked
+    so that neither can be dropped without the other being reconsidered.
+
+    Returns a list of the recipes that are missing their guard.
+    """
+    missing = []
+    if not re.search(r"^%define\s+_lto_cflags\s+%\{nil\}\s*$", spec_text, re.M):
+        missing.append("coolprop.spec (%define _lto_cflags %{nil})")
+    if not re.search(
+        r"^export\s+DEB_BUILD_MAINT_OPTIONS\s*=.*\boptimize=-lto\b",
+        rules_text,
+        re.M,
+    ):
+        missing.append("debian.rules (optimize=-lto)")
+    return missing
+
+
 def parse_eigen_floor(text):
     """Return the Eigen version cmake/dependencies.cmake refuses to go below.
 
@@ -401,6 +431,9 @@ def main():
     lf_declared = packaging_is_lf_only(
         GITATTRIBUTES.read_text(encoding="utf-8")
     )
+    lto_missing = lto_is_disabled(
+        SPEC.read_text(encoding="utf-8"), RULES.read_text(encoding="utf-8")
+    )
     upstream = parse_upstream_version(CMAKELISTS.read_text(encoding="utf-8"))
     spec_upstream, spec_version = parse_spec_versions(
         SPEC.read_text(encoding="utf-8")
@@ -590,6 +623,14 @@ def main():
             "debian.changelog is {0} but coolprop.dsc is {1}".format(
                 changelog_version, dsc_version
             )
+        )
+
+    if lto_missing:
+        problems.append(
+            "link-time optimisation is not disabled in {0}; incbin's .incbin "
+            "directive cannot be resolved when lto-wrapper re-assembles it at "
+            "link time, and the build fails with 'file not found: "
+            "all_fluids.cbor'".format(" and ".join(lto_missing))
         )
 
     if not lf_declared:

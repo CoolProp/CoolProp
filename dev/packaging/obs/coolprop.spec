@@ -9,6 +9,25 @@
 # builds inside a sandbox with no network access.
 #
 
+# CoolProp embeds its fluid database (dev/all_fluids.cbor) into the library with
+# incbin, which emits a top-level __asm__ carrying a .incbin directive.  The
+# assembler resolves that filename through the -I paths the compiler hands it.
+#
+# Link-time optimisation breaks that.  With -flto, top-level asm is streamed
+# into the LTO objects and re-assembled at link time by lto-wrapper, which runs
+# from /tmp with its own option set, so the -I .../dev of the compile step is
+# gone and the assembler cannot find the file:
+#
+#     /tmp/ccXXXXXX.s:46: Error: file not found: all_fluids.cbor
+#     lto-wrapper: fatal error: make returned 2 exit status
+#
+# openSUSE and Fedora both put -flto=auto in %%optflags, so this hits every RPM
+# target (reproduced on Tumbleweed x86_64 and i586 alike).  LTO is therefore
+# switched off for this package.  The fix that would keep LTO is to give incbin
+# an absolute path so the re-assembly can still find the file; that belongs
+# upstream in the build system, not in a packaging recipe.
+%define _lto_cflags %{nil}
+
 # Shared library major version.  It follows COOLPROP_VERSION_MAJOR, which
 # CMakeLists.txt sets as the target SOVERSION, so that two CoolProp majors can
 # be installed side by side during a transition.

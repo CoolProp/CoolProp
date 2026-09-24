@@ -170,9 +170,10 @@ That is not one number, and it is not safe to assume it.  A rolling
 distribution may already carry the same 5.x CoolProp pins, in which case there
 is nothing to worry about; a stable release may sit near the 3.4 floor, which
 is a different major.  One data point from a real OBS build root, 2026-09-24:
-openSUSE Tumbleweed installed `eigen3-devel 5.0.1` and `fmt-devel 12.1.0`,
-which is exactly the Eigen CoolProp pins and one minor ahead on fmt, so on
-Tumbleweed there is no skew at all.  So the exposure has to be read per target, from the
+openSUSE Tumbleweed installed `eigen3-devel 5.0.1` and `fmt-devel 12.1.0`.
+Eigen there is exactly the version CoolProp pins; fmt is one minor ahead of the
+pinned 12.0.0, so even on a rolling distribution the skew is not zero, it is
+just small.  So the exposure has to be read per target, from the
 Eigen version that target actually packages, rather than assumed from this
 file.  `cmake/dependencies.cmake` enforces the 3.4 floor and the recipes
 declare it, but "configures and compiles" is not "behaves identically", and
@@ -207,6 +208,38 @@ be called production-ready.  Until then:
   CMake and by the recipes' own build dependencies instead.
 - The `-dev` packages still depend on `libeigen3-dev` / `eigen3-devel` and the
   fmt equivalents, so the headers a consumer needs are at least present.
+
+### Known limitation: the packages are built without LTO
+
+CoolProp embeds its fluid database (`dev/all_fluids.cbor`) into the library
+with incbin.  That works by emitting a top-level `__asm__` holding a `.incbin`
+directive, and the assembler locates the file through the `-I` paths the
+compiler passes it, one of which is `dev/`.
+
+Link-time optimisation breaks that.  Under `-flto`, top-level assembly is
+streamed into the LTO objects and re-assembled at link time by `lto-wrapper`,
+which runs from `/tmp` with its own option set.  The original `-I` is gone, so
+the link fails:
+
+```
+/tmp/ccXXXXXX.s:46: Error: file not found: all_fluids.cbor
+lto-wrapper: fatal error: make returned 2 exit status
+ld: error: lto-wrapper failed
+```
+
+openSUSE and Fedora both put `-flto=auto` in `%optflags`, so this hits every
+RPM target; it failed real Tumbleweed builds on x86_64 and i586 alike, at the
+final link after a full compile.  Debian does not enable LTO by default.
+
+So `coolprop.spec` sets `%define _lto_cflags %{nil}` and `debian.rules` adds
+`optimize=-lto`, and `check-build-deps.py` fails if either guard is dropped.
+The cost is the cross-object inlining LTO would have bought.
+
+The fix that would let LTO back in is to hand incbin an absolute path, so the
+re-assembly can still find the file no matter which directory it runs from.
+That has been confirmed to work, but it changes the main build system rather
+than a packaging recipe, so it belongs in its own change where CoolProp's test
+suite can be run against it with LTO enabled.
 
 ### Known limitation: `debian.copyright` is not per-dependency yet
 
@@ -339,8 +372,24 @@ error: Bad exit status from /var/tmp/rpm-tmp.XXXXXX (%prep)
 ```
 
 `dev/packaging/**` and `dev/ci/**` are therefore pinned to `eol=lf`, since they
-are only ever consumed by Linux build systems.  If you hit this on an older
-checkout, `git add --renormalize .` or re-clone.
+are only ever consumed by Linux build systems.
+
+If you already have a checkout with CRLF in these files, note that
+`git add --renormalize .` alone does not fix it: that updates the index, not
+the files on disk, so the copy you would upload to OBS still has the CRLF and
+still fails in `%prep`.  Delete the files and check them out again, which
+applies the new `eol=lf` attribute:
+
+```bash
+# Delete the tracked files, then check them out again.  git ls-files is used
+# rather than "rm -rf dev/packaging" so that untracked files in those
+# directories, such as a tarball you already built, are left alone.
+git ls-files -z dev/packaging dev/ci | xargs -0 rm -f
+git checkout -- dev/packaging dev/ci
+```
+
+Re-cloning works too.  Verify with `file dev/packaging/obs/coolprop.spec`,
+which must not say "CRLF line terminators".
 
 ### 3. Choose build targets
 

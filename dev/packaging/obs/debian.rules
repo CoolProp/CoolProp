@@ -3,7 +3,14 @@
 # Debian packaging rules for CoolProp, built on the openSUSE Build Service.
 # See dev/packaging/README.md in the CoolProp source tree.
 
-export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+# optimize=-lto: CoolProp embeds its fluid database with incbin, which emits a
+# top-level __asm__ carrying a .incbin directive.  Under LTO that asm is
+# re-assembled at link time by lto-wrapper, running from /tmp without the -I
+# path that lets the assembler find dev/all_fluids.cbor, and the link fails
+# with "Error: file not found: all_fluids.cbor".  Debian does not enable LTO
+# by default, so this is a guard rather than a fix for a failure seen here;
+# the RPM spec has to do the same thing because openSUSE and Fedora do.
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all optimize=-lto
 
 %:
 	dh $@ --buildsystem=cmake
