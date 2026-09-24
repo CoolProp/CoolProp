@@ -556,7 +556,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CoolPropJSONVisibility)
 
 message(STATUS "Looking for Python")
-find_package(Python REQUIRED COMPONENTS Interpreter)
+# The floor is 3.9, matching requires-python in pyproject.toml: the build runs
+# dev/generate_headers.py to embed the fluid data, and that script uses builtin
+# generics such as list[Path], which are a syntax error before 3.9.
+#
+# Stating the floor here makes CMake skip an interpreter that is too old and
+# keep looking.  Without it, a distribution whose default python3 predates 3.9
+# (Leap 15.x still ships 3.6) configures happily and then dies mid-build with
+# "TypeError: 'type' object is not subscriptable", which says nothing about the
+# real problem.  That was a real OBS build failure.
+find_package(Python 3.9 REQUIRED COMPONENTS Interpreter)
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
 include(FlagFunctions) # Is found since it is in the module path.

@@ -64,12 +64,23 @@ BuildRequires:  pkgconfig
 BuildRequires:  eigen3-devel >= 3.4
 BuildRequires:  fmt-devel
 # dev/generate_headers.py runs at build time to turn the fluid JSON into the
-# generated headers that get compiled into the library.
+# generated headers that get compiled into the library.  It needs Python 3.9 or
+# newer, which is what pyproject.toml declares and what CMakeLists.txt asks
+# find_package for: the script uses builtin generics such as list[Path].
+#
+# Leap 15.x still ships Python 3.6 as its default python3, so there the build
+# died with "TypeError: 'type' object is not subscriptable".  Ask that
+# distribution for a separate, newer interpreter; CMake picks it up because the
+# 3.9 floor makes it skip the 3.6 one and keep looking.
 %if 0%{?suse_version}
 Group:          Development/Libraries/C and C++
-BuildRequires:  python3-base
+%if 0%{?suse_version} < 1600
+BuildRequires:  python311
 %else
-BuildRequires:  python3
+BuildRequires:  python3-base >= 3.9
+%endif
+%else
+BuildRequires:  python3 >= 3.9
 %endif
 
 %description
