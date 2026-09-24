@@ -236,6 +236,15 @@ def lto_is_disabled(spec_text, rules_text):
 # have to say the same thing, and that thing is the RELEASE this development
 # series becomes, not the dev snapshot: a snapshot is never published as a
 # GitHub release, so there is nothing for download_url to fetch.
+# dev/generate_headers.py runs during the build and annotates with builtin
+# generics (list[Path] at dev/generate_headers.py:364), which is a syntax error
+# before Python 3.9.  This constant is the requirement, stated once.
+#
+# It is deliberately NOT read from pyproject.toml.  Every floor below used to
+# be compared against that file, which meant lowering that one line satisfied
+# the whole check while generate_headers.py still needed 3.9.
+REQUIRED_PYTHON = (3, 9)
+
 SERVICE_VERSION_SITES = (
     "the release tag in the download path",
     "the tarball name in the download path",
@@ -260,6 +269,12 @@ def parse_service_versions(text):
     fail-open this whole script exists to prevent.
     """
     found = {}
+
+    # Drop XML comments first.  parse_upstream_version strips "#" lines from
+    # CMakeLists for the same reason: re.search takes the FIRST hit, so a
+    # commented-out old block above the live one is read instead of it, and
+    # the check then reports on a version that is not in effect.
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
 
     path = re.search(r'<param\s+name="path">([^<]*)</param>', text)
     if path:
@@ -292,16 +307,20 @@ def parse_python_floors(
 ):
     """Return the minimum Python each file demands, as (major, minor) tuples.
 
-    dev/generate_headers.py runs during the build and uses builtin generics
-    such as list[Path], so it needs Python 3.9.  That floor is now written in
-    three places: requires-python in pyproject.toml, the find_package(Python
-    ...) call that makes CMake skip an older interpreter, and the spec's
-    BuildRequires so the build root actually has one.  Leap 15.x ships 3.6 and
-    did fail on exactly this, so the three have to keep agreeing.
+    The floor is written in four places: requires-python in pyproject.toml, the
+    find_package(Python ...) call that makes CMake skip an older interpreter,
+    the spec's BuildRequires and Debian's Build-Depends so the build root
+    actually has one.  Leap 15.x ships 3.6 and did fail on exactly this.
 
-    Returns {where: (major, minor)}.  A file whose floor cannot be read is
-    absent from the result and the caller treats that as a failure, since a
-    floor nothing can read is a floor nothing is checking.
+    A python requirement that states NO floor counts as (0, 0) rather than
+    being skipped.  Skipping it was a fail-open: dropping ">= 3.9" from a line,
+    or reverting "python311" to "python3-base", made that line invisible and
+    min() over the remaining branches still answered 3.9, so the gate passed
+    while the build root could be too old.  That is the regression this is
+    here to catch, not a wrong version number.
+
+    A file whose requirement cannot be found at all is absent from the result,
+    and the caller treats that as a failure.
     """
     found = {}
 
@@ -327,37 +346,54 @@ def parse_python_floors(
             int(match.group(2)),
         )
 
-    # The spec asks for Python in several branches, one per distribution
-    # family: an explicit ">= 3.9", or a versioned package name such as
-    # python311 where the version is in the name.  The weakest branch is what
-    # matters, because that is the one that decides whether some build root
-    # ends up too old.
+    # The spec asks for Python once per distribution family.  The weakest
+    # branch decides whether some build root ends up too old, so every branch
+    # is read and the lowest wins.
     spec_floors = []
-    for match in re.finditer(
-        r"^BuildRequires:[ \t]+python3[-a-z]*[ \t]*>=[ \t]*([0-9]+)\.([0-9]+)",
-        spec_text,
-        re.M,
-    ):
-        spec_floors.append((int(match.group(1)), int(match.group(2))))
-    for match in re.finditer(
-        r"^BuildRequires:[ \t]+python([0-9])([0-9]+)[ \t]*$", spec_text, re.M
-    ):
-        spec_floors.append((int(match.group(1)), int(match.group(2))))
+    for line in spec_text.splitlines():
+        match = re.match(
+            r"^BuildRequires:[ \t]+(python[0-9][-A-Za-z0-9_]*)[ \t]*(.*)$", line
+        )
+        if not match:
+            continue
+        name, rest = match.group(1), match.group(2).strip()
+        bound = re.match(r"^>=[ \t]*([0-9]+)\.([0-9]+)", rest)
+        if bound:
+            spec_floors.append((int(bound.group(1)), int(bound.group(2))))
+            continue
+        # A versioned package name such as python311 carries its own floor.
+        in_name = re.match(r"^python([0-9])([0-9]+)(?:-[A-Za-z0-9_]+)?$", name)
+        if in_name:
+            spec_floors.append((int(in_name.group(1)), int(in_name.group(2))))
+            continue
+        # Neither a bound nor a version in the name: this branch promises
+        # nothing, which is weaker than any number.
+        spec_floors.append((0, 0))
     if spec_floors:
         found["the weakest python BuildRequires in coolprop.spec"] = min(
             spec_floors
         )
 
     # Debian's floor matters for the same reason: Ubuntu 20.04 still ships
-    # Python 3.8, which would fail exactly as Leap 15.x did.
-    match = re.search(
-        r"python3[ \t]*\([ \t]*>=[ \t]*([0-9]+)\.([0-9]+)", control_text
-    )
-    if match:
-        found["the python3 Build-Depends in debian.control"] = (
-            int(match.group(1)),
-            int(match.group(2)),
-        )
+    # Python 3.8.  Read it from the parsed Build-Depends rather than by
+    # searching the file, so a bound mentioned in a comment or in some binary
+    # package's Depends: cannot be mistaken for the real one.
+    declared = parse_build_depends(control_text)
+    if declared:
+        control_floors = []
+        for name, bound in declared.items():
+            if not re.match(r"^python[0-9]", name):
+                continue
+            version = re.match(r"^>=\s*([0-9]+)\.([0-9]+)", bound or "")
+            control_floors.append(
+                (int(version.group(1)), int(version.group(2)))
+                if version
+                else (0, 0)
+            )
+        if control_floors:
+            found["the python3 Build-Depends in debian.control"] = min(
+                control_floors
+            )
 
     return found
 
@@ -780,16 +816,15 @@ def main():
             "dev/generate_headers.py".format(", ".join(unread))
         )
     else:
-        python_wanted = python_floors["pyproject.toml requires-python"]
         too_low = sorted(
             "{0} allows {1}.{2}".format(where, *python_floors[where])
             for where in expected_python
-            if python_floors[where] < python_wanted
+            if python_floors[where] < REQUIRED_PYTHON
         )
         if too_low:
             problems.append(
                 "dev/generate_headers.py needs Python {0}.{1}, but {2}".format(
-                    python_wanted[0], python_wanted[1], "; ".join(too_low)
+                    REQUIRED_PYTHON[0], REQUIRED_PYTHON[1], "; ".join(too_low)
                 )
             )
 

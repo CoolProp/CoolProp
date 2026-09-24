@@ -72,15 +72,25 @@ BuildRequires:  fmt-devel
 # died with "TypeError: 'type' object is not subscriptable".  Ask that
 # distribution for a separate, newer interpreter; CMake picks it up because the
 # 3.9 floor makes it skip the 3.6 one and keep looking.
+# cp_python is the interpreter the build is told to use, by absolute path.
+# Leaving CMake to discover one is not good enough on Leap 15.x: python311
+# installs /usr/bin/python3.11 and leaves /usr/bin/python3 at 3.6, and
+# FindPython only probes the interpreter names its own version list knows, so
+# an older CMake can fail to consider 3.11 at all and reject the 3.6 it does
+# find.  Naming the path removes the guesswork.  CMake still checks that the
+# interpreter satisfies the 3.9 floor, so a wrong path fails loudly.
 %if 0%{?suse_version}
 Group:          Development/Libraries/C and C++
 %if 0%{?suse_version} < 1600
 BuildRequires:  python311
+%global cp_python %{_bindir}/python3.11
 %else
 BuildRequires:  python3-base >= 3.9
+%global cp_python %{_bindir}/python3
 %endif
 %else
 BuildRequires:  python3 >= 3.9
+%global cp_python %{_bindir}/python3
 %endif
 
 %description
@@ -155,7 +165,8 @@ include root) are not shipped here: their names are too generic to put into
     -DCOOLPROP_INSTALL_FLAT_HEADERS=OFF \
     -DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
     -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
-    -DCOOLPROP_NO_EXAMPLES=ON
+    -DCOOLPROP_NO_EXAMPLES=ON \
+    -DPython_EXECUTABLE=%{cp_python}
 
 %cmake_build
 
