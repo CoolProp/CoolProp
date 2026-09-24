@@ -9,9 +9,10 @@
 # somebody uploaded by hand.
 #
 # This is the RELEASE path, and it fires on tags only.  Day to day packaging
-# work goes through .github/workflows/packaging_obs.yml instead, which builds
-# the tarball and pushes it and the recipes to OBS with osc, then fails the run
-# if any OBS target fails.  That is where an OBS result in the GitHub checks
+# work goes through the obs-build job in
+# .github/workflows/packaging_offline.yml instead, which reuses the tarball the
+# offline build produced, pushes it and the recipes to OBS with osc, then fails
+# the run if any OBS target fails.  That is where an OBS result in the GitHub checks
 # list comes from.  Note that workflow is filtered to the packaging paths, so
 # it is a check on the recipes and the build system rather than on every change
 # to the library.

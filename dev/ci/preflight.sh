@@ -78,11 +78,29 @@ cd "$REPO_ROOT"
 # C-family checks care about.  Filters out deleted files (.cpp.cpp at
 # the same path would otherwise be checked even though it no longer
 # exists on disk).
+# --diff-filter=ACMR drops deletions from each diff on its own, but the range
+# diff and the working-tree diff are unioned below, and that union can still
+# name a file that is gone.  A file added in a commit and then deleted in the
+# working tree is "Added" in the range diff, so it survives, while the
+# working-tree diff that would have called it deleted has already filtered it
+# out.  Deleting a workflow file used to break the actionlint gate exactly that
+# way: actionlint was handed a path that no longer existed and refused to run,
+# which fails the gate for a reason that has nothing to do with the workflows.
+keep_existing() {
+    local f
+    while IFS= read -r f; do
+        if [[ -n "$f" && -e "$f" ]]; then
+            printf '%s\n' "$f"
+        fi
+    done
+    return 0
+}
+
 CHANGED_CPP="$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
 # Also pick up uncommitted changes in the working tree — preflight is
 # meant to gate pushes, but agents often run it mid-edit too.
 UNSTAGED_CPP="$(git diff --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
-ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' || true)"
+ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' | keep_existing || true)"
 
 # All paths changed (any extension) — used for tag auto-selection.
 ALL_PATHS="$(git diff --name-only "$BASE_REF"...HEAD; git diff --name-only)"
@@ -95,10 +113,10 @@ ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
 # "0 passed / 0 failed" and gating nothing.
 CHANGED_SH="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.sh' '*.bash'
                  git diff --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
-               | sort -u | grep -v '^$' || true)"
+               | sort -u | grep -v '^$' | keep_existing || true)"
 CHANGED_WORKFLOWS="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml'
                         git diff --name-only --diff-filter=ACMR -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; } \
-                      | sort -u | grep -v '^$' || true)"
+                      | sort -u | grep -v '^$' | keep_existing || true)"
 
 # ---------- pretty helpers -------------------------------------------
 

@@ -358,3 +358,130 @@ jobs:
           name: coolprop-source-tarball
           path: ${{ runner.temp }}/dist/
           if-no-files-found: error
+
+  # Builds the same tarball on OBS, for real distributions, and fails if any
+  # target fails.  That is what puts the openSUSE Build Service result into
+  # this repository's checks instead of on a web page somebody has to remember
+  # to open, and it replaces uploading the tarball and the spec by hand.
+  #
+  # It lives here rather than in a workflow of its own for two reasons.  The
+  # obvious one is that the tarball is built once instead of twice.  The one
+  # that matters more is that OBS then builds the BYTE-IDENTICAL artifact the
+  # offline job just proved, rather than a second tarball that ought to be the
+  # same; dev/packaging/obs/_service says that is the goal, and downloading the
+  # artifact is what actually delivers it.  As a side effect a tarball that
+  # already failed to build offline never reaches OBS, which saves a slow round
+  # trip on a failure we have in hand.
+  #
+  # This is NOT the OBS webhook.  The webhook fires when GitHub receives the
+  # push, which is before any of this has run, so a webhook-triggered rebuild
+  # would report the PREVIOUS sources against the new commit.  See the comment
+  # in .obs/workflows.yml.
+  #
+  # Setup, once, before it does anything (see dev/packaging/README.md):
+  #   Repository variables: OBS_PROJECT (e.g. home:jowr), OBS_PACKAGE, OBS_APIURL
+  #   Repository secrets:   OBS_USERNAME, OBS_PASSWORD
+  obs-build:
+    needs: offline-build
+    runs-on: ubuntu-latest
+    # Two gates.  An unset OBS_PROJECT means this repository has no OBS package
+    # configured, which is a legitimate state rather than a failure, so the job
+    # is skipped.  A pull request from a fork gets no secrets, so it would fail
+    # on the credential check through no fault of the contributor.
+    #
+    # A project that IS configured, on a branch that DOES get secrets, but with
+    # the credentials missing is a different thing entirely: obs-upload.sh
+    # fails loudly on that rather than skipping.
+    if: >-
+      vars.OBS_PROJECT != ''
+      && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
+    # The wait for OBS is unbounded in the script, so the bound lives here.
+    timeout-minutes: 120
+    # One OBS package cannot build two commits at once, and this group is
+    # deliberately not keyed by ref: two branches pushing at the same time are
+    # exactly the case that needs serialising.  The workflow-level concurrency
+    # above is per ref and so would not catch it.
+    concurrency:
+      group: packaging-obs
+      cancel-in-progress: true
+
+    steps:
+      # No fetch-depth here: the tarball is downloaded rather than built, so
+      # this checkout only supplies the recipes and the upload script.
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Install osc
+        # From PyPI, which is upstream's own package, NOT from apt.  Ubuntu
+        # 24.04 ships osc 0.169.1, which is far too old for this job:
+        #
+        #   osc 1.6.0  reading credentials from environment variables
+        #   osc 1.8.0  'results --fail-on-error/-F'
+        #
+        # Both are load-bearing here, so an apt osc would either prompt for a
+        # password or never report a failing target.  Keep the pin at or above
+        # those versions when bumping it.
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'osc==1.27.3'
+          # 'osc --version' is not a valid invocation (it exits 2) and
+          # 'osc version' talks to the server, so it asks for credentials.
+          # '--help' is the smoke test that needs neither.
+          osc --help > /dev/null
+          python -m pip show osc | sed -n 's/^Version: /osc version: /p'
+
+      - name: Download the tarball the offline build proved
+        uses: actions/download-artifact@v8
+        with:
+          name: coolprop-source-tarball
+          path: ${{ runner.temp }}/dist
+
+      - name: Check the recipes agree with each other
+        # Cheap, and it catches the class of mistake that is most annoying to
+        # debug from an OBS log: the spec, the .dsc and the Debian control file
+        # disagreeing about a version or a build dependency.
+        run: dev/packaging/check-build-deps.py
+
+      - name: Push to OBS and wait for the builds
+        env:
+          OSC_APIURL: ${{ vars.OBS_APIURL || 'https://api.opensuse.org' }}
+          OSC_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OSC_PASSWORD: ${{ secrets.OBS_PASSWORD }}
+          # The project and package names go through the environment rather
+          # than being pasted into the script body.  A ${{ }} expansion is
+          # substituted before the shell ever sees the line, so a value with a
+          # quote or a semicolon in it would become script rather than an
+          # argument.  These particular values are set by a maintainer, but the
+          # habit is what keeps the next one safe.
+          OBS_PROJECT: ${{ vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ vars.OBS_PACKAGE || 'coolprop' }}
+        run: |
+          set -euo pipefail
+          # Exactly one tarball is expected.  Globbing it into the argument
+          # list without checking would pass two paths to --tarball on the day
+          # a stale file survives, and the script would use only the first.
+          mapfile -t tarballs < <(find "${RUNNER_TEMP}/dist" -maxdepth 1 -name 'coolprop-*.tar.gz' -type f | sort)
+          if [[ ${#tarballs[@]} -ne 1 ]]; then
+            echo "::error::expected exactly one tarball, found ${#tarballs[@]}: ${tarballs[*]-none}"
+            exit 1
+          fi
+          dev/packaging/obs-upload.sh \
+            --tarball "${tarballs[0]}" \
+            --project "${OBS_PROJECT}" \
+            --package "${OBS_PACKAGE}"
+
+      - name: Where to look
+        if: always()
+        env:
+          OBS_APIURL: ${{ vars.OBS_APIURL || 'https://api.opensuse.org' }}
+          OBS_PROJECT: ${{ vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ vars.OBS_PACKAGE || 'coolprop' }}
+        run: |
+          set -euo pipefail
+          # The build logs live on the web UI, not on the API host.
+          web="${OBS_APIURL/api./build.}"
+          echo "OBS package: ${web%/}/package/show/${OBS_PROJECT}/${OBS_PACKAGE}" >> "${GITHUB_STEP_SUMMARY}"

@@ -458,17 +458,34 @@ exact `deb` line and the signing key.
 
 ### 6. Building on OBS from CI (the testing loop)
 
-`.github/workflows/packaging_obs.yml` is how the packaging is exercised day to
-day. On a push that touches the build system or this directory it builds the
-release tarball, pushes it **and every recipe file in `dev/packaging/obs/`** to
-the OBS package with `osc`, waits for the builds, and fails the run if any
-target failed. The OBS outcome therefore shows up as an ordinary check on the
-commit, next to the other CI jobs.
+The `obs-build` job in `.github/workflows/packaging_offline.yml` is how the
+packaging is exercised day to day. It runs after `offline-build`, downloads the
+tarball that job produced, pushes it **and every recipe file in
+`dev/packaging/obs/`** to the OBS package with `osc`, waits for the builds, and
+fails the run if any target failed. The OBS outcome therefore shows up as an
+ordinary check on the commit, next to the other CI jobs.
 
 That replaces the hand upload. The tarball and the spec go up together, so a
 spec change is always tested against the code it belongs with. Uploading a new
 spec on top of an old tarball is the mistake that cost a full round of
 debugging on the `-m32`/`-m64` failures, and this makes it impossible.
+
+It shares a workflow with the offline build on purpose. The obvious gain is
+that the tarball is built once rather than twice, but the one that matters more
+is that OBS builds the **byte-identical** artifact the offline job just proved,
+rather than a second tarball that ought to be the same. `_service` states that
+as the goal; downloading the artifact is what delivers it. A useful side effect
+is ordering: a tarball that already failed to build offline never reaches OBS,
+so an obvious break costs seconds rather than a slow OBS round trip.
+
+The two jobs are not redundant. `offline-build` unpacks the tarball, installs
+the dependencies the distribution recipes declare, builds with the network
+switched off, checks the installed layout, and compiles a consumer against the
+staged install through both `pkg-config` and `find_package`. OBS builds real
+RPMs and DEBs on real distributions but does not test a downstream consumer,
+and it needs credentials and an external service. Keeping the fast, credential
+free job as the gate and OBS as the distribution reality check is the point of
+the split.
 
 Setup, once. The job is **inert until `OBS_PROJECT` is set**, so nothing
 happens in a fork or in a clone with no OBS package to push to.
@@ -535,12 +552,15 @@ cancelled rather than queued.
 
 Two limits to be aware of before leaning on this:
 
-- **It fires on packaging changes, not on code changes.** The `paths:` filter
-  covers `CMakeLists.txt`, `cmake/**`, `dev/packaging/**` and
+- **It fires on packaging changes, not on code changes.** The workflow's
+  `paths:` filter covers `CMakeLists.txt`, `cmake/**`, `dev/packaging/**` and
   `dev/generate_headers.py`. A change under `src/` or `include/` does not
   trigger an OBS build. That keeps the loop fast while the packaging is what is
   being worked on; widen the filter if OBS should also be a check on the
   library itself.
+- **On a pull request it runs only for a branch in this repository.** A fork
+  gets no secrets, so the job is skipped rather than failing a contributor's
+  pull request on a credential they were never going to have.
 - **All triggering branches push to the same OBS package.** `OBS_PROJECT` names
   one project, and `home:jowr` is a published repository that users install
   from, so a branch push replaces what is published there until the next push.
