@@ -46,6 +46,11 @@ changes for a normal developer checkout, which has no `externals/cpm/`.
 dev/packaging/make-release-tarball.sh --ref v8.0.1
 # -> dist/coolprop-8.0.1.tar.gz
 #    dist/coolprop-8.0.1.tar.gz.sha256
+
+# without --ref it follows the working tree, which between releases is a
+# snapshot and is named accordingly:
+dev/packaging/make-release-tarball.sh
+# -> dist/coolprop-8.0.1dev.tar.gz
 ```
 
 The tarball is reproducible for a given revision: entries sorted, ownership
@@ -271,7 +276,7 @@ osc mkpac CoolProp
 cd CoolProp
 
 cp /path/to/CoolProp/dev/packaging/obs/* .
-cp /path/to/CoolProp/dist/coolprop-8.0.1.tar.gz .
+cp /path/to/CoolProp/dist/coolprop-8.0.1dev.tar.gz .
 
 osc add *
 osc commit -m "Initial CoolProp packaging"
@@ -312,6 +317,12 @@ asset URL that does not exist yet, so `osc service manualrun` fails closed
 rather than fetching something unchecked.  It is the tagged-release path and is
 not used for a snapshot trial, where the tarball is added by hand with
 `osc add`.
+
+Do not do both in the same package directory.  `coolprop.dsc` carries no
+`Debtransform-Tar:` line, so OBS's `debtransform` finds the source archive by
+scanning the directory, and it aborts with "Too many files looking like a
+usable source tarball" when a hand-added `coolprop-8.0.1dev.tar.gz` sits beside
+a `coolprop-8.0.1.tar.gz` that `_service` fetched.
 
 ### 3. Choose build targets
 

@@ -159,5 +159,5 @@ include root) are not shipped here: their names are too generic to put into
 %{_libdir}/cmake/CoolProp/
 
 %changelog
-* Mon Sep 21 2026 CoolProp developers <coolprop@coolprop.org> - 8.0.1-0
+* Mon Sep 21 2026 CoolProp developers <coolprop@coolprop.org> - 8.0.1~dev-0
 - Initial packaging for the openSUSE Build Service (GH #3388).

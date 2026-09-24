@@ -64,11 +64,24 @@ def parse_upstream_version(text):
     restate it.  Returns None if any component cannot be read, because a
     half-parsed version would be compared against and silently agree.
     """
+    # Comments go first and every pattern is anchored to the start of a line,
+    # because make-release-tarball.sh parses the same file that way.  An
+    # unanchored search reads "#set(COOLPROP_VERSION_PATCH 1)" sitting above a
+    # live "set(COOLPROP_VERSION_PATCH 2)", so the two tools would answer
+    # differently about the same CMakeLists and this whole check would be void:
+    # the recipes would stay at the old version, CI would pass, and OBS would
+    # get a tarball whose directory %autosetup cannot find.
+    live = "\n".join(
+        line for line in text.splitlines() if not line.lstrip().startswith("#")
+    )
+
     parts = {}
     for name in ("MAJOR", "MINOR", "PATCH"):
         match = re.search(
-            r"set\s*\(\s*COOLPROP_VERSION_{0}\s+([0-9]+)\s*\)".format(name),
-            text,
+            r"^[ \t]*set[ \t]*\([ \t]*COOLPROP_VERSION_{0}[ \t]+"
+            r"([0-9]+)[ \t]*\)".format(name),
+            live,
+            re.M,
         )
         if not match:
             return None
@@ -76,7 +89,10 @@ def parse_upstream_version(text):
     # REVISION is "dev" between releases and empty on a release tag, so an
     # empty match is a legitimate answer here and only a missing LINE is not.
     revision = re.search(
-        r"set\s*\(\s*COOLPROP_VERSION_REVISION\s*([A-Za-z0-9]*)\s*\)", text
+        r"^[ \t]*set[ \t]*\([ \t]*COOLPROP_VERSION_REVISION[ \t]*"
+        r"([A-Za-z0-9]*)[ \t]*\)",
+        live,
+        re.M,
     )
     if revision is None:
         return None
@@ -107,12 +123,52 @@ def parse_spec_versions(text):
 
 
 def parse_dsc_version(text):
-    """Return (Version, tarball name) from the Debian source control file."""
+    """Return (Version, tarball name) from the Debian source control file.
+
+    The tarball is read from the Files: stanza specifically, not from the first
+    indented line that happens to look like "token number token".  dpkg writes
+    Checksums-Sha1: and Checksums-Sha256: BEFORE Files:, and their entries have
+    that same shape, so a looser search reads a checksum line and never looks
+    at the name this check exists to verify.  Exactly one entry is required:
+    a second one would otherwise go unexamined.
+    """
     version = re.search(r"^Version:\s*(\S+)", text, re.M)
-    tarball = re.search(r"^\s+\S+\s+\d+\s+(\S+)\s*$", text, re.M)
+
+    tarball = None
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line.rstrip() != "Files:":
+            continue
+        entries = []
+        for entry in lines[index + 1:]:
+            if not entry[:1].isspace():
+                break
+            fields = entry.split()
+            if len(fields) >= 3:
+                entries.append(fields[2])
+        # One source tarball, or this parser cannot say which one matters.
+        tarball = entries[0] if len(entries) == 1 else None
+        break
+
     return (
         version.group(1) if version else None,
-        tarball.group(1) if tarball else None,
+        tarball,
+    )
+
+
+def parse_soname_major(spec_text, dsc_text, control_text):
+    """Return the shared-library major each Debian and RPM file hardcodes.
+
+    coolprop.spec defines it as %define sover, and the Debian package name
+    carries it in the binary package name (libcoolprop8).  All of them have to
+    track COOLPROP_VERSION_MAJOR, which cmake/CoolPropLibrary.cmake uses as the
+    target SOVERSION, or %files claims a libCoolProp.so.N that was never built.
+    """
+    sover = re.search(r"^%define\s+sover\s+([0-9]+)", spec_text, re.M)
+    binaries = re.findall(r"libcoolprop([0-9]+)", dsc_text + control_text)
+    return (
+        sover.group(1) if sover else None,
+        sorted(set(binaries)),
     )
 
 
@@ -328,6 +384,11 @@ def main():
     changelog_version = parse_changelog_version(
         CHANGELOG.read_text(encoding="utf-8")
     )
+    spec_sover, deb_sonames = parse_soname_major(
+        SPEC.read_text(encoding="utf-8"),
+        DSC.read_text(encoding="utf-8"),
+        CONTROL.read_text(encoding="utf-8"),
+    )
 
     options = {}
     for label, path in (
@@ -360,6 +421,8 @@ def main():
         ("Version: in coolprop.dsc", dsc_version),
         ("the tarball name in coolprop.dsc", dsc_tarball),
         ("the version in debian.changelog", changelog_version),
+        ("%define sover in coolprop.spec", spec_sover),
+        ("the libcoolprop<N> package name", deb_sonames or None),
         ("packaging_offline.yml cmake options", workflow_opts),
         ("coolprop.spec cmake options", spec_opts),
         ("debian.rules cmake options", rules_opts),
@@ -460,10 +523,15 @@ def main():
                 )
 
     # 5. Every recipe's version must follow CMakeLists.txt, which is what
-    #    make-release-tarball.sh names the archive from.  Four files restate
-    #    it, and a mismatch is not a subtle failure: rpmbuild cannot find the
-    #    unpacked directory, and dpkg-source refuses a changelog whose version
-    #    differs from the .dsc.  Both fail late, inside the build service.
+    #    make-release-tarball.sh names the archive from.  Five files restate
+    #    it, and the failures are late ones, inside the build service: rpmbuild
+    #    cannot find the directory %autosetup names, and a stale soname makes
+    #    %files claim a libCoolProp.so.N that was never built.
+    #
+    #    Note on the changelog: OBS's debtransform rewrites the top changelog
+    #    entry to match the .dsc Version rather than failing, so that one is
+    #    checked to keep the files honest for anyone reading or building them
+    #    outside OBS, not because OBS would reject it.
     numeric, revision = upstream
     tarball_version = numeric + revision
     wanted = distro_version(numeric, revision)
@@ -478,10 +546,14 @@ def main():
             "coolprop.spec has Version: {0}, but CMakeLists.txt means "
             "{1}".format(spec_version, wanted)
         )
-    if not dsc_version.startswith(wanted + "-"):
+    # A full match, not a prefix: "8.0.1~dev-" would otherwise pass, and dpkg
+    # rejects an empty revision.  An epoch ("1:8.0.1~dev-1") is also refused;
+    # it is legitimate dpkg syntax and the escape hatch for walking a version
+    # back, so if one is ever needed this check is what to relax, deliberately.
+    if not re.fullmatch(re.escape(wanted) + r"-[A-Za-z0-9.+~]+", dsc_version):
         problems.append(
             "coolprop.dsc has Version: {0}, but CMakeLists.txt means {1} with a "
-            "Debian revision suffix".format(dsc_version, wanted)
+            "non-empty Debian revision suffix".format(dsc_version, wanted)
         )
     if dsc_tarball != "coolprop-{0}.tar.gz".format(tarball_version):
         problems.append(
@@ -490,8 +562,24 @@ def main():
         )
     if changelog_version != dsc_version:
         problems.append(
-            "debian.changelog is {0} but coolprop.dsc is {1}; dpkg-source "
-            "rejects that".format(changelog_version, dsc_version)
+            "debian.changelog is {0} but coolprop.dsc is {1}".format(
+                changelog_version, dsc_version
+            )
+        )
+
+    major = numeric.split(".")[0]
+    if spec_sover != major:
+        problems.append(
+            "coolprop.spec defines sover {0}, but COOLPROP_VERSION_MAJOR is "
+            "{1}, which is the SOVERSION the library is built with".format(
+                spec_sover, major
+            )
+        )
+    wrong_sonames = [n for n in deb_sonames if n != major]
+    if wrong_sonames:
+        problems.append(
+            "the Debian files name libcoolprop{0}, but COOLPROP_VERSION_MAJOR "
+            "is {1}".format(", libcoolprop".join(wrong_sonames), major)
         )
 
     if problems:
