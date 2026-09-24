@@ -700,10 +700,19 @@ else()
   # specified".  The probe would fail for a reason that has nothing to do with
   # the compiler, and FORCE_BITNESS_32/64 would then abort the build.
   # Reproduced with ar; without the guard even a plain -m64 probe fails.
+  #
+  # The flag is APPENDED to whatever the caller already asked for.  A toolchain
+  # file may put a --sysroot or a -L in CMAKE_REQUIRED_LINK_OPTIONS that every
+  # check needs in order to link at all; replacing that list would fail the
+  # probe for want of the caller's own options.  Note the list has to be
+  # expanded unquoted here: set(X "${empty}" "-m64") yields a two-element list
+  # whose first element is empty, and that empty string would be handed to the
+  # linker as an argument.
   set(_cp_saved_link_options "${CMAKE_REQUIRED_LINK_OPTIONS}")
   if(NOT DEFINED CMAKE_TRY_COMPILE_TARGET_TYPE
      OR CMAKE_TRY_COMPILE_TARGET_TYPE STREQUAL "EXECUTABLE")
-    set(CMAKE_REQUIRED_LINK_OPTIONS "-m${BITNESS}")
+    set(CMAKE_REQUIRED_LINK_OPTIONS ${_cp_saved_link_options})
+    list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-m${BITNESS}")
   endif()
   check_cxx_compiler_flag("-m${BITNESS}" COOLPROP_CXX_ACCEPTS_M${BITNESS})
   set(CMAKE_REQUIRED_LINK_OPTIONS "${_cp_saved_link_options}")
