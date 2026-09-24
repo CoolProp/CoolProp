@@ -149,7 +149,7 @@ include root) are not shipped here: their names are too generic to put into
 %{_includedir}/CoolProp/
 %{_libdir}/libCoolProp.so
 %{_libdir}/pkgconfig/coolprop.pc
-# Fedora ships cmake-filesystem, which owns %{_libdir}/cmake, so depend on it
+# Fedora ships cmake-filesystem, which owns %%{_libdir}/cmake, so depend on it
 # there (claiming the directory as well would be dual ownership and a review
 # flag).  openSUSE has no such package, so claim it there instead; an unowned
 # directory is an rpmlint error and OBS will bounce it.

@@ -169,7 +169,10 @@ ships instead.
 That is not one number, and it is not safe to assume it.  A rolling
 distribution may already carry the same 5.x CoolProp pins, in which case there
 is nothing to worry about; a stable release may sit near the 3.4 floor, which
-is a different major.  So the exposure has to be read per target, from the
+is a different major.  One data point from a real OBS build root, 2026-09-24:
+openSUSE Tumbleweed installed `eigen3-devel 5.0.1` and `fmt-devel 12.1.0`,
+which is exactly the Eigen CoolProp pins and one minor ahead on fmt, so on
+Tumbleweed there is no skew at all.  So the exposure has to be read per target, from the
 Eigen version that target actually packages, rather than assumed from this
 file.  `cmake/dependencies.cmake` enforces the 3.4 floor and the recipes
 declare it, but "configures and compiles" is not "behaves identically", and
@@ -323,6 +326,21 @@ Do not do both in the same package directory.  `coolprop.dsc` carries no
 scanning the directory, and it aborts with "Too many files looking like a
 usable source tarball" when a hand-added `coolprop-8.0.1dev.tar.gz` sits beside
 a `coolprop-8.0.1.tar.gz` that `_service` fetched.
+
+**If you check out on Windows, mind the line endings.**  `.gitattributes` sets
+`* text=auto`, so a text file is converted to the platform's native ending on
+checkout.  For these recipes that is fatal rather than cosmetic: rpmbuild
+writes the `%prep` body into a shell script, and a CR there is executed as a
+command, which ends the build with
+
+```
+/var/tmp/rpm-tmp.XXXXXX: line 46: $'\r': command not found
+error: Bad exit status from /var/tmp/rpm-tmp.XXXXXX (%prep)
+```
+
+`dev/packaging/**` and `dev/ci/**` are therefore pinned to `eol=lf`, since they
+are only ever consumed by Linux build systems.  If you hit this on an older
+checkout, `git add --renormalize .` or re-clone.
 
 ### 3. Choose build targets
 

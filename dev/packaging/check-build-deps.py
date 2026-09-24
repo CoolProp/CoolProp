@@ -36,6 +36,7 @@ SPEC = ROOT / "dev/packaging/obs/coolprop.spec"
 RULES = ROOT / "dev/packaging/obs/debian.rules"
 DEPENDENCIES = ROOT / "cmake/dependencies.cmake"
 CMAKELISTS = ROOT / "CMakeLists.txt"
+GITATTRIBUTES = ROOT / ".gitattributes"
 CHANGELOG = ROOT / "dev/packaging/obs/debian.changelog"
 WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 
@@ -176,6 +177,27 @@ def parse_changelog_version(text):
     """Return the version of the newest debian.changelog entry."""
     match = re.match(r"^\S+\s+\(([^)]+)\)", text)
     return match.group(1) if match else None
+
+
+def packaging_is_lf_only(text):
+    """Is dev/packaging declared eol=lf in .gitattributes?
+
+    The repository sets "* text=auto", which converts text files to the
+    checkout platform's native line ending.  On Windows that gives
+    coolprop.spec CRLF, and rpmbuild then writes the %prep body into a shell
+    script where the stray CR is executed as a command:
+
+        /var/tmp/rpm-tmp.XXXX: line 46: $'\r': command not found
+
+    That failed a real OBS build.  CI cannot detect it, because a Linux
+    checkout normalises to LF either way, so what is checkable is that the
+    rule exists at all.
+    """
+    return bool(
+        re.search(
+            r"^dev/packaging/\*\*\s+text\s+eol=lf\s*$", text, re.M
+        )
+    )
 
 
 def parse_eigen_floor(text):
@@ -376,6 +398,9 @@ def main():
         WORKFLOW.read_text(encoding="utf-8")
     )
     eigen_floor = parse_eigen_floor(DEPENDENCIES.read_text(encoding="utf-8"))
+    lf_declared = packaging_is_lf_only(
+        GITATTRIBUTES.read_text(encoding="utf-8")
+    )
     upstream = parse_upstream_version(CMAKELISTS.read_text(encoding="utf-8"))
     spec_upstream, spec_version = parse_spec_versions(
         SPEC.read_text(encoding="utf-8")
@@ -565,6 +590,13 @@ def main():
             "debian.changelog is {0} but coolprop.dsc is {1}".format(
                 changelog_version, dsc_version
             )
+        )
+
+    if not lf_declared:
+        problems.append(
+            ".gitattributes does not declare 'dev/packaging/** text eol=lf', "
+            "so a Windows checkout gives these recipes CRLF and rpmbuild fails "
+            "in %prep on the stray carriage return"
         )
 
     major = numeric.split(".")[0]
