@@ -72,6 +72,16 @@ done
 export OSC_APIURL="${OSC_APIURL:-https://api.opensuse.org}"
 export OSC_CONFIG="${OSC_CONFIG:-/dev/null}"
 
+# A plain http:// API URL does not leak the password: osc keeps allow_http off
+# by default, rewrites the request to https and then dies inside urllib3 with
+# "Tried to open a foreign host", which is true but tells the reader nothing.
+# Checked against the pinned osc rather than assumed.  So this is about the
+# error message, not about secrecy, and it is still worth one line.
+case "${OSC_APIURL}" in
+    https://*) ;;
+    *) die "OSC_APIURL must be an https:// URL, got '${OSC_APIURL}'. osc will not talk plain HTTP to an API host, and the error it raises instead is a urllib3 traceback about a foreign host." ;;
+esac
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 recipe_dir="${repo_root}/dev/packaging/obs"
 tarball="$(cd "$(dirname "${tarball}")" && pwd)/$(basename "${tarball}")"
@@ -204,10 +214,30 @@ osc_cmd results "${project}" "${package}" --watch --fail-on-error --verbose
 # there were no rows at all: a package with no repositories configured, or a
 # mistyped package name, would otherwise look like a clean build.
 results_final="$(osc_cmd results "${project}" "${package}" --xml)"
+# Only targets that could actually build are counted.  A row that says
+# "excluded" or "disabled" is a target OBS deliberately did not build, and
+# --fail-on-error skips those too, so a package whose targets are ALL excluded
+# or disabled produces rows, reports no failure, and would otherwise be a green
+# tick for a package that built nowhere.
+#
+# The walk is over <status> tags rather than the whole document because a
+# <result> element carries a code attribute of its own: a repository can be
+# marked excluded while the status inside it is fine, and matching the raw text
+# would subtract that one twice.
+#
 # awk rather than "grep -c ... || echo 0": grep -c already prints 0 when it
 # matches nothing and exits 1 as well, so the fallback appends a second 0 and
 # the arithmetic below then fails on "0\n0".  awk counts and exits 0 either way.
-result_rows="$(awk '{ n += gsub(/<status /, "") } END { print n+0 }' <<<"${results_final}")"
+result_rows="$(awk '
+    {
+        s = $0
+        while (match(s, /<status [^>]*>/)) {
+            tag = substr(s, RSTART, RLENGTH)
+            if (tag !~ /code="(excluded|disabled)"/) n++
+            s = substr(s, RSTART + RLENGTH)
+        }
+    }
+    END { print n+0 }' <<<"${results_final}")"
 (( result_rows > 0 )) \
-    || die "OBS reported no build results at all for ${project}/${package}. Check that the package exists and has build targets enabled."
-echo "==> ${result_rows} build result(s), none failed"
+    || die "OBS built ${project}/${package} nowhere: every target is excluded, disabled, or there are no results at all. Check that the package exists and has build targets enabled."
+echo "==> ${result_rows} target(s) built, none failed"

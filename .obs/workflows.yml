@@ -12,12 +12,14 @@
 # work goes through the obs-build job in
 # .github/workflows/packaging_offline.yml instead, which reuses the tarball the
 # offline build produced, pushes it and the recipes to OBS with osc, then fails
-# the run if any OBS target fails.  That is where an OBS result in the GitHub checks
-# list comes from.  Note that workflow is filtered to the packaging paths, so
+# the run if any OBS target fails.  That is where an OBS result in the GitHub
+# checks list comes from.  Note that job is filtered to the packaging paths, so
 # it is a check on the recipes and the build system rather than on every change
-# to the library.
+# to the library, and it deliberately skips release tags so that the package on
+# a tag is this path's to fill rather than CI's.
 #
-# The two cannot be merged, and the ordering is why.  A webhook fires when
+# The webhook and that CI job cannot be merged into one, and the ordering is
+# why.  A webhook fires when
 # GitHub receives the push, which is before CI has built or uploaded anything,
 # so a push-triggered rebuild here would build the PREVIOUS sources and report
 # that result against the NEW commit.  A green tick for code that was never

@@ -546,27 +546,51 @@ environment variables arrived in osc 1.6.0 and `results --fail-on-error` in
 1.8.0. With the apt version the job would prompt for a password and would never
 report a failing target, so the pin must stay at or above those versions.
 
-Concurrency is serialised on one group, because a single OBS package cannot
-build two commits at once. A run that is superseded by a newer push is
-cancelled rather than queued.
+The `obs-build` jobs are serialised on one concurrency group, because a single
+OBS package cannot hold two commits at once. They queue rather than cancelling
+each other; see the second limit below for why that matters.
+
+When it runs, and when it does not:
+
+- **On packaging changes, not on code changes.** The workflow's `paths:` filter
+  covers `CMakeLists.txt`, `cmake/**`, `dev/packaging/**`,
+  `dev/generate_headers.py` and the workflow file itself. A change under `src/`
+  or `include/` does not trigger an OBS build. That keeps the loop fast while
+  the packaging is what is being worked on; widen the filter if OBS should also
+  be a check on the library itself.
+- **On pushes to master, main and develop, and on pull requests to them.** The
+  pull request case is the day to day loop: every push to a branch with an open
+  pull request gets an OBS result. A branch with no pull request open does not,
+  and needs `workflow_dispatch`.
+- **Not on release tags.** The workflow itself does fire on `v*`, but
+  `obs-build` skips them. On a release tag the OBS package belongs to the
+  release path in section 7, whose services fetch a published tarball and check
+  its sha256 against the same project and package. Letting CI commit its own
+  tarball at that moment would leave whoever revives that path debugging
+  sources that were quietly replaced.
+- **Not for a pull request from a fork.** A fork gets no secrets, so the job is
+  skipped rather than failing a contributor's pull request on a credential they
+  were never going to have. Note a skipped job reads as neutral, so do not make
+  `obs-build` a required check without thinking that through.
 
 Two limits to be aware of before leaning on this:
 
-- **It fires on packaging changes, not on code changes.** The workflow's
-  `paths:` filter covers `CMakeLists.txt`, `cmake/**`, `dev/packaging/**` and
-  `dev/generate_headers.py`. A change under `src/` or `include/` does not
-  trigger an OBS build. That keeps the loop fast while the packaging is what is
-  being worked on; widen the filter if OBS should also be a check on the
-  library itself.
-- **On a pull request it runs only for a branch in this repository.** A fork
-  gets no secrets, so the job is skipped rather than failing a contributor's
-  pull request on a credential they were never going to have.
-- **All triggering branches push to the same OBS package.** `OBS_PROJECT` names
-  one project, and `home:jowr` is a published repository that users install
-  from, so a branch push replaces what is published there until the next push.
-  While that is only ever your own home project this is a nuisance rather than
-  a hazard, but point `OBS_PROJECT` at a throwaway staging project if branch
-  testing and a repository other people consume ever become the same place.
+- **Everything that triggers it pushes to the same OBS package**, including
+  every push to an open pull request, which is the highest churn case of all.
+  `OBS_PROJECT` names one project, and `home:jowr` is a published repository
+  that users install from, so any of these replaces what is published there
+  until the next run. While that is only ever your own home project this is a
+  nuisance rather than a hazard, but point `OBS_PROJECT` at a throwaway staging
+  project if iteration and a repository other people consume ever become the
+  same place.
+- **Overlapping runs settle in completion order, not push order.** The
+  `obs-build` jobs queue on one concurrency group, and a job joins that group
+  only once `offline-build` has finished, so a run whose offline build was slow
+  can reach OBS after a newer one. Each run still commits its own tarball and
+  reports the result for the sources it committed, so no check ever lies; but
+  the package can be left holding the older sources until the next run. Queuing
+  rather than cancelling is deliberate, so that every commit gets a verdict
+  instead of the overtaken one being cancelled.
 
 ### 7. Rebuilding automatically from GitHub (the release path)
 

@@ -87,19 +87,33 @@ cd "$REPO_ROOT"
 # way: actionlint was handed a path that no longer existed and refused to run,
 # which fails the gate for a reason that has nothing to do with the workflows.
 keep_existing() {
-    local f
-    while IFS= read -r f; do
+    local f dropped=0
+    # "|| [[ -n $f ]]" so a final line with no trailing newline is not eaten.
+    # Every caller below pipes through sort and grep, which always terminate
+    # their output, so this cannot bite today; it bites the first time somebody
+    # reorders the pipeline or calls this directly.
+    while IFS= read -r f || [[ -n "$f" ]]; do
         if [[ -n "$f" && -e "$f" ]]; then
             printf '%s\n' "$f"
+        elif [[ -n "$f" ]]; then
+            dropped=$(( dropped + 1 ))
+            printf 'preflight: skipping %s (no longer on disk)\n' "$f" >&2
         fi
     done
+    # Dropping paths silently would make a bad cwd or a mangled checkout look
+    # like "no files in diff", and every gate would then skip and report green
+    # while checking nothing.  Saying so on stderr costs nothing and makes that
+    # loud.
+    if (( dropped > 0 )); then
+        printf 'preflight: %d path(s) in the diff no longer exist\n' "$dropped" >&2
+    fi
     return 0
 }
 
 CHANGED_CPP="$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
 # Also pick up uncommitted changes in the working tree — preflight is
 # meant to gate pushes, but agents often run it mid-edit too.
-UNSTAGED_CPP="$(git diff --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
+UNSTAGED_CPP="$(git diff HEAD --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
 ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' | keep_existing || true)"
 
 # All paths changed (any extension) — used for tag auto-selection.
@@ -112,10 +126,10 @@ ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
 # CI change, exactly the shape that breaks quietly) reporting
 # "0 passed / 0 failed" and gating nothing.
 CHANGED_SH="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.sh' '*.bash'
-                 git diff --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
+                 git diff HEAD --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
                | sort -u | grep -v '^$' | keep_existing || true)"
 CHANGED_WORKFLOWS="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml'
-                        git diff --name-only --diff-filter=ACMR -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; } \
+                        git diff HEAD --name-only --diff-filter=ACMR -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; } \
                       | sort -u | grep -v '^$' | keep_existing || true)"
 
 # ---------- pretty helpers -------------------------------------------

@@ -27,6 +27,16 @@ on:
       - '.github/workflows/packaging_offline.yml'
   workflow_dispatch:
 
+# Neither job needs to write anything through the Actions token: they build,
+# inspect and (for obs-build) talk to OBS with its own credentials.  This was a
+# workflow-level setting on the separate OBS workflow before it was folded in
+# here, and dropping it would silently hand the job whatever the repository
+# default happens to be, in the one place that handles a secret.
+# download-artifact uses the runtime token rather than GITHUB_TOKEN, so read is
+# enough for the hand-off between the two jobs.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
@@ -392,19 +402,38 @@ jobs:
     # A project that IS configured, on a branch that DOES get secrets, but with
     # the credentials missing is a different thing entirely: obs-upload.sh
     # fails loudly on that rather than skipping.
+    #
+    # Tags are excluded on purpose.  This workflow also fires on v* tags, and on
+    # a release tag the OBS package is the release path's to fill: the webhook
+    # in .obs/workflows.yml runs the services of the SAME project and package,
+    # which fetch a published tarball and verify its checksum.  Having CI commit
+    # its own tarball there at the same moment would leave whoever revives that
+    # path debugging a package whose sources were quietly replaced.
     if: >-
       vars.OBS_PROJECT != ''
+      && !startsWith(github.ref, 'refs/tags/')
       && (github.event_name != 'pull_request'
           || github.event.pull_request.head.repo.full_name == github.repository)
     # The wait for OBS is unbounded in the script, so the bound lives here.
     timeout-minutes: 120
-    # One OBS package cannot build two commits at once, and this group is
+    # One OBS package cannot hold two commits at once, and this group is
     # deliberately not keyed by ref: two branches pushing at the same time are
     # exactly the case that needs serialising.  The workflow-level concurrency
     # above is per ref and so would not catch it.
+    #
+    # cancel-in-progress is false, which is not the obvious choice.  A job joins
+    # its group only once it is ready to run, which here is after offline-build
+    # finishes, so arrival order follows build duration rather than push order.
+    # Cancelling on arrival would therefore let a run whose offline build was
+    # slow cancel a newer one that overtook it, and the newer commit would be
+    # left with a cancelled check and no OBS verdict at all.  Queueing instead
+    # keeps each commit's commit-and-watch atomic against the other and gives
+    # every commit a real result.  The package can still end up holding the
+    # older sources when two pushes overlap; the next push corrects that, and
+    # each run's check still reports the sources that run actually committed.
     concurrency:
       group: packaging-obs
-      cancel-in-progress: true
+      cancel-in-progress: false
 
     steps:
       # No fetch-depth here: the tarball is downloaded rather than built, so
