@@ -453,6 +453,56 @@ sudo zypper install libcoolprop-devel
 For Debian/Ubuntu the project page's "Go to download repository" link gives the
 exact `deb` line and the signing key.
 
+### 6. Rebuilding automatically from GitHub
+
+`.obs/workflows.yml` in the repository root tells OBS what to do when GitHub
+calls it: on a release tag it re-runs the package's source services, which
+fetch the tarball from the GitHub release and verify its sha256.
+
+**The file alone does nothing.** OBS only reads it if a token and a webhook
+exist, and both are created by hand, once:
+
+1. On OBS, create a workflow token and give it a GitHub personal access token
+   so OBS can read the repository and report back:
+
+   ```bash
+   osc token --create --operation workflow --scm-token <github-pat>
+   ```
+
+   This prints a token id and a secret. Keep the secret; it is shown once.
+
+2. On GitHub, under **Settings -> Webhooks -> Add webhook** for the repository:
+
+   - Payload URL: `https://build.opensuse.org/trigger/workflow?id=<token-id>`
+   - Content type: `application/json`
+   - Secret: the secret from step 1
+   - Events: "Let me select individual events", then **Branch or tag creation**
+     and **Pushes**
+
+3. `.obs/workflows.yml` has to be on the repository's default branch. OBS reads
+   it from there, not from the branch that triggered the event.
+
+Two things to check on the first tag rather than assume:
+
+- **Whether the services actually run.** `dev/packaging/obs/_service` marks its
+  services `mode="manual"` so they do not re-download on every source change.
+  If the first webhook fires and the tarball is not refreshed, that mode is
+  why, and the fix is to drop `mode="manual"` from the two services so OBS may
+  run them server side.
+- **Which project the workflow targets.** It currently names `home:jowr`, a
+  personal project. That is the right place while the packaging is being
+  proven, and the wrong place afterwards: a project owned by the CoolProp
+  organisation should own the published packages, and the workflow file should
+  be updated with it.
+
+There is deliberately no pull-request workflow here. OBS can branch a package
+and build it per pull request, but this package's source is a release tarball
+rather than the git checkout, so such a build would compile whatever tarball
+the package already holds and report green without having tested the pull
+request at all. CoolProp's own CI covers pull requests; see
+`.github/workflows/packaging_offline.yml`, which builds the tarball with the
+network switched off.
+
 ## Keeping it alive
 
 The single clearest lesson from the 2014 attempt recorded in GH #3388 is that

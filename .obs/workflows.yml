@@ -1,0 +1,26 @@
+# OBS workflow, read by the OpenSUSE Build Service when GitHub calls its
+# webhook.  See dev/packaging/README.md for the token and webhook setup, which
+# is manual and has to be done once: this file on its own does nothing.
+#
+# What this automates: when a release tag is pushed, OBS re-runs the source
+# services of the package below.  Those services (dev/packaging/obs/_service)
+# download the release tarball from the GitHub release and verify its sha256,
+# so the package rebuilds against the artifact the release workflow published
+# rather than one somebody uploaded by hand.
+#
+# Note the package below sits in a personal home: project.  That is where the
+# packaging is being proven; a project owned by the CoolProp organisation is
+# the right home once it is.
+
+rebuild_on_release_tag:
+  steps:
+    - trigger_services:
+        project: home:jowr
+        package: coolprop
+  filters:
+    event: tag_push
+    # Release tags only.  Without this, every tag, including the gui-v* ones
+    # the GUI publishes on its own schedule, would refetch and rebuild.
+    branches:
+      only:
+        - /^v[0-9]+\.[0-9]+\.[0-9]+$/
