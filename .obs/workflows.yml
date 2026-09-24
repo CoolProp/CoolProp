@@ -2,25 +2,35 @@
 # webhook.  See dev/packaging/README.md for the token and webhook setup, which
 # is manual and has to be done once: this file on its own does nothing.
 #
-# What this automates: when a release tag is pushed, OBS re-runs the source
-# services of the package below.  Those services (dev/packaging/obs/_service)
-# download the release tarball from the GitHub release and verify its sha256,
-# so the package rebuilds against the artifact the release workflow published
-# rather than one somebody uploaded by hand.
+# What this automates: when a tag is pushed, OBS re-runs the source services of
+# the package below.  Those services (dev/packaging/obs/_service) download a
+# release tarball from GitHub and verify its sha256, so the package rebuilds
+# against the artifact the release workflow published rather than one somebody
+# uploaded by hand.
+#
+# There is deliberately no tag filter.  An earlier version of this file carried
+# one meant to exclude the gui-v* tags, which ship on their own schedule, and
+# claimed in a comment that it did so.  That claim was never verified, and two
+# things make it doubtful: OBS documents the branches filter for branch events
+# rather than tag pushes, and filter values are documented as literal strings,
+# so a regex would be compared character by character and match nothing.  Both
+# failure modes are silent, and they point in opposite directions: the filter
+# either does nothing or blocks everything.
+#
+# Firing on every tag is the safe behaviour to fall back on.  _service names an
+# explicit version, so a services run triggered by an unrelated tag re-fetches
+# the same pinned tarball, verifies the same checksum and changes nothing.  The
+# cost is a little OBS noise; the benefit is that the release path cannot be
+# silently switched off by a filter nobody tested.
 #
 # Note the package below sits in a personal home: project.  That is where the
 # packaging is being proven; a project owned by the CoolProp organisation is
 # the right home once it is.
 
-rebuild_on_release_tag:
+rebuild_on_tag:
   steps:
     - trigger_services:
         project: home:jowr
         package: coolprop
   filters:
     event: tag_push
-    # Release tags only.  Without this, every tag, including the gui-v* ones
-    # the GUI publishes on its own schedule, would refetch and rebuild.
-    branches:
-      only:
-        - /^v[0-9]+\.[0-9]+\.[0-9]+$/

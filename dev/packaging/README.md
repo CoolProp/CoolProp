@@ -476,8 +476,9 @@ exist, and both are created by hand, once:
    - Payload URL: `https://build.opensuse.org/trigger/workflow?id=<token-id>`
    - Content type: `application/json`
    - Secret: the secret from step 1
-   - Events: "Let me select individual events", then **Branch or tag creation**
-     and **Pushes**
+   - Events: "Let me select individual events", then **Pushes**. OBS derives
+     its `tag_push` event from a push whose ref is under `refs/tags/`, so the
+     separate "Branch or tag creation" event is not needed.
 
 3. `.obs/workflows.yml` has to be on the repository's default branch. OBS reads
    it from there, not from the branch that triggered the event.
@@ -489,6 +490,11 @@ Two things to check on the first tag rather than assume:
   If the first webhook fires and the tarball is not refreshed, that mode is
   why, and the fix is to drop `mode="manual"` from the two services so OBS may
   run them server side.
+- **How often it fires.** `.obs/workflows.yml` has no tag filter, so every
+  tag triggers a services run, including the `gui-v*` ones. That is harmless,
+  because `_service` names an explicit version and re-fetching it changes
+  nothing, but it is deliberate rather than an oversight; the file explains
+  why a filter was removed.
 - **Which project the workflow targets.** It currently names `home:jowr`, a
   personal project. That is the right place while the packaging is being
   proven, and the wrong place afterwards: a project owned by the CoolProp

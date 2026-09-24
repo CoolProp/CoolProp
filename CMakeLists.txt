@@ -629,6 +629,47 @@ elseif(FORCE_BITNESS_NATIVE)
 endif()
 
 #######################################
+#           BITNESS FLAG              #
+#-------------------------------------#
+# Decide ONCE whether -m32/-m64 can   #
+# be used, and let every target below #
+# use the answer.                     #
+#######################################
+
+# -m32 and -m64 pick between the two ABIs an x86 toolchain can both emit,
+# which is what FORCE_BITNESS_32 is for.  Other architectures have one ABI per
+# toolchain and reject the flag outright rather than ignoring it:
+#
+#     c++: error: unrecognized command-line option '-m64'          (aarch64)
+#     c++: error: unrecognized command-line option '-m32'          (armhf)
+#
+# Both were real OBS build failures.  Rather than guess from the processor
+# name, ask the compiler: a name list cannot know about every toolchain, and
+# CMAKE_SYSTEM_PROCESSOR is empty when a toolchain file does not set it.
+if(MSVC OR BITNESS STREQUAL "NATIVE")
+  set(COOLPROP_BITNESS_FLAG "")
+else()
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag("-m${BITNESS}" COOLPROP_CXX_ACCEPTS_BITNESS_FLAG)
+  if(COOLPROP_CXX_ACCEPTS_BITNESS_FLAG)
+    set(COOLPROP_BITNESS_FLAG "-m${BITNESS}")
+  else()
+    set(COOLPROP_BITNESS_FLAG "")
+    # BITNESS normally just describes CMAKE_SIZEOF_VOID_P, so dropping the
+    # flag changes nothing.  Being asked for a bitness the toolchain cannot
+    # produce is different, and is refused rather than silently ignored:
+    # ignoring it would hand back a library of the other bitness.
+    if(FORCE_BITNESS_32 OR FORCE_BITNESS_64)
+      message(
+        FATAL_ERROR
+          "FORCE_BITNESS_32/64 needs a compiler that accepts -m${BITNESS}, and "
+          "this one rejects it. Build for the bitness of the toolchain "
+          "instead, or use a toolchain file that targets the other one.")
+    endif()
+  endif()
+endif()
+
+#######################################
 #         SHARED POINTER              #
 #-------------------------------------#
 # In this section we define the       #
@@ -1544,8 +1585,10 @@ if(COOLPROP_R_MODULE)
 
   link_directories(${R_BIN_OUT})
   if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m${BITNESS}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m${BITNESS}")
+    set(CMAKE_CXX_FLAGS_RELEASE
+        "${CMAKE_CXX_FLAGS_RELEASE} ${COOLPROP_BITNESS_FLAG}")
+    set(CMAKE_CXX_FLAGS_DEBUG
+        "${CMAKE_CXX_FLAGS_DEBUG} ${COOLPROP_BITNESS_FLAG}")
   endif()
 
   add_definitions(-DNO_ERROR_CATCHING)
@@ -1652,8 +1695,9 @@ if(COOLPROP_JAVA_MODULE)
   endif()
 
   if(NOT MSVC)
-    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}"
-                                              LINK_FLAGS "-m${BITNESS}")
+    set_target_properties(
+      CoolProp PROPERTIES COMPILE_FLAGS "${COOLPROP_BITNESS_FLAG}"
+                          LINK_FLAGS "${COOLPROP_BITNESS_FLAG}")
   endif()
 
   add_dependencies(${app_name} generate_headers generate_examples)
@@ -1831,8 +1875,9 @@ if(COOLPROP_PHP_MODULE)
   endif()
 
   if(NOT MSVC)
-    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}"
-                                              LINK_FLAGS "-m${BITNESS}")
+    set_target_properties(
+      CoolProp PROPERTIES COMPILE_FLAGS "${COOLPROP_BITNESS_FLAG}"
+                          LINK_FLAGS "${COOLPROP_BITNESS_FLAG}")
   endif()
   add_dependencies(CoolProp generate_headers)
 
@@ -2067,15 +2112,15 @@ if(COOLPROP_MATHEMATICA_MODULE)
   # Set the bitness
   if(NOT MSVC)
     if(NOT "${BITNESS}" STREQUAL "NATIVE")
-      message(STATUS "Setting bitness flag -m${BITNESS}")
+      message(STATUS "Setting bitness flag ${COOLPROP_BITNESS_FLAG}")
       set_property(
         TARGET ${app_name}
         APPEND_STRING
-        PROPERTY COMPILE_FLAGS " -m${BITNESS}")
+        PROPERTY COMPILE_FLAGS " ${COOLPROP_BITNESS_FLAG}")
       set_property(
         TARGET ${app_name}
         APPEND_STRING
-        PROPERTY LINK_FLAGS " -m${BITNESS}")
+        PROPERTY LINK_FLAGS " ${COOLPROP_BITNESS_FLAG}")
     endif()
   endif()
 
