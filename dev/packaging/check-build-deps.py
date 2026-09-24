@@ -35,6 +35,8 @@ DSC = ROOT / "dev/packaging/obs/coolprop.dsc"
 SPEC = ROOT / "dev/packaging/obs/coolprop.spec"
 RULES = ROOT / "dev/packaging/obs/debian.rules"
 DEPENDENCIES = ROOT / "cmake/dependencies.cmake"
+CMAKELISTS = ROOT / "CMakeLists.txt"
+CHANGELOG = ROOT / "dev/packaging/obs/debian.changelog"
 WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 
 # COOLPROP_VENDOR_THIRD_PARTY=OFF, which every distribution build passes, makes
@@ -52,6 +54,72 @@ THIRD_PARTY = (
     ("libfmt-dev", "fmt-devel", False),
 )
 DEBIAN_THIRD_PARTY = {row[0] for row in THIRD_PARTY}
+
+
+def parse_upstream_version(text):
+    """Return the version make-release-tarball.sh will name the archive with.
+
+    CMakeLists.txt is the single source of truth: the four components there
+    decide the tarball name, so every recipe has to follow it rather than
+    restate it.  Returns None if any component cannot be read, because a
+    half-parsed version would be compared against and silently agree.
+    """
+    parts = {}
+    for name in ("MAJOR", "MINOR", "PATCH"):
+        match = re.search(
+            r"set\s*\(\s*COOLPROP_VERSION_{0}\s+([0-9]+)\s*\)".format(name),
+            text,
+        )
+        if not match:
+            return None
+        parts[name] = match.group(1)
+    # REVISION is "dev" between releases and empty on a release tag, so an
+    # empty match is a legitimate answer here and only a missing LINE is not.
+    revision = re.search(
+        r"set\s*\(\s*COOLPROP_VERSION_REVISION\s*([A-Za-z0-9]*)\s*\)", text
+    )
+    if revision is None:
+        return None
+    return "{0}.{1}.{2}".format(
+        parts["MAJOR"], parts["MINOR"], parts["PATCH"]
+    ), revision.group(1)
+
+
+def distro_version(numeric, revision):
+    """Render the version a distribution package should carry.
+
+    A pre-release has to sort BELOW the release it precedes.  Both RPM and dpkg
+    spell that with a tilde, and neither treats a bare suffix that way: dpkg
+    puts 8.0.1dev ABOVE 8.0.1, so a snapshot named that way would shadow the
+    release and block the upgrade to it.
+    """
+    return numeric if not revision else "{0}~{1}".format(numeric, revision)
+
+
+def parse_spec_versions(text):
+    """Return (upstream_version, Version) from the RPM spec."""
+    upstream = re.search(r"^%global\s+upstream_version\s+(\S+)", text, re.M)
+    version = re.search(r"^Version:\s*(\S+)", text, re.M)
+    return (
+        upstream.group(1) if upstream else None,
+        version.group(1) if version else None,
+    )
+
+
+def parse_dsc_version(text):
+    """Return (Version, tarball name) from the Debian source control file."""
+    version = re.search(r"^Version:\s*(\S+)", text, re.M)
+    tarball = re.search(r"^\s+\S+\s+\d+\s+(\S+)\s*$", text, re.M)
+    return (
+        version.group(1) if version else None,
+        tarball.group(1) if tarball else None,
+    )
+
+
+def parse_changelog_version(text):
+    """Return the version of the newest debian.changelog entry."""
+    match = re.match(r"^\S+\s+\(([^)]+)\)", text)
+    return match.group(1) if match else None
 
 
 def parse_eigen_floor(text):
@@ -252,6 +320,14 @@ def main():
         WORKFLOW.read_text(encoding="utf-8")
     )
     eigen_floor = parse_eigen_floor(DEPENDENCIES.read_text(encoding="utf-8"))
+    upstream = parse_upstream_version(CMAKELISTS.read_text(encoding="utf-8"))
+    spec_upstream, spec_version = parse_spec_versions(
+        SPEC.read_text(encoding="utf-8")
+    )
+    dsc_version, dsc_tarball = parse_dsc_version(DSC.read_text(encoding="utf-8"))
+    changelog_version = parse_changelog_version(
+        CHANGELOG.read_text(encoding="utf-8")
+    )
 
     options = {}
     for label, path in (
@@ -278,6 +354,12 @@ def main():
         ("coolprop.spec BuildRequires", spec_reqs or None),
         ("packaging_offline.yml apt-get install", workflow_pkgs),
         ("the Eigen floor in cmake/dependencies.cmake", eigen_floor),
+        ("the version in CMakeLists.txt", upstream),
+        ("%global upstream_version in coolprop.spec", spec_upstream),
+        ("Version: in coolprop.spec", spec_version),
+        ("Version: in coolprop.dsc", dsc_version),
+        ("the tarball name in coolprop.dsc", dsc_tarball),
+        ("the version in debian.changelog", changelog_version),
         ("packaging_offline.yml cmake options", workflow_opts),
         ("coolprop.spec cmake options", spec_opts),
         ("debian.rules cmake options", rules_opts),
@@ -377,6 +459,41 @@ def main():
                     "{0} {1}, but {2}".format(label, describe, expected)
                 )
 
+    # 5. Every recipe's version must follow CMakeLists.txt, which is what
+    #    make-release-tarball.sh names the archive from.  Four files restate
+    #    it, and a mismatch is not a subtle failure: rpmbuild cannot find the
+    #    unpacked directory, and dpkg-source refuses a changelog whose version
+    #    differs from the .dsc.  Both fail late, inside the build service.
+    numeric, revision = upstream
+    tarball_version = numeric + revision
+    wanted = distro_version(numeric, revision)
+
+    if spec_upstream != tarball_version:
+        problems.append(
+            "coolprop.spec builds from coolprop-{0}.tar.gz, but CMakeLists.txt "
+            "produces coolprop-{1}.tar.gz".format(spec_upstream, tarball_version)
+        )
+    if spec_version != wanted:
+        problems.append(
+            "coolprop.spec has Version: {0}, but CMakeLists.txt means "
+            "{1}".format(spec_version, wanted)
+        )
+    if not dsc_version.startswith(wanted + "-"):
+        problems.append(
+            "coolprop.dsc has Version: {0}, but CMakeLists.txt means {1} with a "
+            "Debian revision suffix".format(dsc_version, wanted)
+        )
+    if dsc_tarball != "coolprop-{0}.tar.gz".format(tarball_version):
+        problems.append(
+            "coolprop.dsc names {0}, but make-release-tarball.sh produces "
+            "coolprop-{1}.tar.gz".format(dsc_tarball, tarball_version)
+        )
+    if changelog_version != dsc_version:
+        problems.append(
+            "debian.changelog is {0} but coolprop.dsc is {1}; dpkg-source "
+            "rejects that".format(changelog_version, dsc_version)
+        )
+
     if problems:
         report(problems)
         return 1
@@ -384,6 +501,8 @@ def main():
     print("ok: the recipes agree on build dependencies and configure options")
     print("  debian.control / coolprop.dsc: " + format_declared(control_deps))
     print("  coolprop.spec:                 " + format_declared(spec_reqs))
+    print("  version:                       {0} (tarball coolprop-{1}.tar.gz)".format(
+        wanted, tarball_version))
     print("  shared cmake options:          "
           + ", ".join("{0}={1}".format(k, v)
                       for k, v in sorted(workflow_opts.items())))

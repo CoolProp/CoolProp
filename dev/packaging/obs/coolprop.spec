@@ -15,12 +15,25 @@
 %define sover 8
 
 Name:           coolprop
-Version:        8.0.1
+# The tarball name and the RPM version are deliberately not the same string.
+#
+# make-release-tarball.sh names the archive from CMakeLists.txt, which carries
+# COOLPROP_VERSION_REVISION=dev between releases, so a snapshot unpacks as
+# coolprop-8.0.1dev/.  That suffix cannot be the RPM Version: "8.0.1dev" sorts
+# ABOVE "8.0.1", so a snapshot would shadow the release it precedes and block
+# the upgrade.  RPM spells a pre-release with "~", which sorts below.
+#
+# Hence two values: upstream_version follows the tarball, Version follows RPM's
+# ordering rules.  On a release tag COOLPROP_VERSION_REVISION is empty and both
+# become plain 8.0.1.  dev/packaging/check-build-deps.py checks they agree with
+# CMakeLists.txt and with the Debian files.
+%global upstream_version 8.0.1dev
+Version:        8.0.1~dev
 Release:        0%{?dist}
 Summary:        Thermophysical property library for pure fluids, mixtures and humid air
 License:        MIT
 URL:            https://www.coolprop.org
-Source0:        coolprop-%{version}.tar.gz
+Source0:        coolprop-%{upstream_version}.tar.gz
 
 BuildRequires:  cmake >= 3.14
 BuildRequires:  gcc-c++
@@ -89,7 +102,7 @@ include root) are not shipped here: their names are too generic to put into
 %{_includedir}.
 
 %prep
-%autosetup -n coolprop-%{version}
+%autosetup -n coolprop-%{upstream_version}
 
 %build
 # COOLPROP_REQUIRE_VENDORED_DEPS makes the configure step fail if anything

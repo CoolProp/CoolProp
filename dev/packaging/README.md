@@ -277,19 +277,41 @@ osc add *
 osc commit -m "Initial CoolProp packaging"
 ```
 
-**The recipes carry placeholder values, on purpose, and nothing in CI checks
-them yet.** Fix these by hand for the first run, then automate it as described
-under "Keeping it alive" below:
+### Versions
 
-| File | Placeholder | Why it is there |
+`CMakeLists.txt` is the single source of truth.  `make-release-tarball.sh` names
+the archive from it, so between releases it emits `coolprop-8.0.1dev.tar.gz`,
+and the recipes follow.
+
+The distribution version is **not** the same string as the tarball version, and
+that is deliberate.  A pre-release has to sort *below* the release it precedes,
+and a bare suffix does the opposite:
+
+```
+$ dpkg --compare-versions 8.0.1~dev lt 8.0.1   # true
+$ dpkg --compare-versions 8.0.1dev  lt 8.0.1   # FALSE
+```
+
+so a snapshot called `8.0.1dev` would outrank the release and block the upgrade
+to it.  Both RPM and dpkg spell a pre-release with `~`.  Hence:
+
+| | between releases | on a release tag |
 |---|---|---|
-| `coolprop.spec` | `Version: 8.0.1` | the tree is `8.0.1dev`, so `make-release-tarball.sh` currently emits `coolprop-8.0.1dev.tar.gz` and `%autosetup -n coolprop-%{version}` will not find it |
-| `coolprop.dsc` | `Version: 8.0.1-1`, and a `Files:` line of zeros | OBS's `debtransform` normally rewrites the `Files:` stanza, so the zeros are expected to work, but that is unverified here |
-| `debian.changelog` | `(8.0.1-1)` | `dpkg-source` rejects a changelog version that does not match the tarball |
-| `_service` | 64 zeros for the checksum, and a release asset URL that does not exist yet | so `osc service manualrun` fails closed rather than fetching something unchecked |
+| tarball | `coolprop-8.0.1dev.tar.gz` | `coolprop-8.0.1.tar.gz` |
+| `coolprop.spec` | `%global upstream_version 8.0.1dev`, `Version: 8.0.1~dev` | both `8.0.1` |
+| `coolprop.dsc` | `Version: 8.0.1~dev-1` | `8.0.1-1` |
+| `debian.changelog` | `(8.0.1~dev-1)` | `(8.0.1-1)` |
 
-Tag a release, or set `COOLPROP_VERSION_REVISION` to empty in `CMakeLists.txt`,
-and all four line up at `8.0.1`.
+`dev/packaging/check-build-deps.py` checks all four against `CMakeLists.txt` on
+every CI run, so they cannot drift apart silently.  To cut a release, set
+`COOLPROP_VERSION_REVISION` to empty and update the four; the checker tells you
+if you miss one.
+
+**`_service` is still a placeholder**: 64 zeros for the checksum and a release
+asset URL that does not exist yet, so `osc service manualrun` fails closed
+rather than fetching something unchecked.  It is the tagged-release path and is
+not used for a snapshot trial, where the tarball is added by hand with
+`osc add`.
 
 ### 3. Choose build targets
 
