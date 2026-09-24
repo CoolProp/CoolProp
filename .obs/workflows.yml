@@ -8,8 +8,22 @@
 # rebuilds against the artifact the release workflow published rather than one
 # somebody uploaded by hand.
 #
-# As things stand it does nothing, for three separate reasons.  They are
-# written down because the file otherwise reads as though the release path were
+# This is the RELEASE path, and it fires on tags only.  Day to day packaging
+# work goes through .github/workflows/packaging_obs.yml instead, which builds
+# the tarball and pushes it and the recipes to OBS with osc, then fails the run
+# if any OBS target fails.  That is where an OBS result in the GitHub checks
+# list comes from.  Note that workflow is filtered to the packaging paths, so
+# it is a check on the recipes and the build system rather than on every change
+# to the library.
+#
+# The two cannot be merged, and the ordering is why.  A webhook fires when
+# GitHub receives the push, which is before CI has built or uploaded anything,
+# so a push-triggered rebuild here would build the PREVIOUS sources and report
+# that result against the NEW commit.  A green tick for code that was never
+# built is worse than no tick, so the filter below stays on tag_push.
+#
+# As things stand this release path does nothing, for three separate reasons.
+# They are written down because the file otherwise reads as though it were
 # already wired up.
 #
 #   1. Both services in _service carry mode="manual", and a server-side

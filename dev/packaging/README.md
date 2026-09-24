@@ -351,10 +351,13 @@ if you miss one.
 **`_service` is still a placeholder**: 64 zeros for the checksum and a release
 asset URL that does not exist yet, so `osc service manualrun` fails closed
 rather than fetching something unchecked.  It is the tagged-release path and is
-not used for a snapshot trial, where the tarball is added by hand with
-`osc add`.
+not used for a snapshot trial, where the tarball is added with `osc add` --
+by hand for a one-off, or by the CI job in section 6, which does the same
+thing on every push.
 
-Do not do both in the same package directory.  `coolprop.dsc` carries no
+Do not do both in the same package directory.  `dev/packaging/obs-upload.sh`
+handles this by removing every `*.tar.gz` from the checkout before copying the
+new one in, and by never uploading `_service`.  `coolprop.dsc` carries no
 `Debtransform-Tar:` line, so OBS's `debtransform` finds the source archive by
 scanning the directory, and it aborts with "Too many files looking like a
 usable source tarball" when a hand-added `coolprop-8.0.1dev.tar.gz` sits beside
@@ -453,7 +456,99 @@ sudo zypper install libcoolprop-devel
 For Debian/Ubuntu the project page's "Go to download repository" link gives the
 exact `deb` line and the signing key.
 
-### 6. Rebuilding automatically from GitHub
+### 6. Building on OBS from CI (the testing loop)
+
+`.github/workflows/packaging_obs.yml` is how the packaging is exercised day to
+day. On a push that touches the build system or this directory it builds the
+release tarball, pushes it **and every recipe file in `dev/packaging/obs/`** to
+the OBS package with `osc`, waits for the builds, and fails the run if any
+target failed. The OBS outcome therefore shows up as an ordinary check on the
+commit, next to the other CI jobs.
+
+That replaces the hand upload. The tarball and the spec go up together, so a
+spec change is always tested against the code it belongs with. Uploading a new
+spec on top of an old tarball is the mistake that cost a full round of
+debugging on the `-m32`/`-m64` failures, and this makes it impossible.
+
+Setup, once. The job is **inert until `OBS_PROJECT` is set**, so nothing
+happens in a fork or in a clone with no OBS package to push to.
+
+| Kind | Name | Value |
+|---|---|---|
+| Variable | `OBS_PROJECT` | e.g. `home:jowr`. Setting this is what switches the job on. |
+| Variable | `OBS_PACKAGE` | Optional, defaults to `coolprop`. |
+| Variable | `OBS_APIURL` | Optional, defaults to `https://api.opensuse.org`. |
+| Secret | `OBS_USERNAME` | Your OBS account name. |
+| Secret | `OBS_PASSWORD` | Your OBS password. |
+
+Set these under **Settings -> Secrets and variables -> Actions**, on the
+Variables and Secrets tabs respectively. `osc` reads the credentials from the
+environment, so neither value appears in a command line.
+
+No `oscrc` is written on the runner, but only because the script sets
+`OSC_CONFIG=/dev/null`. That is not a tidiness measure. osc resolves its config
+file before it consults the environment, so on a machine with no
+`~/.config/osc/oscrc` it announces that it is going to create one and blocks
+waiting for a username on stdin; the environment credentials are never reached.
+Pointing `OSC_CONFIG` at `/dev/null` makes osc start from an empty config and
+use them.
+
+If `OBS_PROJECT` is set but the credentials are missing, the run fails with a
+clear message rather than skipping. That is deliberate: a packaging gate that
+quietly does nothing is worse than one that is switched off, because it still
+shows a green tick.
+
+Two behaviours worth knowing before the first run:
+
+- **An unresolvable target fails the run.** `osc results --fail-on-error`
+  treats `failed`, `broken` and `unresolvable` as failures, so a
+  `BuildRequires:` that does not exist on a target (the reason CentOS 8 Stream
+  and possibly Leap's `gcc13-c++` fall over) turns the check red rather than
+  passing quietly. `excluded` and `disabled` are not failures, so a repository
+  that does not build a given architecture is fine.
+- **A rebuild that OBS never reacts to fails the run.** After the commit there
+  is a window where OBS still reports the previous build as finished, and
+  reading results in that window would pass on stale data. So when the sources
+  changed, the script snapshots the build state before committing and then
+  waits until OBS either marks the package dirty or reports something different
+  from that snapshot, and treats running out of time as a failure. Comparing
+  against a snapshot rather than looking for failure codes is deliberate: this
+  package already has failing targets, and any check that simply looked for a
+  failed state would match the leftovers from the previous build on its first
+  poll and report those instead. When the sources did NOT change, there is
+  nothing for OBS to react to, and the run reports the existing results without
+  waiting.
+- **A result list with no rows fails the run.** `--fail-on-error` decides from
+  the rows it iterated, so zero rows exits 0. A package with no build targets
+  enabled, or a mistyped `OBS_PACKAGE`, would otherwise look like a clean
+  build, so the row count is asserted separately.
+
+The job installs `osc` from PyPI rather than from apt, and that is not a
+preference. Ubuntu 24.04 ships osc 0.169.1, while reading credentials from
+environment variables arrived in osc 1.6.0 and `results --fail-on-error` in
+1.8.0. With the apt version the job would prompt for a password and would never
+report a failing target, so the pin must stay at or above those versions.
+
+Concurrency is serialised on one group, because a single OBS package cannot
+build two commits at once. A run that is superseded by a newer push is
+cancelled rather than queued.
+
+Two limits to be aware of before leaning on this:
+
+- **It fires on packaging changes, not on code changes.** The `paths:` filter
+  covers `CMakeLists.txt`, `cmake/**`, `dev/packaging/**` and
+  `dev/generate_headers.py`. A change under `src/` or `include/` does not
+  trigger an OBS build. That keeps the loop fast while the packaging is what is
+  being worked on; widen the filter if OBS should also be a check on the
+  library itself.
+- **All triggering branches push to the same OBS package.** `OBS_PROJECT` names
+  one project, and `home:jowr` is a published repository that users install
+  from, so a branch push replaces what is published there until the next push.
+  While that is only ever your own home project this is a nuisance rather than
+  a hazard, but point `OBS_PROJECT` at a throwaway staging project if branch
+  testing and a repository other people consume ever become the same place.
+
+### 7. Rebuilding automatically from GitHub (the release path)
 
 `.obs/workflows.yml` in the repository root tells OBS what to do when GitHub
 calls it: on a release tag it re-runs the package's source services, which
