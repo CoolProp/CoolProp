@@ -260,6 +260,36 @@ option(COOLPROP_BUILD_SVDSBTL_PROFILE
 # Force C++11 since lambdas are used in CPStrings.h
 # In the future, we may want to force C++14 since std::make_unique is used in DataStructures.cpp
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# CoolProp uses <filesystem> in src/CPfilepaths.cpp, include/CoolProp/detail/
+# atomic_write.h and the SBTL sources, and links no separate filesystem library.
+# GCC only ships <filesystem> from 8, and only stops needing -lstdc++fs for it
+# at 9, so 9 is the real floor.
+#
+# Say so here rather than letting it surface later.  GCC 7.5, which openSUSE
+# Leap 15.x still installs as its default compiler, announces partial C++17
+# support and then fails well into the build with
+#
+#     src/CPfilepaths.cpp:11:10: fatal error: filesystem: No such file or
+#     directory
+#
+# followed by an unrelated-looking overload resolution error in
+# SVDEvaluator.h.  Neither names the actual problem.  That was a real OBS
+# build failure.
+#
+# Only GNU is checked.  The floors for MSVC, Clang and AppleClang are easy to
+# state wrongly and none of the toolchains CoolProp is built with come close
+# to them, so an unverified check there would risk breaking builds that work
+# rather than explaining one that does not.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION
+                                            VERSION_LESS 9)
+  message(
+    FATAL_ERROR
+      "CoolProp needs GCC 9 or newer for std::filesystem, and this is GCC "
+      "${CMAKE_CXX_COMPILER_VERSION}. On openSUSE Leap 15.x install gcc13-c++ "
+      "and configure with -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13.")
+endif()
 
 
 # Define -DCOOLPROP_ASAN=ON to enable the option of using address sanitizer of clang

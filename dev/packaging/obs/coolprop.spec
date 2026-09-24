@@ -55,7 +55,20 @@ URL:            https://www.coolprop.org
 Source0:        coolprop-%{upstream_version}.tar.gz
 
 BuildRequires:  cmake >= 3.14
+# CoolProp uses std::filesystem, so it needs GCC 9 or newer; CMakeLists.txt
+# states that floor and refuses anything older.  Leap 15.x still installs GCC
+# 7.5 as its default compiler, where the build died on
+# "fatal error: filesystem: No such file or directory", so that distribution
+# gets a newer compiler by name, exactly as it gets a newer Python.
+%if 0%{?suse_version} && 0%{?suse_version} < 1600
+BuildRequires:  gcc13-c++
+%global cp_cc   %{_bindir}/gcc-13
+%global cp_cxx  %{_bindir}/g++-13
+%else
 BuildRequires:  gcc-c++
+%global cp_cc   %{_bindir}/gcc
+%global cp_cxx  %{_bindir}/g++
+%endif
 BuildRequires:  pkgconfig
 # COOLPROP_VENDOR_THIRD_PARTY=OFF below resolves Eigen and fmt with
 # find_package, so they must be present at build time as well as at
@@ -166,7 +179,9 @@ include root) are not shipped here: their names are too generic to put into
     -DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
     -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
     -DCOOLPROP_NO_EXAMPLES=ON \
-    -DPython_EXECUTABLE=%{cp_python}
+    -DPython_EXECUTABLE=%{cp_python} \
+    -DCMAKE_C_COMPILER=%{cp_cc} \
+    -DCMAKE_CXX_COMPILER=%{cp_cxx}
 
 %cmake_build
 
