@@ -38,6 +38,8 @@ DEPENDENCIES = ROOT / "cmake/dependencies.cmake"
 CMAKELISTS = ROOT / "CMakeLists.txt"
 GITATTRIBUTES = ROOT / ".gitattributes"
 CHANGELOG = ROOT / "dev/packaging/obs/debian.changelog"
+PYPROJECT = ROOT / "pyproject.toml"
+SERVICE = ROOT / "dev/packaging/obs/_service"
 WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 
 # COOLPROP_VENDOR_THIRD_PARTY=OFF, which every distribution build passes, makes
@@ -228,6 +230,136 @@ def lto_is_disabled(spec_text, rules_text):
     ):
         missing.append("debian.rules (optimize=-lto)")
     return missing
+
+
+# The four places dev/packaging/obs/_service names a version.  All of them
+# have to say the same thing, and that thing is the RELEASE this development
+# series becomes, not the dev snapshot: a snapshot is never published as a
+# GitHub release, so there is nothing for download_url to fetch.
+SERVICE_VERSION_SITES = (
+    "the release tag in the download path",
+    "the tarball name in the download path",
+    "the download_url filename",
+    "the verify_file file",
+)
+
+
+def parse_service_versions(text):
+    """Return {where: version} for every version _service names.
+
+    _service is the bootstrap path a packager runs by hand with
+    "osc service manualrun": it downloads a published release tarball from
+    GitHub and verifies its sha256.  Nothing else in this script looked at
+    it, so its version could sit at an old release while CMakeLists.txt moved
+    on, and the first symptom would be a packager fetching the wrong tarball
+    or a 404.
+
+    A site that cannot be read is simply absent from the returned dict, and
+    the caller treats that as a failure.  Quietly returning fewer sites than
+    there are would make this check pass by finding nothing, which is the
+    fail-open this whole script exists to prevent.
+    """
+    found = {}
+
+    path = re.search(r'<param\s+name="path">([^<]*)</param>', text)
+    if path:
+        target = path.group(1).strip()
+        tag = re.search(r"/releases/download/v([0-9][^/]*)/", target)
+        if tag:
+            found[SERVICE_VERSION_SITES[0]] = tag.group(1)
+        name = re.search(r"/coolprop-([0-9][^/]*?)\.tar\.gz$", target)
+        if name:
+            found[SERVICE_VERSION_SITES[1]] = name.group(1)
+
+    for site, param in (
+        (SERVICE_VERSION_SITES[2], "filename"),
+        (SERVICE_VERSION_SITES[3], "file"),
+    ):
+        match = re.search(
+            r'<param\s+name="{0}">\s*coolprop-([0-9].*?)\.tar\.gz\s*</param>'.format(
+                param
+            ),
+            text,
+        )
+        if match:
+            found[site] = match.group(1)
+
+    return found
+
+
+def parse_python_floors(
+    pyproject_text, cmakelists_text, spec_text, control_text
+):
+    """Return the minimum Python each file demands, as (major, minor) tuples.
+
+    dev/generate_headers.py runs during the build and uses builtin generics
+    such as list[Path], so it needs Python 3.9.  That floor is now written in
+    three places: requires-python in pyproject.toml, the find_package(Python
+    ...) call that makes CMake skip an older interpreter, and the spec's
+    BuildRequires so the build root actually has one.  Leap 15.x ships 3.6 and
+    did fail on exactly this, so the three have to keep agreeing.
+
+    Returns {where: (major, minor)}.  A file whose floor cannot be read is
+    absent from the result and the caller treats that as a failure, since a
+    floor nothing can read is a floor nothing is checking.
+    """
+    found = {}
+
+    match = re.search(
+        r'^requires-python\s*=\s*"[><=~^ ]*([0-9]+)\.([0-9]+)',
+        pyproject_text,
+        re.M,
+    )
+    if match:
+        found["pyproject.toml requires-python"] = (
+            int(match.group(1)),
+            int(match.group(2)),
+        )
+
+    match = re.search(
+        r"^[ \t]*find_package\([ \t]*Python[ \t]+([0-9]+)\.([0-9]+)",
+        cmakelists_text,
+        re.M,
+    )
+    if match:
+        found["the find_package(Python ...) floor in CMakeLists.txt"] = (
+            int(match.group(1)),
+            int(match.group(2)),
+        )
+
+    # The spec asks for Python in several branches, one per distribution
+    # family: an explicit ">= 3.9", or a versioned package name such as
+    # python311 where the version is in the name.  The weakest branch is what
+    # matters, because that is the one that decides whether some build root
+    # ends up too old.
+    spec_floors = []
+    for match in re.finditer(
+        r"^BuildRequires:[ \t]+python3[-a-z]*[ \t]*>=[ \t]*([0-9]+)\.([0-9]+)",
+        spec_text,
+        re.M,
+    ):
+        spec_floors.append((int(match.group(1)), int(match.group(2))))
+    for match in re.finditer(
+        r"^BuildRequires:[ \t]+python([0-9])([0-9]+)[ \t]*$", spec_text, re.M
+    ):
+        spec_floors.append((int(match.group(1)), int(match.group(2))))
+    if spec_floors:
+        found["the weakest python BuildRequires in coolprop.spec"] = min(
+            spec_floors
+        )
+
+    # Debian's floor matters for the same reason: Ubuntu 20.04 still ships
+    # Python 3.8, which would fail exactly as Leap 15.x did.
+    match = re.search(
+        r"python3[ \t]*\([ \t]*>=[ \t]*([0-9]+)\.([0-9]+)", control_text
+    )
+    if match:
+        found["the python3 Build-Depends in debian.control"] = (
+            int(match.group(1)),
+            int(match.group(2)),
+        )
+
+    return found
 
 
 def parse_eigen_floor(text):
@@ -434,6 +566,15 @@ def main():
     lto_missing = lto_is_disabled(
         SPEC.read_text(encoding="utf-8"), RULES.read_text(encoding="utf-8")
     )
+    service_versions = parse_service_versions(
+        SERVICE.read_text(encoding="utf-8")
+    )
+    python_floors = parse_python_floors(
+        PYPROJECT.read_text(encoding="utf-8"),
+        CMAKELISTS.read_text(encoding="utf-8"),
+        SPEC.read_text(encoding="utf-8"),
+        CONTROL.read_text(encoding="utf-8"),
+    )
     upstream = parse_upstream_version(CMAKELISTS.read_text(encoding="utf-8"))
     spec_upstream, spec_version = parse_spec_versions(
         SPEC.read_text(encoding="utf-8")
@@ -624,6 +765,53 @@ def main():
                 changelog_version, dsc_version
             )
         )
+
+    expected_python = (
+        "pyproject.toml requires-python",
+        "the find_package(Python ...) floor in CMakeLists.txt",
+        "the weakest python BuildRequires in coolprop.spec",
+        "the python3 Build-Depends in debian.control",
+    )
+    unread = [w for w in expected_python if w not in python_floors]
+    if unread:
+        problems.append(
+            "could not read the Python floor from {0}; nothing then checks "
+            "that the build root has an interpreter new enough to run "
+            "dev/generate_headers.py".format(", ".join(unread))
+        )
+    else:
+        python_wanted = python_floors["pyproject.toml requires-python"]
+        too_low = sorted(
+            "{0} allows {1}.{2}".format(where, *python_floors[where])
+            for where in expected_python
+            if python_floors[where] < python_wanted
+        )
+        if too_low:
+            problems.append(
+                "dev/generate_headers.py needs Python {0}.{1}, but {2}".format(
+                    python_wanted[0], python_wanted[1], "; ".join(too_low)
+                )
+            )
+
+    missing_sites = [
+        site for site in SERVICE_VERSION_SITES if site not in service_versions
+    ]
+    if missing_sites:
+        problems.append(
+            "_service: could not read {0}; the version there is then checked "
+            "by nothing".format(", ".join(missing_sites))
+        )
+    else:
+        wrong = sorted(
+            "{0} says {1}".format(site, service_versions[site])
+            for site in SERVICE_VERSION_SITES
+            if service_versions[site] != numeric
+        )
+        if wrong:
+            problems.append(
+                "_service must name the release this series becomes, {0}, but "
+                "{1}".format(numeric, "; ".join(wrong))
+            )
 
     if lto_missing:
         problems.append(
