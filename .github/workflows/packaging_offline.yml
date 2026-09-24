@@ -279,6 +279,33 @@ jobs:
           cc "${work}/main.c" ${cflags} ${libs} -o "${work}/consumer_pc"
           LD_LIBRARY_PATH="${libdir}" "${work}/consumer_pc"
 
+          # The C API needs no third-party header, so compiling only it hides
+          # a .pc that fails to name Eigen and fmt.  The installed C++ headers
+          # do include them, so build a C++ consumer through pkg-config too.
+          # dev/ci/cmake-consumer/cpp_api.cpp includes numerics/PolyMath.h
+          # precisely to pull the transitive Eigen include in, so it fails
+          # when the flags are incomplete.
+          #
+          # This build asks for COOLPROP_VENDOR_THIRD_PARTY=OFF, so the
+          # library compiled against the system Eigen and fmt and coolprop.pc
+          # has to require them; with vendoring ON the .pc names the bundled
+          # copies in Cflags instead.  Assert the shape that matches this
+          # build before relying on the compile.
+          if ! grep -qx 'Requires: eigen3 fmt' "${libdir}/pkgconfig/coolprop.pc"; then
+            echo "coolprop.pc does not require the system Eigen and fmt that" >&2
+            echo "COOLPROP_VENDOR_THIRD_PARTY=OFF made it compile against:" >&2
+            grep -E '^(Requires|Cflags):' "${libdir}/pkgconfig/coolprop.pc" >&2
+            exit 1
+          fi
+
+          cpp_cflags="$(pkg-config --define-variable=prefix="${root}" --cflags coolprop)"
+          cpp_libs="$(pkg-config --define-variable=prefix="${root}" --libs coolprop)"
+          echo "c++ cflags: ${cpp_cflags}"
+          # shellcheck disable=SC2086
+          c++ -std=c++17 "${COOLPROP_SRC}/dev/ci/cmake-consumer/cpp_api.cpp" \
+            ${cpp_cflags} ${cpp_libs} -o "${work}/consumer_pc_cxx"
+          LD_LIBRARY_PATH="${libdir}" "${work}/consumer_pc_cxx"
+
           echo "== via find_package(CoolProp) =="
           cat > "${work}/CMakeLists.txt" <<'EOF'
           cmake_minimum_required(VERSION 3.14)

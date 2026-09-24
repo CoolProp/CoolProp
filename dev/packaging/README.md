@@ -281,25 +281,31 @@ and all four line up at `8.0.1`.
 
 ### 3. Choose build targets
 
-In the web UI, **Repositories -> Add from a distribution**.  A reasonable
-starting set:
+In the web UI, **Repositories -> Add from a distribution**.
 
-| Repository | Gives you |
+**Take the exact repository names from that dialog rather than from this
+file.** Distribution releases go end of life on their own schedule, so any list
+written down here is wrong within a year or two, and a packager who copies a
+stale name selects a target that no longer receives updates. What follows is
+therefore the shape of a reasonable set, not a list to copy:
+
+| Pick | Why |
 |---|---|
-| `openSUSE_Tumbleweed` | rolling openSUSE |
-| `openSUSE_Leap_15.6` | current Leap |
-| `Fedora_41`, `Fedora_42` | Fedora |
-| `CentOS_9_Stream` | RHEL-compatible; needs EPEL in the project's repository list, see below |
-| `Debian_12`, `Debian_13` | Debian stable and next |
-| `xUbuntu_24.04`, `xUbuntu_22.04` | Ubuntu LTS |
-| `Arch` | Arch (community-maintained is usually better; see AUR below) |
-
-`eigen3-devel` and `fmt-devel` are not in the RHEL or CentOS Stream base
-repositories, they come from EPEL.  The `CentOS_9_Stream` target is therefore
-unresolvable until EPEL is added to the OBS project's repository list.  The
-openSUSE and Fedora targets carry both packages themselves.
+| `openSUSE_Tumbleweed` | rolling openSUSE, and the one to develop against |
+| the current openSUSE Leap | the regular-release openSUSE users actually run |
+| the two newest Fedora releases | Fedora supports roughly the last two |
+| the current CentOS Stream | stands in for RHEL and its rebuilds; needs EPEL, see below |
+| Debian stable, and oldstable while it is still supported | what most Debian users have |
+| the Ubuntu LTS releases still in standard support | Ubuntu users mostly track LTS |
+| `Arch` | possible, though the AUR below is the better home for it |
 
 Enable `x86_64` everywhere and `aarch64` where the distribution offers it.
+
+`eigen3-devel` and `fmt-devel` are not in the RHEL or CentOS Stream base
+repositories, they come from EPEL, so a CentOS Stream target is unresolvable
+until EPEL is added to the OBS project's repository list.  The openSUSE and
+Fedora targets carry both packages themselves.
+
 Each repository can be added from the command line too, by editing the project
 metadata with `osc meta prj -e home:<username>`.
 
@@ -314,8 +320,11 @@ waiting on the server and gives you the full log:
 
 ```bash
 osc build openSUSE_Tumbleweed x86_64 coolprop.spec
-osc build Debian_12 x86_64 coolprop.dsc
+osc build Debian_13 x86_64 coolprop.dsc
 ```
+
+Substitute whichever target names you actually enabled above; the Debian one
+here is only an example.
 
 The first run downloads a base chroot and needs root (`osc build` uses `sudo`
 for that, or set `su-wrapper` in `oscrc`).

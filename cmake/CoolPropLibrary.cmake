@@ -549,16 +549,56 @@ function(coolprop_add_library_targets)
       endif()
     endforeach()
 
-    # Requires: stays empty until COOLPROP_USE_SYSTEM_DEPS lands (GH #3388
-    # step 2).  The installed C++ headers include <Eigen/Dense>, but naming
-    # eigen3 here would assert a version compatibility nobody has established;
-    # with COOLPROP_VENDOR_THIRD_PARTY=ON the bundled copy is used instead.
-    # Override with -DCOOLPROP_PC_REQUIRES="eigen3" once that is settled.
-    set(COOLPROP_PC_REQUIRES "${COOLPROP_PC_REQUIRES}")
+    # The installed C++ headers are not self-contained: they include
+    # <Eigen/Dense>, and <fmt/format.h> unless the consumer defines NO_FMTLIB.
+    # A consumer using pkg-config has to be given those include paths, or the
+    # C++ API simply does not compile for them.  Where they come from depends
+    # on COOLPROP_VENDOR_THIRD_PARTY, so the two cases are answered
+    # differently, and a -DCOOLPROP_PC_REQUIRES=... override still wins.
+    if(NOT DEFINED COOLPROP_PC_REQUIRES)
+      if(COOLPROP_VENDOR_THIRD_PARTY)
+        # The bundled copies are installed under the CoolProp include tree and
+        # named in Cflags below, so nothing external is required.
+        set(COOLPROP_PC_REQUIRES "")
+      else()
+        # The build resolved these with find_package, so the consumer compiles
+        # against the same system copies and needs their flags.  Both are
+        # header-only here, hence Requires rather than Requires.private: the
+        # include path is needed to compile, not just to link.  The recipes
+        # that pass COOLPROP_VENDOR_THIRD_PARTY=OFF already depend on the
+        # matching -dev packages, so these .pc files are present.
+        set(COOLPROP_PC_REQUIRES "eigen3 fmt")
+      endif()
+    endif()
+
+    set(COOLPROP_PC_CFLAGS "-I\${includedir}")
+    if(COOLPROP_VENDOR_THIRD_PARTY)
+      # Mirrors the INSTALL_INTERFACE include directories of the
+      # coolprop_eigen_headers and coolprop_fmt_headers targets, so a
+      # pkg-config consumer and a find_package consumer see the same headers.
+      string(APPEND COOLPROP_PC_CFLAGS
+             " -I\${includedir}/CoolProp/third_party/eigen"
+             " -I\${includedir}/CoolProp/third_party/fmt")
+    endif()
+
+    # Libs.private is what `pkg-config --static` adds.  It has to be emitted
+    # whenever a static archive is installed, not only when the archive is the
+    # only artifact: a package carrying both still lets a consumer ask for the
+    # static one.  CMAKE_DL_LIBS is a list of library NAMES ("dl" on Linux,
+    # empty on platforms where dlopen is in libc), so each entry needs turning
+    # into a linker flag; passing a bare "dl" through would make pkg-config
+    # hand the compiler a filename.
     set(COOLPROP_PC_LIBS_PRIVATE "")
-    if(_static_target AND NOT _shared_target)
-      # A static-only package makes the consumer link our private deps too.
-      set(COOLPROP_PC_LIBS_PRIVATE "-lpthread ${CMAKE_DL_LIBS}")
+    if(_static_target)
+      set(_pc_private "-lpthread")
+      foreach(_dl_lib IN LISTS CMAKE_DL_LIBS)
+        if(_dl_lib MATCHES "^-")
+          string(APPEND _pc_private " ${_dl_lib}")
+        else()
+          string(APPEND _pc_private " -l${_dl_lib}")
+        endif()
+      endforeach()
+      set(COOLPROP_PC_LIBS_PRIVATE "${_pc_private}")
     endif()
 
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/coolprop.pc.in"

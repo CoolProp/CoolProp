@@ -38,50 +38,68 @@ WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 
 # COOLPROP_VENDOR_THIRD_PARTY=OFF, which every distribution build passes, makes
 # cmake/dependencies.cmake resolve these two with find_package instead of CPM,
-# so both must be installed at build time.  Names differ per ecosystem.
-DEBIAN_THIRD_PARTY = {"libeigen3-dev", "libfmt-dev"}
-RPM_THIRD_PARTY = {"eigen3-devel", "fmt-devel"}
+# so both must be installed at build time.  Names differ per ecosystem, and so
+# does the syntax of a version bound, hence one row per dependency.
+#
+# The bound matters as much as the name.  cmake/dependencies.cmake hard-fails
+# below Eigen 3.4 and the exported CoolPropConfig.cmake repeats that floor, so
+# a recipe naming eigen3 without the bound describes a build that resolves
+# happily and then dies in the middle of compiling.
+THIRD_PARTY = (
+    # debian name, rpm name, the bound every recipe must state (None = any)
+    ("libeigen3-dev", "eigen3-devel", ">= 3.4"),
+    ("libfmt-dev", "fmt-devel", None),
+)
+DEBIAN_THIRD_PARTY = {row[0] for row in THIRD_PARTY}
 
 
 def parse_build_depends(text):
-    """Return the package names in an RFC-822 Build-Depends field.
+    """Return {package name: version bound} for an RFC-822 Build-Depends field.
 
     Handles both shapes we use: the one-line form in coolprop.dsc and the
     continuation-line form in debian.control, where following lines start
-    with whitespace.  Version constraints such as "(>= 3.4)" are stripped;
-    this compares which packages are declared, not their bounds.
+    with whitespace.  The bound is normalised to "<operator> <version>", or
+    None where the entry states none, because dropping it would let a recipe
+    lose "(>= 3.4)" without this checker noticing.
     """
     match = re.search(
         r"^Build-Depends:(.*?)(?=^\S)", text, re.MULTILINE | re.DOTALL
     )
     if not match:
         return None
-    names = set()
+    declared = {}
     for entry in match.group(1).split(","):
         entry = entry.strip()
         if not entry:
             continue
-        # Drop a version constraint and any architecture qualifier.
+        # The name ends at the first space, bracket or architecture qualifier.
         name = re.split(r"[\s(\[]", entry, maxsplit=1)[0].strip()
-        if name:
-            names.add(name)
-    return names
+        if not name:
+            continue
+        bound = re.search(r"\(\s*([<>=]+)\s*([^)]+?)\s*\)", entry)
+        declared[name] = (
+            "{0} {1}".format(bound.group(1), bound.group(2)) if bound else None
+        )
+    return declared
 
 
 def parse_build_requires(text):
-    """Return the package names on BuildRequires lines in an RPM spec.
+    """Return {package name: version bound} for a spec's BuildRequires lines.
 
     Lines inside %if blocks are collected too: this asks what the spec can
-    declare, not what one distribution ends up with.
+    declare, not what one distribution ends up with.  As above, the bound is
+    kept rather than discarded.
     """
-    names = set()
+    declared = {}
     for line in text.splitlines():
         if not line.startswith("BuildRequires:"):
             continue
         entry = line.split(":", 1)[1].strip()
-        # "eigen3-devel >= 3.4" and "cmake >= 3.14" both reduce to the name.
-        names.add(entry.split()[0])
-    return names
+        parts = entry.split(None, 1)
+        if not parts:
+            continue
+        declared[parts[0]] = parts[1].strip() if len(parts) > 1 else None
+    return declared
 
 
 def parse_workflow_apt_packages(text):
@@ -153,6 +171,19 @@ def parse_distro_cmake_options(text):
     return {name: value.strip("\"'") for name, value in pairs}
 
 
+def format_declared(declared):
+    """Render a {name: bound} mapping as one readable line."""
+    return ", ".join(
+        name if bound is None else "{0} {1}".format(name, bound)
+        for name, bound in sorted(declared.items())
+    )
+
+
+def describe_bound(bound):
+    """Render a version bound for a diagnostic, including its absence."""
+    return "without a version bound" if bound is None else "with " + bound
+
+
 def main():
     problems = []
 
@@ -200,38 +231,57 @@ def main():
         report(problems)
         return 1
 
-    # 1. The two Debian declarations must be identical.  They describe one
-    #    package built one way; OBS reads the .dsc and dpkg reads the control.
-    if control_deps != dsc_deps:
-        only_control = sorted(control_deps - dsc_deps)
-        only_dsc = sorted(dsc_deps - control_deps)
-        if only_control:
+    # 1. The two Debian declarations must be identical, bounds included.  They
+    #    describe one package built one way; OBS reads the .dsc and dpkg reads
+    #    the control, so a bound present in only one of them is a real skew.
+    for name in sorted(set(control_deps) | set(dsc_deps)):
+        if name not in dsc_deps:
             problems.append(
-                "in debian.control but not coolprop.dsc: "
-                + ", ".join(only_control)
+                "in debian.control but not coolprop.dsc: " + name
             )
-        if only_dsc:
+        elif name not in control_deps:
             problems.append(
-                "in coolprop.dsc but not debian.control: " + ", ".join(only_dsc)
+                "in coolprop.dsc but not debian.control: " + name
+            )
+        elif control_deps[name] != dsc_deps[name]:
+            problems.append(
+                "{0} is {1} in debian.control but {2} in coolprop.dsc".format(
+                    name,
+                    describe_bound(control_deps[name]),
+                    describe_bound(dsc_deps[name]),
+                )
             )
 
     # 2. Every recipe must declare the third-party packages that
-    #    COOLPROP_VENDOR_THIRD_PARTY=OFF needs at build time.
-    for label, declared, required in (
-        ("debian.control", control_deps, DEBIAN_THIRD_PARTY),
-        ("coolprop.dsc", dsc_deps, DEBIAN_THIRD_PARTY),
-        ("coolprop.spec", spec_reqs, RPM_THIRD_PARTY),
+    #    COOLPROP_VENDOR_THIRD_PARTY=OFF needs at build time, with the version
+    #    bound CMake enforces.  A name without its bound is not enough.
+    for label, declared, column in (
+        ("debian.control", control_deps, 0),
+        ("coolprop.dsc", dsc_deps, 0),
+        ("coolprop.spec", spec_reqs, 1),
     ):
-        missing = sorted(required - declared)
-        if missing:
-            problems.append(
-                "{0} builds with COOLPROP_VENDOR_THIRD_PARTY=OFF but does not "
-                "declare: {1}".format(label, ", ".join(missing))
-            )
+        for row in THIRD_PARTY:
+            name = row[column]
+            required_bound = row[2]
+            if name not in declared:
+                problems.append(
+                    "{0} builds with COOLPROP_VENDOR_THIRD_PARTY=OFF but does "
+                    "not declare {1}".format(label, name)
+                )
+            elif required_bound is not None and declared[name] != required_bound:
+                problems.append(
+                    "{0} declares {1} {2}, but cmake/dependencies.cmake "
+                    "requires {3}".format(
+                        label,
+                        name,
+                        describe_bound(declared[name]),
+                        required_bound,
+                    )
+                )
 
     # 3. What CI installs must be declared by the Debian recipes, so that the
     #    workflow cannot pass by installing something no recipe asks for.
-    undeclared = sorted(workflow_pkgs - control_deps)
+    undeclared = sorted(workflow_pkgs - set(control_deps))
     if undeclared:
         problems.append(
             "packaging_offline.yml installs packages no recipe declares: "
@@ -270,8 +320,8 @@ def main():
         return 1
 
     print("ok: the recipes agree on build dependencies and configure options")
-    print("  debian.control / coolprop.dsc: " + ", ".join(sorted(control_deps)))
-    print("  coolprop.spec:                 " + ", ".join(sorted(spec_reqs)))
+    print("  debian.control / coolprop.dsc: " + format_declared(control_deps))
+    print("  coolprop.spec:                 " + format_declared(spec_reqs))
     print("  shared cmake options:          "
           + ", ".join("{0}={1}".format(k, v)
                       for k, v in sorted(workflow_opts.items())))

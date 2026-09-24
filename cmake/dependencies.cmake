@@ -301,8 +301,14 @@ if(COOLPROP_REQUIRE_VENDORED_DEPS)
   set(_cp_cache_clash FALSE)
   if(NOT "${CPM_SOURCE_CACHE}" STREQUAL "")
     get_filename_component(_cp_cache_real "${CPM_SOURCE_CACHE}" REALPATH)
+    # Either nesting is disqualifying, and the second one is the dangerous
+    # direction: with the cache UNDER the vendor root, CPM's downloads land
+    # inside the vendored tree, the per-package test below then finds them
+    # there, and the gate reports an offline build that in fact downloaded.
+    # That is precisely the case this gate exists to catch, so test both ways.
     string(FIND "${COOLPROP_VENDORED_DEPS_REAL}/" "${_cp_cache_real}/" _cp_in_cache)
-    if(_cp_in_cache EQUAL 0)
+    string(FIND "${_cp_cache_real}/" "${COOLPROP_VENDORED_DEPS_REAL}/" _cp_cache_under)
+    if(_cp_in_cache EQUAL 0 OR _cp_cache_under EQUAL 0)
       set(_cp_cache_clash TRUE)
     endif()
   endif()
@@ -318,7 +324,8 @@ if(COOLPROP_REQUIRE_VENDORED_DEPS)
         "Offline build requested but COOLPROP_VENDORED_DEPS_DIR ('${COOLPROP_VENDORED_DEPS_DIR}') "
         "resolves to '${COOLPROP_VENDORED_DEPS_REAL}', which cannot be told apart from an "
         "ordinary download: it is empty, or at or above the source or build directory, or "
-        "inside the build directory or the CPM source cache.  Set it to the directory holding "
+        "inside the build directory, or it and the CPM source cache contain one another.  "
+        "Set it to the directory holding "
         "the vendored sources (externals/cpm in a release tarball).  A relative value is "
         "resolved against the current working directory, not the source tree.")
   endif()
