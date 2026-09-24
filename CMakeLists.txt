@@ -680,8 +680,35 @@ if(MSVC OR BITNESS STREQUAL "NATIVE")
   set(COOLPROP_BITNESS_FLAG "")
 else()
   include(CheckCXXCompilerFlag)
-  check_cxx_compiler_flag("-m${BITNESS}" COOLPROP_CXX_ACCEPTS_BITNESS_FLAG)
-  if(COOLPROP_CXX_ACCEPTS_BITNESS_FLAG)
+  # The result variable carries the flag in its NAME.  check_cxx_compiler_flag
+  # caches by variable name, so a single shared name would answer for whichever
+  # flag was probed first: configure once with the default 64-bit, then set
+  # FORCE_BITNESS_32 in the same build directory, and the cached "-m64 works"
+  # would be reused as though it said "-m32 works".  The flag would then be
+  # passed to a compiler that rejects it, which is the exact failure this probe
+  # exists to prevent.  Verified by reconfiguring one build directory with each
+  # value.
+  #
+  # -m32/-m64 also change which libraries the link step can find, not just how
+  # the compile step generates code, so the probe links with the flag too.
+  #
+  # Only when there is a link step, though.  A toolchain file may set
+  # CMAKE_TRY_COMPILE_TARGET_TYPE to STATIC_LIBRARY, which is the usual way to
+  # probe a cross compiler that cannot link a runnable binary.  CMake then
+  # hands the link options to ar instead, which reads -m as one of its own
+  # operation letters and dies with "two different operation options
+  # specified".  The probe would fail for a reason that has nothing to do with
+  # the compiler, and FORCE_BITNESS_32/64 would then abort the build.
+  # Reproduced with ar; without the guard even a plain -m64 probe fails.
+  set(_cp_saved_link_options "${CMAKE_REQUIRED_LINK_OPTIONS}")
+  if(NOT DEFINED CMAKE_TRY_COMPILE_TARGET_TYPE
+     OR CMAKE_TRY_COMPILE_TARGET_TYPE STREQUAL "EXECUTABLE")
+    set(CMAKE_REQUIRED_LINK_OPTIONS "-m${BITNESS}")
+  endif()
+  check_cxx_compiler_flag("-m${BITNESS}" COOLPROP_CXX_ACCEPTS_M${BITNESS})
+  set(CMAKE_REQUIRED_LINK_OPTIONS "${_cp_saved_link_options}")
+  unset(_cp_saved_link_options)
+  if(COOLPROP_CXX_ACCEPTS_M${BITNESS})
     set(COOLPROP_BITNESS_FLAG "-m${BITNESS}")
   else()
     set(COOLPROP_BITNESS_FLAG "")

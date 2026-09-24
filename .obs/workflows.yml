@@ -2,11 +2,42 @@
 # webhook.  See dev/packaging/README.md for the token and webhook setup, which
 # is manual and has to be done once: this file on its own does nothing.
 #
-# What this automates: when a tag is pushed, OBS re-runs the source services of
-# the package below.  Those services (dev/packaging/obs/_service) download a
-# release tarball from GitHub and verify its sha256, so the package rebuilds
-# against the artifact the release workflow published rather than one somebody
-# uploaded by hand.
+# What this is meant to automate: when a tag is pushed, OBS re-runs the source
+# services of the package below.  Those services (dev/packaging/obs/_service)
+# download a release tarball from GitHub and verify its sha256, so the package
+# rebuilds against the artifact the release workflow published rather than one
+# somebody uploaded by hand.
+#
+# As things stand it does nothing, for three separate reasons.  They are
+# written down because the file otherwise reads as though the release path were
+# already wired up.
+#
+#   1. Both services in _service carry mode="manual", and a server-side
+#      services run skips exactly the modes localonly, disabled, manual and
+#      buildtime (OBS backend, bs_service, "collect services to run").  So a
+#      trigger_services step logs "Skip download_url" and "Skip verify_file"
+#      and runs nothing.  Dropping the mode makes them run, at the cost of
+#      re-downloading on every source change, which is what the mode was added
+#      to avoid.
+#   2. Nothing publishes the tarball at the URL _service fetches, namely a
+#      GitHub release asset under releases/download/<tag>/.
+#      release_all_files.yml does build it with make-release-tarball.sh, but it
+#      uploads it as a workflow artifact and rsyncs it to SourceForge, and its
+#      tags: ['v*'] trigger is commented out, so no tag runs it at all.
+#   3. _service still pins v8.0.1 with an all-zero placeholder checksum, so it
+#      does not describe whatever version is actually being released.
+#
+# None of that can publish a wrong tarball: with the services skipped nothing
+# happens, and if they were un-skipped today the download would 404 or
+# verify_file would reject the checksum.  The failure direction is safe, which
+# is why the trigger is left in place rather than removed.
+#
+# Making it real is the item recorded in dev/packaging/README.md under "Keeping
+# it alive": have the release workflow attach the tarball to the GitHub release
+# and rewrite the version and checksum in _service.  Note also that tag_push
+# fires when the tag is pushed, which is before the release workflow has
+# uploaded anything, so the dependable trigger is that workflow calling OBS
+# after its own upload.  This file is then the manual re-run path.
 #
 # There is deliberately no tag filter.  An earlier version of this file carried
 # one meant to exclude the gui-v* tags, which ship on their own schedule, and
@@ -15,13 +46,8 @@
 # rather than tag pushes, and filter values are documented as literal strings,
 # so a regex would be compared character by character and match nothing.  Both
 # failure modes are silent, and they point in opposite directions: the filter
-# either does nothing or blocks everything.
-#
-# Firing on every tag is the safe behaviour to fall back on.  _service names an
-# explicit version, so a services run triggered by an unrelated tag re-fetches
-# the same pinned tarball, verifies the same checksum and changes nothing.  The
-# cost is a little OBS noise; the benefit is that the release path cannot be
-# silently switched off by a filter nobody tested.
+# either does nothing or blocks everything.  Firing on every tag is the safe
+# behaviour to fall back on, and costs only a little OBS noise.
 #
 # Note the package below sits in a personal home: project.  That is where the
 # packaging is being proven; a project owned by the CoolProp organisation is

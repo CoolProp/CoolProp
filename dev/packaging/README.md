@@ -463,13 +463,23 @@ fetch the tarball from the GitHub release and verify its sha256.
 exist, and both are created by hand, once:
 
 1. On OBS, create a workflow token and give it a GitHub personal access token
-   so OBS can read the repository and report back:
+   so OBS can read the repository and report back. Do this in the browser,
+   under **Profile -> Manage Your Tokens**, choosing the `workflow` operation
+   and pasting the GitHub token into the form.
+
+   It returns a token id and a secret. Keep the secret; it is shown once.
+
+   `osc` can do the same thing:
 
    ```bash
    osc token --create --operation workflow --scm-token <github-pat>
    ```
 
-   This prints a token id and a secret. Keep the secret; it is shown once.
+   Prefer the browser anyway. The GitHub token is a command-line argument
+   here, so it lands in your shell history and is readable in
+   `/proc/<pid>/cmdline` by anyone else on the machine for as long as the
+   command runs. That matters little on a personal laptop and rather more on
+   a shared build host.
 
 2. On GitHub, under **Settings -> Webhooks -> Add webhook** for the repository:
 
@@ -483,18 +493,45 @@ exist, and both are created by hand, once:
 3. `.obs/workflows.yml` has to be on the repository's default branch. OBS reads
    it from there, not from the branch that triggered the event.
 
-Two things to check on the first tag rather than assume:
+Setting the token and the webhook up does not yet make the trigger do
+anything. Three things are in the way, and all three have to be dealt with
+before a tag rebuilds the package:
 
-- **Whether the services actually run.** `dev/packaging/obs/_service` marks its
-  services `mode="manual"` so they do not re-download on every source change.
-  If the first webhook fires and the tarball is not refreshed, that mode is
-  why, and the fix is to drop `mode="manual"` from the two services so OBS may
-  run them server side.
+1. **The services are skipped.** Both services in `dev/packaging/obs/_service`
+   carry `mode="manual"`. A server-side services run, which is what
+   `trigger_services` asks for, skips exactly the modes `localonly`,
+   `disabled`, `manual` and `buildtime`; the list is in the OBS backend, in
+   `bs_service` under "collect services to run". So the webhook logs
+   `Skip download_url` and `Skip verify_file` and does nothing else. Dropping
+   the mode makes them run, at the price of re-downloading the tarball on
+   every source change, which is the thing the mode was added to avoid.
+2. **There is no tarball at the URL.** `_service` fetches a GitHub release
+   asset under `releases/download/<tag>/`, and nothing publishes one.
+   `release_all_files.yml` does build the tarball with
+   `make-release-tarball.sh`, but it uploads it as a workflow artifact and
+   rsyncs it to SourceForge, and its `tags: ['v*']` trigger is commented out,
+   so no tag runs it at all.
+3. **`_service` names the wrong version.** It still pins v8.0.1 with an
+   all-zero placeholder checksum.
+
+None of this can publish a wrong tarball. With the services skipped nothing
+happens at all, and if they were un-skipped today the download would 404 or
+`verify_file` would reject the checksum. Wiring the release job to attach the
+tarball and rewrite `_service` is item 3 under "Keeping it alive" below.
+
+There is also an ordering point that survives all three fixes: `tag_push`
+fires when the tag is pushed, which is before the release workflow has
+uploaded anything. The dependable trigger is therefore that workflow calling
+OBS after its own upload, with this webhook as the manual re-run path.
+
+Things to check on the first tag rather than assume:
+
 - **How often it fires.** `.obs/workflows.yml` has no tag filter, so every
-  tag triggers a services run, including the `gui-v*` ones. That is harmless,
-  because `_service` names an explicit version and re-fetching it changes
-  nothing, but it is deliberate rather than an oversight; the file explains
-  why a filter was removed.
+  tag triggers a services run, including the `gui-v*` ones. Once the three
+  items above are fixed, that means an unrelated tag re-fetches whatever
+  version `_service` names at the time. The file explains why a filter was
+  removed rather than left in unverified, but this is the cost of that
+  choice and is worth watching.
 - **Which project the workflow targets.** It currently names `home:jowr`, a
   personal project. That is the right place while the packaging is being
   proven, and the wrong place afterwards: a project owned by the CoolProp
