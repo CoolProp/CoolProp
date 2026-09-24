@@ -261,15 +261,39 @@ jobs:
           fi
 
           echo "== via pkg-config =="
-          export PKG_CONFIG_PATH="${libdir}/pkgconfig"
-          # The .pc has prefix=/usr baked in, but this is a DESTDIR install, so
-          # point it at the staging root.  NOT --define-prefix: that recomputes
-          # the prefix by stripping two components from the .pc file's
-          # directory, which is wrong whenever libdir is multiarch
-          # (lib/x86_64-linux-gnu/pkgconfig is three), and yields
-          # -I<root>/lib/include.
-          cflags="$(pkg-config --define-variable=prefix="${root}" --cflags coolprop)"
-          libs="$(pkg-config --define-variable=prefix="${root}" --libs coolprop)"
+          # The .pc has prefix=/usr baked in and this is a DESTDIR install, so
+          # its prefix has to be redirected at the staging root.  Two ways that
+          # look right and are not:
+          #
+          #   --define-prefix recomputes the prefix by stripping two components
+          #   from the .pc file's directory, which is wrong whenever libdir is
+          #   multiarch (lib/x86_64-linux-gnu/pkgconfig is three), and yields
+          #   -I<root>/lib/include.
+          #
+          #   --define-variable=prefix= is GLOBAL: it overrides prefix in every
+          #   .pc resolved, not just this one.  That was harmless while
+          #   Requires was empty, but coolprop.pc now requires eigen3 and fmt,
+          #   whose own .pc files are prefix-relative, so it would relocate
+          #   /usr/include/eigen3 to <destdir>/usr/include/eigen3 and the
+          #   compile would fail on a perfectly correct file.
+          #
+          # So rewrite this one file's own prefix line in a scratch copy and
+          # leave the system dependencies where they are.  The baked-in value
+          # was asserted just above, so the substitution cannot silently no-op.
+          pcdir="${work}/pkgconfig"
+          mkdir -p "${pcdir}"
+          sed "s|^prefix=/usr$|prefix=${root}|" \
+            "${libdir}/pkgconfig/coolprop.pc" >"${pcdir}/coolprop.pc"
+          if ! grep -qx "prefix=${root}" "${pcdir}/coolprop.pc"; then
+            echo "rewriting the staged coolprop.pc prefix did not take:" >&2
+            grep '^prefix=' "${pcdir}/coolprop.pc" >&2
+            exit 1
+          fi
+          # Prepended, not replacing: eigen3.pc and fmt.pc come from the system
+          # directories that pkg-config searches by default.
+          export PKG_CONFIG_PATH="${pcdir}"
+          cflags="$(pkg-config --cflags coolprop)"
+          libs="$(pkg-config --libs coolprop)"
           echo "cflags: ${cflags}"
           echo "libs:   ${libs}"
           # Unquoted on purpose: pkg-config hands back several arguments in one
@@ -291,15 +315,23 @@ jobs:
           # has to require them; with vendoring ON the .pc names the bundled
           # copies in Cflags instead.  Assert the shape that matches this
           # build before relying on the compile.
-          if ! grep -qx 'Requires: eigen3 fmt' "${libdir}/pkgconfig/coolprop.pc"; then
+          # Requires.private rather than Requires: pkg-config emits a private
+          # requirement's Cflags unconditionally and gates only its Libs on
+          # --static, which is what header-only dependencies want.  Naming them
+          # publicly would put -lfmt on every dynamic consumer's link line and
+          # give their binary a libfmt NEEDED entry the CMake package does not
+          # create, since CoolProp links fmt::fmt-header-only.
+          if ! grep -qx 'Requires.private: eigen3 fmt' \
+               "${libdir}/pkgconfig/coolprop.pc"; then
             echo "coolprop.pc does not require the system Eigen and fmt that" >&2
             echo "COOLPROP_VENDOR_THIRD_PARTY=OFF made it compile against:" >&2
-            grep -E '^(Requires|Cflags):' "${libdir}/pkgconfig/coolprop.pc" >&2
+            grep -E '^(Requires|Requires.private|Cflags):' \
+              "${libdir}/pkgconfig/coolprop.pc" >&2
             exit 1
           fi
 
-          cpp_cflags="$(pkg-config --define-variable=prefix="${root}" --cflags coolprop)"
-          cpp_libs="$(pkg-config --define-variable=prefix="${root}" --libs coolprop)"
+          cpp_cflags="$(pkg-config --cflags coolprop)"
+          cpp_libs="$(pkg-config --libs coolprop)"
           echo "c++ cflags: ${cpp_cflags}"
           # shellcheck disable=SC2086
           c++ -std=c++17 "${COOLPROP_SRC}/dev/ci/cmake-consumer/cpp_api.cpp" \

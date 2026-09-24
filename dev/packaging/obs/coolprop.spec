@@ -101,10 +101,9 @@ include root) are not shipped here: their names are too generic to put into
 # thing a distribution will not accept.  The consumer therefore compiles the
 # installed C++ headers against the distribution's own Eigen.
 #
-# COOLPROP_PC_REQUIRES is deliberately left unset for the same reason in
-# reverse: naming eigen3 there would assert a version compatibility nobody has
-# established.  Set it to "eigen3 fmt" once COOLPROP_USE_SYSTEM_DEPS exists
-# (step 2 of GH #3388); see dev/packaging/README.md.
+# COOLPROP_PC_REQUIRES is not set here because it does not need to be: with
+# COOLPROP_VENDOR_THIRD_PARTY=OFF the CMake defaults it to "eigen3 fmt", which
+# is what the build actually compiled against.  Set it only to override that.
 %cmake \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCOOLPROP_SHARED_LIBRARY=ON \

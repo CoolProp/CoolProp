@@ -562,16 +562,19 @@ function(coolprop_add_library_targets)
         set(COOLPROP_PC_REQUIRES "")
       else()
         # The build resolved these with find_package, so the consumer compiles
-        # against the same system copies and needs their flags.  Both are
-        # header-only here, hence Requires rather than Requires.private: the
-        # include path is needed to compile, not just to link.  The recipes
+        # against the same system copies and needs their flags.  The recipes
         # that pass COOLPROP_VENDOR_THIRD_PARTY=OFF already depend on the
         # matching -dev packages, so these .pc files are present.
         set(COOLPROP_PC_REQUIRES "eigen3 fmt")
       endif()
     endif()
 
-    set(COOLPROP_PC_CFLAGS "-I\${includedir}")
+    # fmt is used header-only, and fmt::fmt-header-only carries
+    # FMT_HEADER_ONLY=1 as an interface definition.  A pkg-config consumer gets
+    # no such thing from the imported target, so without this it would compile
+    # CoolProp's installed headers in a different fmt mode than both the
+    # library and a find_package consumer, and then fail to link libfmt.
+    set(COOLPROP_PC_CFLAGS "-DFMT_HEADER_ONLY=1 -I\${includedir}")
     if(COOLPROP_VENDOR_THIRD_PARTY)
       # Mirrors the INSTALL_INTERFACE include directories of the
       # coolprop_eigen_headers and coolprop_fmt_headers targets, so a
@@ -590,7 +593,12 @@ function(coolprop_add_library_targets)
     # hand the compiler a filename.
     set(COOLPROP_PC_LIBS_PRIVATE "")
     if(_static_target)
-      set(_pc_private "-lpthread")
+      # -lpthread is a UNIX spelling; a Windows static build has no such
+      # library and naming it would hand the linker a file that is not there.
+      set(_pc_private "")
+      if(UNIX)
+        set(_pc_private "-lpthread")
+      endif()
       foreach(_dl_lib IN LISTS CMAKE_DL_LIBS)
         if(_dl_lib MATCHES "^-")
           string(APPEND _pc_private " ${_dl_lib}")
@@ -598,7 +606,7 @@ function(coolprop_add_library_targets)
           string(APPEND _pc_private " -l${_dl_lib}")
         endif()
       endforeach()
-      set(COOLPROP_PC_LIBS_PRIVATE "${_pc_private}")
+      string(STRIP "${_pc_private}" COOLPROP_PC_LIBS_PRIVATE)
     endif()
 
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/coolprop.pc.in"

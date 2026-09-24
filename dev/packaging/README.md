@@ -163,16 +163,21 @@ is 3.4.0 on every target listed above.  `cmake/dependencies.cmake` enforces a
 3.4 floor and the recipes now declare it, but "configures and compiles" is not
 "behaves identically", and nobody has run the test suite against Eigen 3.4.
 
-There is a second, narrower gap in the OFF build: `coolprop.pc` ships with an
-empty `Requires:`, so `pkg-config --cflags coolprop` emits no include path for
-Eigen.  On Debian that matters, because Eigen lives in `/usr/include/eigen3`
-rather than `/usr/include`, so a **C++** consumer using pkg-config will not
-find `<Eigen/Dense>`.  CMake consumers are unaffected: `CoolPropConfig.cmake`
-calls `find_dependency(Eigen3)` and picks the path up from the imported
-target.  The C API is unaffected either way, and that is the only thing the CI
-consumer test exercises, so this gap is documented rather than observed.
-Setting `-DCOOLPROP_PC_REQUIRES="eigen3 fmt"` closes it, at the cost of
-asserting a compatibility nobody has established yet; see below.
+`coolprop.pc` used to ship an empty `Requires:`, which meant
+`pkg-config --cflags coolprop` emitted no include path for Eigen, so a **C++**
+consumer could not compile at all: Debian keeps Eigen in `/usr/include/eigen3`
+rather than `/usr/include`.  That is fixed.  The OFF build now writes
+`Requires.private: eigen3 fmt`, and the ON build instead names the bundled
+copies under `<includedir>/CoolProp/third_party/` in `Cflags`.  Private rather
+than public because both are header-only here, so pkg-config always emits
+their include flags and keeps their link flags behind `--static`.
+
+The CI consumer test now compiles `dev/ci/cmake-consumer/cpp_api.cpp` through
+pkg-config to keep it that way.  It was C-only before, deliberately, which is
+exactly why a `.pc` no C++ consumer could use went unnoticed.
+
+Declaring the dependency does not settle the version question above.  It only
+stops the file being unusable.
 
 For the **C API** (`<CoolProp/CoolPropLib.h>`) this does not arise; it is a
 plain C interface over a compiled library.
@@ -182,9 +187,9 @@ For the **C++ API** it is a real hazard, and it is why step 2 of GH #3388,
 that distributions already package, has to land before the `-dev` package can
 be called production-ready.  Until then:
 
-- `coolprop.pc` ships with an empty `Requires:`, because naming `eigen3` there
-  would claim a compatibility that has not been established.  It is one
-  `-DCOOLPROP_PC_REQUIRES="eigen3 fmt"` away once it has been.
+- `coolprop.pc` names `eigen3` and `fmt` without a version bound, so
+  pkg-config accepts whatever the distribution ships.  The floor is enforced by
+  CMake and by the recipes' own build dependencies instead.
 - The `-dev` packages still depend on `libeigen3-dev` / `eigen3-devel` and the
   fmt equivalents, so the headers a consumer needs are at least present.
 

@@ -7,7 +7,7 @@ Name: CoolProp
 Description: Thermophysical property library for pure fluids, pseudo-pure fluids, mixtures and humid air
 URL: https://coolprop.org
 Version: @COOLPROP_VERSION_MAJOR@.@COOLPROP_VERSION_MINOR@.@COOLPROP_VERSION_PATCH@
-Requires: @COOLPROP_PC_REQUIRES@
+Requires.private: @COOLPROP_PC_REQUIRES@
 Libs: -L${libdir} -l@COOLPROP_LIBRARY_NAME@
 Libs.private: @COOLPROP_PC_LIBS_PRIVATE@
 Cflags: @COOLPROP_PC_CFLAGS@

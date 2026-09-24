@@ -34,6 +34,7 @@ CONTROL = ROOT / "dev/packaging/obs/debian.control"
 DSC = ROOT / "dev/packaging/obs/coolprop.dsc"
 SPEC = ROOT / "dev/packaging/obs/coolprop.spec"
 RULES = ROOT / "dev/packaging/obs/debian.rules"
+DEPENDENCIES = ROOT / "cmake/dependencies.cmake"
 WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 
 # COOLPROP_VENDOR_THIRD_PARTY=OFF, which every distribution build passes, makes
@@ -46,11 +47,54 @@ WORKFLOW = ROOT / ".github/workflows/packaging_offline.yml"
 # a recipe naming eigen3 without the bound describes a build that resolves
 # happily and then dies in the middle of compiling.
 THIRD_PARTY = (
-    # debian name, rpm name, the bound every recipe must state (None = any)
-    ("libeigen3-dev", "eigen3-devel", ">= 3.4"),
-    ("libfmt-dev", "fmt-devel", None),
+    # debian name, rpm name, whether the Eigen floor below applies to it
+    ("libeigen3-dev", "eigen3-devel", True),
+    ("libfmt-dev", "fmt-devel", False),
 )
 DEBIAN_THIRD_PARTY = {row[0] for row in THIRD_PARTY}
+
+
+def parse_eigen_floor(text):
+    """Return the Eigen version cmake/dependencies.cmake refuses to go below.
+
+    Read rather than restated, because a floor written down here as well would
+    be one more copy to drift: raise it in the CMake and a hardcoded constant
+    would keep passing three recipes that all understate it, which is the exact
+    failure this script exists to prevent.
+    """
+    match = re.search(
+        r"Eigen3_VERSION\s+VERSION_LESS\s+([0-9][0-9.]*)", text
+    )
+    return match.group(1) if match else None
+
+
+def split_bound(bound):
+    """Return (operator, version tuple) for a bound, or None if unparsable."""
+    if bound is None:
+        return None
+    match = re.match(r"^([<>=]+)\s*([0-9][0-9.]*)$", bound.strip())
+    if not match:
+        return None
+    return match.group(1), tuple(int(n) for n in match.group(2).split("."))
+
+
+def satisfies_floor(bound, floor):
+    """Is this bound at least as strict as a ">= floor" requirement?
+
+    Compares versions numerically, so ">= 3.4.0" satisfies a floor of "3.4"
+    and ">= 3.5" does too.  A missing, non-">=" or lower bound does not.
+    """
+    parsed = split_bound(bound)
+    if parsed is None:
+        return False
+    operator, version = parsed
+    if operator != ">=":
+        return False
+    wanted = tuple(int(n) for n in floor.split("."))
+    length = max(len(version), len(wanted))
+    version = version + (0,) * (length - len(version))
+    wanted = wanted + (0,) * (length - len(wanted))
+    return version >= wanted
 
 
 def parse_build_depends(text):
@@ -72,11 +116,17 @@ def parse_build_depends(text):
         entry = entry.strip()
         if not entry:
             continue
+        # An entry may offer alternatives ("a | b"); dpkg satisfies the build
+        # from the first installable one, and only the first is recorded here.
+        # The bound must be searched inside that alternative alone: searching
+        # the whole entry would credit b's bound to a, so "libeigen3-dev |
+        # other (>= 3.4)" would read as a floor this recipe does not have.
+        alternative = entry.split("|")[0].strip()
         # The name ends at the first space, bracket or architecture qualifier.
-        name = re.split(r"[\s(\[]", entry, maxsplit=1)[0].strip()
+        name = re.split(r"[\s(\[]", alternative, maxsplit=1)[0].strip()
         if not name:
             continue
-        bound = re.search(r"\(\s*([<>=]+)\s*([^)]+?)\s*\)", entry)
+        bound = re.search(r"\(\s*([<>=]+)\s*([^)]+?)\s*\)", alternative)
         declared[name] = (
             "{0} {1}".format(bound.group(1), bound.group(2)) if bound else None
         )
@@ -98,7 +148,15 @@ def parse_build_requires(text):
         parts = entry.split(None, 1)
         if not parts:
             continue
-        declared[parts[0]] = parts[1].strip() if len(parts) > 1 else None
+        # "eigen3-devel >= 3.4" is one package with a bound, but RPM also
+        # allows "gcc-c++ make" as two packages on one line.  Tell them apart
+        # by whether the tail starts with a comparison operator, so the second
+        # package is recorded rather than mistaken for a version.
+        if len(parts) > 1 and re.match(r"^[<>=]", parts[1].strip()):
+            declared[parts[0]] = parts[1].strip()
+        else:
+            for name in entry.split():
+                declared.setdefault(name, None)
     return declared
 
 
@@ -193,6 +251,7 @@ def main():
     workflow_pkgs = parse_workflow_apt_packages(
         WORKFLOW.read_text(encoding="utf-8")
     )
+    eigen_floor = parse_eigen_floor(DEPENDENCIES.read_text(encoding="utf-8"))
 
     options = {}
     for label, path in (
@@ -218,6 +277,7 @@ def main():
         ("coolprop.dsc Build-Depends", dsc_deps),
         ("coolprop.spec BuildRequires", spec_reqs or None),
         ("packaging_offline.yml apt-get install", workflow_pkgs),
+        ("the Eigen floor in cmake/dependencies.cmake", eigen_floor),
         ("packaging_offline.yml cmake options", workflow_opts),
         ("coolprop.spec cmake options", spec_opts),
         ("debian.rules cmake options", rules_opts),
@@ -262,20 +322,22 @@ def main():
     ):
         for row in THIRD_PARTY:
             name = row[column]
-            required_bound = row[2]
+            floor_applies = row[2]
             if name not in declared:
                 problems.append(
                     "{0} builds with COOLPROP_VENDOR_THIRD_PARTY=OFF but does "
                     "not declare {1}".format(label, name)
                 )
-            elif required_bound is not None and declared[name] != required_bound:
+            elif floor_applies and not satisfies_floor(
+                declared[name], eigen_floor
+            ):
                 problems.append(
                     "{0} declares {1} {2}, but cmake/dependencies.cmake "
-                    "requires {3}".format(
+                    "refuses to build below {3}".format(
                         label,
                         name,
                         describe_bound(declared[name]),
-                        required_bound,
+                        eigen_floor,
                     )
                 )
 
