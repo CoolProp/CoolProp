@@ -160,10 +160,31 @@ function(_coolprop_configure_core_target target linkage)
     target_compile_definitions("${target}" PUBLIC EXTERNC)
   endif()
 
+  # -m32 and -m64 are x86 options.  They pick between the two ABIs that an
+  # x86 toolchain can both emit, which is what FORCE_BITNESS_32 is for.  Every
+  # other architecture has one ABI per toolchain, and its compiler rejects the
+  # flag outright rather than ignoring it:
+  #
+  #     c++: error: unrecognized command-line option '-m64'          (aarch64)
+  #     c++: error: unrecognized command-line option '-m32'          (armhf)
+  #
+  # Both were real OBS build failures.  On those targets BITNESS comes from
+  # CMAKE_SIZEOF_VOID_P, so it only describes the pointer size and there is
+  # nothing to select.  An explicit request that cannot be honoured is a
+  # different matter, and is refused below rather than quietly dropped.
   if(NOT MSVC AND NOT BITNESS STREQUAL "NATIVE")
-    target_compile_options("${target}" PRIVATE "-m${BITNESS}")
-    if(NOT linkage STREQUAL "OBJECT")
-      target_link_options("${target}" PRIVATE "-m${BITNESS}")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^([Xx]86|[Xx]86_64|AMD64|amd64|i[3-6]86)$")
+      target_compile_options("${target}" PRIVATE "-m${BITNESS}")
+      if(NOT linkage STREQUAL "OBJECT")
+        target_link_options("${target}" PRIVATE "-m${BITNESS}")
+      endif()
+    elseif(FORCE_BITNESS_32 OR FORCE_BITNESS_64)
+      message(
+        FATAL_ERROR
+          "FORCE_BITNESS_32/64 selects between the 32- and 64-bit x86 ABIs "
+          "with -m32/-m64, which '${CMAKE_SYSTEM_PROCESSOR}' does not accept. "
+          "Build for the bitness of the toolchain instead, or use a toolchain "
+          "file to target the other one.")
     endif()
   endif()
 
