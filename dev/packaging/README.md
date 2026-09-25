@@ -394,6 +394,53 @@ git checkout -- dev/packaging dev/ci
 Re-cloning works too.  Verify with `file dev/packaging/obs/coolprop.spec`,
 which must not say "CRLF line terminators".
 
+### rpmlint fails the build after a successful compile
+
+openSUSE runs rpmlint after packaging and aborts when the accumulated "badness"
+exceeds 1000. A single error can be worth 10000, so a build that compiled,
+linked, installed and produced all three RPMs still ends in
+`failed "build coolprop.spec"`. The log looks like a toolchain failure and is
+not one; read past the compiler warnings to the `RPMLINT report:` block near
+the end.
+
+One rule has already caught us, and will again if anyone tidies the spec:
+
+- **A package holding one shared library must be named after its SONAME.** Ours
+  is `libCoolProp.so.8`, so the package is `libCoolProp8`, capitals included.
+  Naming it `libcoolprop8` gives
+  `E: shlib-policy-name-error (Badness: 10000) libCoolProp8`, where the name in
+  brackets is what rpmlint wanted. The `-devel` package is not covered by that
+  rule and stays lower case, which is also what the install instructions above
+  tell users to type.
+
+  **The RPM and the Debian package therefore have different names on purpose**,
+  and that is not something to tidy up:
+
+  | | Package | Rule |
+  |---|---|---|
+  | `debian.control` | `libcoolprop8` | Debian Policy allows lower case only |
+  | `coolprop.spec` | `libCoolProp8` | openSUSE derives the name from the SONAME |
+
+  The two policies genuinely contradict each other, so each file follows its
+  own and neither is wrong. Making them agree would mean renaming the library
+  itself to `libcoolprop.so.8`, which is not a packaging detail: `coolprop.pc`
+  advertises `-lCoolProp`, the CMake package exports `CoolProp::CoolProp`, and
+  the same library is `CoolProp.dll` on Windows and `libCoolProp.dylib` on
+  macOS. That would break every existing consumer to make two package names
+  match, so the mixed case stays.
+
+Two warnings are known and accepted, because warnings score nothing against the
+threshold:
+
+- `no-binary` on the `coolprop` package, which ships only the licence and the
+  README. Making it `noarch` is not possible from the main preamble without
+  making the shared library noarch too.
+- `macro-in-comment`, if a `%` macro is written unescaped in a spec comment.
+  Macros expand inside comments as well, so double the percent sign: `%%files`.
+
+`osc build` runs rpmlint locally, so section 4 below catches all of this before
+a push.
+
 ### 3. Choose build targets
 
 In the web UI, **Repositories -> Add from a distribution**.

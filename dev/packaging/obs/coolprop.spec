@@ -113,16 +113,24 @@ high-accuracy Helmholtz energy formulations, correlations of incompressible
 fluids and brines, and psychrometric routines for humid air.
 
 This package contains the documentation and licence only; see
-libcoolprop%{sover} for the shared library and libcoolprop-devel to build
+libCoolProp%{sover} for the shared library and libcoolprop-devel to build
 against it.
 
-%package -n libcoolprop%{sover}
+# The capitals are not a style choice.  openSUSE requires a package holding a
+# single shared library to be named after that library's SONAME, which here is
+# libCoolProp.so.8, giving libCoolProp8.  rpmlint scores a mismatch at badness
+# 10000 against a threshold of 1000, so it fails the build AFTER everything has
+# compiled and linked, which reads like a toolchain problem and is not one.
+# Do not "normalise" this to lower case.  The -devel package below is free of
+# that rule and stays lower case, matching what the README tells users to
+# install.
+%package -n libCoolProp%{sover}
 Summary:        Thermophysical property library for pure fluids, mixtures and humid air
 %if 0%{?suse_version}
 Group:          System/Libraries
 %endif
 
-%description -n libcoolprop%{sover}
+%description -n libCoolProp%{sover}
 CoolProp is a C++ library that implements pure and pseudo-pure fluid equations
 of state and transport properties for 122 components, mixture properties using
 high-accuracy Helmholtz energy formulations, correlations of incompressible
@@ -134,13 +142,13 @@ configure.
 
 %package -n libcoolprop-devel
 Summary:        Development files for CoolProp
-Requires:       libcoolprop%{sover} = %{version}-%{release}
+Requires:       libCoolProp%{sover} = %{version}-%{release}
 Requires:       eigen3-devel
 Requires:       fmt-devel
 %if 0%{?suse_version}
 Group:          Development/Libraries/C and C++
 %else
-# Owns %{_libdir}/cmake on Fedora and RHEL; see the %files section below.
+# Owns %%{_libdir}/cmake on Fedora and RHEL; see the %%files section below.
 Requires:       cmake-filesystem
 %endif
 
@@ -188,14 +196,14 @@ include root) are not shipped here: their names are too generic to put into
 %install
 %cmake_install
 
-%post   -n libcoolprop%{sover} -p /sbin/ldconfig
-%postun -n libcoolprop%{sover} -p /sbin/ldconfig
+%post   -n libCoolProp%{sover} -p /sbin/ldconfig
+%postun -n libCoolProp%{sover} -p /sbin/ldconfig
 
 %files
 %license LICENSE
 %doc README.md
 
-%files -n libcoolprop%{sover}
+%files -n libCoolProp%{sover}
 %{_libdir}/libCoolProp.so.%{sover}
 # libCoolProp.so.8.0.1 on a release, libCoolProp.so.8.0.1dev on a snapshot:
 # CMakeLists.txt appends COOLPROP_VERSION_REVISION to the library VERSION.
