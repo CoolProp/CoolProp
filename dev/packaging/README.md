@@ -705,9 +705,12 @@ environment variables arrived in osc 1.6.0 and `results --fail-on-error` in
 1.8.0. With the apt version the job would prompt for a password and would never
 report a failing target, so the pin must stay at or above those versions.
 
-The `obs-build` jobs are serialised on one concurrency group, because a single
-OBS package cannot hold two commits at once. They queue rather than cancelling
-each other; see the second limit below for why that matters.
+The `obs-build` jobs are serialised on a concurrency group keyed by the
+project and package they write to, because a single OBS package cannot hold two
+commits at once. Runs aimed at different packages, which is what the
+`obs_project` input makes possible, do not hold each other up. They queue
+rather than cancelling each other; see the second limit below for why that
+matters.
 
 When it runs, and when it does not:
 
@@ -765,20 +768,28 @@ Two behaviours specific to manual runs:
   `push_to_obs` asked for an OBS build in so many words, and answering that with
   a skipped job and a green run is the quiet no-op this setup exists to avoid.
   The first step in the job says what is missing, before it installs anything.
-- **A tag still skips the OBS job.** `obs-build` excludes `refs/tags/` whatever
-  started the run, because on a release tag the package belongs to the release
-  path in section 7. Dispatching against a tag gets you the offline build only.
+- **Dispatching against a tag fails the run**, rather than skipping quietly,
+  for the same reason. On a release tag the package belongs to the release path
+  in section 7, so the job refuses and says so. An automatic run on a tag is
+  still skipped, because nobody asked for anything there.
+- **The project and package names are checked for shape, not just emptiness.**
+  Any non-empty input wins over the variable, so a single space left behind by
+  a copy-paste would otherwise pass an empty-looking name and silently override
+  a perfectly good `OBS_PROJECT`. A name with a space in it is rejected.
+- **The credentials are checked in the same step.** A repository that was never
+  set up finds out before `osc` is installed rather than several steps later.
 
 Two limits to be aware of before leaning on this:
 
-- **Everything that triggers it pushes to the same OBS package**, including
-  every push to an open pull request, which is the highest churn case of all.
-  `OBS_PROJECT` names one project, and `home:jowr` is a published repository
-  that users install from, so any of these replaces what is published there
-  until the next run. While that is only ever your own home project this is a
-  nuisance rather than a hazard, but point `OBS_PROJECT` at a throwaway staging
-  project if iteration and a repository other people consume ever become the
-  same place.
+- **Everything that triggers it automatically pushes to the same OBS
+  package**, including every push to an open pull request, which is the highest
+  churn case of all. `OBS_PROJECT` names one project, and `home:jowr` is a
+  published repository that users install from, so any of these replaces what
+  is published there until the next run. While that is only ever your own home
+  project this is a nuisance rather than a hazard, but point `OBS_PROJECT` at a
+  throwaway staging project if iteration and a repository other people consume
+  ever become the same place. A manual run escapes this with the `obs_project`
+  input; an automatic one cannot.
 - **Overlapping runs settle in completion order, not push order.** The
   `obs-build` jobs queue on one concurrency group, and a job joins that group
   only once `offline-build` has finished, so a run whose offline build was slow

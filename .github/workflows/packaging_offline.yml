@@ -441,18 +441,29 @@ jobs:
     # those clauses fall back to the behaviour above on a push or a pull
     # request.
     #
-    # A manual run is deliberately NOT skipped when no project is configured.
-    # Skipping is the right answer for an automatic run, where it means "this
-    # repository has no OBS package", but somebody who ticked push_to_obs asked
-    # for an OBS build in so many words, and answering that with a skipped job
-    # and a green run is the quiet no-op this whole file is written to avoid.
-    # The job starts instead and the first step below says what is missing.
+    # A manual run is deliberately NOT skipped when it cannot push, whether
+    # that is because no project is configured or because it was started
+    # against a tag.  Skipping is the right answer for an automatic run, where
+    # it means "this repository has no OBS package", but somebody who ticked
+    # push_to_obs asked for an OBS build in so many words, and answering that
+    # with a skipped job and a green run is the quiet no-op this whole file is
+    # written to avoid.  The job starts instead and its first step says what is
+    # wrong, which is why the tag clause below only applies to other events.
+    #
+    # push_to_obs is read twice, through both contexts, and that is not
+    # redundance for its own sake.  'inputs' honours the declared boolean, so
+    # an unticked box is false; 'github.event.inputs' is always strings, where
+    # the string "false" would be TRUTHY and would push to OBS against the
+    # explicit wish of whoever unticked it.  Requiring both to agree fails
+    # closed whichever way a future API change resolves the value.  The
+    # opposite spelling, inputs.push_to_obs == true, must NOT be used: it is
+    # false for the string "true", which is the same silent skip in reverse.
     if: >-
-      (inputs.obs_project != ''
-       || vars.OBS_PROJECT != ''
-       || github.event_name == 'workflow_dispatch')
-      && (github.event_name != 'workflow_dispatch' || inputs.push_to_obs)
-      && !startsWith(github.ref, 'refs/tags/')
+      (vars.OBS_PROJECT != '' || github.event_name == 'workflow_dispatch')
+      && (github.event_name != 'workflow_dispatch'
+          || (inputs.push_to_obs && github.event.inputs.push_to_obs != 'false'))
+      && (github.event_name == 'workflow_dispatch'
+          || !startsWith(github.ref, 'refs/tags/'))
       && (github.event_name != 'pull_request'
           || github.event.pull_request.head.repo.full_name == github.repository)
     # The wait for OBS is unbounded in the script, so the bound lives here.
@@ -461,6 +472,12 @@ jobs:
     # deliberately not keyed by ref: two branches pushing at the same time are
     # exactly the case that needs serialising.  The workflow-level concurrency
     # above is per ref and so would not catch it.
+    #
+    # It IS keyed by the project and package, because since the obs_project
+    # input exists two runs in flight no longer necessarily write the same
+    # place.  A one-off build to a staging project has no reason to hold up a
+    # master push's verdict on the real one, and runs that DO share a package
+    # still serialise, which is the whole rationale.
     #
     # cancel-in-progress is false, which is not the obvious choice.  A job joins
     # its group only once it is ready to run, which here is after offline-build
@@ -473,24 +490,69 @@ jobs:
     # older sources when two pushes overlap; the next push corrects that, and
     # each run's check still reports the sources that run actually committed.
     concurrency:
-      group: packaging-obs
+      group: packaging-obs-${{ inputs.obs_project || vars.OBS_PROJECT }}-${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
       cancel-in-progress: false
 
     steps:
-      # First, before the checkout, so a manual run that has nowhere to push
-      # says so in seconds rather than after installing osc.  This can only
-      # fire on a workflow_dispatch: every other event is skipped by the
-      # condition above when no project is configured.
-      - name: Check there is an OBS project to push to
+      # Everything this job needs in order to reach OBS at all, in one place
+      # and before the checkout, so a manual run that cannot get there says why
+      # instead of failing later and less clearly.  It is not instant: the job
+      # waits for offline-build to produce the tarball first, so the feedback
+      # comes after that build, not within seconds of pressing the button.
+      # What it does save is installing osc and downloading the artifact, and
+      # what it really buys is an accurate message instead of an osc traceback.
+      #
+      # Everything here can only fire on a manual run.  Every other event is
+      # skipped by the condition above when the project is unset or the ref is
+      # a tag, and an automatic run that reaches this point has a project from
+      # a repository variable that nobody typed in a hurry.
+      - name: Check this run can reach OBS
         env:
+          OBS_REF: ${{ github.ref }}
           OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
+          # Named OSC_* to match what obs-upload.sh reads, so the two agree.
+          OSC_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OSC_PASSWORD: ${{ secrets.OBS_PASSWORD }}
         run: |
           set -euo pipefail
+
+          if [[ "${OBS_REF}" == refs/tags/* ]]; then
+            echo "::error::${OBS_REF} is a tag, and on a tag the OBS package belongs to the release path in .obs/workflows.yml, whose services fetch a published tarball and check its sha256. Letting this run commit its own tarball there would leave the package holding sources that were quietly replaced. Dispatch against a branch instead, or untick push_to_obs to run only the offline build."
+            exit 1
+          fi
+
           if [[ -z "${OBS_PROJECT}" ]]; then
             echo "::error::No OBS project to push to. Either set the OBS_PROJECT repository variable, or fill in the obs_project input when starting the run. Untick push_to_obs to run only the offline build."
             exit 1
           fi
-          echo "OBS project: ${OBS_PROJECT}"
+
+          # Emptiness is not enough, and this is the case that motivated the
+          # check.  A dispatch input is taken verbatim, and ANY non-empty
+          # string is truthy to the '||' above, so a single space left behind
+          # by a copy-paste out of the OBS web UI passes an empty-looking name
+          # AND silently overrides a perfectly good OBS_PROJECT variable.
+          # Checking the shape catches that, and the odder values too.
+          name_pattern='^[A-Za-z0-9][A-Za-z0-9._:+-]*$'
+          if [[ ! "${OBS_PROJECT}" =~ ${name_pattern} ]]; then
+            echo "::error::OBS project '${OBS_PROJECT}' is not a valid project name. Expected something like home:jowr, with no spaces."
+            exit 1
+          fi
+          if [[ ! "${OBS_PACKAGE}" =~ ${name_pattern} ]]; then
+            echo "::error::OBS package '${OBS_PACKAGE}' is not a valid package name. Expected something like coolprop, with no spaces."
+            exit 1
+          fi
+
+          # The credentials are the other half of "is this set up".
+          # obs-upload.sh checks them too, which is what protects it when it is
+          # run by hand; checking here as well means a repository that was
+          # never set up finds out before osc is installed.
+          if [[ -z "${OSC_USERNAME}" || -z "${OSC_PASSWORD}" ]]; then
+            echo "::error::Both the OBS_USERNAME and OBS_PASSWORD secrets are needed and at least one is missing. See dev/packaging/README.md."
+            exit 1
+          fi
+
+          echo "OBS target: ${OBS_PROJECT}/${OBS_PACKAGE}"
 
       # No fetch-depth here: the tarball is downloaded rather than built, so
       # this checkout only supplies the recipes and the upload script.
@@ -562,7 +624,12 @@ jobs:
             --package "${OBS_PACKAGE}"
 
       - name: Where to look
-        if: always()
+        # always(), so the link is there when the push FAILED, which is when it
+        # is most wanted.  But not when there is no project to link to: the
+        # guard above has already said so, and a URL with an empty project
+        # segment printed under that error is noise.  A step's own env: is not
+        # visible to its own if:, so the fallback is spelled out again here.
+        if: ${{ always() && (inputs.obs_project || vars.OBS_PROJECT) != '' }}
         env:
           OBS_APIURL: ${{ vars.OBS_APIURL || 'https://api.opensuse.org' }}
           # A blank input falls through to the variable: '' is falsy to ||,
