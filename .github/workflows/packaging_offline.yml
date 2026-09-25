@@ -569,11 +569,11 @@ jobs:
         # 24.04 ships osc 0.169.1, which is far too old for this job:
         #
         #   osc 1.6.0  reading credentials from environment variables
-        #   osc 1.8.0  'results --fail-on-error/-F'
         #
-        # Both are load-bearing here, so an apt osc would either prompt for a
-        # password or never report a failing target.  Keep the pin at or above
-        # those versions when bumping it.
+        # That is load-bearing here, so an apt osc would prompt for a password.
+        # Keep the pin at or above that version when bumping it.  Note the job
+        # deliberately does NOT use 'results --fail-on-error'; see the comment
+        # in dev/packaging/obs-upload.sh for why it cannot be trusted.
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check 'osc==1.27.3'

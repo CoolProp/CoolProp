@@ -675,14 +675,21 @@ clear message rather than skipping. That is deliberate: a packaging gate that
 quietly does nothing is worse than one that is switched off, because it still
 shows a green tick.
 
-Two behaviours worth knowing before the first run:
+Three behaviours worth knowing before the first run:
 
-- **An unresolvable target fails the run.** `osc results --fail-on-error`
-  treats `failed`, `broken` and `unresolvable` as failures, so a
-  `BuildRequires:` that does not exist on a target (the reason CentOS 8 Stream
-  and possibly Leap's `gcc13-c++` fall over) turns the check red rather than
-  passing quietly. `excluded` and `disabled` are not failures, so a repository
-  that does not build a given architecture is fine.
+- **An unresolvable target fails the run.** `failed`, `broken` and
+  `unresolvable` are all treated as failures, so a `BuildRequires:` that does
+  not exist on a target (the reason CentOS 8 Stream falls over) turns the check
+  red rather than passing quietly. `excluded` and `disabled` are not failures,
+  so a repository that does not build a given architecture is fine.
+- **The verdict comes from the final results, not from `--fail-on-error`.**
+  That flag is the obvious way to do this and it cannot be used here. osc
+  evaluates it inside its own polling loop and never clears it, so a state left
+  over from before the run uploaded anything latches a failure on the first
+  poll that no later success can undo. The first real run of this loop went red
+  with every target reporting `succeeded`, because the package had been sitting
+  at `broken: no source uploaded`. `dev/packaging/obs-results.py` reads the
+  result list once, after the watch returns, and is what decides.
 - **A rebuild that OBS never reacts to fails the run.** After the commit there
   is a window where OBS still reports the previous build as finished, and
   reading results in that window would pass on stale data. So when the sources
@@ -695,16 +702,14 @@ Two behaviours worth knowing before the first run:
   poll and report those instead. When the sources did NOT change, there is
   nothing for OBS to react to, and the run reports the existing results without
   waiting.
-- **A result list with no rows fails the run.** `--fail-on-error` decides from
-  the rows it iterated, so zero rows exits 0. A package with no build targets
-  enabled, or a mistyped `OBS_PACKAGE`, would otherwise look like a clean
-  build, so the row count is asserted separately.
+- **A result list with no rows fails the run.** A package with no build
+  targets enabled, or a mistyped `OBS_PACKAGE`, would otherwise look like a
+  clean build, so having built somewhere is asserted rather than assumed.
 
 The job installs `osc` from PyPI rather than from apt, and that is not a
 preference. Ubuntu 24.04 ships osc 0.169.1, while reading credentials from
-environment variables arrived in osc 1.6.0 and `results --fail-on-error` in
-1.8.0. With the apt version the job would prompt for a password and would never
-report a failing target, so the pin must stay at or above those versions.
+environment variables arrived in osc 1.6.0. With the apt version the job would
+prompt for a password, so the pin must stay at or above that version.
 
 The `obs-build` jobs are serialised on a concurrency group keyed by the
 project and package they write to, because a single OBS package cannot hold two

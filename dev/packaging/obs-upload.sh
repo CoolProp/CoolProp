@@ -41,6 +41,10 @@ package=""
 # bounded by the CI job timeout instead.
 schedule_timeout_s="${OBS_SCHEDULE_TIMEOUT_S:-600}"
 schedule_poll_s=5
+# How long to keep re-reading the results after --watch returns, for the case
+# where the watch and the next request disagree about whether anything is still
+# building.  Seconds, not build time.
+settle_timeout_s="${OBS_SETTLE_TIMEOUT_S:-300}"
 
 die() {
     echo "::error::$*" >&2
@@ -64,6 +68,8 @@ done
 # arithmetic error rather than a clear complaint about the setting.
 [[ "${schedule_timeout_s}" =~ ^[0-9]+$ ]] \
     || die "OBS_SCHEDULE_TIMEOUT_S must be a whole number of seconds, got '${schedule_timeout_s}'"
+[[ "${settle_timeout_s}" =~ ^[0-9]+$ ]] \
+    || die "OBS_SETTLE_TIMEOUT_S must be a whole number of seconds, got '${settle_timeout_s}'"
 
 # Credentials are checked here rather than left to osc, so a missing secret
 # fails with one clear line instead of an interactive password prompt that
@@ -85,6 +91,14 @@ esac
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 recipe_dir="${repo_root}/dev/packaging/obs"
+# Checked here rather than at the point of use, which is after the builds have
+# run: discovering then that the verdict cannot be computed would waste the
+# whole wait and report a bare exit 127.
+results_script="${repo_root}/dev/packaging/obs-results.py"
+[[ -f "${results_script}" ]] \
+    || die "missing ${results_script}, which is what decides whether the OBS builds passed"
+command -v python3 > /dev/null \
+    || die "python3 is needed to read the OBS results (osc is itself a Python program, so this should not normally be possible)"
 tarball="$(cd "$(dirname "${tarball}")" && pwd)/$(basename "${tarball}")"
 
 work_dir="$(mktemp -d)"
@@ -204,42 +218,45 @@ else
 fi
 
 echo "==> waiting for the builds to finish"
-# --watch returns once nothing is dirty or in a waiting state, and
-# --fail-on-error exits 1 when any result is failed, broken or unresolvable
-# (osc/core.py, get_results).  "excluded" and "disabled" are not failures,
-# which is what we want: a repository that does not build a given architecture
-# is a configuration choice, not a regression.  set -e carries that exit code
-# out of the script.
-osc_cmd results "${project}" "${package}" --watch --fail-on-error --verbose
+# --watch returns once nothing is dirty and nothing is in a waiting state.
+#
+# NOT --fail-on-error, which looks exactly right and is a trap.  osc evaluates
+# it INSIDE its polling loop and never clears it:
+#
+#     for results in get_package_results(...):
+#         ...
+#             if res['code'] in ('failed', 'broken', 'unresolvable'):
+#                 failed = True
+#
+# (osc/core.py, get_results).  So a state left over from before this run
+# uploaded anything latches a failure on the very first poll, and no later
+# success can undo it.  This package sat at "broken: no source uploaded", and
+# the first real run of this loop went red with every single target reporting
+# "succeeded".  Checked against osc 1.27.3, the version pinned in the workflow.
+#
+# The verdict is therefore taken once, from the FINAL results, below.
+osc_cmd results "${project}" "${package}" --watch --verbose
 
-# --fail-on-error decides from the rows it iterated, so it also exits 0 when
-# there were no rows at all: a package with no repositories configured, or a
-# mistyped package name, would otherwise look like a clean build.
-results_final="$(osc_cmd results "${project}" "${package}" --xml)"
-# Only targets that could actually build are counted.  A row that says
-# "excluded" or "disabled" is a target OBS deliberately did not build, and
-# --fail-on-error skips those too, so a package whose targets are ALL excluded
-# or disabled produces rows, reports no failure, and would otherwise be a green
-# tick for a package that built nowhere.
-#
-# The walk is over <status> tags rather than the whole document because a
-# <result> element carries a code attribute of its own: a repository can be
-# marked excluded while the status inside it is fine, and matching the raw text
-# would subtract that one twice.
-#
-# awk rather than "grep -c ... || echo 0": grep -c already prints 0 when it
-# matches nothing and exits 1 as well, so the fallback appends a second 0 and
-# the arithmetic below then fails on "0\n0".  awk counts and exits 0 either way.
-result_rows="$(awk '
-    {
-        s = $0
-        while (match(s, /<status [^>]*>/)) {
-            tag = substr(s, RSTART, RLENGTH)
-            if (tag !~ /code="(excluded|disabled)"/) n++
-            s = substr(s, RSTART + RLENGTH)
-        }
-    }
-    END { print n+0 }' <<<"${results_final}")"
-(( result_rows > 0 )) \
-    || die "OBS built ${project}/${package} nowhere: every target is excluded, disabled, or there are no results at all. Check that the package exists and has build targets enabled."
-echo "==> ${result_rows} target(s) built, none failed"
+# Re-read the results and judge them.  --watch should already have waited, so
+# the loop normally runs once; it exists because --watch returning and the next
+# request being served are two different moments, and reading a result list
+# that is still moving would judge stale codes.
+results_file="${work_dir}/results.xml"
+settle_deadline=$(( SECONDS + settle_timeout_s ))
+while true; do
+    osc_cmd results "${project}" "${package}" --xml > "${results_file}"
+
+    # 0 = built and clean, 1 = a target failed or nothing built, 2 = not
+    # settled.  obs-results.py explains each in its own docstring.
+    verdict=0
+    python3 "${results_script}" "${results_file}" || verdict=$?
+
+    (( verdict == 2 )) || break
+
+    if (( SECONDS >= settle_deadline )); then
+        die "OBS was still reporting builds in progress ${settle_timeout_s}s after the watch returned. Check ${OSC_APIURL/api./build.}/package/show/${project}/${package}."
+    fi
+    sleep "${schedule_poll_s}"
+done
+
+exit "${verdict}"
