@@ -465,15 +465,109 @@ Enable `x86_64` everywhere and `aarch64` where the distribution offers it.
 
 `eigen3-devel` and `fmt-devel` are not in the RHEL or CentOS Stream base
 repositories, they come from EPEL, so a CentOS Stream target is unresolvable
-until EPEL is added to the OBS project's repository list.  The openSUSE and
-Fedora targets carry both packages themselves.
-
-Each repository can be added from the command line too, by editing the project
-metadata with `osc meta prj -e home:<username>`.
+until EPEL is added to it; see "Adding EPEL to a CentOS Stream target" below.
+The openSUSE and Fedora targets carry both packages themselves.
 
 Debian and Ubuntu targets build from `coolprop.dsc` plus the `debian.*` files;
 the RPM targets build from `coolprop.spec`.  OBS decides per repository, so the
 two recipes live side by side in one package directory.
+
+#### Editing the target list as XML
+
+The web UI dialog writes into the project metadata, and that metadata can be
+edited directly instead.  This is the faster route once more than one or two
+targets are involved, and it is the only route that shows the two settings the
+dialog hides (a second `<path>`, and a per-target architecture switch).
+
+```bash
+osc meta prj -e home:<username>            # opens $EDITOR on the live metadata
+osc meta prj home:<username> > prj.xml     # or: dump, edit, upload
+osc meta prj home:<username> -F prj.xml
+```
+
+Each target is one `<repository>` block.  The `name` is what appears in the
+download URL and in `osc build`, the `<path>` says which distribution supplies
+the build root, and each `<arch>` is one architecture OBS will schedule:
+
+```xml
+<repository name="openSUSE_Tumbleweed">
+  <path project="openSUSE:Factory" repository="snapshot"/>
+  <arch>x86_64</arch>
+  <arch>aarch64</arch>
+</repository>
+```
+
+The project and repository names inside `<path>` are OBS names, not
+distribution names, and they change as releases come and go.  Add one target
+through **Repositories -> Add from a distribution** first, then dump the
+metadata and copy the shape: that way the names come from the server rather
+than from anyone's memory.
+
+Removing a target is deleting its block.  OBS does not retire a repository when
+the distribution behind it goes end of life, it keeps scheduling builds against
+a base that no longer receives updates, so end-of-life targets have to be taken
+out by hand.
+
+#### Adding EPEL to a CentOS Stream target
+
+`eigen3-devel` and `fmt-devel` are not in the CentOS Stream base repositories,
+which is why a CentOS Stream target reports `unresolvable` rather than failing
+to compile: OBS cannot assemble a build root that satisfies the `BuildRequires`
+in the spec, so nothing is ever built.
+
+The fix is a second `<path>` in that repository block, pointing at whichever
+project on the server mirrors EPEL for that release.  Paths are searched in the
+order they are listed, so the base distribution goes first and EPEL after it:
+
+```xml
+<repository name="CentOS_Stream">
+  <path project="CENTOS_STREAM_PROJECT" repository="standard"/>
+  <path project="EPEL_PROJECT_FOR_THAT_RELEASE" repository="standard"/>
+  <arch>x86_64</arch>
+</repository>
+```
+
+Take both names from the **Add from a distribution** dialog, which lists what
+the server actually carries.  Until the second path is there, the target stays
+unresolvable no matter what the spec says.
+
+#### Turning off one architecture without dropping the target
+
+Deleting an `<arch>` line stops that architecture being scheduled, but it also
+discards the build history behind it.  To keep the target and silence one
+architecture, for instance while an `aarch64` failure is being investigated,
+disable it instead:
+
+```xml
+<build>
+  <disable repository="openSUSE_Tumbleweed" arch="aarch64"/>
+</build>
+```
+
+The `<build>` element sits at the end of the project metadata, after the
+`<repository>` blocks.  The same element is accepted in the package metadata
+(`osc meta pkg -e home:<username> coolprop`), which is the better place for a
+switch that is about this package rather than about the project.
+
+A disabled architecture reports `disabled` in `osc results`.  That is not
+counted as a failure by the CI job in section 6, deliberately: a target that is
+switched off on purpose should not turn the GitHub check red.  Do note that
+switching off every target would leave nothing to check, which the job treats
+as a failure in its own right.
+
+#### Project-wide build settings
+
+Macros, package preferences and similar build-root settings live in a separate
+document, the project config:
+
+```bash
+osc meta prjconf -e home:<username>
+```
+
+Nothing in this packaging currently needs an entry there.  It is worth knowing
+about because build failures that look like a broken spec, for example two
+packages both providing the same dependency, are usually resolved with a
+`Prefer:` line in the project config rather than by changing the spec.
 
 ### 4. Build locally before pushing
 
@@ -490,6 +584,22 @@ here is only an example.
 
 The first run downloads a base chroot and needs root (`osc build` uses `sudo`
 for that, or set `su-wrapper` in `oscrc`).
+
+This stays a local step, and the CI job in section 6 does not use `osc build`.
+The reasons are worth recording, because it looks at first like the obvious way
+to test packaging on a GitHub runner:
+
+- it is not offline.  `osc build` fetches the build configuration and the
+  package list from the OBS API before it starts, so it needs the same
+  credentials and the same reachable server as pushing does.  It gives no
+  independence from OBS, only a different place to run the compiler.
+- it needs a privileged chroot on the runner.
+- Ubuntu's `obs-build`, which supplies the distribution definitions, is a
+  snapshot several years old, so the newest targets are not described in it.
+
+A container running `rpmbuild` plus `rpmlint` directly, with no OBS involved,
+is the cheaper way to reproduce an RPM target on a runner if that is ever
+wanted.  It needs no credentials, so it also works on pull requests from forks.
 
 ### 5. What users then do
 
