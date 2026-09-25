@@ -645,11 +645,13 @@ free job as the gate and OBS as the distribution reality check is the point of
 the split.
 
 Setup, once. The job is **inert until `OBS_PROJECT` is set**, so nothing
-happens in a fork or in a clone with no OBS package to push to.
+happens in a fork or in a clone with no OBS package to push to. A manual run
+can supply the project instead of the variable, but only somebody with write
+access can start one.
 
 | Kind | Name | Value |
 |---|---|---|
-| Variable | `OBS_PROJECT` | e.g. `home:jowr`. Setting this is what switches the job on. |
+| Variable | `OBS_PROJECT` | e.g. `home:jowr`. Setting this is what switches the job on for automatic runs. |
 | Variable | `OBS_PACKAGE` | Optional, defaults to `coolprop`. |
 | Variable | `OBS_APIURL` | Optional, defaults to `https://api.opensuse.org`. |
 | Secret | `OBS_USERNAME` | Your OBS account name. |
@@ -729,6 +731,43 @@ When it runs, and when it does not:
   skipped rather than failing a contributor's pull request on a credential they
   were never going to have. Note a skipped job reads as neutral, so do not make
   `obs-build` a required check without thinking that through.
+
+#### Triggering a build by hand
+
+**Actions -> Packaging (offline build) -> Run workflow**, then pick the branch.
+Three inputs:
+
+| Input | Default | What it does |
+|---|---|---|
+| `push_to_obs` | ticked | Untick to run only the offline build and leave OBS alone. |
+| `obs_project` | blank | A project for this run only. Blank uses the `OBS_PROJECT` variable. |
+| `obs_package` | blank | Likewise for the package name. Blank uses `OBS_PACKAGE`, or `coolprop`. |
+
+The whole workflow runs either way, because `obs-build` consumes the tarball
+artifact that `offline-build` produces, so there is no path to OBS that does not
+build the tarball first. A manual run therefore costs one offline build even
+when all you wanted was the OBS half.
+
+Two inputs rather than a variable is what makes a one-off build to a staging
+project possible without editing the variable that every automatic run uses.
+The credentials are deliberately not overridable: they are secrets, and a
+dispatch input would record the value in the run's parameters in plain text.
+
+A manual run ignores the `paths:` filter, so it is also the way to get an OBS
+build for a change that the filter does not cover, or for a branch with no pull
+request open.
+
+Two behaviours specific to manual runs:
+
+- **Asking for an OBS build with no project configured fails the run**, rather
+  than skipping the job the way an automatic run does. Skipping is right when it
+  means "this repository has no OBS package", but somebody who ticked
+  `push_to_obs` asked for an OBS build in so many words, and answering that with
+  a skipped job and a green run is the quiet no-op this setup exists to avoid.
+  The first step in the job says what is missing, before it installs anything.
+- **A tag still skips the OBS job.** `obs-build` excludes `refs/tags/` whatever
+  started the run, because on a release tag the package belongs to the release
+  path in section 7. Dispatching against a tag gets you the offline build only.
 
 Two limits to be aware of before leaning on this:
 

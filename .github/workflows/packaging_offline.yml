@@ -25,7 +25,24 @@ on:
       - 'dev/packaging/**'
       - 'dev/generate_headers.py'
       - '.github/workflows/packaging_offline.yml'
+  # Manual runs.  The whole workflow always runs, because obs-build consumes
+  # the tarball artifact that offline-build produces, so there is no way to
+  # reach OBS without building the tarball first.  What the inputs decide is
+  # whether OBS is touched at all and which package is written to.
   workflow_dispatch:
+    inputs:
+      push_to_obs:
+        description: 'Push to OBS and wait for the builds'
+        type: boolean
+        default: true
+      obs_project:
+        description: 'OBS project, e.g. home:jowr (blank uses the OBS_PROJECT variable)'
+        type: string
+        default: ''
+      obs_package:
+        description: 'OBS package (blank uses the OBS_PACKAGE variable, or coolprop)'
+        type: string
+        default: ''
 
 # Neither job needs to write anything through the Actions token: they build,
 # inspect and (for obs-build) talk to OBS with its own credentials.  This was a
@@ -391,6 +408,12 @@ jobs:
   # Setup, once, before it does anything (see dev/packaging/README.md):
   #   Repository variables: OBS_PROJECT (e.g. home:jowr), OBS_PACKAGE, OBS_APIURL
   #   Repository secrets:   OBS_USERNAME, OBS_PASSWORD
+  #
+  # A manual run (Actions -> this workflow -> Run workflow) can override the two
+  # names through the inputs above, which is how a one-off build goes to a
+  # staging project without editing the repository variable that every automatic
+  # run uses.  The credentials are NOT overridable: they are secrets, and a
+  # dispatch input would put them in the run's parameters in plain text.
   obs-build:
     needs: offline-build
     runs-on: ubuntu-latest
@@ -409,8 +432,26 @@ jobs:
     # which fetch a published tarball and verify its checksum.  Having CI commit
     # its own tarball there at the same moment would leave whoever revives that
     # path debugging a package whose sources were quietly replaced.
+    #
+    # On a manual run the obs_project input stands in for the variable, so a
+    # repository that has never set OBS_PROJECT can still be pointed at a
+    # project by hand; and push_to_obs turns the job off for a manual run that
+    # only wants the offline build.  Outside a workflow_dispatch the inputs
+    # context is empty, and an empty value compares equal to '', so both of
+    # those clauses fall back to the behaviour above on a push or a pull
+    # request.
+    #
+    # A manual run is deliberately NOT skipped when no project is configured.
+    # Skipping is the right answer for an automatic run, where it means "this
+    # repository has no OBS package", but somebody who ticked push_to_obs asked
+    # for an OBS build in so many words, and answering that with a skipped job
+    # and a green run is the quiet no-op this whole file is written to avoid.
+    # The job starts instead and the first step below says what is missing.
     if: >-
-      vars.OBS_PROJECT != ''
+      (inputs.obs_project != ''
+       || vars.OBS_PROJECT != ''
+       || github.event_name == 'workflow_dispatch')
+      && (github.event_name != 'workflow_dispatch' || inputs.push_to_obs)
       && !startsWith(github.ref, 'refs/tags/')
       && (github.event_name != 'pull_request'
           || github.event.pull_request.head.repo.full_name == github.repository)
@@ -436,6 +477,21 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      # First, before the checkout, so a manual run that has nowhere to push
+      # says so in seconds rather than after installing osc.  This can only
+      # fire on a workflow_dispatch: every other event is skipped by the
+      # condition above when no project is configured.
+      - name: Check there is an OBS project to push to
+        env:
+          OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${OBS_PROJECT}" ]]; then
+            echo "::error::No OBS project to push to. Either set the OBS_PROJECT repository variable, or fill in the obs_project input when starting the run. Untick push_to_obs to run only the offline build."
+            exit 1
+          fi
+          echo "OBS project: ${OBS_PROJECT}"
+
       # No fetch-depth here: the tarball is downloaded rather than built, so
       # this checkout only supplies the recipes and the upload script.
       - uses: actions/checkout@v7
@@ -486,8 +542,10 @@ jobs:
           # quote or a semicolon in it would become script rather than an
           # argument.  These particular values are set by a maintainer, but the
           # habit is what keeps the next one safe.
-          OBS_PROJECT: ${{ vars.OBS_PROJECT }}
-          OBS_PACKAGE: ${{ vars.OBS_PACKAGE || 'coolprop' }}
+          # A blank input falls through to the variable: '' is falsy to ||,
+          # and so is the empty inputs context of a push or pull request.
+          OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
         run: |
           set -euo pipefail
           # Exactly one tarball is expected.  Globbing it into the argument
@@ -507,8 +565,10 @@ jobs:
         if: always()
         env:
           OBS_APIURL: ${{ vars.OBS_APIURL || 'https://api.opensuse.org' }}
-          OBS_PROJECT: ${{ vars.OBS_PROJECT }}
-          OBS_PACKAGE: ${{ vars.OBS_PACKAGE || 'coolprop' }}
+          # A blank input falls through to the variable: '' is falsy to ||,
+          # and so is the empty inputs context of a push or pull request.
+          OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
         run: |
           set -euo pipefail
           # The build logs live on the web UI, not on the API host.
