@@ -400,10 +400,15 @@ jobs:
   # already failed to build offline never reaches OBS, which saves a slow round
   # trip on a failure we have in hand.
   #
-  # This is NOT the OBS webhook.  The webhook fires when GitHub receives the
-  # push, which is before any of this has run, so a webhook-triggered rebuild
-  # would report the PREVIOUS sources against the new commit.  See the comment
-  # in .obs/workflows.yml.
+  # This job is now the ONLY thing that builds this package on OBS.  There used
+  # to be a second path, an OBS webhook in .obs/workflows.yml that re-ran the
+  # package's source services on a release tag, and it was removed because it
+  # never did anything: its services were mode="manual", which a server-side run
+  # skips, and nothing published the tarball they were meant to fetch.  The
+  # ordering was against it too.  A webhook fires when GitHub RECEIVES the push,
+  # which is before any of this has run, so a webhook-triggered rebuild reports
+  # the PREVIOUS sources against the new commit.  Do not reintroduce one without
+  # solving that.
   #
   # Setup, once, before it does anything (see dev/packaging/README.md):
   #   Repository variables: OBS_PROJECT (e.g. home:jowr), OBS_PACKAGE, OBS_APIURL
@@ -426,12 +431,17 @@ jobs:
     # the credentials missing is a different thing entirely: obs-upload.sh
     # fails loudly on that rather than skipping.
     #
-    # Tags are excluded on purpose.  This workflow also fires on v* tags, and on
-    # a release tag the OBS package is the release path's to fill: the webhook
-    # in .obs/workflows.yml runs the services of the SAME project and package,
-    # which fetch a published tarball and verify its checksum.  Having CI commit
-    # its own tarball there at the same moment would leave whoever revives that
-    # path debugging a package whose sources were quietly replaced.
+    # Tags are no longer excluded.  They used to be, so that the OBS webhook
+    # could own the package on a release tag without CI replacing its sources
+    # underneath it.  That webhook is gone, so there is nothing left to collide
+    # with and no reason to leave a tag unbuilt.
+    #
+    # Whether a tag PUSH actually reaches this job is a separate question and
+    # is worth checking on the first one rather than assuming: this workflow
+    # carries a paths: filter as well as tags: ['v*'], both have to be
+    # satisfied, and a tag push usually introduces no new commits for the paths
+    # filter to match.  Dispatching the workflow against the tag is the
+    # dependable route, and is now allowed.
     #
     # On a manual run the obs_project input stands in for the variable, so a
     # repository that has never set OBS_PROJECT can still be pointed at a
@@ -462,8 +472,6 @@ jobs:
       (vars.OBS_PROJECT != '' || github.event_name == 'workflow_dispatch')
       && (github.event_name != 'workflow_dispatch'
           || (inputs.push_to_obs && github.event.inputs.push_to_obs != 'false'))
-      && (github.event_name == 'workflow_dispatch'
-          || !startsWith(github.ref, 'refs/tags/'))
       && (github.event_name != 'pull_request'
           || github.event.pull_request.head.repo.full_name == github.repository)
     # The wait for OBS is unbounded in the script, so the bound lives here.
@@ -503,12 +511,11 @@ jobs:
       # what it really buys is an accurate message instead of an osc traceback.
       #
       # Everything here can only fire on a manual run.  Every other event is
-      # skipped by the condition above when the project is unset or the ref is
-      # a tag, and an automatic run that reaches this point has a project from
-      # a repository variable that nobody typed in a hurry.
+      # skipped by the condition above when the project is unset, and an
+      # automatic run that reaches this point has a project from a repository
+      # variable that nobody typed in a hurry.
       - name: Check this run can reach OBS
         env:
-          OBS_REF: ${{ github.ref }}
           OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
           OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
           # Named OSC_* to match what obs-upload.sh reads, so the two agree.
@@ -516,11 +523,6 @@ jobs:
           OSC_PASSWORD: ${{ secrets.OBS_PASSWORD }}
         run: |
           set -euo pipefail
-
-          if [[ "${OBS_REF}" == refs/tags/* ]]; then
-            echo "::error::${OBS_REF} is a tag, and on a tag the OBS package belongs to the release path in .obs/workflows.yml, whose services fetch a published tarball and check its sha256. Letting this run commit its own tarball there would leave the package holding sources that were quietly replaced. Dispatch against a branch instead, or untick push_to_obs to run only the offline build."
-            exit 1
-          fi
 
           if [[ -z "${OBS_PROJECT}" ]]; then
             echo "::error::No OBS project to push to. Either set the OBS_PROJECT repository variable, or fill in the obs_project input when starting the run. Untick push_to_obs to run only the offline build."

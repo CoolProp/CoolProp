@@ -350,8 +350,9 @@ if you miss one.
 
 **`_service` is still a placeholder**: 64 zeros for the checksum and a release
 asset URL that does not exist yet, so `osc service manualrun` fails closed
-rather than fetching something unchecked.  It is the tagged-release path and is
-not used for a snapshot trial, where the tarball is added with `osc add` --
+rather than fetching something unchecked.  It is only ever run by hand now (see
+section 7) and is not used for a snapshot trial, where the tarball is added
+with `osc add` --
 by hand for a one-off, or by the CI job in section 6, which does the same
 thing on every push.
 
@@ -724,12 +725,14 @@ When it runs, and when it does not:
   pull request case is the day to day loop: every push to a branch with an open
   pull request gets an OBS result. A branch with no pull request open does not,
   and needs `workflow_dispatch`.
-- **Not on release tags.** The workflow itself does fire on `v*`, but
-  `obs-build` skips them. On a release tag the OBS package belongs to the
-  release path in section 7, whose services fetch a published tarball and check
-  its sha256 against the same project and package. Letting CI commit its own
-  tarball at that moment would leave whoever revives that path debugging
-  sources that were quietly replaced.
+- **On release tags, in principle.** `obs-build` used to skip them, so that
+  the OBS webhook could own the package on a tag. That webhook is gone (see
+  section 7), so nothing collides any more and the exclusion has been removed.
+  Whether a tag *push* reaches the job is worth checking on the first tag
+  rather than assuming: the workflow carries a `paths:` filter as well as
+  `tags: ['v*']`, both have to be satisfied, and a tag push usually introduces
+  no new commits for the paths filter to match. Dispatching the workflow
+  against the tag is the dependable route.
 - **Not for a pull request from a fork.** A fork gets no secrets, so the job is
   skipped rather than failing a contributor's pull request on a credential they
   were never going to have. Note a skipped job reads as neutral, so do not make
@@ -768,10 +771,9 @@ Two behaviours specific to manual runs:
   `push_to_obs` asked for an OBS build in so many words, and answering that with
   a skipped job and a green run is the quiet no-op this setup exists to avoid.
   The first step in the job says what is missing, before it installs anything.
-- **Dispatching against a tag fails the run**, rather than skipping quietly,
-  for the same reason. On a release tag the package belongs to the release path
-  in section 7, so the job refuses and says so. An automatic run on a tag is
-  still skipped, because nobody asked for anything there.
+- **Dispatching against a tag works**, and is the dependable way to get a
+  release tag onto OBS, for the `paths:` reason above. It used to be refused,
+  because the OBS webhook owned tags; that webhook is gone.
 - **The project and package names are checked for shape, not just emptiness.**
   Any non-empty input wins over the variable, so a single space left behind by
   a copy-paste would otherwise pass an empty-looking name and silently override
@@ -799,98 +801,46 @@ Two limits to be aware of before leaning on this:
   rather than cancelling is deliberate, so that every commit gets a verdict
   instead of the overtaken one being cancelled.
 
-### 7. Rebuilding automatically from GitHub (the release path)
+### 7. What used to be here: the OBS webhook
 
-`.obs/workflows.yml` in the repository root tells OBS what to do when GitHub
-calls it: on a release tag it re-runs the package's source services, which
-fetch the tarball from the GitHub release and verify its sha256.
+This section described a second way to build on OBS: a token plus a GitHub
+webhook, and an `.obs/workflows.yml` telling OBS to re-run the package's source
+services on a release tag, so that the package rebuilt from a published release
+asset whose sha256 it had checked.
 
-**The file alone does nothing.** OBS only reads it if a token and a webhook
-exist, and both are created by hand, once:
+**It has been removed**, and the note is kept because the idea is an obvious one
+to have again. Three things were wrong with it, and only the third is specific
+to how it was written here:
 
-1. On OBS, create a workflow token and give it a GitHub personal access token
-   so OBS can read the repository and report back. Do this in the browser,
-   under **Profile -> Manage Your Tokens**, choosing the `workflow` operation
-   and pasting the GitHub token into the form.
+1. **It never ran anything.** Both services in `_service` carry `mode="manual"`,
+   and a server-side services run, which is what `trigger_services` asks for,
+   skips exactly `localonly`, `disabled`, `manual` and `buildtime`. So the
+   webhook logged `Skip download_url` and `Skip verify_file` and stopped.
+2. **The ordering is against it.** A webhook fires when GitHub *receives* the
+   push, which is before CI has built or uploaded anything. A rebuild triggered
+   that way reports the previous sources against the new commit, and a green
+   tick for code that was never built is worse than no tick. Anything that
+   revives this has to be called by the release workflow *after* its own
+   upload, not by a webhook on the push.
+3. **There was no tarball to fetch.** `_service` points at a GitHub release
+   asset under `releases/download/<tag>/`, and nothing publishes one;
+   `release_all_files.yml` has its `tags: ['v*']` trigger commented out.
 
-   It returns a token id and a secret. Keep the secret; it is shown once.
+`dev/packaging/obs/_service` itself is still there. It is what an
+`osc service manualrun` uses, and it is one of the four files whose version
+`check-build-deps.py` keeps in agreement, so removing it is a separate job from
+removing the trigger. It still carries the v8.0.1 placeholder and an all-zero
+checksum, which is why it fails closed rather than fetching something unchecked.
 
-   `osc` can do the same thing:
+If you set up the OBS token and webhook earlier, **remove them on OBS**. They
+are not in this repository, so deleting the file does not remove them, and the
+"OBS SCM/CI Workflow Integration" status will keep appearing on pushes.
 
-   ```bash
-   osc token --create --operation workflow --scm-token <github-pat>
-   ```
-
-   Prefer the browser anyway. The GitHub token is a command-line argument
-   here, so it lands in your shell history and is readable in
-   `/proc/<pid>/cmdline` by anyone else on the machine for as long as the
-   command runs. That matters little on a personal laptop and rather more on
-   a shared build host.
-
-2. On GitHub, under **Settings -> Webhooks -> Add webhook** for the repository:
-
-   - Payload URL: `https://build.opensuse.org/trigger/workflow?id=<token-id>`
-   - Content type: `application/json`
-   - Secret: the secret from step 1
-   - Events: "Let me select individual events", then **Pushes**. OBS derives
-     its `tag_push` event from a push whose ref is under `refs/tags/`, so the
-     separate "Branch or tag creation" event is not needed.
-
-3. `.obs/workflows.yml` has to be on the repository's default branch. OBS reads
-   it from there, not from the branch that triggered the event.
-
-Setting the token and the webhook up does not yet make the trigger do
-anything. Three things are in the way, and all three have to be dealt with
-before a tag rebuilds the package:
-
-1. **The services are skipped.** Both services in `dev/packaging/obs/_service`
-   carry `mode="manual"`. A server-side services run, which is what
-   `trigger_services` asks for, skips exactly the modes `localonly`,
-   `disabled`, `manual` and `buildtime`; the list is in the OBS backend, in
-   `bs_service` under "collect services to run". So the webhook logs
-   `Skip download_url` and `Skip verify_file` and does nothing else. Dropping
-   the mode makes them run, at the price of re-downloading the tarball on
-   every source change, which is the thing the mode was added to avoid.
-2. **There is no tarball at the URL.** `_service` fetches a GitHub release
-   asset under `releases/download/<tag>/`, and nothing publishes one.
-   `release_all_files.yml` does build the tarball with
-   `make-release-tarball.sh`, but it uploads it as a workflow artifact and
-   rsyncs it to SourceForge, and its `tags: ['v*']` trigger is commented out,
-   so no tag runs it at all.
-3. **`_service` names the wrong version.** It still pins v8.0.1 with an
-   all-zero placeholder checksum.
-
-None of this can publish a wrong tarball. With the services skipped nothing
-happens at all, and if they were un-skipped today the download would 404 or
-`verify_file` would reject the checksum. Wiring the release job to attach the
-tarball and rewrite `_service` is item 3 under "Keeping it alive" below.
-
-There is also an ordering point that survives all three fixes: `tag_push`
-fires when the tag is pushed, which is before the release workflow has
-uploaded anything. The dependable trigger is therefore that workflow calling
-OBS after its own upload, with this webhook as the manual re-run path.
-
-Things to check on the first tag rather than assume:
-
-- **How often it fires.** `.obs/workflows.yml` has no tag filter, so every
-  tag triggers a services run, including the `gui-v*` ones. Once the three
-  items above are fixed, that means an unrelated tag re-fetches whatever
-  version `_service` names at the time. The file explains why a filter was
-  removed rather than left in unverified, but this is the cost of that
-  choice and is worth watching.
-- **Which project the workflow targets.** It currently names `home:jowr`, a
-  personal project. That is the right place while the packaging is being
-  proven, and the wrong place afterwards: a project owned by the CoolProp
-  organisation should own the published packages, and the workflow file should
-  be updated with it.
-
-There is deliberately no pull-request workflow here. OBS can branch a package
-and build it per pull request, but this package's source is a release tarball
-rather than the git checkout, so such a build would compile whatever tarball
-the package already holds and report green without having tested the pull
-request at all. CoolProp's own CI covers pull requests; see
-`.github/workflows/packaging_offline.yml`, which builds the tarball with the
-network switched off.
+There is deliberately no pull-request workflow on OBS either. OBS can branch a
+package and build it per pull request, but this package's source is a release
+tarball rather than the git checkout, so such a build would compile whatever
+tarball the package already holds and report green without having tested the
+pull request at all. Section 6 covers pull requests properly.
 
 ## Keeping it alive
 
