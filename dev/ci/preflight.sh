@@ -2,9 +2,11 @@
 #
 # preflight.sh — local pre-push quality gate for CoolProp.
 #
-# Runs the same checks CI runs on the diff between the current HEAD and
-# its upstream / origin/master, so a passing preflight predicts a green
-# CI.  Closes CoolProp-6r6.
+# Runs the same checks CI runs on the diff between the merge-base with
+# origin/master (or --base) and the working tree -- committed, staged and
+# unstaged changes -- so a passing preflight predicts a green CI.  Lint
+# findings count on changed lines only; stage logs go to a per-run
+# directory printed at the start.  Closes CoolProp-6r6.
 #
 # Designed to be the body of a pre-push git hook (which `git commit
 # --no-verify` does NOT bypass — only `git push --no-verify` does).
@@ -94,6 +96,48 @@ esac
 # CPM_SOURCE_CACHE is an opt-out and is respected.
 export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE-$HOME/.cache/CPM}"
 
+# REFPROP for the [REFPROP] cases.  Every REFPROP-backed case calls
+# Skip_if_No_REFPROP(), so without a REFPROP the gate still prints green --
+# with ~30 cases silently skipped.  The backend looks at
+# $COOLPROP_REFPROP_ROOT, then /opt/refprop; nothing ever set the variable,
+# so on a machine with REFPROP installed anywhere else those cases never ran.
+# Probe the usual install locations and export the first one that looks like
+# a REFPROP root (shared library + fluid files).  The test summary reports
+# the skipped count either way.
+case "$(uname -s)" in
+    Darwin) REFPROP_LIBS="librefprop.dylib" ;;
+    Linux) REFPROP_LIBS="librefprop.so" ;;
+    *) REFPROP_LIBS="REFPRP64.dll REFPROP.dll" ;;
+esac
+refprop_root_ok() {
+    [ -d "$1" ] || return 1
+    [ -d "$1/FLUIDS" ] || [ -d "$1/fluids" ] || return 1
+    local lib
+    for lib in $REFPROP_LIBS; do
+        [ -e "$1/$lib" ] && return 0
+    done
+    return 1
+}
+if [ -n "${COOLPROP_REFPROP_ROOT+set}" ] && [ -z "$COOLPROP_REFPROP_ROOT" ]; then
+    # Explicitly empty: opt out.  Unset it so the backend does not treat ""
+    # as a root, and skip the probe.
+    unset COOLPROP_REFPROP_ROOT
+    REFPROP_NOTE="REFPROP: disabled (COOLPROP_REFPROP_ROOT set empty); [REFPROP] cases will SKIP"
+elif [ -n "${COOLPROP_REFPROP_ROOT:-}" ]; then
+    REFPROP_NOTE="REFPROP: \$COOLPROP_REFPROP_ROOT=$COOLPROP_REFPROP_ROOT"
+elif refprop_root_ok /opt/refprop; then
+    REFPROP_NOTE="REFPROP: /opt/refprop (backend default)"
+else
+    REFPROP_NOTE="REFPROP: not found; [REFPROP] cases will SKIP (set COOLPROP_REFPROP_ROOT; set it empty to opt out of the probe)"
+    for rp in "$HOME/REFPROP10" "$HOME/REFPROP" "$HOME/refprop" /Applications/REFPROP; do
+        if refprop_root_ok "$rp"; then
+            export COOLPROP_REFPROP_ROOT="$rp"
+            REFPROP_NOTE="REFPROP: $rp (auto-detected; set COOLPROP_REFPROP_ROOT to override)"
+            break
+        fi
+    done
+fi
+
 # Ninja when available: it is what CI uses, and it schedules the build better
 # than Unix Makefiles.  Only applied when preflight configures a build dir
 # itself (the dir does not exist yet), so it can never clash with the
@@ -108,21 +152,155 @@ fi
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+# ---------- per-run log directory ------------------------------------
+#
+# Every stage log lives in a fresh directory for THIS run.  They used to be
+# fixed /tmp/preflight-*.log paths shared by every worktree on the machine,
+# so two concurrent runs overwrote each other's logs: one run reported 48
+# clang-tidy findings that all belonged to another worktree's run.  That is
+# fail-open as well as fail-closed -- a gate that greps a log can read the
+# other run's clean log.  Kept after the run so the paths in the messages
+# stay valid.
+PF_LOGDIR="$(mktemp -d "${TMPDIR:-/tmp}/preflight.XXXXXX")"
+echo "preflight logs: $PF_LOGDIR"
+
+# ---------- build-dir validation --------------------------------------
+#
+# ensure_build_dir <dir> <log> <cmake -D args...>
+#
+# Returns 0 when <dir> holds a usable configure of THIS checkout (configuring
+# it first if needed), non-zero if configuring failed (see <log>).
+#
+# The old guard was `[ ! -d dir ]`: an interrupted configure left the dir
+# behind with a truncated CMakeCache.txt, the guard then skipped configuring
+# forever, and every later run failed the build or json-symbols with a
+# misleading message.  A dir is usable only if its cache names this project,
+# points at THIS source tree (a dir copied from another worktree does not),
+# and its generator file exists.  A dir that fails that is one preflight
+# owns (build_catch / build_shared, both gitignored), so it is removed and
+# configured from scratch.
+build_dir_problem() {
+    local dir="$1" cache="$1/CMakeCache.txt" home
+    [ -f "$cache" ] || { echo "no CMakeCache.txt"; return; }
+    grep -qx 'CMAKE_PROJECT_NAME:STATIC=CoolProp' "$cache" || { echo "CMakeCache.txt does not name project CoolProp (truncated?)"; return; }
+    home="$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache")"
+    if [ -z "$home" ] || [ "$(cd "$home" 2>/dev/null && pwd -P)" != "$(pwd -P)" ]; then
+        echo "CMakeCache.txt belongs to a different source tree (${home:-unknown})"
+        return
+    fi
+    [ -f "$dir/build.ninja" ] || [ -f "$dir/Makefile" ] || { echo "no build.ninja or Makefile (configure did not finish)"; return; }
+}
+ensure_build_dir() {
+    local dir="$1" log="$2" problem
+    shift 2
+    if [ -d "$dir" ]; then
+        problem="$(build_dir_problem "$dir")"
+        [ -z "$problem" ] && return 0
+        echo "  $dir is not a usable build dir ($problem); reconfiguring from scratch"
+        rm -rf "$dir"
+    fi
+    cmake -B "$dir" -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} "$@" >"$log" 2>&1
+}
+
 # ---------- resolve diff set -----------------------------------------
 
-# Files changed on this branch vs base, restricted to extensions the
-# C-family checks care about.  Filters out deleted files (.cpp.cpp at
-# the same path would otherwise be checked even though it no longer
-# exists on disk).
-CHANGED_CPP="$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
-# Also pick up uncommitted changes in the working tree — preflight is
-# meant to gate pushes, but agents often run it mid-edit too.
-UNSTAGED_CPP="$(git diff --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
-ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' || true)"
+# Everything is diffed against the merge-base with the WORKING TREE, which
+# covers committed, staged and unstaged changes in one diff.  The old form
+# unioned `BASE...HEAD` with `git diff` (unstaged only), so staged-but-
+# uncommitted edits were never checked, and its line numbers would have
+# referred to two different versions of a file.
+#
+# An unresolvable base is a hard error.  The old `git diff ... || true`
+# turned a typo in --base into an EMPTY diff, and every check then reported
+# "skipped: no C/C++ files in diff" -- preflight passed having checked
+# nothing.
+if ! MERGE_BASE="$(git merge-base "$BASE_REF" HEAD 2>/dev/null)"; then
+    echo "preflight: cannot find a merge-base between '$BASE_REF' and HEAD (git fetch origin, or pass --base=<ref>)" >&2
+    exit 2
+fi
+CPP_GLOBS=('*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx')
 
-# All paths changed (any extension) — used for tag auto-selection.
-ALL_PATHS="$(git diff --name-only "$BASE_REF"...HEAD; git diff --name-only)"
+# One git diff invocation for everything below, with every output-shaping
+# setting pinned so user config cannot change what the parsers read:
+# diff.mnemonicPrefix / srcPrefix / dstPrefix / noprefix change the "b/"
+# prefix, core.quotePath quotes non-ASCII paths, diff.relative rewrites paths
+# against the cwd, and external diff / textconv replace the output entirely.
+# --no-renames: a moved file shows as delete + add, so ALL_PATHS carries the
+# OLD path too and a file moved out of a rule's directory still triggers it.
+git_diff() {
+    git -c core.quotePath=false -c diff.noprefix=false -c diff.mnemonicPrefix=false \
+        diff --no-color --no-ext-diff --no-textconv --no-renames --no-relative \
+        --src-prefix=a/ --dst-prefix=b/ "$@"
+}
+
+# C-family files that still exist (deleted files are filtered out: there is
+# nothing on disk to check).
+ALL_CPP="$(git_diff --name-only --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}")"
+ALL_CPP="$(printf '%s\n' "$ALL_CPP" | sort -u | grep -v '^$' || true)"
+# The same list as an array, for passing to tools: expanding $ALL_CPP
+# unquoted split a path containing a space into several nonexistent files,
+# and cppcheck then skipped the real one without failing.
+ALL_CPP_ARR=()
+while IFS= read -r _f; do
+    [ -n "$_f" ] && ALL_CPP_ARR+=("$_f")
+done <<< "$ALL_CPP"
+
+# All paths changed (any extension, deletions included) — used for tag
+# auto-selection.
+ALL_PATHS="$(git_diff --name-only "$MERGE_BASE")"
 ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
+
+# Added/modified line ranges of the C-family files, one "path<TAB>first<TAB>last"
+# per hunk, with line numbers in the working-tree file -- what cppcheck and
+# clang-tidy see.  Pure-deletion hunks (+c,0) add no lines and are dropped.
+# CI's clang-tidy job scopes to changed lines the same way (clang-tidy-diff),
+# so this also stops preflight failing on findings that predate the branch.
+#
+# The file name is taken only from the "+++ " line of a file's HEADER (between
+# "diff --git" and its first "@@"): inside a hunk, an added source line that
+# starts with "++ " also reads "+++ ...".  git appends a TAB to that line when
+# the path contains a space, so one trailing TAB is stripped.
+CHANGED_RANGES="$(git_diff -U0 --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}" | awk '
+    /^diff --git / { hdr = 1; f = ""; next }
+    hdr && /^\+\+\+ / {
+        f = substr($0, 5); sub(/\t$/, "", f)
+        f = (substr(f, 1, 2) == "b/") ? substr(f, 3) : ""
+        next
+    }
+    /^@@ / {
+        hdr = 0
+        if (f != "" && match($0, /\+[0-9]+(,[0-9]+)?/)) {
+            n = split(substr($0, RSTART + 1, RLENGTH - 1), p, ",")
+            cnt = (n > 1) ? p[2] + 0 : 1
+            if (cnt > 0) printf "%s\t%d\t%d\n", f, p[1], p[1] + cnt - 1
+        }
+    }')"
+
+# Completeness: every C-family file that gained lines must have ranges.  Both
+# lint gates DROP findings outside CHANGED_RANGES, so a parse that loses a
+# file (a path shape or git setting the parser did not anticipate) would make
+# them pass having checked nothing.  --numstat -z is a separate, NUL-safe
+# listing of the same diff; if the two disagree, stop.
+RANGE_FILES="$(printf '%s\n' "$CHANGED_RANGES" | awk -F'\t' 'NF == 3 { print $1 }' | sort -u)"
+MISSING_RANGES=""
+# Written to a file first so a failing git aborts here under set -e; inside
+# the process substitution its status would be lost and the check would pass
+# on an empty listing.
+git_diff --numstat -z --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}" >"$PF_LOGDIR/numstat.z"
+while IFS=$'\t' read -r -d '' ns_added _ns_deleted ns_path; do
+    # 0: deletions only, nothing to lint.  "-": git treats the file as binary
+    # (a NUL byte, or a -diff/binary attribute), so it has no hunks and the
+    # line filters would drop all its findings -- report it as unmappable.
+    case "$ns_added" in 0) continue ;; esac
+    if ! printf '%s\n' "$RANGE_FILES" | grep -qxF -- "$ns_path"; then
+        MISSING_RANGES="$MISSING_RANGES $ns_path"
+    fi
+done <"$PF_LOGDIR/numstat.z"
+if [ -n "$MISSING_RANGES" ]; then
+    echo "preflight: could not map changed lines for:$MISSING_RANGES" >&2
+    echo "           (the cppcheck/clang-tidy line filters would skip these files; refusing to run)" >&2
+    exit 2
+fi
 
 # ---------- pretty helpers -------------------------------------------
 
@@ -201,26 +379,25 @@ fi
 step "build CatchTestRunner"
 if skip_check build; then
     skip "build" "--skip=build"
-elif [ ! -d build_catch ]; then
-    # Auto-configure on first run.  Release is not optional: CoolProp sets no
-    # default CMAKE_BUILD_TYPE, so without it the runner is built unoptimized
-    # and every test stage after this is several times slower.
-    cmake -B build_catch -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 || {
-        fail "build (cmake configure failed; rm -rf build_catch, then run cmake -B build_catch -S . ${CMAKE_GEN_ARGS[*]-} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release manually)"
-    }
-fi
-if ! skip_check build && [ -d build_catch ]; then
+elif ! ensure_build_dir build_catch "$PF_LOGDIR/configure-build_catch.log" \
+        -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release; then
+    # Release is not optional: CoolProp sets no default CMAKE_BUILD_TYPE, so
+    # without it the runner is built unoptimized and every test stage after
+    # this is several times slower.
+    tail -20 "$PF_LOGDIR/configure-build_catch.log" || true
+    fail "build (cmake configure of build_catch failed; see $PF_LOGDIR/configure-build_catch.log)"
+else
     # Test cmake's own exit status.  The previous form piped the build log
     # through `tee | tail -5 | grep -qE "error:|FAILED"` under `set -o
     # pipefail`: a failing build made the pipeline non-zero, so `if
     # <pipeline>` was false and the gate reported the build as PASSING.
     # Grepping the last 5 lines was independently unreliable -- a link
     # error, an OOM kill or a cmake usage error need not print "error:".
-    if cmake --build build_catch --target CatchTestRunner -j"$JOBS" >/tmp/preflight-build.log 2>&1; then
+    if cmake --build build_catch --target CatchTestRunner -j"$JOBS" >"$PF_LOGDIR/build.log" 2>&1; then
         ok "build CatchTestRunner"
     else
-        tail -20 /tmp/preflight-build.log
-        fail "build (see /tmp/preflight-build.log)"
+        tail -20 "$PF_LOGDIR/build.log"
+        fail "build (see $PF_LOGDIR/build.log)"
     fi
 fi
 
@@ -245,14 +422,13 @@ else
     # surface configure/build failures as a hard fail. Intentional skips go
     # through --skip=json-symbols (handled above), not through swallowed errors.
     SHARED_OK=1
-    if [ ! -d build_shared ]; then
-        if ! cmake -B build_shared -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
-            fail "json-symbols (shared configure failed; see /tmp/preflight-shared-build.log)"
-            SHARED_OK=0
-        fi
+    if ! ensure_build_dir build_shared "$PF_LOGDIR/configure-build_shared.log" \
+            -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release; then
+        fail "json-symbols (shared configure failed; see $PF_LOGDIR/configure-build_shared.log)"
+        SHARED_OK=0
     fi
-    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j"$JOBS" >/tmp/preflight-shared-build.log 2>&1; then
-        fail "json-symbols (shared build failed; see /tmp/preflight-shared-build.log)"
+    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j"$JOBS" >"$PF_LOGDIR/shared-build.log" 2>&1; then
+        fail "json-symbols (shared build failed; see $PF_LOGDIR/shared-build.log)"
         SHARED_OK=0
     fi
     SHARED_LIB=""
@@ -283,10 +459,11 @@ elif skip_check build; then
     skip "install-headers" "--skip=build (shared build needed)"
 elif [ ! -d build_shared ]; then
     skip "install-headers" "build_shared not available (run without --skip=json-symbols)"
-elif ./dev/ci/check-installed-headers.sh build_shared; then
+elif mkdir "$PF_LOGDIR/install-headers" \
+     && COOLPROP_CI_LOGDIR="$PF_LOGDIR/install-headers" ./dev/ci/check-installed-headers.sh build_shared; then
     ok "install-headers (detail/json.h not shipped; no installed header pulls nlohmann/valijson)"
 else
-    fail "install-headers (detail/json.h shipped, or a header pulls nlohmann/valijson, or install failed; see /tmp/install-headers-check.log)"
+    fail "install-headers (detail/json.h shipped, or a header pulls nlohmann/valijson, or install failed; see $PF_LOGDIR/install-headers)"
 fi
 
 # ---------- check 3: Catch2 tests with auto-selected tag scope -------
@@ -297,95 +474,99 @@ if skip_check tests; then
 elif [ ! -x ./build_catch/CatchTestRunner ]; then
     skip "tests" "CatchTestRunner not built"
 else
-    # Tag scope selection.  Path -> tag mapping mirrors how CI's broad
-    # workflow runs the full suite, but skips the expensive `[slow]`
-    # tests by default for fast local feedback.  (There is no --slow flag;
-    # run `./build_catch/CatchTestRunner "[slow]"` directly for those.)
+    # Tag scope selection: ~[slow] ALWAYS, plus the tags of EVERY path rule
+    # the diff matches.  (There is no --slow flag; run
+    # `./build_catch/CatchTestRunner "[slow]"` directly for the rest.)
+    #
+    # This used to be a first-match if/elif chain whose branches REPLACED the
+    # default.  Because ~[slow] (the else branch) is the broad set and every
+    # rule's list was narrower, matching a rule shrank the sweep: a Helmholtz
+    # diff ran 69 cases instead of ~560, and a diff touching both SBTL and
+    # Helmholtz paths never saw [flash].  A dev/fluids change selected only
+    # the SBTL tags, so the [melting] suite -- which reads that data -- was not
+    # run, and a red [melting] shipped green through preflight (#3153).  Now
+    # the rules can only ADD: since ~[slow] already holds every non-slow case,
+    # what a rule contributes is its [slow]-tagged cases (today: SBTL +57,
+    # Helmholtz/REFPROP +6; the cubic, expression and melting rules add none,
+    # and stay so a future [slow] tag in those suites is picked up).  That is
+    # affordable only because the run is sharded across cores.
+    #
     # Catch2 filter syntax, since three of these were wrong before:
     #   ~[tag]   EXCLUDES a tag.  `[!slow]` does NOT exclude -- it selects a
     #            literal tag named "!slow", which no test carries, so
     #            `[!slow][!benchmark]` matched 0 test cases and this gate
     #            passed while running NOTHING.
-    #   ,        inside one spec is OR.
+    #   ,        inside one spec is OR, so "~[slow],[SBTL]" is every non-slow
+    #            case plus every [SBTL] case (slow or not).
     #   [!benchmark] is a real Catch2 tag, but benchmarks are HIDDEN from the
     #            default set already (`~[!benchmark]` and no filter both list
     #            468).  So appending `,[!benchmark]` to an OR-list ADDED the
-    #            benchmarks instead of excluding them.  No benchmark term is
-    #            needed; --benchmark-samples stays a CI concern.
+    #            benchmarks instead of excluding them.
     # Separate argv specs are AND-ed (intersected), not OR-ed, so an OR-list
     # must be one comma-separated argument.
-    TAG_FILTER=""
-    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/|dev/fluids/|dev/mixtures/)"; then
-        # SBTL/SVDSBTL surface area touched — run the umbrella tags.
-        # [SBTL] catches the adapter-layer tests (serializer round-trip,
-        # multi-fluid PH preset) that [SVDSBTL] alone misses.
+    EXTRA_TAGS=""
+    add_tags() {
+        local t
+        for t in "$@"; do
+            case ",$EXTRA_TAGS," in
+                *",$t,"*) ;;
+                *) EXTRA_TAGS="${EXTRA_TAGS:+$EXTRA_TAGS,}$t" ;;
+            esac
+        done
+    }
+    diff_touches() {
+        printf '%s\n' "$ALL_PATHS" | grep -qE "$1"
+    }
+    if diff_touches "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/|dev/fluids/|dev/mixtures/)"; then
+        # SBTL/SVDSBTL surface area.  [SBTL] catches the adapter-layer tests
+        # (serializer round-trip, multi-fluid PH preset) that [SVDSBTL] alone
+        # misses.
         #
         # dev/fluids and dev/mixtures are in this list because the SVD tables are
         # SAMPLED from that data: change a fluid and the cached table for it is
         # stale, but nothing on the load path notices (the cache filename hashes
         # build options, not fluid data, and the serializer kRevision check only
         # sees format changes).  The tests that compare a table against HEOS are
-        # tagged [slow], so without this a fluid-data-only change selects
-        # "~[slow]" and never runs them.  PR #3352 shipped a new R-32 viscosity
-        # and CI caught the 8 % table/HEOS mismatch that preflight had missed.
-        TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region]"
-    elif printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/REFPROP/)"; then
-        # HEOS / REFPROP path touched — broader sweep including the flash
-        # routines.  ([transport], [viscosity] and [conductivity] are real
-        # tags and are NOT in this list; the older wording claimed they were.)
-        #
-        # [flash],[mixture] are NOT optional here.  Without them this branch
-        # narrowed a Helmholtz-backend diff to 19 cases and ran NEITHER the
-        # PT-flash two-phase residual test nor the all_deltaonly agreement
-        # test — the two that sat red on master until #3323, because only a
-        # manual ~[slow] sweep ever reached them (bd CoolProp-n2qs).  Cost is
-        # 6 s (69 cases, 7.1 s total vs 0.9 s before; 13 [REFPROP] cases skip
-        # in this worktree, so budget more where REFPROP resolves).  The hole
-        # it closed is the flash surface this branch exists to cover.  Note this branch (like the SBTL one) carries no ~[slow]
-        # exclusion, so 6 [slow]-tagged cases are in scope — but they came in
-        # with [REFPROP] already, not with this widening.
-        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture]"
-    elif printf '%s\n' "$ALL_PATHS" | grep -qE "^src/Backends/Cubics/"; then
-        # Cubic backends touched.  [cubic] is the umbrella (every [cubic_*]
-        # test now carries it too — Catch2 tags are exact-match, not prefix).
-        # [mixture_derivs2] is the composition-derivative gate: DerivativeFixture
-        # is instantiated for PengRobinsonBackend and SRKBackend and finite-
-        # differences the whole fugacity chain, so it is where a wrong
-        # composition derivative shows up.
-        #
-        # [helmholtz] is NOT optional, and neither is it covered by the rest of
-        # this list: GeneralizedCubic is not reached only through the cubic
-        # backends.  HelmholtzConsistencyFixture builds a
-        # ResidualHelmholtzGeneralizedCubic over both SRK and PengRobinson and
-        # finite-differences all 14 derivatives, including the third- and
-        # fourth-order delta terms -- psi_minus/psi_plus cases 3 and 4, which feed
-        # d3alphar_ddelta3 / d4alphar_ddelta4 and hence the critical-point and
-        # stability routines.  Nothing else here reaches them: [mixture_derivs2]
-        # stops at d2alphar_dDelta2, and [change_EOS] only asserts that
-        # change_EOS(0,"SRK") does not throw -- it never evaluates a property
-        # afterwards, so it cannot see a wrong alphar.  Nor does anything in the
-        # suite evaluate a thermodynamic property through the "-SRK" /
-        # "-PengRobinson" fluid endings; the one test that names them reads molar
-        # mass.  [GERG] and [json_validation] stay for the cubic JSON payload and
-        # change_EOS surfaces they do cover.
-        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen],[change_EOS],[GERG],[json_validation],[helmholtz]"
-    else
-        # Default: run everything fast (skip the [slow] long tests).
-        TAG_FILTER="~[slow]"
+        # tagged [slow], so without this a fluid-data-only change never runs
+        # them.  PR #3352 shipped a new R-32 viscosity and CI caught the 8 %
+        # table/HEOS mismatch that preflight had missed.
+        add_tags "[SBTL]" "[SVDSBTL]" "[SVDComponents]" "[region]"
     fi
-    # The expression-DSL surface is ORTHOGONAL to the branches above, so it has to
-    # be OR-ed in rather than being another elif.  Its parse branch and dispatch arm
-    # live under src/Backends/Helmholtz/, so any change to them selects
-    # "[Helmholtz],[REFPROP]" -- which contains ZERO [expression] test cases.  Before
-    # this, a branch touching the DSL, its tests and shipped fluid data reported a
-    # green preflight having run none of them.
-    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/expression/|include/CoolProp/expression/|src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-Expression\.cpp|dev/fluids/)"; then
-        case "$TAG_FILTER" in
-            "~[slow]") : ;;  # already runs everything except [slow]
-            *) TAG_FILTER="${TAG_FILTER},[expression]" ;;
-        esac
+    if diff_touches "^(src/Backends/Helmholtz/|src/Backends/REFPROP/)"; then
+        # HEOS / REFPROP.  [flash],[mixture] matter: the PT-flash two-phase
+        # residual test and the all_deltaonly agreement test sat red on master
+        # until #3323 because a Helmholtz diff never reached them (bd
+        # CoolProp-n2qs).  Under the ~[slow] floor they run anyway; the rule's
+        # remaining contribution is the 6 [slow] cases in these tags.
+        add_tags "[Helmholtz]" "[REFPROP]" "[flash]" "[mixture]"
     fi
+    if diff_touches "^src/Backends/Cubics/"; then
+        # Cubic backends.  [cubic] is the umbrella (every [cubic_*] test carries
+        # it -- Catch2 tags are exact-match, not prefix).  [mixture_derivs2]
+        # finite-differences the whole fugacity chain for PengRobinsonBackend
+        # and SRKBackend.  [helmholtz] is here because
+        # HelmholtzConsistencyFixture builds a ResidualHelmholtzGeneralizedCubic
+        # over SRK and PengRobinson and finite-differences all 14 derivatives,
+        # including the third- and fourth-order delta terms that feed the
+        # critical-point and stability routines -- nothing else reaches them.
+        # [GERG] and [json_validation] cover the cubic JSON payload and
+        # change_EOS.
+        add_tags "[cubic]" "[volume_translation]" "[mixture_derivs2]" "[michelsen]" "[change_EOS]" "[GERG]" "[json_validation]" "[helmholtz]"
+    fi
+    if diff_touches "^(src/expression/|include/CoolProp/expression/|src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-Expression\.cpp|dev/fluids/)"; then
+        # The expression DSL; its parse branch and dispatch arm live under
+        # src/Backends/Helmholtz/ and its data under dev/fluids/.
+        add_tags "[expression]"
+    fi
+    if diff_touches "^(dev/fluids/|src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-[A-Za-z]*Melting\.cpp)"; then
+        # Melting lines: the fluid JSON carries them, and the Helmholtz backend
+        # (MeltingCaloric.cpp, FluidLibrary, Ancillaries, the flash routines)
+        # evaluates them.  r1w7.4.
+        add_tags "[melting]"
+    fi
+    TAG_FILTER="~[slow]${EXTRA_TAGS:+,$EXTRA_TAGS}"
     echo "  tag filter: $TAG_FILTER"
+    echo "  $REFPROP_NOTE"
     # Gate on the runner's EXIT CODE, not on grepping its output.  The old
     # form piped into `grep -qE "failed|Errors:"`, so the `if` saw grep's
     # status and the runner's was discarded -- a zero-match run (exit 2,
@@ -410,7 +591,8 @@ else
     # distinct from a filter that legitimately matches nothing (exit 0, no
     # lines).  No `2>/dev/null` and no `|| echo 0`: swallowing either the
     # stderr or the status is what lets a gate fail open.
-    test_logdir="$(mktemp -d "${TMPDIR:-/tmp}/preflight-tests.XXXXXX")"
+    test_logdir="$PF_LOGDIR/tests"
+    mkdir "$test_logdir"
     if ! listed_tests=$(./build_catch/CatchTestRunner "$TAG_FILTER" \
                             --list-tests --verbosity quiet); then
         fail "tests (could not list cases for filter '$TAG_FILTER' -- is the runner intact?)"
@@ -440,7 +622,9 @@ else
                  --warn UnmatchedTestSpec \
                  --benchmark-samples 1 --benchmark-no-analysis --benchmark-warmup-time 0 \
                  >"$test_logdir/summary.txt" 2>&1; then
-            ok "tests ($TAG_FILTER, $matched cases, sharded over $JOBS jobs)"
+            # The runner's last line carries the skipped count; surface it in
+            # the verdict so a green gate cannot hide cases that never ran.
+            ok "tests ($TAG_FILTER, $matched cases; $(tail -1 "$test_logdir/summary.txt" | sed -n 's/.*(\([0-9]* skipped\)).*/\1/p'))"
         else
             # `|| true` guards the DISPLAY only: without it a failed cat
             # would abort the script under `set -e` before `fail` records the
@@ -472,12 +656,50 @@ else
     # "informational" mode so they don't block PRs.  Preflight mirrors
     # that — warnings are real-bug-class (uninit vars, null deref,
     # buffer overflow) and worth blocking.
-    if ! cppcheck --enable=warning --error-exitcode=1 --quiet --inline-suppr --language=c++ --std=c++17 \
-                  --suppress=missingIncludeSystem --suppress=unknownMacro $ALL_CPP 2>/tmp/preflight-cppcheck.log; then
-        tail -30 /tmp/preflight-cppcheck.log
-        fail "cppcheck (see /tmp/preflight-cppcheck.log)"
+    #
+    # Scoped to CHANGED LINES, like CI's diff-only lint jobs.  The whole-file
+    # form failed on findings that predate the branch, so any diff touching a
+    # file with old findings could never pass and pushes routinely needed
+    # --no-verify -- which also skips every other check.  cppcheck has no
+    # line filter, so it analyses the whole files and its findings are
+    # filtered afterwards against CHANGED_RANGES.
+    #
+    # Fail-closed rules for the filter:
+    #   - exit status must be 0 or 1; anything else (crash, bad option) fails.
+    #   - exit 1 with an EMPTY findings log fails: cppcheck also exits 1 for
+    #     usage errors (printed on stdout, not in this log), which must not
+    #     read as "findings, all filtered away".
+    #   - analysis-failure ids (syntaxError, internal*, preprocessorError-
+    #     Directive, cppcheckError) and findings at line 0 are kept whatever
+    #     their line: they mean part of the file was not analysed at all.
+    #     (unknownMacro, the other such id, stays suppressed as before.)
+    #   - a finding line that does not parse is kept, not dropped.
+    printf '%s\n' "$CHANGED_RANGES" >"$PF_LOGDIR/changed-ranges.tsv"
+    CPPCHECK_RC=0
+    cppcheck --enable=warning --error-exitcode=1 --quiet --inline-suppr --language=c++ --std=c++17 \
+             --suppress=missingIncludeSystem --suppress=unknownMacro \
+             --template='{file}\t{line}\t{severity}\t{id}\t{message}' \
+             "${ALL_CPP_ARR[@]}" 2>"$PF_LOGDIR/cppcheck.log" || CPPCHECK_RC=$?
+    if [ "$CPPCHECK_RC" -ne 0 ] && [ "$CPPCHECK_RC" -ne 1 ]; then
+        tail -30 "$PF_LOGDIR/cppcheck.log" || true
+        fail "cppcheck (exited $CPPCHECK_RC -- crashed or rejected its arguments; see $PF_LOGDIR/cppcheck.log)"
     else
-        ok "cppcheck ($(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
+        awk -F'\t' '
+            FILENAME == ARGV[1] { if (NF == 3) { n++; rf[n] = $1; rs[n] = $2 + 0; re[n] = $3 + 0 } next }
+            NF < 5 || $2 !~ /^[0-9]+$/ { print; next }        # unparseable: keep
+            $4 ~ /^(syntaxError|internalAstError|internalError|cppcheckError|preprocessorErrorDirective)$/ || $2 == 0 { print; next }
+            { for (i = 1; i <= n; i++) if (rf[i] == $1 && $2 >= rs[i] && $2 <= re[i]) { print; next } }
+        ' "$PF_LOGDIR/changed-ranges.tsv" "$PF_LOGDIR/cppcheck.log" >"$PF_LOGDIR/cppcheck-changed-lines.log"
+        CPPCHECK_ALL="$(awk 'NF { c++ } END { print c + 0 }' "$PF_LOGDIR/cppcheck.log")"
+        CPPCHECK_KEPT="$(awk 'NF { c++ } END { print c + 0 }' "$PF_LOGDIR/cppcheck-changed-lines.log")"
+        if [ "$CPPCHECK_RC" -eq 1 ] && [ "$CPPCHECK_ALL" -eq 0 ]; then
+            fail "cppcheck (exited 1 but reported no findings -- usage error?; see $PF_LOGDIR/cppcheck.log)"
+        elif [ "$CPPCHECK_KEPT" -gt 0 ]; then
+            head -30 "$PF_LOGDIR/cppcheck-changed-lines.log" || true
+            fail "cppcheck ($CPPCHECK_KEPT finding(s) on changed lines or not attributable to a line; see $PF_LOGDIR/cppcheck-changed-lines.log)"
+        else
+            ok "cppcheck ($(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s); 0 on changed lines, $CPPCHECK_ALL elsewhere in those files)"
+        fi
     fi
 fi
 
@@ -530,48 +752,118 @@ else
     if [ -z "$CPP_ONLY" ]; then
         skip "clang-tidy" "no .cpp files in diff (headers covered transitively)"
     else
-        # One clang-tidy per file, $JOBS at a time.  It was one process over
-        # every file, which analyses them serially at ~47 s each (parsing is
-        # only ~5 s of that; the rest is the ~200 enabled checks), so a
-        # five-file diff sat in this step for four minutes on one core.
-        # Each file logs to its own zero-padded file and the logs are joined
-        # in order afterwards, so parallel writers never interleave lines and
-        # the combined log reads exactly as the serial one did.  The `|| true`
-        # per file is the pre-existing contract of this step (the verdict
-        # comes from the grep below, not from clang-tidy's exit status).
-        CT_LOGDIR="$(mktemp -d "${TMPDIR:-/tmp}/preflight-clang-tidy.XXXXXX")"
+        # Scoped to CHANGED LINES via clang-tidy's -line-filter, the same
+        # scoping CI's clang-tidy-diff job uses.  The whole-file form failed on
+        # findings that predate the branch (VLERoutines.cpp alone has 31), so
+        # touching such a file made the gate unpassable.  One JSON filter lists
+        # the changed ranges of every changed C-family file, headers included,
+        # so a finding reported in a changed header line is kept too.  Verified:
+        # the filter is a path-suffix match, and clang-tidy's exit status counts
+        # only the findings that survive it.
+        CT_FILTER="$(printf '%s\n' "$CHANGED_RANGES" | awk -F'\t' '
+            NF == 3 {
+                f = $1; gsub(/\\/, "\\\\", f); gsub(/"/, "\\\"", f)
+                if (!(f in seen)) { seen[f] = 1; order[++n] = f }
+                r[f] = r[f] (r[f] == "" ? "" : ",") "[" $2 "," $3 "]"
+            }
+            END {
+                printf "["
+                for (i = 1; i <= n; i++) printf "%s{\"name\":\"%s\",\"lines\":[%s]}", (i > 1 ? "," : ""), order[i], r[order[i]]
+                printf "]"
+            }')"
+        # Only .cpp files with at least one added line: a file whose hunks are
+        # all deletions has nothing for the filter to keep.  Named, not dropped.
+        CT_FILES="$(printf '%s\n' "$CHANGED_RANGES" | awk -F'\t' 'NF == 3 && $1 ~ /\.(cpp|cc|cxx)$/ && !s[$1]++ { print $1 }')"
+        CT_NO_ADDED="$(printf '%s\n' "$CPP_ONLY" | grep -vxF -f <(printf '%s\n' "$CT_FILES") || true)"
+        if [ -n "$CT_NO_ADDED" ]; then
+            echo "  no added lines (deletions only), not analysed: $(printf '%s ' $CT_NO_ADDED)"
+        fi
+    fi
+    if [ -n "$CPP_ONLY" ] && [ -z "$CT_FILES" ]; then
+        skip "clang-tidy" "changed .cpp files have no added lines"
+    elif [ -n "$CPP_ONLY" ]; then
+        # One clang-tidy per file, $JOBS at a time (it was one process over
+        # every file, ~47 s each, serially).  Each file logs to its own
+        # zero-padded file and records its OWN exit status; the logs are joined
+        # in order afterwards so parallel writers never interleave lines.
+        CT_LOGDIR="$PF_LOGDIR/clang-tidy"
+        mkdir "$CT_LOGDIR"
         ct_i=0
         while IFS= read -r ct_f; do
             [ -n "$ct_f" ] || continue
             printf '%04d\0%s\0' "$ct_i" "$ct_f"
             ct_i=$((ct_i + 1))
-        done <<< "$CPP_ONLY" \
+        done <<< "$CT_FILES" \
             | xargs -0 -n 2 -P "$JOBS" bash -c \
-                'COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh "$2" >"$0/$1.log" 2>&1 || true' \
-                "$CT_LOGDIR"
-        cat "$CT_LOGDIR"/*.log >/tmp/preflight-clang-tidy.log
-        if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
-            skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
+                'COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh "-line-filter=$1" "$3" >"$0/$2.log" 2>&1 && rc=0 || rc=$?; echo "$rc" >"$0/$2.rc"' \
+                "$CT_LOGDIR" "$CT_FILTER"
+        cat "$CT_LOGDIR"/*.log >"$PF_LOGDIR/clang-tidy.log"
+        # Per-file verdicts first.  The verdict used to come from grepping the
+        # combined log alone, behind a `|| true` on the run: a clang-tidy that
+        # crashed or died before printing anything left no "warning:" line
+        # and passed.  Each file's exit status now has to agree with its log:
+        # 0 is fine, 1 must come with at least one finding (it is what
+        # WarningsAsErrors produces), anything else -- a signal, a usage
+        # error -- fails.  The wrapper's graceful skip (no clang-tidy binary,
+        # no compile_commands.json) prints a "skipping" warning and exits 0;
+        # the stage is reported as skipped only when EVERY file says so, so
+        # one file's marker cannot hide another file's crash.
+        CT_BAD=()
+        CT_SKIPPED=0
+        CT_TOTAL=0
+        ct_i=0
+        while IFS= read -r ct_f; do
+            [ -n "$ct_f" ] || continue
+            ct_id="$(printf '%04d' "$ct_i")"
+            ct_i=$((ct_i + 1))
+            CT_TOTAL=$((CT_TOTAL + 1))
+            if [ ! -f "$CT_LOGDIR/$ct_id.rc" ]; then
+                CT_BAD+=("$ct_f (no exit status recorded)")
+                continue
+            fi
+            ct_rc="$(cat "$CT_LOGDIR/$ct_id.rc")"
+            if [ "$ct_rc" = 0 ] && grep -aq '^warning:.*skipping' "$CT_LOGDIR/$ct_id.log"; then
+                CT_SKIPPED=$((CT_SKIPPED + 1))
+                continue
+            fi
+            ct_n="$(grep -acE 'warning: |error: ' "$CT_LOGDIR/$ct_id.log" || true)"
+            if [ "$ct_rc" = 1 ] && [ "${ct_n:-0}" -eq 0 ]; then
+                CT_BAD+=("$ct_f (exit 1 with no findings)")
+            elif [ "$ct_rc" != 0 ] && [ "$ct_rc" != 1 ]; then
+                CT_BAD+=("$ct_f (exit $ct_rc)")
+            fi
+        done <<< "$CT_FILES"
+        if [ "${#CT_BAD[@]}" -eq 0 ] && [ "$CT_TOTAL" -gt 0 ] && [ "$CT_SKIPPED" -eq "$CT_TOTAL" ]; then
+            skip "clang-tidy" "$(grep -a -m1 '^warning:' "$PF_LOGDIR/clang-tidy.log" | sed 's/^warning: //')"
+        elif [ "$CT_SKIPPED" -gt 0 ]; then
+            [ "${#CT_BAD[@]}" -eq 0 ] || printf '  %s\n' "${CT_BAD[@]}"
+            fail "clang-tidy (skipped $CT_SKIPPED of $CT_TOTAL file(s) -- a partial skip is not a pass; logs in $CT_LOGDIR)"
         else
-            # `|| echo 0` appended a second line (grep -c prints 0 then exits
-            # 1).  Harmless here, but the same construct on SIGNAL_COUNT below
-            # fed a numeric test and errored on every clean run.
-            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || true)"
+            # -a on every grep: with the binary-content heuristic, grep prints
+            # "Binary file ... matches" instead of the lines.  One observed run
+            # reported "1 signal / 1434 raw" where the true signal count was
+            # 132; had that one line matched the noise list, the gate would
+            # have passed with every finding hidden.  The per-file check above
+            # backs this up: a file that exited 1 must show a finding line.
+            RAW="$(grep -acE 'warning: |error: ' "$PF_LOGDIR/clang-tidy.log" || true)"
             [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
             # or `[<check-name>]`.  Match the bracketed check name and
             # exclude any line whose name is in NOISE_PATTERN.
-            SIGNAL_LINES="$(grep -E 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null \
-                | grep -vE "\\[($NOISE_PATTERN)(,|\\])" || true)"
-            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || true)"
+            SIGNAL_LINES="$(grep -aE 'warning: |error: ' "$PF_LOGDIR/clang-tidy.log" \
+                | grep -avE "\\[($NOISE_PATTERN)(,|\\])" || true)"
+            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -ac . || true)"
             [ -n "$SIGNAL_COUNT" ] || SIGNAL_COUNT=0
-            if [ "$SIGNAL_COUNT" -gt 0 ]; then
-                printf '\n--- signal findings (noise-filtered, see #2926) ---\n'
+            if [ "${#CT_BAD[@]}" -gt 0 ]; then
+                printf '  %s\n' "${CT_BAD[@]}"
+                fail "clang-tidy (${#CT_BAD[@]} file(s) did not complete normally; logs in $CT_LOGDIR)"
+            elif [ "$SIGNAL_COUNT" -gt 0 ]; then
+                printf '\n--- signal findings on changed lines (noise-filtered, see #2926) ---\n'
                 printf '%s\n' "$SIGNAL_LINES" | head -30
-                printf '%s\n' "$SIGNAL_LINES" > /tmp/preflight-clang-tidy-signal.log
-                fail "clang-tidy ($SIGNAL_COUNT signal / $RAW raw findings; see /tmp/preflight-clang-tidy-signal.log)"
+                printf '%s\n' "$SIGNAL_LINES" > "$PF_LOGDIR/clang-tidy-signal.log"
+                fail "clang-tidy ($SIGNAL_COUNT signal / $RAW raw findings on changed lines; see $PF_LOGDIR/clang-tidy-signal.log)"
             else
-                ok "clang-tidy ($(printf '%s\n' "$CPP_ONLY" | wc -l | tr -d ' ') .cpp file(s); 0 signal / $RAW raw findings)"
+                ok "clang-tidy ($(printf '%s\n' "$CT_FILES" | wc -l | tr -d ' ') .cpp file(s); 0 signal / $RAW raw findings on changed lines)"
             fi
         fi
     fi
@@ -596,9 +888,9 @@ else
     if [ -d ".semgrep" ]; then
         SEMGREP_CONFIG="$SEMGREP_CONFIG --config .semgrep/"
     fi
-    if ! uvx --python 3.12 semgrep $SEMGREP_CONFIG --error --quiet $ALL_CPP 2>/tmp/preflight-semgrep.log; then
-        tail -30 /tmp/preflight-semgrep.log
-        fail "semgrep (see /tmp/preflight-semgrep.log)"
+    if ! uvx --python 3.12 semgrep $SEMGREP_CONFIG --error --quiet "${ALL_CPP_ARR[@]}" 2>"$PF_LOGDIR/semgrep.log"; then
+        tail -30 "$PF_LOGDIR/semgrep.log"
+        fail "semgrep (see $PF_LOGDIR/semgrep.log)"
     else
         ok "semgrep ($(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
     fi
@@ -619,7 +911,7 @@ if skip_check schema-validate; then
 elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/(pcsaft|cubics|mixtures)/.*\.json$'; then
     skip "schema-validate" "no dev/{pcsaft,cubics,mixtures}/*.json files in diff"
 else
-    SCHEMA_LOG=/tmp/preflight-schema-validate.log
+    SCHEMA_LOG="$PF_LOGDIR/schema-validate.log"
     SCHEMA_RC=0
     if command -v uvx >/dev/null 2>&1; then
         uvx --from jsonschema python dev/validate_fluid_schemas.py >"$SCHEMA_LOG" 2>&1 || SCHEMA_RC=$?
@@ -654,7 +946,7 @@ if skip_check incomp-sanity; then
 elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/incompressible_liquids/'; then
     skip "incomp-sanity" "no dev/incompressible_liquids/ files in diff"
 else
-    INCOMP_LOG=/tmp/preflight-incomp-sanity.log
+    INCOMP_LOG="$PF_LOGDIR/incomp-sanity.log"
     INCOMP_RC=0
     if ! command -v python3 >/dev/null 2>&1; then
         INCOMP_RC=127

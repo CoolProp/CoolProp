@@ -37,8 +37,15 @@ fi
 PREFIX="$(mktemp -d)"
 trap 'rm -rf "$PREFIX"' EXIT
 
-if ! cmake --install "$BUILD_DIR" --prefix "$PREFIX" >/tmp/install-headers-check.log 2>&1; then
-    echo "FAIL: cmake --install '$BUILD_DIR' failed (see /tmp/install-headers-check.log)" >&2
+# Logs go to a per-run directory (preflight passes its own), never to a fixed
+# /tmp path: concurrent runs from different worktrees overwrote each other's
+# logs there.  Not removed on exit, so the paths in the messages stay valid.
+LOG_DIR="${COOLPROP_CI_LOGDIR:-$(mktemp -d "${TMPDIR:-/tmp}/installed-headers.XXXXXX")}"
+mkdir -p "$LOG_DIR"
+INSTALL_LOG="$LOG_DIR/install.log"
+
+if ! cmake --install "$BUILD_DIR" --prefix "$PREFIX" >"$INSTALL_LOG" 2>&1; then
+    echo "FAIL: cmake --install '$BUILD_DIR' failed (see $INSTALL_LOG)" >&2
     exit 1
 fi
 
@@ -116,7 +123,7 @@ if [ ! -f "$INC_ROOT/CoolProp/CoolProp.h" ]; then
     echo "FAIL: canonical installed header $INC_ROOT/CoolProp/CoolProp.h is missing -- cannot validate self-containedness." >&2
     exit 1
 fi
-SC_LOG=/tmp/installed-headers-selfcontained.log
+SC_LOG="$LOG_DIR/selfcontained.log"
 : >"$SC_LOG"
 
 # The sweep is ~93 INDEPENDENT -fsyntax-only invocations, so it parallelises
