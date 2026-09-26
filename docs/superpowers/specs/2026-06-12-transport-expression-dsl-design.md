@@ -388,8 +388,9 @@ See "Authoring from Python" below for the Python surface built on it.
   produces a silently-wrong correlation and never crashes.
 - **Eval-time, inside the formula:** numeric domain results follow `std::pow/log`
   semantics exactly (e.g. `log` of a non-positive argument → NaN/-inf as in the
-  current C++), so DSL output matches the hardcoded routines bit-for-bit in
-  behavior, including at domain edges. No domain guards, no exceptions.
+  current C++), so DSL output matches the hardcoded routines' domain behavior
+  (NaN/-inf propagation), including at domain edges. No domain guards, no
+  exceptions.
 - **Eval-time, on the way in:** the *inputs* are guarded, which is a different
   thing. `evaluate_at()` throws `CoolProp::ValueError` naming the input if a
   `keyed_output()` comes back non-finite. This is the one exception the hot path
@@ -426,12 +427,18 @@ New Catch2 tag `[expression]`.
    a `(T, ρ)` grid spanning the fluid's transport validity range. Default gate is
    relative error `< 1e-14` (~tens of ULP). Because the DSL replicates the same
    library calls (`std::pow/exp/log`) in the same accumulation order, most forms
-   match far tighter; the only expected divergence class is a hand-written
-   `x*x`/`x*x*x` in some C++ routines vs the DSL's `x^2`/`x^3` (→ `std::pow`).
-   **Where a form uses the identical operation sequence, assert bit-exact
-   (0 ULP) per-form** and reserve the `1e-14` band only for the `pow`-vs-multiply
-   forms. If all Tier-A forms reproduce within this gate, the DSL is provably
-   complete for the scope.
+   match far tighter. Divergence classes are a hand-written `x*x`/`x*x*x` in
+   some C++ routines vs the DSL's `x^2`/`x^3` (→ `std::pow`), and FP
+   contraction: the compiler may fuse the routine's `summer += a[i]*pow(...)`
+   into an FMA (clang defaults to `-ffp-contract=on`, GCC to `fast`), while the
+   DSL tree walk always rounds each op separately. Whether it fuses depends on
+   contraction settings, target FMA support and code generation (scalar code
+   can fuse too; unrolling/vectorization is not required), so even an
+   identical operation sequence is **not** portably bit-exact. The `1e-14` relative gate therefore applies to
+   every form, and no form asserts 0 ULP. (Amended 2026-09-26: the original
+   per-form bit-exact assertions failed (powers_of_Tr) or were at risk (fmadd
+   present) on Apple clang/arm64.) If all Tier-A forms reproduce within this
+   gate, the DSL is provably complete for the scope.
 
 Per project convention (`CLAUDE.md`), changes here run under `[SBTL]`-style
 umbrella discipline only if they touch those paths; this feature is new code, so
@@ -476,11 +483,11 @@ e.evaluate(AS)
 
 ## Risks / open trade-offs
 
-- **`^` semantics:** chosen as `pow`. Forms whose C++ uses the identical
-  operation sequence match bit-exact; the only divergence is `x^2`/`x^3` (→
-  `std::pow`) vs a hand-written `x*x` in some routines. Golden gate is `1e-14`
-  relative (~tens of ULP) with per-form bit-exact assertions where applicable.
-  Accepted.
+- **`^` semantics:** chosen as `pow`. Divergence from the C++ routines is
+  `x^2`/`x^3` (→ `std::pow`) vs a hand-written `x*x` in some routines, plus
+  toolchain-dependent FMA contraction in the routines' accumulation loops, so
+  bit-exactness is not portable even for identical operation sequences. The
+  golden gate is `1e-14` relative (~tens of ULP) for all forms. Accepted.
 - **Per-block declared state variables:** the binder records the
   `CoolProp::parameters` keys a formula declares and reads, and the host fills them
   with `keyed_output()`. This replaced a curated five-entry allowlist, which made
