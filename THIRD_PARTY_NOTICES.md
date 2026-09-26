@@ -16,6 +16,10 @@ requirement.
 When a dependency pin in `cmake/dependencies.cmake`, `externals/`, or the
 `nanobind` requirement in `pyproject.toml` changes, update this file.
 
+Eigen is distributed under the MPL-2.0.  The Eigen code in CoolProp
+binaries is unmodified Eigen 5.0.1, whose source is available at
+https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz .
+
 | Component | Version | License |
 |---|---|---|
 | [Eigen](https://gitlab.com/libeigen/eigen) | 5.0.1 | MPL-2.0 (some files Apache-2.0, BSD-3-Clause, MINPACK) |
@@ -30,6 +34,8 @@ When a dependency pin in `cmake/dependencies.cmake`, `externals/`, or the
 | [incbin](https://github.com/graphitemaster/incbin) | (vendored) | Unlicense (public domain) |
 | [nanobind](https://github.com/wjakob/nanobind) | 2.12.0 | BSD-3-Clause |
 | [tsl::robin_map (bundled with nanobind)](https://github.com/Tessil/robin-map) | (as bundled by nanobind 2.12.0) | MIT |
+| [Superancillary equations (NIST)](https://github.com/CoolProp/CoolProp/tree/master/include/CoolProp/superancillary) | (in-tree: include/CoolProp/superancillary/) | NIST disclaimer of copyright and warranty |
+| [Cubic spline class (Devin Lane)](http://shiftedbits.org/2011/01/30/cubic-spline-interpolation/) | (in-tree: Spline in include/CoolProp/numerics/numerics.h) | Beer-ware (Revision 42) |
 
 ---
 
@@ -1118,4 +1124,59 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+
+---
+
+## Superancillary equations (NIST)
+
+Version (in-tree: include/CoolProp/superancillary/) — https://github.com/CoolProp/CoolProp/tree/master/include/CoolProp/superancillary
+
+### notice
+
+```text
+# NIST Disclaimer of Copyright and Warranty
+
+This software was developed by employees of the National Institute of
+Standards and Technology (NIST), an agency of the Federal Government
+and is being made available as a public service. Pursuant to title 17
+United States Code Section 105, works of NIST employees are not
+subject to copyright protection in the United States. This software
+may be subject to foreign copyright. Permission in the United States
+and in foreign countries, to the extent that NIST may hold copyright,
+to use, copy, modify, create derivative works, and distribute this
+software and its documentation without fee is hereby granted on a
+non-exclusive basis, provided that this notice and disclaimer of
+warranty appears in all copies.
+
+THE SOFTWARE IS PROVIDED 'AS IS' WITHOUT ANY WARRANTY OF ANY KIND,
+EITHER EXPRESSED, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED
+TO, ANY WARRANTY THAT THE SOFTWARE WILL CONFORM TO SPECIFICATIONS,
+ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND FREEDOM FROM INFRINGEMENT, AND ANY WARRANTY THAT THE
+DOCUMENTATION WILL CONFORM TO THE SOFTWARE, OR ANY WARRANTY THAT THE
+SOFTWARE WILL BE ERROR FREE. IN NO EVENT SHALL NIST BE LIABLE FOR ANY
+DAMAGES, INCLUDING, BUT NOT LIMITED TO, DIRECT, INDIRECT, SPECIAL OR
+CONSEQUENTIAL DAMAGES, ARISING OUT OF, RESULTING FROM, OR IN ANY WAY
+CONNECTED WITH THIS SOFTWARE, WHETHER OR NOT BASED UPON WARRANTY,
+CONTRACT, TORT, OR OTHERWISE, WHETHER OR NOT INJURY WAS SUSTAINED BY
+PERSONS OR PROPERTY OR OTHERWISE, AND WHETHER OR NOT LOSS WAS
+SUSTAINED FROM, OR AROSE OUT OF THE RESULTS OF, OR USE OF, THE
+SOFTWARE OR SERVICES PROVIDED HEREUNDER.
+```
+
+
+---
+
+## Cubic spline class (Devin Lane)
+
+Version (in-tree: Spline in include/CoolProp/numerics/numerics.h) — http://shiftedbits.org/2011/01/30/cubic-spline-interpolation/
+
+### notice
+
+```text
+"THE BEER-WARE LICENSE" (Revision 42): Devin Lane wrote this file. As long as you retain
+this notice you can do whatever you want with this stuff. If we meet some day, and you
+think this stuff is worth it, you can buy me a beer in return.
 ```
