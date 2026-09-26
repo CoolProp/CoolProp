@@ -1099,32 +1099,25 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
           format("set_reference_stateS is not implemented for the %s backend. These backends fix h = s = 0 for the IDEAL GAS at 298.15 K and "
                  "101325 Pa; see the GERG documentation for how to compare them against HEOS.",
                  backend.c_str()));
+    } else {
+        // Every other prefix -- SRK, PR, VTPR, PCSAFT, INCOMP, IF97, the
+        // tabular backends, and also the non-literal HEOS/REFPROP spellings
+        // ("HelmholtzEOSBackend", "HEOS?<options>", "REFPROPBackend", ...)
+        // that the literal comparisons above do not match -- used to fall off
+        // the end of this chain and return having done NOTHING, without even
+        // validating reference_state.  A caller asking for a reference state
+        // and silently keeping the old one is the worst outcome for this
+        // function, so refuse instead.
+        throw ValueError(format("set_reference_stateS is not supported for the [%s] backend (fluid string [%s]); only the HEOS and REFPROP "
+                                "backends are supported, spelled \"HEOS::\" or \"REFPROP::\", or with no backend prefix for HEOS",
+                                backend.c_str(), FluidName.c_str()));
     }
-    // NOTE: two fail-open holes remain here, both PRE-EXISTING and neither
-    // widened by the GERG arm above.
-    //
-    // 1. Any other unrecognised backend prefix (SRK, PR, VTPR, PCSAFT,
-    //    INCOMP, ...) still falls off the end of this chain and silently does
-    //    nothing.  Making it throw would change behaviour for callers that
-    //    have relied on the no-op for years, so it needs its own decision.
-    //    Note this includes the HEOS arm's own literal comparison: the
-    //    registered BACKEND names "HelmholtzEOSBackend" and
-    //    "HelmholtzEOSMixtureBackend" are valid factory spellings that
-    //    `backend == "HEOS"` does not match, so
-    //    set_reference_stateS("HelmholtzEOSBackend::Methane", "NBP") is a
-    //    silent no-op today, as is the "?<options>" spelling
-    //    ("HEOS?::Water"), for the same reason: the HEOS arm compares the raw
-    //    prefix literally.  Those are unambiguously bugs rather than
-    //    preserved legacy behaviour, but fixing them changes HEOS behaviour
-    //    and does not belong in a GERG change.
-    //
-    // 2. A FluidName with no "::" at all resolves to backend "?" and takes the
-    //    HEOS arm above.  That is the documented default and cannot be
-    //    improved here -- the string genuinely carries no backend information
-    //    -- but it does mean set_reference_stateS("Methane", "NBP") adjusts
-    //    the HEOS fluid library and has no effect on a GERG state, silently.
-    //
-    // Both are bd CoolProp-mh1q.
+    // NOTE: one fail-open hole remains, and cannot be closed from inside this
+    // function: a FluidName with no "::" at all resolves to backend "?" and
+    // takes the HEOS arm above.  That is the documented default -- the string
+    // genuinely carries no backend information -- but it does mean
+    // set_reference_stateS("Methane", "NBP") adjusts the HEOS fluid library
+    // and has no effect on, say, a GERG or SRK state, silently.
 }
 void set_reference_stateD(const std::string& FluidName, double T, double rhomolar, double hmolar0, double smolar0) {
     // Same refusal, same reasoning, as the GERG arm of set_reference_stateS
@@ -1153,10 +1146,11 @@ void set_reference_stateD(const std::string& FluidName, double T, double rhomola
                      backend.c_str()));
         }
     }
-    // NOTE: the same two pre-existing fail-open holes documented at the end of
-    // set_reference_stateS apply here unchanged (bd CoolProp-mh1q): an
-    // unrecognised non-GERG backend prefix, and a bare FluidName with no "::",
-    // both still reach the HEOS path below.
+    // NOTE: unlike set_reference_stateS, a non-GERG backend prefix is not
+    // stripped here: the whole FluidName (e.g. "SRK::Propane") reaches the
+    // HEOS constructor below, which throws because no fluid of that name
+    // exists.  A bare FluidName with no "::" adjusts the HEOS fluid library,
+    // with no effect on a state of any other backend.
     std::vector<std::string> _comps(1, FluidName);
     CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
 
