@@ -113,6 +113,11 @@ TEST_CASE("TensorBSpline2D throws rather than failing open outside its domain", 
 TEST_CASE("TensorBSpline2D validates its inputs in the public constructor", "[TensorBSpline][spline][validation]") {
     // Validation lives in the constructor, not in a factory, so there is
     // no way to obtain an unchecked instance.
+    //
+    // These assert on the MESSAGE, not just the type.  Every guard throws
+    // ValueError, so CHECK_THROWS_AS alone lets a section pass on the wrong
+    // guard -- mutation testing showed deleting the knot-count check still
+    // passed, because the coefficient-count check threw instead.
     const std::vector<double> good(kNx * kNy, 1.0);
 
     SECTION("a well-formed surface constructs (positive control)") {
@@ -122,21 +127,21 @@ TEST_CASE("TensorBSpline2D validates its inputs in the public constructor", "[Te
     }
     SECTION("coefficient count must match the knots and orders") {
         std::vector<double> short_coefs(kNx * kNy - 1, 1.0);
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(kx, ky, kOx, kOy, short_coefs), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky, kOx, kOy, short_coefs), Catch::Matchers::ContainsSubstring("coefficients, got"));
         std::vector<double> long_coefs(kNx * kNy + 1, 1.0);
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(kx, ky, kOx, kOy, long_coefs), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky, kOx, kOy, long_coefs), Catch::Matchers::ContainsSubstring("coefficients, got"));
     }
     SECTION("knot vectors must be non-decreasing") {
         std::vector<double> bad = kx;
         bad[4] = 0.8;  // now 0.8 sits before 0.7
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(bad, ky, kOx, kOy, good), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ky, kOx, kOy, good), Catch::Matchers::ContainsSubstring("non-decreasing"));
         std::vector<double> bad_y = ky;
         bad_y[3] = 3.0;  // now 3.0 sits before 2.2
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(kx, bad_y, kOx, kOy, good), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, bad_y, kOx, kOy, good), Catch::Matchers::ContainsSubstring("non-decreasing"));
     }
     SECTION("order zero is rejected rather than underflowing to a huge degree") {
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(kx, ky, 0, kOy, good), CoolProp::ValueError);
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(kx, ky, kOx, 0, good), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky, 0, kOy, good), Catch::Matchers::ContainsSubstring("order must be at least 1"));
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky, kOx, 0, good), Catch::Matchers::ContainsSubstring("order must be at least 1"));
     }
     SECTION("order above kMaxOrder is rejected rather than overrunning the stack scratch") {
         const std::size_t too_big = cp_spline::TensorBSpline2D::kMaxOrder + 1;
@@ -145,24 +150,29 @@ TEST_CASE("TensorBSpline2D validates its inputs in the public constructor", "[Te
             knots[i] = static_cast<double>(i);
         }
         std::vector<double> c(2 * kNy, 1.0);
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(knots, ky, too_big, kOy, c), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(knots, ky, too_big, kOy, c), Catch::Matchers::ContainsSubstring("exceeds kMaxOrder"));
     }
     SECTION("too few knots for the requested order is rejected, not wrapped around") {
         // knots.size() <= order would make n = size - order underflow.
         const std::vector<double> tiny{0.0, 1.0};
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(tiny, ky, kOx, kOy, good), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(tiny, ky, kOx, kOy, good), Catch::Matchers::ContainsSubstring("needs at least"));
     }
     SECTION("non-finite knots are rejected") {
         std::vector<double> bad = kx;
         bad[5] = std::numeric_limits<double>::quiet_NaN();
-        CHECK_THROWS_AS(cp_spline::TensorBSpline2D(bad, ky, kOx, kOy, good), CoolProp::ValueError);
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ky, kOx, kOy, good), Catch::Matchers::ContainsSubstring("non-finite"));
     }
 }
 
 TEST_CASE("TensorBSpline2D handles repeated interior knots", "[TensorBSpline][spline][multiplicity]") {
-    // An interior knot of multiplicity 2 creates a zero-width span, which
-    // the bisection in find_span can land on.  The fixture above has only
-    // simple interior knots, so this exercises a path nothing else does.
+    // An interior knot of multiplicity 2.  NOTE: contrary to what an
+    // earlier version of this comment claimed, the bisection in find_span
+    // provably cannot return a zero-width span -- its exit condition
+    // requires knots[mid] <= v < knots[mid+1].  The only path that can
+    // reach one is the v >= knots[n] early return, which is covered by
+    // the run-length rejection tested below.  What this case does cover
+    // is a knot vector whose interior multiplicity is > 1 but still
+    // within the order, which the main fixture does not have.
     const std::vector<double> kxm{0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0};
     const std::vector<double> kym{0.0, 0.0, 0.0, 2.0, 4.0, 4.0, 4.0};
     const std::vector<double> cm{0.500382, 1.588855,  1.102743,  -1.099171, -0.799335, 1.494214,  -1.978939, 1.284914,
@@ -193,5 +203,140 @@ TEST_CASE("TensorBSpline2D returns zero for derivatives above the degree", "[Ten
     CHECK_THAT(sp.eval(0.42, 2.7, 0, 3), Catch::Matchers::WithinAbs(0.0, 1e-14));
     CHECK_THAT(sp.eval(0.42, 2.7, 0, 7), Catch::Matchers::WithinAbs(0.0, 1e-14));
     CHECK_THAT(sp.eval(0.42, 2.7, 4, 0), Catch::Matchers::WithinAbs(0.0, 1e-14));
+}
+
+TEST_CASE("TensorBSpline2D requires at least `order` coefficients per axis", "[TensorBSpline][spline][validation]") {
+    // n = knots.size() - order must be >= order.  When n < order, find_span's
+    // right-endpoint early return yields a span below p, and eval's
+    // `sx - px + a` then wraps in std::size_t.  Verified pre-fix under ASAN as
+    // a heap-buffer-overflow READ at the eval() coefficient lookup.
+    //
+    // The degenerate case is n == order - 1, where the domain
+    // [knots[order-1], knots[n]] collapses to a single point that
+    // check_in_domain is then GUARANTEED to admit -- so the guard in front of
+    // the bisection cannot save us here.  It has to be refused at construction.
+    const std::vector<double> kx_short{0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0};  // 7 knots, order 4 -> n = 3
+    const std::vector<double> ky_ok{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};          // 6 knots, order 3 -> n = 3
+    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx_short, ky_ok, 4, 3, std::vector<double>(9, 1.0)),
+                      Catch::Matchers::ContainsSubstring("needs at least"));
+    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(ky_ok, kx_short, 3, 4, std::vector<double>(9, 1.0)),
+                      Catch::Matchers::ContainsSubstring("needs at least"));
+
+    // The boundary must stay open: n == order exactly is legitimate.
+    const std::vector<double> kx_min{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};  // 6 knots, order 3 -> n = 3 == order
+    CHECK_NOTHROW(cp_spline::TensorBSpline2D(kx_min, kx_min, 3, 3, std::vector<double>(9, 1.0)));
+}
+
+TEST_CASE("TensorBSpline2D rejects knot multiplicity above the order", "[TensorBSpline][spline][validation]") {
+    // A run of equal knots longer than `order` makes the Cox-de Boor
+    // denominator exactly zero on the span the right-endpoint early return
+    // selects, so eval RETURNED NaN rather than throwing -- the precise
+    // fail-open this class exists to prevent.  Refuse it at construction.
+    const std::vector<double> bad{0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};  // run of 1.0 has length 4 > order 3
+    const std::vector<double> ok{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
+    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ok, 3, 3, std::vector<double>(4 * 3, 1.0)),
+                      Catch::Matchers::ContainsSubstring("knot multiplicity"));
+    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(ok, bad, 3, 3, std::vector<double>(3 * 4, 1.0)),
+                      Catch::Matchers::ContainsSubstring("knot multiplicity"));
+
+    // Multiplicity exactly == order is the normal clamped case and must pass.
+    CHECK_NOTHROW(cp_spline::TensorBSpline2D(ok, ok, 3, 3, std::vector<double>(9, 1.0)));
+}
+
+TEST_CASE("TensorBSpline2D never returns a non-finite value on a valid surface", "[TensorBSpline][spline][nan]") {
+    // COO-45 requires "assert not NaN".  The existing coverage only asserted
+    // that the THROW paths throw; nothing checked that the success path is
+    // finite.  Sweep the domain, including both endpoints and the knots.
+    const std::vector<double> coefs(kNx * kNy, 1.0);
+    const cp_spline::TensorBSpline2D sp(kx, ky, kOx, kOy, coefs);
+    const unsigned orders[][2] = {{0, 0}, {1, 0}, {0, 1}, {2, 0}, {0, 2}, {1, 1}};
+    for (int i = 0; i <= 20; ++i) {
+        const double x = static_cast<double>(i) / 20.0;
+        for (int j = 0; j <= 20; ++j) {
+            const double y = 4.0 * static_cast<double>(j) / 20.0;
+            for (const auto& d : orders) {
+                const double v = sp.eval(x, y, d[0], d[1]);
+                INFO("x = " << x << ", y = " << y << ", d = (" << d[0] << "," << d[1] << ")");
+                REQUIRE(std::isfinite(v));
+            }
+        }
+    }
+}
+
+TEST_CASE("TensorBSpline2D derivative order is range-checked before narrowing", "[TensorBSpline][spline][validation]") {
+    // `static_cast<int>(nd)` turns nd >= 2^31 negative, which slipped past the
+    // `k_want > p` early-out and indexed ders[-1].  Confirmed pre-fix under
+    // UBSAN as "index -1 out of bounds for type 'double[16][16]'".
+    //
+    // Pre-fix this read uninitialised stack, so the assertion below could pass
+    // by luck; the UBSAN trace, not this test, is the evidence that it was
+    // broken.  Post-fix the result is deterministic and this guards it.
+    const std::vector<double> coefs(kNx * kNy, 1.0);
+    const cp_spline::TensorBSpline2D sp(kx, ky, kOx, kOy, coefs);
+    for (const unsigned nd : {20u, 100u, 0x7FFFFFFFu, 0x80000000u, 0xFFFFFFFFu}) {
+        INFO("nd = " << nd);
+        const double dy = sp.eval(0.42, 2.7, 0, nd);
+        const double dx = sp.eval(0.42, 2.7, nd, 0);
+        REQUIRE(std::isfinite(dy));
+        REQUIRE(std::isfinite(dx));
+        CHECK_THAT(dy, Catch::Matchers::WithinAbs(0.0, 1e-14));
+        CHECK_THAT(dx, Catch::Matchers::WithinAbs(0.0, 1e-14));
+    }
+}
+
+TEST_CASE("TensorBSpline2D high-order derivatives do not overflow the scale factor", "[TensorBSpline][spline]") {
+    // The falling-factorial scaling p*(p-1)*... exceeds 2^31 at order 15, so
+    // accumulating it in `int` silently returned wrong derivatives across part
+    // of the range kMaxOrder advertises.  Reference from scipy.
+    const std::vector<double> highorder_kx{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    const std::vector<double> highorder_ky{0, 0, 1, 1};
+    const std::vector<double> highorder_c{0.729595,  0.710605, 0.622047,  -0.477107, -0.845601, 0.892932,  0.227583,  -0.994738, 0.820814, 0.969607,
+                                          -0.427407, 0.627322, -0.835184, -0.123440, 0.635408,  -0.182533, 0.035499,  -0.765920, 0.628013, -0.004265,
+                                          -0.503442, 0.553372, 0.958457,  0.076686,  0.474300,  0.985521,  -0.939745, 0.197955,  0.934591, -0.765327};
+    const cp_spline::TensorBSpline2D sp(highorder_kx, highorder_ky, 15, 2, highorder_c);
+    // {x, y, d00, d10_0, d12_0, d14_0}
+    const double ref[][6] = {
+      {0.3, 0.5, 0.10790408280695911, 71934819558.937683, 3045415990388.0981, -278259267961772.72},
+      {0.7, 0.25, 0.21663003118109, -11773121881.499836, -10597773524988.631, -362545500906504.19},
+    };
+    for (const auto& r : ref) {
+        INFO("at x = " << r[0] << ", y = " << r[1]);
+        CHECK_THAT(sp.eval(r[0], r[1], 0, 0), Catch::Matchers::WithinRel(r[2], 1e-11));
+        CHECK_THAT(sp.eval(r[0], r[1], 10, 0), Catch::Matchers::WithinRel(r[3], 1e-11));
+        CHECK_THAT(sp.eval(r[0], r[1], 12, 0), Catch::Matchers::WithinRel(r[4], 1e-11));
+        CHECK_THAT(sp.eval(r[0], r[1], 14, 0), Catch::Matchers::WithinRel(r[5], 1e-11));
+    }
+}
+
+TEST_CASE("TensorBSpline2D uses the true support interval on unclamped knots", "[TensorBSpline][spline]") {
+    // For an unclamped knot vector the support is [knots[order-1], knots[n]],
+    // strictly inside the knot vector.  On a clamped vector that coincides
+    // with [knots.front(), knots.back()], so nothing else here would notice
+    // check_in_domain using the wrong bounds.
+    const std::vector<double> ukx{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};  // order 4 -> n = 6, support [3, 6]
+    const std::vector<double> uky{0, 1, 2, 3, 4, 5, 6, 7};        // order 3 -> n = 5, support [2, 5]
+    const std::vector<double> uc{-1.485719, -0.002889, 0.405993, -1.885244, -1.408296, 1.712844, -1.718318, -1.480904, 1.793314, 0.487534,
+                                 -0.524028, 0.045560,  0.651372, -0.898765, -1.448128, 1.152158, 0.681442,  0.049529,  1.266946, 0.196301,
+                                 1.923655,  -1.181962, 0.214921, -0.065501, -0.586901, 0.366381, -1.058795, 1.208811,  1.469334, -1.484961};
+    const cp_spline::TensorBSpline2D sp(ukx, uky, 4, 3, uc);
+
+    // {x, y, f, f_x, f_y}
+    const double ref[][5] = {
+      {3.0, 2.0, -0.16574766666666663, 0.25253500000000001, -1.9453716666666665},
+      {4.25, 3.5, 0.24472814257812497, 0.33897408593750006, -0.071796700520833368},
+      {5.5, 4.0, 0.37652434374999993, -0.18185856249999999, 0.4221098124999999},
+      {6.0, 5.0, -0.096832333333333381, -0.36971850000000001, -1.0184233333333332},
+    };
+    for (const auto& r : ref) {
+        INFO("at x = " << r[0] << ", y = " << r[1]);
+        CHECK_THAT(sp.eval(r[0], r[1]), Catch::Matchers::WithinRel(r[2], 1e-12));
+        CHECK_THAT(sp.eval(r[0], r[1], 1, 0), Catch::Matchers::WithinRel(r[3], 1e-12));
+        CHECK_THAT(sp.eval(r[0], r[1], 0, 1), Catch::Matchers::WithinRel(r[4], 1e-12));
+    }
+    // Outside the SUPPORT but still inside the knot vector: must be refused.
+    CHECK_THROWS_AS(sp.eval(2.5, 3.0), CoolProp::ValueError);  // x < knots[3]
+    CHECK_THROWS_AS(sp.eval(6.5, 3.0), CoolProp::ValueError);  // x > knots[6]
+    CHECK_THROWS_AS(sp.eval(4.0, 1.5), CoolProp::ValueError);  // y < knots[2]
+    CHECK_THROWS_AS(sp.eval(4.0, 5.5), CoolProp::ValueError);  // y > knots[5]
 }
 #endif

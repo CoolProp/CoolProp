@@ -12,7 +12,11 @@
 namespace CoolProp {
 namespace spline {
 
-// Tensor-product B-spline surface on a clamped knot grid.
+// Tensor-product B-spline surface on a knot grid.
+//
+// Clamped and unclamped knot vectors are both supported.  The valid
+// domain is the true support interval [knots[order-1], knots[n]], which
+// coincides with [knots.front(), knots.back()] only when clamped.
 //
 //   f(x, y) = sum_i sum_j  c_ij  B_i,kx(x)  B_j,ky(y)
 //
@@ -97,18 +101,35 @@ inline void TensorBSpline2D::validate_axis(const std::vector<double>& knots, std
         throw ValueError(std::string("TensorBSpline2D: ") + axis + " order " + std::to_string(order) + " exceeds kMaxOrder "
                          + std::to_string(kMaxOrder));
     }
-    if (knots.size() <= order) {
-        // n = knots.size() - order is computed in std::size_t, so this
-        // would wrap to an enormous coefficient count rather than fail.
-        throw ValueError(std::string("TensorBSpline2D: ") + axis + " needs more than " + std::to_string(order) + " knots, got "
-                         + std::to_string(knots.size()));
+    if (knots.size() < 2 * order) {
+        // n = knots.size() - order must be at least `order`, not merely at
+        // least 1.  When n < order, find_span's right-endpoint early return
+        // yields a span below p and eval's `sx - px + a` wraps in
+        // std::size_t -- an out-of-bounds coefficient read, not merely a
+        // wrong number.  The degenerate case n == order - 1 collapses the
+        // domain to a single point that check_in_domain is then GUARANTEED
+        // to admit, so the evaluation-time guard cannot cover this case; it
+        // has to be refused here.
+        throw ValueError(std::string("TensorBSpline2D: ") + axis + " needs at least " + std::to_string(2 * order) + " knots for order "
+                         + std::to_string(order) + " (so that n >= order), got " + std::to_string(knots.size()));
     }
+    std::size_t run = 1;
     for (std::size_t i = 0; i < knots.size(); ++i) {
         if (!std::isfinite(knots[i])) {
             throw ValueError(std::string("TensorBSpline2D: non-finite ") + axis + " knot at index " + std::to_string(i));
         }
         if (i > 0 && knots[i] < knots[i - 1]) {
             throw ValueError(std::string("TensorBSpline2D: ") + axis + " knots must be non-decreasing, but knot " + std::to_string(i) + " decreases");
+        }
+        // A run of equal knots longer than `order` drives the Cox-de Boor
+        // denominator (right[r+1] + left[j-r]) to exactly zero on the span
+        // the right-endpoint early return selects, so evaluation yielded a
+        // silent NaN rather than a number.  Multiplicity == order is the
+        // ordinary clamped end condition and stays legal.
+        run = (i > 0 && knots[i] == knots[i - 1]) ? run + 1 : 1;
+        if (run > order) {
+            throw ValueError(std::string("TensorBSpline2D: ") + axis + " knot multiplicity " + std::to_string(run) + " at index " + std::to_string(i)
+                             + " exceeds the order " + std::to_string(order));
         }
     }
 }
@@ -182,16 +203,20 @@ inline void TensorBSpline2D::basis_funs(const std::vector<double>& knots, std::s
 
 inline void TensorBSpline2D::basis_ders(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, unsigned nd, double* out) {
     const int p = static_cast<int>(order) - 1;
-    const int k_want = static_cast<int>(nd);
     const int s = static_cast<int>(span);
 
     // Above the polynomial degree every derivative vanishes identically.
-    if (k_want > p) {
+    //
+    // Compared BEFORE narrowing to int: static_cast<int>(nd) is negative
+    // for nd >= 2^31, which slipped past this guard and then indexed
+    // ders[-1].  p >= 0 always, the constructor having rejected order 0.
+    if (nd > static_cast<unsigned>(p)) {
         for (int j = 0; j <= p; ++j) {
             out[j] = 0.0;
         }
         return;
     }
+    const int k_want = static_cast<int>(nd);
 
     double ndu[kMaxOrder][kMaxOrder];
     double a[2][kMaxOrder];
@@ -247,12 +272,18 @@ inline void TensorBSpline2D::basis_ders(const std::vector<double>& knots, std::s
 
     // The recurrence above omits the falling-factorial factor
     // p (p-1) ... (p-k+1) on the k-th derivative row; apply it now.
-    int factor = p;
+    //
+    // Accumulated in double, not int: at order 15 this product reaches
+    // 14!/4! = 3632428800, which overflows a 32-bit int and silently
+    // returned derivatives wrong by O(1) RELATIVE error across part of the
+    // range kMaxOrder advertises.  double represents every value reachable
+    // here exactly (order 16 gives at most 15! = 1.3e12, well inside 2^53).
+    double factor = p;
     for (int k = 1; k <= k_want; ++k) {
         for (int j = 0; j <= p; ++j) {
-            ders[k][j] *= static_cast<double>(factor);
+            ders[k][j] *= factor;
         }
-        factor *= (p - k);
+        factor *= static_cast<double>(p - k);
     }
 
     for (int j = 0; j <= p; ++j) {
@@ -289,6 +320,14 @@ inline double TensorBSpline2D::eval(double x, double y, unsigned dx, unsigned dy
             inner += by[b] * coefs_[i * ny_ + j];
         }
         acc += bx[a] * inner;
+    }
+    // Belt and braces.  The known NaN source (knot multiplicity above the
+    // order) is now refused at construction, but this class's contract is
+    // that a caller never receives a silent non-finite value, and a
+    // thermodynamic property built on one would propagate it invisibly.
+    // One predictable branch against ~100 flops of spline evaluation.
+    if (!std::isfinite(acc)) {
+        throw ValueError("TensorBSpline2D: evaluation produced a non-finite result");
     }
     return acc;
 }
