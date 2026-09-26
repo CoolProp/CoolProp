@@ -97,7 +97,8 @@ inline void TensorBSpline2D::validate_axis(const std::vector<double>& knots, std
     }
     if (order > kMaxOrder) {
         // Evaluation uses fixed-size stack scratch dimensioned by
-        // kMaxOrder; accepting a larger order would overrun it.
+        // kMaxOrder; accepting a larger order would overrun it.  Checked
+        // before 2 * order below, so that product cannot overflow.
         throw ValueError(std::string("TensorBSpline2D: ") + axis + " order " + std::to_string(order) + " exceeds kMaxOrder "
                          + std::to_string(kMaxOrder));
     }
@@ -106,14 +107,10 @@ inline void TensorBSpline2D::validate_axis(const std::vector<double>& knots, std
         // least 1.  When n < order, find_span's right-endpoint early return
         // yields a span below p and eval's `sx - px + a` wraps in
         // std::size_t -- an out-of-bounds coefficient read, not merely a
-        // wrong number.  The degenerate case n == order - 1 collapses the
-        // domain to a single point that check_in_domain is then GUARANTEED
-        // to admit, so the evaluation-time guard cannot cover this case; it
-        // has to be refused here.
+        // wrong number.
         throw ValueError(std::string("TensorBSpline2D: ") + axis + " needs at least " + std::to_string(2 * order) + " knots for order "
                          + std::to_string(order) + " (so that n >= order), got " + std::to_string(knots.size()));
     }
-    std::size_t run = 1;
     for (std::size_t i = 0; i < knots.size(); ++i) {
         if (!std::isfinite(knots[i])) {
             throw ValueError(std::string("TensorBSpline2D: non-finite ") + axis + " knot at index " + std::to_string(i));
@@ -121,16 +118,34 @@ inline void TensorBSpline2D::validate_axis(const std::vector<double>& knots, std
         if (i > 0 && knots[i] < knots[i - 1]) {
             throw ValueError(std::string("TensorBSpline2D: ") + axis + " knots must be non-decreasing, but knot " + std::to_string(i) + " decreases");
         }
-        // A run of equal knots longer than `order` drives the Cox-de Boor
-        // denominator (right[r+1] + left[j-r]) to exactly zero on the span
-        // the right-endpoint early return selects, so evaluation yielded a
-        // silent NaN rather than a number.  Multiplicity == order is the
-        // ordinary clamped end condition and stays legal.
-        run = (i > 0 && knots[i] == knots[i - 1]) ? run + 1 : 1;
-        if (run > order) {
-            throw ValueError(std::string("TensorBSpline2D: ") + axis + " knot multiplicity " + std::to_string(run) + " at index " + std::to_string(i)
-                             + " exceeds the order " + std::to_string(order));
-        }
+    }
+    // The last span must be non-degenerate.
+    //
+    // This is a VALUE condition, and it is the one that matters: for any
+    // span s reached by the bisection the Cox-de Boor denominator is
+    // knots[s+r+1] - knots[s+r+1-j], whose index pair always straddles
+    // s / s+1, so knots[s] < knots[s+1] makes a zero denominator
+    // impossible at ANY multiplicity.  The only way to reach a zero is
+    // find_span's `v >= knots[n]` early return handing back span n-1 when
+    // knots[n-1] == knots[n].  Two sub-cases, both admitted by every size
+    // and multiplicity check: the domain collapsing to a point
+    // (knots[order-1] == knots[n]), and a proper domain whose declared
+    // right endpoint is the degenerate span.  Both previously returned a
+    // silent NaN.
+    //
+    // Implied by this: knots[order-1] <= knots[n-1] < knots[n], so the
+    // domain is always a non-empty interval.
+    //
+    // An earlier version of this guard rejected knot runs longer than
+    // `order` instead.  That was wrong in both directions -- it admitted
+    // both sub-cases above (a multiplicity of 2 at index n is enough) and
+    // it refused legitimate vectors such as order 3 {0,0,0,0,1,2,3,4},
+    // which scipy accepts and evaluates.
+    const std::size_t n = knots.size() - order;
+    if (!(knots[n - 1] < knots[n])) {
+        throw ValueError(std::string("TensorBSpline2D: ") + axis + " has a degenerate last span: knots[" + std::to_string(n - 1) + "] == knots["
+                         + std::to_string(n) + "] == " + std::to_string(knots[n])
+                         + ", which makes the basis undefined at the right end of the domain");
     }
 }
 
@@ -273,11 +288,12 @@ inline void TensorBSpline2D::basis_ders(const std::vector<double>& knots, std::s
     // The recurrence above omits the falling-factorial factor
     // p (p-1) ... (p-k+1) on the k-th derivative row; apply it now.
     //
-    // Accumulated in double, not int: at order 15 this product reaches
-    // 14!/4! = 3632428800, which overflows a 32-bit int and silently
-    // returned derivatives wrong by O(1) RELATIVE error across part of the
-    // range kMaxOrder advertises.  double represents every value reachable
-    // here exactly (order 16 gives at most 15! = 1.3e12, well inside 2^53).
+    // Accumulated in double, not int.  k_want can reach p, so the largest
+    // value used is p! -- 13! = 6.2e9 at order 14, already past INT_MAX,
+    // rising to 15! = 1.3e12 at kMaxOrder.  In int this silently returned
+    // derivatives wrong by O(1) RELATIVE error across part of the range
+    // kMaxOrder advertises.  Every partial product p!/(p-k)! is an exact
+    // integer below 2^53, so double represents all of them exactly.
     double factor = p;
     for (int k = 1; k <= k_want; ++k) {
         for (int j = 0; j <= p; ++j) {
@@ -321,9 +337,15 @@ inline double TensorBSpline2D::eval(double x, double y, unsigned dx, unsigned dy
         }
         acc += bx[a] * inner;
     }
-    // Belt and braces.  The known NaN source (knot multiplicity above the
-    // order) is now refused at construction, but this class's contract is
-    // that a caller never receives a silent non-finite value, and a
+    // Defence in depth.  The degenerate-last-span guard in validate_axis
+    // is believed to make a non-finite result unreachable from a
+    // constructible surface via a zero denominator, so this is not the
+    // primary protection -- it is the backstop for anything that analysis
+    // missed, and for genuine floating-point overflow, which IS reachable:
+    // finite but enormous coefficients (order 15, |c| ~ 1e300) overflow to
+    // inf in a high derivative and throw here rather than returning inf.
+    // That is a deliberate behaviour choice: this class's contract is that
+    // a caller never receives a silent non-finite value, and a
     // thermodynamic property built on one would propagate it invisibly.
     // One predictable branch against ~100 flops of spline evaluation.
     if (!std::isfinite(acc)) {

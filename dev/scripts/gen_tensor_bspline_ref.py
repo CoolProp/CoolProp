@@ -94,7 +94,9 @@ def emit(name, kxx, kyy, oxx, oyy, CC, pts, derivs):
     print("    const std::vector<double> %s_c{%s};" % (name, ", ".join(f"{v:.6f}" for v in CC.ravel())))
     Bx = BSpline(kxx, np.eye(nxx), oxx-1, extrapolate=False)
     By = BSpline(kyy, np.eye(nyy), oyy-1, extrapolate=False)
-    print("    // {x, y, " + ", ".join(f"d{dx}{dy}" for dx,dy in derivs) + "}")
+    # d{dx}_{dy}: the underscore matters -- "d10" for (1, 0) and (10, 0)
+    # are otherwise the same string.
+    print("    // {x, y, " + ", ".join(f"d{dx}_{dy}" for dx, dy in derivs) + "}")
     for (x, y) in pts:
         vals = []
         for (dx, dy) in derivs:

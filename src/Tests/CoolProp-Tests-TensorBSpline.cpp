@@ -14,6 +14,7 @@
 #    include <cstddef>
 #    include <cmath>
 #    include <limits>
+#    include <memory>
 #    include <vector>
 
 namespace cp_spline = CoolProp::spline;
@@ -161,7 +162,7 @@ TEST_CASE("TensorBSpline2D validates its inputs in the public constructor", "[Te
     SECTION("non-finite knots are rejected") {
         std::vector<double> bad = kx;
         bad[5] = std::numeric_limits<double>::quiet_NaN();
-        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ky, kOx, kOy, good), Catch::Matchers::ContainsSubstring("non-finite"));
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ky, kOx, kOy, good), Catch::Matchers::ContainsSubstring("non-finite x knot"));
     }
 }
 
@@ -171,9 +172,9 @@ TEST_CASE("TensorBSpline2D handles repeated interior knots", "[TensorBSpline][sp
     // provably cannot return a zero-width span -- its exit condition
     // requires knots[mid] <= v < knots[mid+1].  The only path that can
     // reach one is the v >= knots[n] early return, which is covered by
-    // the run-length rejection tested below.  What this case does cover
-    // is a knot vector whose interior multiplicity is > 1 but still
-    // within the order, which the main fixture does not have.
+    // the degenerate-last-span rejection tested below.  What this case
+    // does cover is a knot vector whose interior multiplicity is > 1,
+    // which the main fixture does not have.
     const std::vector<double> kxm{0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0};
     const std::vector<double> kym{0.0, 0.0, 0.0, 2.0, 4.0, 4.0, 4.0};
     const std::vector<double> cm{0.500382, 1.588855,  1.102743,  -1.099171, -0.799335, 1.494214,  -1.978939, 1.284914,
@@ -228,20 +229,70 @@ TEST_CASE("TensorBSpline2D requires at least `order` coefficients per axis", "[T
     CHECK_NOTHROW(cp_spline::TensorBSpline2D(kx_min, kx_min, 3, 3, std::vector<double>(9, 1.0)));
 }
 
-TEST_CASE("TensorBSpline2D rejects knot multiplicity above the order", "[TensorBSpline][spline][validation]") {
-    // A run of equal knots longer than `order` makes the Cox-de Boor
-    // denominator exactly zero on the span the right-endpoint early return
-    // selects, so eval RETURNED NaN rather than throwing -- the precise
-    // fail-open this class exists to prevent.  Refuse it at construction.
-    const std::vector<double> bad{0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};  // run of 1.0 has length 4 > order 3
-    const std::vector<double> ok{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
-    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ok, 3, 3, std::vector<double>(std::size_t{4} * 3, 1.0)),
-                      Catch::Matchers::ContainsSubstring("knot multiplicity"));
-    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(ok, bad, 3, 3, std::vector<double>(std::size_t{3} * 4, 1.0)),
-                      Catch::Matchers::ContainsSubstring("knot multiplicity"));
+TEST_CASE("TensorBSpline2D rejects a degenerate last span", "[TensorBSpline][spline][validation]") {
+    // knots[n-1] == knots[n] makes find_span's right-endpoint early return
+    // hand back a zero-width span, zeroing the Cox-de Boor denominator, so
+    // eval produced a silent NaN AT A POINT INSIDE ITS OWN DECLARED DOMAIN.
+    //
+    // An earlier guard here rejected knot runs longer than `order`.  That
+    // was wrong in both directions: it admitted both cases below, and it
+    // refused legitimate vectors (see the positive controls).
+    const std::vector<double> ky_ok{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
 
-    // Multiplicity exactly == order is the normal clamped case and must pass.
-    CHECK_NOTHROW(cp_spline::TensorBSpline2D(ok, ok, 3, 3, std::vector<double>(9, 1.0)));
+    SECTION("domain collapsed to a single point") {
+        // order 2, n = 2: size == 2*order and max run == order, so every
+        // size- and multiplicity-based check passes.  Domain is [1, 1].
+        const std::vector<double> kx{0.0, 1.0, 1.0, 2.0};
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky_ok, 2, 3, std::vector<double>(std::size_t{2} * 3, 1.0)),
+                          Catch::Matchers::ContainsSubstring("degenerate last span"));
+    }
+    SECTION("proper domain whose right endpoint is the degenerate span") {
+        // Max run is 2, well under order 3 -- a run-length guard cannot see
+        // this.  Domain is [0, 3]; eval(3.0) is in-domain and was NaN.
+        const std::vector<double> kx{0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 4.0, 4.0};
+        CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky_ok, 3, 3, std::vector<double>(std::size_t{6} * 3, 1.0)),
+                          Catch::Matchers::ContainsSubstring("degenerate last span"));
+    }
+    SECTION("positive control: a run longer than the order is legitimate") {
+        // scipy accepts and evaluates this; the previous guard refused it.
+        const std::vector<double> kx{0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0};
+        std::unique_ptr<cp_spline::TensorBSpline2D> sp;
+        REQUIRE_NOTHROW(sp.reset(new cp_spline::TensorBSpline2D(kx, ky_ok, 3, 3, std::vector<double>(std::size_t{5} * 3, 1.0))));
+        CHECK_THAT(sp->eval(0.0, 0.5), Catch::Matchers::WithinAbs(1.0, 1e-14));
+        CHECK_THAT(sp->eval(2.0, 0.5), Catch::Matchers::WithinAbs(1.0, 1e-14));
+    }
+    SECTION("positive control: ordinary clamped multiplicity == order") {
+        CHECK_NOTHROW(cp_spline::TensorBSpline2D(ky_ok, ky_ok, 3, 3, std::vector<double>(9, 1.0)));
+    }
+}
+
+TEST_CASE("TensorBSpline2D evaluates at the right endpoint of a minimal spline", "[TensorBSpline][spline]") {
+    // n == order exactly, evaluated AT knots[n] -- the find_span early-return
+    // path at the boundary the size guard protects.  Nothing else reaches it:
+    // other fixtures either only construct, or evaluate via the bisection.
+    const std::vector<double> k{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};  // order 3 -> n = 3 == order
+    const cp_spline::TensorBSpline2D sp(k, k, 3, 3, std::vector<double>(9, 1.0));
+    CHECK_THAT(sp.eval(1.0, 1.0), Catch::Matchers::WithinAbs(1.0, 1e-14));
+    CHECK_THAT(sp.eval(0.0, 0.0), Catch::Matchers::WithinAbs(1.0, 1e-14));
+    CHECK_THAT(sp.eval(1.0, 0.0), Catch::Matchers::WithinAbs(1.0, 1e-14));
+}
+
+TEST_CASE("TensorBSpline2D throws rather than returning an overflowed value", "[TensorBSpline][spline][nan]") {
+    // Pins the isfinite backstop in eval().  With the degenerate-span guard
+    // in place, a zero denominator is no longer reachable from a
+    // constructible surface, so genuine floating-point overflow is what
+    // remains: finite but enormous coefficients whose high derivatives
+    // exceed DBL_MAX.  Deleting the backstop makes this return inf.
+    std::vector<double> k(30);
+    for (int i = 0; i < 15; ++i) {
+        k[i] = 0.0;
+        k[15 + i] = 1.0;
+    }
+    const std::vector<double> ky{0.0, 0.0, 1.0, 1.0};
+    const cp_spline::TensorBSpline2D sp(k, ky, 15, 2, std::vector<double>(std::size_t{15} * 2, 1e300));
+    CHECK_THROWS_WITH(sp.eval(0.3, 0.5, 14, 0), Catch::Matchers::ContainsSubstring("non-finite result"));
+    // The same surface at a modest derivative order stays finite.
+    CHECK(std::isfinite(sp.eval(0.3, 0.5)));
 }
 
 TEST_CASE("TensorBSpline2D never returns a non-finite value on a valid surface", "[TensorBSpline][spline][nan]") {
@@ -256,8 +307,13 @@ TEST_CASE("TensorBSpline2D never returns a non-finite value on a valid surface",
         for (int j = 0; j <= 20; ++j) {
             const double y = 4.0 * static_cast<double>(j) / 20.0;
             for (const auto& d : orders) {
-                const double v = sp.eval(x, y, d[0], d[1]);
                 INFO("x = " << x << ", y = " << y << ", d = (" << d[0] << "," << d[1] << ")");
+                // NOTHROW is the load-bearing half: eval now THROWS rather
+                // than returning a non-finite value, so the isfinite check
+                // alone could never fail.  This also pins the domain guard
+                // open -- an over-strict guard would throw somewhere here.
+                double v = 0.0;
+                REQUIRE_NOTHROW(v = sp.eval(x, y, d[0], d[1]));
                 REQUIRE(std::isfinite(v));
             }
         }
