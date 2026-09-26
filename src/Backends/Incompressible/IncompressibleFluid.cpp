@@ -697,9 +697,10 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
  *  maximum value. Enforces the redefinition of xmin and
  *  xmax since the default values cause an error. */
 bool IncompressibleFluid::checkX(double x) {
-    if (xmin < 0.0 || xmin > 1.0) throw ValueError("Please specify the minimum concentration between 0 and 1.");
-    if (xmax < 0.0 || xmax > 1.0) throw ValueError("Please specify the maximum concentration between 0 and 1.");
-    if ((x < xmin * (1 - INCOMP_EPSILON)) || (x > xmax * (1 + INCOMP_EPSILON))) {
+    // is_in_closed_range, not (x < lo || x > hi): the latter is false for NaN.
+    if (!is_in_closed_range(0.0, 1.0, xmin)) throw ValueError("Please specify the minimum concentration between 0 and 1.");
+    if (!is_in_closed_range(0.0, 1.0, xmax)) throw ValueError("Please specify the maximum concentration between 0 and 1.");
+    if (!is_in_closed_range(xmin * (1 - INCOMP_EPSILON), xmax * (1 + INCOMP_EPSILON), x)) {
         throw ValueError(format("Your composition %g is not between %g and %g.", x, xmin, xmax));
     }
     return true;

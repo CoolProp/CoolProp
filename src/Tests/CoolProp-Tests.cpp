@@ -5912,6 +5912,129 @@ TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality]
     }
 }
 
+TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality (COO-7)", "[quality][nonfinite][cubic][PCSAFT][INCOMP][IF97]") {
+    // The HEOS/IF97/PCSAFT doors were closed earlier; these are the ones that
+    // were left: the cubic backends' own update switch (no check at all -- SRK
+    // Propane at Q = 5 returned rho = 102.18 without a word), the PQ/QT arms of
+    // HEOS update_with_guesses, the PCSAFT guard ordering, and the NaN-blind
+    // (x < 0 || x > 1) guards in INCOMP.  Match on the message: a bare
+    // CHECK_THROWS would also be satisfied by some unrelated failure further
+    // down a flash and keep passing if the guard were removed.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("cubic backends, update()") {
+        for (const char* backend : {"SRK", "PR"}) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            for (double q : {5.0, -0.5, 1.0 + 1e-9, qnan, std::numeric_limits<double>::infinity()}) {
+                CAPTURE(backend, q);
+                CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+            }
+            // The boundary qualities are still legal.
+            for (double q : {0.0, 0.5, 1.0}) {
+                CAPTURE(backend, q);
+                CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+                CHECK(AS->Q() == q);
+                CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 1e6, q));
+                CHECK(AS->Q() == q);
+            }
+        }
+    }
+
+    SECTION("HEOS update_with_guesses PQ/QT arms") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 1e6;
+        for (double q : {qnan, 5.0, -0.5}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::PQ_INPUTS, 1e6, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QT_INPUTS, q, 300.0, guesses), between_0_and_1);
+        }
+    }
+
+    SECTION("PCSAFT rejects the quality before mutating the object") {
+        // The guard used to run after _Q, SatL/SatV and _phase = twophase were
+        // written, so a rejected QT/PQ left Q() reading the bad value and phase()
+        // reading two-phase on an object that never reached a two-phase state.
+        // (A fresh object rather than a prior PT update: PCSAFT METHANE PT flashes
+        // need a VLE-pressure estimate that is not the point here.)
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+            REQUIRE(PC->phase() != CoolProp::iphase_twophase);
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(PC->update(pair, q, 150.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(PC->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(PC->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(PC->Q() == 5.0);
+                CHECK_FALSE(std::isnan(PC->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 does not clamp a NaN lever-rule quality to 0") {
+        // std::min(1, std::max(0, NaN)) is 0, so HmassP with h = NaN (and PSmass
+        // with s = NaN) landed in the Region-4 branch and reported Q = 0,
+        // phase = twophase -- a NaN input dressed up as saturated liquid.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        const auto not_finite = Catch::Matchers::ContainsSubstring("quality is not a finite number");
+        CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, qnan, 1e6), not_finite);
+        CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, 1e6, qnan), not_finite);
+        // A genuine two-phase state is unaffected.
+        IF->update(CoolProp::PQ_INPUTS, 1e6, 0.4);
+        const double h = IF->hmass(), s = IF->smass();
+        CHECK_NOTHROW(IF->update(CoolProp::HmassP_INPUTS, h, 1e6));
+        CHECK(IF->Q() == Catch::Approx(0.4).epsilon(1e-6));
+        CHECK_NOTHROW(IF->update(CoolProp::PSmass_INPUTS, 1e6, s));
+        CHECK(IF->Q() == Catch::Approx(0.4).epsilon(1e-6));
+    }
+
+    SECTION("INCOMP solution rejects a NaN mass fraction") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        CHECK_THROWS_AS(
+          [&] {
+              AS->set_mass_fractions(std::vector<CoolPropDbl>{qnan});
+              AS->update(CoolProp::PT_INPUTS, 1e5, 280.0);
+          }(),
+          CoolProp::ValueError);
+        // A legal fraction still works on a fresh object.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        AS2->set_mass_fractions(std::vector<CoolPropDbl>{0.3});
+        CHECK_NOTHROW(AS2->update(CoolProp::PT_INPUTS, 1e5, 280.0));
+        CHECK(std::isfinite(AS2->rhomass()));
+    }
+}
+
+TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)", "[REFPROP][refprop][quality][nonfinite]") {
+    // REFPROP catches Q = 5 itself, but a NaN quality came back as a plausible
+    // saturated state with an EMPTY error string:
+    //     PropsSI("T","P",5e5,"Q",nan,"REFPROP::PROPANE") -> 274.87...
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    for (double q : {qnan, 5.0, -0.5}) {
+        CAPTURE(q);
+        CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmassQ_INPUTS, 50.0, q), between_0_and_1);
+    }
+    // PropsSI surfaces it as a non-finite return rather than a plausible number.
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("T", "P", 5e5, "Q", qnan, "REFPROP::PROPANE")));
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("P", "T", 300, "Q", qnan, "REFPROP::PROPANE")));
+    // Boundary qualities still flash.
+    for (double q : {0.0, 1.0}) {
+        CAPTURE(q);
+        CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+        CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 5e5, q));
+    }
+}
+
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
     // reaches the flash routines by other doors, and HQ_flash's own gate,

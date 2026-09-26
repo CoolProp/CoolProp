@@ -14,6 +14,7 @@ using Catch::Approx;
 #    include <cstdint>
 #    include <filesystem>
 #    include <fstream>
+#    include <limits>
 #    include <memory>
 #    include <random>
 #    include <string>
@@ -645,6 +646,13 @@ TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][re
     REQUIRE_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.0e6, 1.1));
     REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, -0.1, 350.0));
     REQUIRE_THROWS(AS->update(CoolProp::QT_INPUTS, 1.1, 350.0));
+    // NaN too (COO-7): the guard was (Q < 0 || Q > 1), false for NaN, so a NaN
+    // quality returned rhomass = NaN without throwing.  Match the message so an
+    // unrelated downstream failure cannot satisfy the check.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto q_range = Catch::Matchers::ContainsSubstring("two-phase Q must be in [0, 1]");
+    CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 1.0e6, qnan), q_range);
+    CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, qnan, 350.0), q_range);
 }
 
 // -----------------------------------------------------------------------------

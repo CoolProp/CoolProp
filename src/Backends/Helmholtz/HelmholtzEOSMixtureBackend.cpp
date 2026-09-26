@@ -1658,11 +1658,15 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
 
     switch (input_pair) {
         case PQ_INPUTS:
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value2)))
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _p = value1;
             _Q = value2;
             FlashRoutines::PQ_flash_with_guesses(*this, guesses);
             break;
         case QT_INPUTS:
+            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value1)))
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
             FlashRoutines::QT_flash_with_guesses(*this, guesses);

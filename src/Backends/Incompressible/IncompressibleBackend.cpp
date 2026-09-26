@@ -85,7 +85,7 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
     } else {
         this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
         if (get_debug_level() >= 50) std::cout << format("Incompressible backend: Fluid type is  %d ", this->_fluid_type) << '\n';
-        if ((_fractions[0] < 0.0) || (_fractions[0] > 1.0)) {
+        if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_fractions[0]))) {  // rejects NaN too
             throw ValueError(
               format("%s is a solution or brine. Mass fractions must be set to a vector with one entry between 0 and 1. %s is not valid.",
                      this->name().c_str(), vec_to_string(_fractions).c_str()));

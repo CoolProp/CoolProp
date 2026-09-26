@@ -2002,6 +2002,11 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             return;
         }
         case PQ_INPUTS: {
+            // REFPROP rejects Q = 5 itself but silently accepts NaN and returns a
+            // plausible saturated state; is_in_closed_range rejects both.
+            if (!is_in_closed_range(0.0, 1.0, value2)) {
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            }
 
             // c  Estimate temperature, pressure, and compositions to be used
             // c  as initial guesses to SATTP
@@ -2094,6 +2099,11 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             break;
         }
         case QT_INPUTS: {
+            // REFPROP rejects Q = 5 itself but silently accepts NaN and returns a
+            // plausible saturated state; is_in_closed_range rejects both.
+            if (!is_in_closed_range(0.0, 1.0, value1)) {
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            }
             // Unit conversion for REFPROP
             q = value1;
             _T = value2;
@@ -2165,6 +2175,11 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             return;
         }
         case DmolarQ_INPUTS: {
+            // REFPROP rejects Q = 5 itself but silently accepts NaN and returns a
+            // plausible saturated state; is_in_closed_range rejects both.
+            if (!is_in_closed_range(0.0, 1.0, value2)) {
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            }
             // GitHub #1845: REFPROP supports D,Q via DQFL2 — wire it through.
             // REFPROP's DQFL2(d,q,z,kq,t,p,Dl,Dv,xliq,xvap,ierr,herr) iterates
             // for T given (rho, q) on the saturation envelope. Then THERMdll
@@ -2255,6 +2270,11 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             break;
         }
         case PQ_INPUTS: {
+            // REFPROP rejects Q = 5 itself but silently accepts NaN and returns a
+            // plausible saturated state; is_in_closed_range rejects both.
+            if (!is_in_closed_range(0.0, 1.0, value2)) {
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            }
             // Unit conversion for REFPROP
             p_kPa = 0.001 * value1;
             q = value2;  // Want p in [kPa] in REFPROP

@@ -364,12 +364,17 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
                 HelmholtzEOSMixtureBackend::update(PT_INPUTS, value1, value2);
             }
             break;
+        // This switch bypasses HelmholtzEOSMixtureBackend::update, so its
+        // quality guard has to be repeated here; without it SRK Propane at
+        // Q = 5 returned a plausible density.  is_in_closed_range rejects NaN.
         case QT_INPUTS:
+            if (!is_in_closed_range(0.0, 1.0, value1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
             saturation(input_pair);
             break;
         case PQ_INPUTS:
+            if (!is_in_closed_range(0.0, 1.0, value2)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _p = value1;
             _Q = value2;
             saturation(input_pair);

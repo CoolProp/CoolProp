@@ -1123,7 +1123,7 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
             Q = value1;
             T_sat = value2;
         }
-        if (Q < 0.0 || Q > 1.0) {
+        if (!is_in_closed_range(0.0, 1.0, Q)) {  // rejects NaN too
             throw ValueError("SVDSBTL backend: two-phase Q must be in [0, 1]");
         }
         // Try SA-or-surrogate fast path first; only fall through to

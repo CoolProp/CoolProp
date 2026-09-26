@@ -7,6 +7,8 @@
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/Exceptions.h"
 #include <vector>
+#include <algorithm>
+#include <cmath>
 
 namespace CoolProp {
 
@@ -19,6 +21,14 @@ class IF97Backend : public AbstractState
     CachedElement _hmass, _rhomass, _smass,
       _reverse;  // Also need a way to flag using the IF97 reverse calcs for h(p,s) and s(p,h)
                  /// CachedElement  _hVmass, _hLmass, _sVmass, sLmass;
+
+    /// Clamp a lever-rule quality into [0,1] to absorb rounding at the dome
+    /// edges, but refuse a non-finite one: std::min(1, std::max(0, NaN)) is 0,
+    /// which silently reported a NaN quality as saturated liquid.
+    static double bounded_quality(double q) {
+        if (!std::isfinite(q)) throw ValueError("IF97: computed two-phase quality is not a finite number");
+        return std::min(1.0, std::max(0.0, q));
+    }
 
    public:
     /// The name of the backend being used
@@ -228,7 +238,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bound between 0 and 1
+                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     set_phase();
@@ -250,7 +260,7 @@ class IF97Backend : public AbstractState
                     S = _smass;
                     sVmass = IF97::svap_p(_p);
                     sLmass = IF97::sliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (S - sLmass) / (sVmass - sLmass)));  //bound between 0 and 1
+                    _Q = bounded_quality((S - sLmass) / (sVmass - sLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     set_phase();
@@ -271,7 +281,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bount between 0 and 1
+                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bount between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     _Q = -1;
