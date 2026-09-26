@@ -219,9 +219,10 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
     // Decrement the counter for the number of instances
-    REFPROPMixtureBackend::instance_counter--;
-    // Unload the shared library when the last instance is about to be destroyed
-    if (REFPROPMixtureBackend::instance_counter == 0) {
+    // Unload the shared library when the last instance is about to be destroyed.
+    // Decrement and test in one atomic step so two concurrent destructors can't
+    // both (or neither) observe zero.
+    if (--REFPROPMixtureBackend::instance_counter == 0) {
         force_unload_REFPROP();
     }
 }
@@ -229,8 +230,8 @@ void REFPROPMixtureBackend::check_loaded_fluid() {
     this->set_REFPROP_fluids(this->fluid_names);
 }
 
-std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
-bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+std::atomic<std::size_t> REFPROPMixtureBackend::instance_counter{0};  // initialise with 0
+bool REFPROPMixtureBackend::_REFPROP_supported = true;                // initialise with true
 bool REFPROPMixtureBackend::REFPROP_supported() {
     /*
      * Here we build the bridge from macro definitions
@@ -1490,6 +1491,10 @@ phases REFPROPMixtureBackend::GetRPphase() {
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // REFPROP rejects Q = 5 itself but silently accepts NaN and returns a
+    // plausible saturated state, and DQFL2 extrapolates a quality above 1 rather
+    // than refuse it; so validate every quality, Qmass included, up front.
+    check_input_quality(input_pair, value1, value2);
     this->check_loaded_fluid();
 
     // Mass-quality input pair.  On a true mixture Qmass != Qmolar, so it needs the
@@ -1503,11 +1508,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     // that to update_Qmass_pair, whose check_status() reports it properly.
     if (CoolProp::is_Qmass_pair(input_pair)) {
         if (get_mole_fractions().size() == 1) {
-            // The rewrite skips AbstractState::update_Qmass_pair, so its [0,1] range
-            // check has to be applied here.  REFPROP will not do it for us: DQFL2
-            // extrapolates a quality above 1 and returns a state whose Q() reads 1.05
-            // and phase() reads gas, while Qmass() on it throws.
-            check_Qmass_pair_range(input_pair, value1, value2);
+            // The rewrite skips AbstractState::update_Qmass_pair; its [0,1] range
+            // check was already applied by check_input_quality above.
             // NOTE: mass_to_molar_inputs runs two switches.  The first rewrites the
             // Qmass pair to its molar sibling; the second converts any remaining
             // mass-basis value to molar (DmassQmass -> DmassQ -> DmolarQ, dividing by
@@ -2002,7 +2004,6 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             return;
         }
         case PQ_INPUTS: {
-
             // c  Estimate temperature, pressure, and compositions to be used
             // c  as initial guesses to SATTP
             // c
@@ -2217,6 +2218,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 }
 
 void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2, const GuessesStructure& guesses) {
+    check_input_quality(input_pair, value1, value2);
     this->check_loaded_fluid();
     double rho_mol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE, q = _HUGE, p_kPa = _HUGE,
            hjt = _HUGE;
