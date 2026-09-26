@@ -153,7 +153,8 @@ def main(argv):
     # Compared with a tolerance, NOT exact equality.  The fitted knots carry
     # ULP-class noise -- the true upper P knot is 2300.5999999999995, not
     # 2300.6 -- so an exact comparison against the paper's rounded literals
-    # rejects the correct data and accepts a truncated copy.  An earlier
+    # rejects the correct data and accepts a truncated copy.  (These are the
+    # fit's own rounded bounds, not a validity claim.)  An earlier
     # version of this script did exactly that: it passed only because the
     # values had been degraded to six significant figures, and refused to
     # run at all on full precision.  The sha256 gate above already pins the
@@ -163,9 +164,9 @@ def main(argv):
         return abs(a - b) <= 1e-9 * max(1.0, abs(b))
 
     if not (_near(kx[ox - 1], SUPPORT_P_MIN_MPA) and _near(kx[nx], SUPPORT_P_MAX_MPA)):
-        problems.append(f"P support {(kx[ox-1], kx[nx])} != paper {(SUPPORT_P_MIN_MPA, SUPPORT_P_MAX_MPA)}")
+        problems.append(f"P support {(kx[ox-1], kx[nx])} != expected {(SUPPORT_P_MIN_MPA, SUPPORT_P_MAX_MPA)}")
     if not (_near(ky[oy - 1], SUPPORT_T_MIN_K) and _near(ky[ny], SUPPORT_T_MAX_K)):
-        problems.append(f"T support {(ky[oy-1], ky[ny])} != paper {(SUPPORT_T_MIN_K, SUPPORT_T_MAX_K)}")
+        problems.append(f"T support {(ky[oy-1], ky[ny])} != expected {(SUPPORT_T_MIN_K, SUPPORT_T_MAX_K)}")
     if problems:
         for p in problems:
             print("ERROR: " + p, file=sys.stderr)
@@ -199,9 +200,10 @@ def main(argv):
 // G is in J/kg, P in MPa, T in K.  Order is the B-spline ORDER (degree + 1),
 // matching CoolProp::spline::TensorBSpline2D.
 //
-// Knot support: P in [{SUPPORT_P_MIN_MPA}, {SUPPORT_P_MAX_MPA}] MPa,
-// T in [{SUPPORT_T_MIN_K}, {SUPPORT_T_MAX_K}] K.  That is the span of the FIT, not a
-// validity claim -- the paper states 240-500 K, which is what the backend
+// Knot support: P in [{kx[ox-1]!r}, {kx[nx]!r}] MPa,
+// T in [{ky[oy-1]!r}, {ky[ny]!r}] K -- the ACTUAL fitted bounds, not the
+// paper's rounded statement of them.  This is the span of the FIT, not a
+// validity claim: the paper states 240-500 K, which is what the backend
 // advertises.  Liquid only: no vapour branch, no saturation curve.
 
 #ifndef COOLPROP_BOLLENGIER_WATER_COEFFICIENTS_H

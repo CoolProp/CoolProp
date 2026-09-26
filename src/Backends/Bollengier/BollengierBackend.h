@@ -19,7 +19,9 @@ namespace CoolProp {
 ///
 /// WHY THIS EXISTS.  CoolProp's IAPWS-95 refuses the entire region below the
 /// melting line: 250 K/200 MPa, 300 K/2000 MPa and similar all throw.  This
-/// backend covers P in [0, 2300.6] MPa, T in [240, 500] K, which includes
+/// backend covers P up to 2300.5999999999995 MPa (the fitted bound; the
+/// paper rounds it to 2300.6, which this refuses -- see domain()) and
+/// T in [240, 500] K, which includes
 /// that region, and is more accurate than IAPWS-95 above ~100 MPa.
 ///
 /// PT_INPUTS ONLY, by design.  For a Gibbs-explicit model (P, T) is the
@@ -277,34 +279,54 @@ class BollengierBackend : public AbstractState
         //
         // In particular there is NO sound-speed ceiling.  An earlier version
         // had one, on the theory that absurd stiffness marked the fit
-        // breaking down.  The populations OVERLAP in w near the physical
-        // range: measured on the shipped code, an unphysical state at
-        // 1660 MPa / 240 K (cv = 1041, a quarter of water's) has
-        // w = 3367.9 m/s, while a perfectly physical 2200 MPa / 300 K
-        // (cv = 3630) has w = 3512.7 -- the bad one is SLOWER.  So no
-        // threshold near the physical range can separate them.
+        // breaking down.
         //
-        // A far higher cut (tens of km/s) would catch the worst pathology,
-        // but that is not the argument for omitting one.  The argument is
-        // that the reference implementation makes no such claim: SeaFreeze
-        // serves this region deliberately, and inventing a criterion it
-        // does not apply is what produced two failed guards here already.
+        // NO threshold at any value separates the populations.  Measured:
+        // pathological states (cv < 2000, half of water's ~3800) run as slow
+        // as w = 2496.7 m/s at 1480.4 MPa / 240 K -- 1016 m/s BELOW the
+        // fastest state the authors themselves publish (3512.7 at
+        // 2200 MPa / 300 K).  Any cut above 2496.7 admits pathological
+        // states; any cut at or below it refuses published ones.
+        //
+        // A very high cut would truncate the worst tail, but that is not
+        // separation: at 20 km/s only the cv < 100 sliver goes, leaving tens
+        // of thousands of cv < 2000 states served.  And it is not the
+        // argument for omitting a ceiling anyway.  The argument is that the
+        // reference implementation makes no such claim: SeaFreeze serves
+        // this region deliberately, and inventing a criterion it does not
+        // apply is what produced two failed guards here already.
         //
         // WHAT THIS MEANS FOR CALLERS -- read this before using the cold
-        // high-pressure corner.  From about 1526 MPa at the 240 K edge the
-        // surface is unconstrained extrapolation, deep inside the ice
-        // VI/VII field where no liquid data existed to fit against.  The
-        // authors decline to publish there at all: Supplementary Material E
-        // omits 250 K above 900 MPa in every property it tabulates.
+        // high-pressure corner.
+        //
+        // How far the advertised rectangle reaches beyond the measurements,
+        // from the paper's own Supplementary Material B (901 sound-speed
+        // points, its primary constraint): those span 0.10-701.09 MPa and
+        // 252.28-353.76 K.  So the advertised domain is extrapolation in
+        // BOTH directions -- the 240 K edge lies 12 K below the coldest
+        // datum, and above ~700 MPa there are no sound-speed data at any
+        // temperature.  (An earlier version of this comment named a
+        // specific pressure where extrapolation "starts".  No such
+        // threshold exists; the number was not derivable from anything.)
+        //
+        // The authors decline to publish in the cold high-pressure corner
+        // at all: Supplementary Material E omits 250 K above 900 MPa in
+        // every property it tabulates.
         //
         // Those states stay thermodynamically self-consistent (cv > 0,
         // (dv/dP)_T < 0, cv < cp) but stop describing water, and the
         // degradation is UNBOUNDED, not merely large.  Measured over the
-        // advertised rectangle on a 2001x1001 grid, admitted states reach
-        // cv = 0.047 J/kg/K (water is ~3800), cp/cv = 56002, and
-        // w = 1.18e6 m/s.  cv -> 0 continuously at the convexity flip, so
-        // those are sampling artefacts of the grid, not extrema: the true
-        // infimum of cv is 0 and w is unbounded above.
+        // advertised rectangle on a grid of 2001 pressures x 1001
+        // temperatures, admitted states reach cv = 0.047 J/kg/K (water is
+        // ~3800), cp/cv = 56002, and w = 1.18e6 m/s.
+        //
+        // Those are sampling artefacts, not extrema.  cv -> 0 continuously
+        // along the locus cp*G_PP + T*G_PT^2 = 0, where G_PP is strictly
+        // NEGATIVE (-0.053 at the nearest point) -- so this is a separate
+        // locus from the convexity flip G_PP = 0, where cv instead diverges
+        // to -infinity.  Both appear in the refused set.  Since
+        // w^2 = -v^2 cp / (1e-12 G_PP cv), the cv -> 0 locus is exactly
+        // where w diverges: the true infimum of cv is 0 and w is unbounded.
         //
         // They are SERVED regardless, matching the reference implementation.
         // A caller who needs to know whether liquid is the stable phase --

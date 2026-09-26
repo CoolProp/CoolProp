@@ -330,9 +330,11 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         CHECK(AS->cvmass() < 1500.0);  // real water is ~3800 here
         // And the sound speed does NOT flag it: 3561 m/s here, against
         // 3513 m/s at a perfectly physical 2200 MPa / 300 K.  The two
-        // populations OVERLAP in w, so no sound-speed threshold separates
-        // them -- which is why this backend does not try, and why an
-        // earlier attempt to do so had to be reverted.
+        // bad state is FASTER.  The overlap is wider still: pathological
+        // states run down to 2497 m/s, over 1000 m/s below the fastest
+        // value the authors publish.  No threshold at ANY value separates
+        // the two populations -- which is why this backend does not try,
+        // and why an earlier attempt to do so had to be reverted.
         CHECK(AS->speed_sound() < 4000.0);
         auto warm = make();
         warm->update(PT_INPUTS, 2200.0e6, 300.0);
@@ -344,7 +346,14 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // all: reinstating the reverted `_w > 6000` guard passed every
         // other assertion in this file, because nothing asserted that a
         // FAST state survives -- only that a served state was slow.  Any
-        // ceiling from ~3600 m/s upward could be reintroduced silently.
+        // gap began at ~4081 m/s (a pre-existing test happens to update at
+        // 2000 MPa / 250 K, where w = 4081, so lower ceilings died by
+        // accident); anything above that could be reintroduced silently.
+        //
+        // NOTE this pins the policy up to 12688 m/s, not absolutely -- a
+        // ceiling above that would still survive.  Pinning higher is
+        // inherently brittle: w scales as cv^(-1/2), so w = 100 km/s sits
+        // within ~0.1 MPa of the cv = 0 locus.
         auto fast = make();
         REQUIRE_NOTHROW(fast->update(PT_INPUTS, 2185.0e6, 240.0));
         INFO("w at 2185 MPa / 240 K = " << fast->speed_sound());
