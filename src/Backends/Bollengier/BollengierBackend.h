@@ -49,7 +49,7 @@ class BollengierBackend : public AbstractState
     /// NOTE ON THE REFERENCE STATE.  This backend reports the published
     /// surface as-is.  Bollengier et al. do not use the IAPWS convention:
     /// at the triple-point saturated-liquid state (273.16 K, 611.657 Pa)
-    /// this model gives h = 71.2317874 J/kg and s = 0.2581766665 J/kg/K, where
+    /// this model gives h = 71.2317874 J/kg and s = 0.2581766650 J/kg/K, where
     /// IAPWS-95 has 0.6117817 and 0.
     ///
     /// No shift is applied, deliberately.  h and s are defined only up to
@@ -118,12 +118,6 @@ class BollengierBackend : public AbstractState
         }();
         return d;
     }
-
-    /// Upper bound on the isentropic stiffness, expressed as a speed of
-    /// sound [m/s].  Measured from this surface: max w below 1500 MPa is
-    /// 3120 m/s, p99 over the full rectangle is 4375 m/s.  See the guard in
-    /// update() for why a finiteness test alone is insufficient.
-    static constexpr double kMaxSoundSpeed = 6000.0;
 
     /// Molar mass of water, IAPWS-95 value [kg/mol].
     static constexpr double kMolarMass = 0.018015268;
@@ -247,36 +241,45 @@ class BollengierBackend : public AbstractState
         const double dvdP_s = dvdP_T + T_K * dvdT_P * dvdT_P / _cp;
         _w = std::sqrt(-_v * _v / dvdP_s);
 
-        // The advertised domain is a RECTANGLE, but the fit is not
-        // physically admissible throughout it: in the cold high-pressure
-        // region (p >~ 1815 MPa, T <~ 250 K) it loses convexity, and
-        // (dv/dP)_s passes through zero.
+        // Refuse states the representation cannot evaluate, and ONLY
+        // those.
         //
-        // Guarding on isfinite alone is NOT enough, and that was the first
-        // attempt here.  Approaching the sign change from the stable side
-        // (dv/dP)_s -> 0 CONTINUOUSLY, so w -> +inf and cv -> 0 smoothly:
-        // every point before the flip is finite and passes.  Measured, that
-        // let through 2303 points with w > 6000 m/s -- including
-        // w = 121 km/s with cv = 2.2 J/kg/K at 1901.8 MPa, 239 K, one MPa
-        // from a rejection -- against only 776 points actually rejected.
-        // The absurd-but-finite band was three times larger than the band
-        // the guard caught.  Rejecting NaN while serving 121 km/s is not a
-        // safeguard, it is a safeguard-shaped no-op.
+        // The reference implementation (SeaFreeze, by a co-author of the
+        // paper) does no range-checking and no output sanity-checking at
+        // all: getProp() evaluates whatever phase it is asked for, returns
+        // NaN outside the parametrisation, and exposes a SEPARATE
+        // whichphase() for callers who need to know which phase is actually
+        // stable.  Evaluating the liquid surface inside the ice field is a
+        // deliberate capability there, not an error -- serving the
+        // metastable region is much of the point.
         //
-        // So bound the isentropic stiffness directly.  kMaxSoundSpeed is
-        // set from the surface itself, not guessed: over the whole domain
-        // below 1500 MPa -- deep liquid, far from the bad corner -- w never
-        // exceeds 3120 m/s, and the 99th percentile across the entire
-        // rectangle is 4375 m/s.  6000 m/s leaves ~2x headroom over any
-        // value the model produces where it is physical, and is still half
-        // the speed of sound in diamond, which compressed water cannot
-        // approach.
-        if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0 || _w > kMaxSoundSpeed) {
-            throw ValueError(format("BollengierBackend: the fitted surface is not physically admissible at p = %g Pa, T = %g K "
-                                    "(speed of sound %g m/s, cv %g J/kg/K). This is where the representation loses convexity, "
-                                    "in the cold high-pressure corner of the published rectangle; it is a limit of the fit, "
-                                    "not a domain boundary.",
-                                    p_Pa, T_K, _w, _cv));
+        // So this guard matches that contract on the model and keeps
+        // CoolProp's on safety: what SeaFreeze returns as NaN, this throws,
+        // because a non-finite property silently propagating is the failure
+        // mode TensorBSpline2D exists to prevent.  Nothing more.
+        //
+        // In particular there is NO sound-speed ceiling.  An earlier version
+        // had one, on the theory that absurd stiffness marked the fit
+        // breaking down.  It cannot work: measured, an unphysical state at
+        // 1661.5 MPa / 239 K has w = 3368 m/s while a perfectly physical one
+        // at 2300.6 MPa / 300 K has w = 3587.  The populations overlap in w,
+        // so no threshold separates them, and the reference implementation
+        // makes no such claim in the first place.
+        //
+        // WHAT THIS MEANS FOR CALLERS.  In the cold high-pressure corner
+        // (p >~ 1660 MPa, T <~ 260 K) the surface is an unconstrained
+        // extrapolation -- deep inside the ice VI/VII field, where no liquid
+        // data exists to have fitted against.  It stays thermodynamically
+        // self-consistent (cv > 0, (dv/dP)_T < 0) but stops describing
+        // water: cv falls as low as ~416 J/kg/K against roughly 3800 for
+        // real water, with cp/cv ~ 5.4.  Those states are SERVED, as the
+        // reference serves them.  A caller who needs to know whether the
+        // liquid is the stable phase there must ask separately.
+        if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0) {
+            throw ValueError(format("BollengierBackend: the representation is not evaluable at p = %g Pa, T = %g K "
+                                    "((dv/dP)_T >= 0, or a non-finite result). The reference implementation returns NaN "
+                                    "here; CoolProp throws rather than propagating one.",
+                                    p_Pa, T_K));
         }
 
         _p_Pa = p_Pa;
