@@ -726,6 +726,44 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2),
   vel("Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2),
 
+  // Perkins, Huber & Assael, JCED 61:3286 (2016) - R245fa, Table 4
+  vel("R245fa", "T", 250, "Dmass", 1e-9, "L", 8.309e-3, 1e-4),
+  vel("R245fa", "T", 250, "Dmass", 1500.0, "L", 111.40e-3, 1e-4),
+  // Table 4 prints this one to four figures only: the equations give 24.6330, and half
+  // a unit in the last printed place is 2.0e-4 of the value.
+  vel("R245fa", "T", 430, "Dmass", 1e-9, "L", 24.63e-3, 2.1e-4),
+  vel("R245fa", "T", 430, "Dmass", 530.0, "L", 66.75e-3, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 63:2783 (2018) - Novec649, Table 3
+  vel("Novec649", "T", 300, "Dmass", 1e-9, "L", 0.011876, 1e-4),
+  vel("Novec649", "T", 300, "Dmass", 5.50, "L", 0.011813, 1e-4),
+  // PINNED to CoolProp's own output, not Table 3's 0.065259.  CoolProp uses the paper's
+  // EOS (McLinden et al. 2015) and viscosity (Wen et al. 2017), and the paper's
+  // Eqs. (3)-(9) evaluated independently on REFPROP 10.0 (same EOS) give 0.0652073, the
+  // value below.  0.065259 is REFPROP 10.0's own TCX output: in the compressed liquid
+  // REFPROP's enhancement behaves as if the correlation length were floored near
+  // 0.4*xi0 (1.01e-10 m here, inferred by inverting its output), whereas Eq. (9) gives
+  // 5.2e-11 m.  The R245fa and R1233zd(E) papers' liquid check values do follow the
+  // equations without that floor.
+  vel("Novec649", "T", 300, "Dmass", 1673.3, "L", 0.06520725656268984, 1e-6),
+  vel("Novec649", "T", 445, "Dmass", 1e-9, "L", 0.022632, 1e-4),
+  vel("Novec649", "T", 445, "Dmass", 685.0, "L", 0.036508, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 62:2659 (2017) - R1233zd(E), Table 2
+  vel("R1233zd(E)", "T", 300, "Dmass", 1e-9, "L", 0.010659, 1e-4),
+  vel("R1233zd(E)", "T", 300, "Dmass", 5.4411, "L", 0.010766, 1e-4),
+  vel("R1233zd(E)", "T", 300, "Dmass", 1308.8, "L", 0.091399, 1e-4),
+  vel("R1233zd(E)", "T", 445, "Dmass", 1e-9, "L", 0.021758, 1e-4),
+  // PINNED to CoolProp's own output, not Table 2's 0.026141.  The critical enhancement
+  // reads cp, cv and drho/dp from the EOS (and Tc, pc, rhoc from its reducing state),
+  // and CoolProp's R1233zd(E) EOS is Akasaka & Lemmon (2022), whereas the correlation
+  // was fitted with Mondejar et al. (2015).  The paper's equations on REFPROP 10.0's
+  // Mondejar EOS with the paper's viscosity (19.053 uPa s) give 0.0261406, i.e. Table 2;
+  // on the Akasaka & Lemmon EOS (REFPROP 10.1 FLD) they give 0.026048, and CoolProp,
+  // with its own viscosity, gives the value below (-0.35 %).  The enhancement-free
+  // background at this state is checked against the paper in the test case below.
+  vel("R1233zd(E)", "T", 445, "Dmass", 168.52, "L", 0.02604904492595249, 1e-6),
+
   // Heavy Water, IAPWS formulation
   vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
   vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),
@@ -755,6 +793,37 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
         CAPTURE(el.expected);
         CAPTURE(actual);
         CHECK(std::abs(actual / el.expected - 1) < el.tol);
+    }
+}
+
+// The same three papers also tabulate the total at their near-critical check point
+// with the critical enhancement set to zero.  That background (dilute + residual)
+// reads no EOS property and no viscosity, so it is checked against the paper
+// directly, including for R1233zd(E), whose near-critical total is pinned above.
+TEST_CASE("Perkins et al. conductivity backgrounds near the critical point match the papers", "[conductivity],[transport]") {
+    struct BackgroundPoint
+    {
+        std::string fluid;
+        double T, rho, expected;
+    };
+    const std::vector<BackgroundPoint> points = {
+      {"R245fa", 430.0, 530.0, 36.73e-3},      // JCED 61:3286 (2016), Table 4, footnote b
+      {"Novec649", 445.0, 685.0, 0.024976},    // JCED 63:2783 (2018), Table 3, footnote **
+      {"R1233zd(E)", 445.0, 168.52, 0.023992}  // JCED 62:2659 (2017), Table 2, footnote **
+    };
+    for (const auto& pt : points) {
+        CAPTURE(pt.fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", pt.fluid));
+        AS->update(CoolProp::DmassT_INPUTS, pt.rho, pt.T);
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(std::abs((dilute + initial_density + residual) / pt.expected - 1) < 1e-4);
+        // The enhancement must be present at these states, or the totals above would
+        // be checking the background alone.
+        CHECK(critical > 0);
     }
 }
 

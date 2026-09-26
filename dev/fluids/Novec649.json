@@ -4233,6 +4233,82 @@
     }
   },
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Perkins-JCED-2018-Novec649",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (4) and Table 2 of Perkins, Huber & Assael, J. Chem. Eng. Data 63:2783 (2018). A[k] are the paper's values in W/(m K) (printed x1e-3); the denominator coefficients a[j] are dimensionless. Tc = 441.81 K is the paper's own value.",
+        "formula": "let Tr = T/Tc\nsum(i: A[i]*Tr^i)/sum(j: a[j]*Tr^j)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 441.81
+        },
+        "arrays": {
+          "A": [
+            0.00154022,
+            -0.0150745,
+            0.0490451,
+            -0.0607192,
+            0.0462647,
+            -0.00316935
+          ],
+          "a": [
+            -0.211741,
+            1.16696,
+            -1.15574,
+            1.0
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (5) and Table 2 of Perkins et al. (2018), in W/(m K). Tc = 441.81 K and rhoc = 606.81 kg/m^3 are the paper's own reducing values (REFPROP: 1.92 mol/L).",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 441.81,
+          "rhoc": 606.81
+        },
+        "arrays": {
+          "B1": [
+            -0.0234542,
+            0.0418017,
+            -0.0274745,
+            0.00932188,
+            -0.00111766
+          ],
+          "B2": [
+            0.0158544,
+            -0.0334181,
+            0.0282766,
+            -0.0103009,
+            0.00147852
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Eqs. (6)-(9) of Perkins et al. (2018): R_D = 1.02, gamma = 1.239, Gamma = 0.061, xi0 = 0.251e-9 m, qD^-1 = 0.334e-9 m (fitted), T_ref = 1.5 Tc = 662.715 K (REFPROP rounds to 662.72). Paper, REFPROP 10.0 and REFPROP 10.1 agree on every constant. The correlation was developed with the McLinden et al. (2015) EOS, which is the EOS CoolProp uses (REFPROP 10.1 has since moved to Gao and Lemmon 2020). Table 3's liquid check value at 300 K / 1673.3 kg/m^3 (0.065259) is not reproduced by these equations, which give 0.0652073 on REFPROP 10.0's McLinden EOS and viscosity. 0.065259 is REFPROP 10.0's own TCX output there: REFPROP's enhancement at dense-liquid states behaves as if the correlation length were floored near 0.4 xi0 (inferred by inverting its output; 1.01e-10 m here), whereas Eq. (9) gives xi = 5.2e-11 m. The other five Table 3 values are reproduced to 1e-4.",
+        "GAMMA": 0.061,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 2994011976.0479045,
+        "zeta0": 2.51e-10,
+        "T_ref": 662.715
+      }
+    },
     "viscosity": {
       "BibTeX": "Wen-JCED-2017-Novec649",
       "dilute": {
