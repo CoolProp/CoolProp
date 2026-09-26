@@ -38,6 +38,30 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity for R245fa, Novec649 and R1233zd(E).**  The correlations are
+  Perkins, Huber and Assael, *J. Chem. Eng. Data* **61**\ (9):3286 (2016) for R245fa,
+  **63**\ (8):2783 (2018) for Novec649 and **62**\ (9):2659 (2017) for R1233zd(E).
+  ``PropsSI("L", ..., "Novec649")`` and ``PropsSI("L", ..., "R1233zd(E)")`` previously
+  raised; R245fa previously used an extended-corresponding-states estimate, which is
+  kept in its fluid file after the new correlation but no longer used.  As for R161, the
+  dilute and residual terms are expression-DSL data and the critical enhancement is the
+  native simplified Olchowy–Sengers block.  Every check value of the three papers,
+  including their enhancement-free backgrounds, agrees to 1e-4 (R245fa's 24.63 mW/(m K)
+  at 430 K is printed to four figures and agrees to that precision), with two exceptions:
+
+  * **Novec649, 300 K and 1673.3 kg/m**\ :sup:`3`: CoolProp gives 0.065207 W/(m K)
+    against the paper's 0.065259.  CoolProp uses the paper's EOS and viscosity, and the
+    paper's equations evaluated independently give 0.065207; the published value is
+    REFPROP's, whose enhancement in the compressed liquid does not follow the paper's
+    equations.
+  * **R1233zd(E), 445 K and 168.52 kg/m**\ :sup:`3`: CoolProp gives 0.026049 W/(m K)
+    against the paper's 0.026141.  The enhancement uses the EOS, and CoolProp's
+    R1233zd(E) EOS is Akasaka and Lemmon (2022), not the Mondéjar et al. (2015) EOS the
+    correlation was fitted with; the background at that state agrees with the paper.
+
+  Eq. (6) of the R1233zd(E) paper prints its residual sum to five terms, but its
+  Table 1, REFPROP and the paper's check values all have six; six are used.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
