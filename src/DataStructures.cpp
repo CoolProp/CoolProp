@@ -784,7 +784,7 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
             p2 = iUmolar;
             break;
         default:
-            throw ValueError(format("Invalid input pair"));
+            throw ValueError(format("Unknown input pair [%d]; add it to split_input_pair", static_cast<int>(pair)));
     }
 }
 

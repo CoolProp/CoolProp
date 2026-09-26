@@ -356,8 +356,11 @@ class AbstractState
     /// Throw if the vapor quality carried by an input pair is outside [0,1] (NaN
     /// included).  Qmass pairs go to check_Qmass_pair_range; for every other pair
     /// the Q slot is found with split_input_pair, so no hand-kept list of pairs is
-    /// needed.  A pair without a quality, or one split_input_pair does not know,
-    /// passes untouched: the backend then raises its own "not supported" error.
+    /// needed.  A known pair without a quality passes untouched (so a pair the
+    /// backend does not support still reaches its own "not supported" error).  A
+    /// pair split_input_pair does not know -- INPUT_PAIR_INVALID, an out-of-range
+    /// value, or a pair added to the enum but not registered -- throws ValueError
+    /// ("Unknown input pair [N]; ..."): the check fails closed, never skipped.
     /// Backends call this as the first statement of update() so a bad quality is
     /// refused before any cached state is cleared or overwritten.
     static void check_input_quality(CoolProp::input_pairs pair, double v1, double v2);

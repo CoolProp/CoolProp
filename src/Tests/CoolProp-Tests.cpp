@@ -6198,14 +6198,17 @@ TEST_CASE("check_input_quality guards exactly the quality slot of every input pa
     const double qnan = std::numeric_limits<double>::quiet_NaN();
     const auto q_msg = Catch::Matchers::ContainsSubstring("Input vapor quality [Q] must be between 0 and 1");
     const auto qmass_msg = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    const auto unknown_msg = Catch::Matchers::ContainsSubstring("Unknown input pair");
     const double ok_other = 300.0;  // any finite value; the non-Q slot is never range-checked
 
     // input_pairs has no sentinel, so rather than stop at a hard-coded last
     // enumerator, probe well past it.  Every described value must form one
     // contiguous run 1..last (INPUT_PAIR_INVALID = 0 is the only undescribed value
     // below it), split_input_pair must know exactly the described values, and the
-    // exact counts below pin the size: appending a pair (with its description, as
-    // the enum's header comment requires) changes n_pairs and fails here.
+    // exact counts below pin the size: appending a registered pair changes n_pairs
+    // and fails here.  A pair appended but NOT registered cannot be enumerated, but
+    // it cannot slip past the check either: check_input_quality fails closed on any
+    // value split_input_pair does not know (asserted for every such value below).
     // UPDATE THESE COUNTS when an input pair is added or removed.
     constexpr int expected_pairs = 43;
     constexpr int expected_q_pairs = 16;  // 8 molar-Q + 8 Qmass
@@ -6237,6 +6240,8 @@ TEST_CASE("check_input_quality guards exactly the quality slot of every input pa
         CHECK(is_splittable(pair) == is_described(pair));
         if (!is_described(pair)) {
             skipped.push_back(i);
+            // Fail closed: an unknown pair is refused, even with a harmless value.
+            CHECK_THROWS_WITH(QualityCheckProbe::check_input_quality(pair, 0.5, 0.5), unknown_msg);
             continue;
         }
         last_described = i;
@@ -6290,6 +6295,13 @@ TEST_CASE("check_input_quality guards exactly the quality slot of every input pa
         if (v <= last_described) skipped_below.push_back(v);
     }
     CHECK(skipped_below == std::vector<int>{static_cast<int>(CoolProp::INPUT_PAIR_INVALID)});
+
+    // And through a real update path: HEOS calls check_input_quality first, so an
+    // unknown pair is refused there before any state is touched.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS_WITH(AS->update(CoolProp::INPUT_PAIR_INVALID, 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), Catch::Matchers::ContainsSubstring("[250]"));
 }
 
 TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {
