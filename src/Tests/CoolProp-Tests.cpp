@@ -517,7 +517,8 @@ vel conductivity_validation_data[] = {
   // enhancement keeps a small dense-liquid contribution that Eq. (19) of the paper does
   // not have.  Here the paper's equations give an enhancement of 0.144 mW/(m K) (also
   // evaluated independently on REFPROP's EOS: 104.2449 in total) where REFPROP gives
-  // 0.175 (104.276).  CoolProp follows the equations.
+  // 0.175 (104.276).  CoolProp follows the equations (Linear COO-49).  The REFPROP step is
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)   (TRNS_TCX.FOR, TK3)
   vel("n-Undecane", "T", 550, "Dmass", 600, "L", 104.24492571630205e-3, 1e-6),
 
   // Sotiriadou, IJT, 2024 - Sec. 4.2
@@ -526,7 +527,8 @@ vel conductivity_validation_data[] = {
   // paper's (Fiedler 2023), but the paper's value includes a 0.0408 mW/(m K) critical
   // enhancement from REFPROP's TK3 routine; with the paper's Eq. (17) the susceptibility
   // difference is negative here, so the enhancement is zero and the total is the
-  // background, 159.8246 (checked against the paper in the test case below).
+  // background, 159.8246 (checked against the paper in the test case below).  Same
+  // REFPROP dense-liquid step as for n-undecane above; CoolProp follows the equations.
   vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "L", 159.82456074842671e-3, 1e-6),
 
   // From Assael, JPCRD, 2013
