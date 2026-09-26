@@ -6200,6 +6200,48 @@ TEST_CASE("A failed HEOS add leaves no orphan in fluids_list", "[fluids_list],[a
     }
 }
 
+// parse_viscosity takes the first entry of an array-valued TRANSPORT.viscosity
+// by calling .front(), which is undefined behaviour on an empty nlohmann::json
+// array.  An empty list must throw ValueError naming the fluid.
+TEST_CASE("An empty TRANSPORT.viscosity list throws rather than invoking UB", "[viscosity],[transport],[add_one]") {
+    using nlohmann::json;
+
+    SECTION("parse_viscosity on an empty array") {
+        // parse_viscosity is protected on a non-final class; reach it directly.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_viscosity;
+        };
+        Probe probe;
+        CoolProp::CoolPropFluid f;
+        f.name = "Probe";
+        CHECK_THROWS_WITH(probe.parse_viscosity(json::array(), f),
+                          Catch::Matchers::ContainsSubstring("viscosity list is empty") && Catch::Matchers::ContainsSubstring("Probe"));
+        CHECK_THROWS_AS(probe.parse_viscosity(json::array(), f), CoolProp::ValueError);
+    }
+
+    SECTION("add_fluids_as_JSON with viscosity [] fails cleanly") {
+        // End-to-end through add_one.  A failed add leaves nothing registered
+        // (see the [fluids_list] test above), so this does not perturb later tests.
+        const std::string name = "CatchRuntimeEmptyViscosity";
+        json fluid = json::parse(CoolProp::get_fluid_param_string("R134a", "JSON"))[0];
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = "999-99-72";
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        REQUIRE(fluid.contains("TRANSPORT"));
+        fluid["TRANSPORT"]["viscosity"] = json::array();
+
+        const std::string before = CoolProp::get_global_param_string("fluids_list");
+        // add_one wraps any std::exception as ValueError, so the type alone
+        // carries no signal; the message must come from the guard.
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()), CoolProp::ValueError);
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()),
+                          Catch::Matchers::ContainsSubstring("viscosity list is empty") && Catch::Matchers::ContainsSubstring(name));
+        CHECK(CoolProp::get_global_param_string("fluids_list") == before);
+    }
+}
+
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
     // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
     // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa

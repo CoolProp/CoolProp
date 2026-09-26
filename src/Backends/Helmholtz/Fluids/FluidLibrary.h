@@ -809,6 +809,7 @@ class JSONFluidLibrary
     void parse_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         // If an array, use the first one, and then stop;
         if (viscosity.is_array()) {
+            if (viscosity.empty()) throw ValueError(format("viscosity list is empty for fluid %s", fluid.name.c_str()));
             parse_viscosity(viscosity.front(), fluid);
             return;
         }
