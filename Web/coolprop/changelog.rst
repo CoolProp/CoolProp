@@ -38,6 +38,13 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity from the reference correlations of Assael, Huber, Perkins and
+  co-workers.**  Where a model is replaced, the old one stays in the fluid file for
+  reference.  Check values that CoolProp does not reproduce, and why, are documented in
+  the fluid files and tests.
+
+  * R161: Tsolakidou et al. (2017).
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
