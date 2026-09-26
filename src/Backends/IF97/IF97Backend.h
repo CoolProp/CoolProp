@@ -175,6 +175,9 @@ class IF97Backend : public AbstractState
     @param value2 Second input value
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override {
+        // Quality first, so a non-finite or out-of-range Q keeps the
+        // "[Q] must be between 0 and 1" diagnostic every backend uses.
+        check_input_quality(input_pair, value1, value2);
 
         double H, S, hLmass, hVmass, sLmass, sVmass;
 
@@ -182,11 +185,9 @@ class IF97Backend : public AbstractState
         // selectors do not propagate NaN: HmassP / PSmass with p = NaN and
         // HmassSmass with h or s = NaN previously returned T = 273.15 K and a
         // gas / two-phase state without complaint.  Same exception type and
-        // "is not a valid number" wording as HEOS's post-update checks.  A
-        // non-finite QUALITY is left to the PQ/QT arms' own range guard so it
-        // keeps the "[Q] must be between 0 and 1" diagnostic every backend uses.
-        const bool q_is_v1 = (input_pair == QT_INPUTS), q_is_v2 = (input_pair == PQ_INPUTS);
-        if ((!q_is_v1 && !std::isfinite(value1)) || (!q_is_v2 && !std::isfinite(value2))) {
+        // "is not a valid number" wording as HEOS's post-update checks.  Any
+        // quality has already passed check_input_quality, so it is finite.
+        if (!std::isfinite(value1) || !std::isfinite(value2)) {
             throw ValueError(format("IF97: input [%s] is not a valid number: value1 = %g, value2 = %g", get_input_pair_short_desc(input_pair).c_str(),
                                     value1, value2));
         }
@@ -220,14 +221,12 @@ class IF97Backend : public AbstractState
                 }
                 break;
             case PQ_INPUTS:
-                if (!is_in_closed_range(0.0, 1.0, value2)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _p = value1;
                 _Q = value2;
                 _T = IF97::Tsat97(_p);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
             case QT_INPUTS:
-                if (!is_in_closed_range(0.0, 1.0, value1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _Q = value1;
                 _T = value2;
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve

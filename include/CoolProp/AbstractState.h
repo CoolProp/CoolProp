@@ -351,7 +351,20 @@ class AbstractState
     /// the pair to its molar sibling instead of iterating must call it directly,
     /// or the range goes unchecked -- REFPROP's DQFL2 will extrapolate a quality
     /// above 1 rather than refuse it.
-    void check_Qmass_pair_range(CoolProp::input_pairs pair, double v1, double v2);
+    static void check_Qmass_pair_range(CoolProp::input_pairs pair, double v1, double v2);
+
+    /// Throw if the vapor quality carried by an input pair is outside [0,1] (NaN
+    /// included).  Qmass pairs go to check_Qmass_pair_range; for every other pair
+    /// the Q slot is found with split_input_pair, so no hand-kept list of pairs is
+    /// needed.  A pair without a quality, or one split_input_pair does not know,
+    /// passes untouched: the backend then raises its own "not supported" error.
+    /// Backends call this as the first statement of update() so a bad quality is
+    /// refused before any cached state is cleared or overwritten.
+    static void check_input_quality(CoolProp::input_pairs pair, double v1, double v2);
+
+    /// Throw OutOfRangeError unless 0 <= Q <= 1 (NaN included).  The single home of
+    /// the "Input vapor quality [Q] must be between 0 and 1" message.
+    static void check_input_quality_value(double Q);
 
     /// Default iterative Qmass-pair solver (secant on Qmolar). Backends may
     /// override to use a native fast path (e.g. REFPROP TQFLSHdll kq=2).

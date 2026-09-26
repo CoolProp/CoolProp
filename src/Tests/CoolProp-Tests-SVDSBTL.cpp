@@ -650,7 +650,7 @@ TEST_CASE("SVDSBTL backend Q out of [0, 1] is rejected", "[SVDSBTL][twophase][re
     // quality returned rhomass = NaN without throwing.  Match the message so an
     // unrelated downstream failure cannot satisfy the check.
     const double qnan = std::numeric_limits<double>::quiet_NaN();
-    const auto q_range = Catch::Matchers::ContainsSubstring("two-phase Q must be in [0, 1]");
+    const auto q_range = Catch::Matchers::ContainsSubstring("Input vapor quality [Q] must be between 0 and 1");
     CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 1.0e6, qnan), q_range);
     CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, qnan, 350.0), q_range);
 }

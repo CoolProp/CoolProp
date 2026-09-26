@@ -6183,6 +6183,74 @@ TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][no
     }
 }
 
+namespace {
+// Never instantiated: exists only to expose the protected static helper.
+struct QualityCheckProbe : CoolProp::AbstractState
+{
+    using CoolProp::AbstractState::check_input_quality;
+};
+}  // namespace
+
+TEST_CASE("check_input_quality guards exactly the quality slot of every input pair", "[quality]") {
+    // The helper finds the Q slot with split_input_pair.  Derive the expected slot
+    // independently, from the human-readable description ("Pressure in Pa, Molar
+    // quality"), so a wrong entry in split_input_pair cannot vouch for itself.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto q_msg = Catch::Matchers::ContainsSubstring("Input vapor quality [Q] must be between 0 and 1");
+    const auto qmass_msg = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    const double ok_other = 300.0;  // any finite value; the non-Q slot is never range-checked
+
+    int n_pairs = 0, n_q_pairs = 0;
+    for (int i = static_cast<int>(CoolProp::INPUT_PAIR_INVALID); i <= static_cast<int>(CoolProp::DmolarUmolar_INPUTS); ++i) {
+        const auto pair = static_cast<CoolProp::input_pairs>(i);
+        std::string desc;
+        try {
+            desc = CoolProp::get_input_pair_long_desc(pair);
+        } catch (const CoolProp::ValueError&) {
+            continue;  // INPUT_PAIR_INVALID and any other hole in the enum
+        }
+        ++n_pairs;
+        CAPTURE(i, desc);
+
+        const auto comma = desc.find(',');
+        REQUIRE(comma != std::string::npos);
+        const std::string part1 = desc.substr(0, comma), part2 = desc.substr(comma + 1);
+        const bool q1 = part1.find("quality") != std::string::npos;
+        const bool q2 = part2.find("quality") != std::string::npos;
+        REQUIRE_FALSE((q1 && q2));
+
+        auto check = [&](double v1, double v2) { QualityCheckProbe::check_input_quality(pair, v1, v2); };
+
+        if (!q1 && !q2) {
+            // No quality in this pair: nothing may throw, whatever the values.
+            CHECK_FALSE(CoolProp::is_Qmass_pair(pair));
+            for (double bad : {5.0, -0.5, qnan}) {
+                CHECK_NOTHROW(check(bad, bad));
+            }
+            continue;
+        }
+        ++n_q_pairs;
+        const bool mass_basis = (q1 ? part1 : part2).find("Mass-basis") != std::string::npos;
+        CHECK(mass_basis == CoolProp::is_Qmass_pair(pair));
+
+        for (double good : {0.0, 1.0}) {
+            CHECK_NOTHROW(q1 ? check(good, ok_other) : check(ok_other, good));
+        }
+        for (double bad : {5.0, -0.5, qnan}) {
+            CAPTURE(bad);
+            if (mass_basis) {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), qmass_msg);
+            } else {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), q_msg);
+            }
+            // A bad value in the OTHER slot must not be mistaken for a quality.
+            CHECK_NOTHROW(q1 ? check(0.5, bad) : check(bad, 0.5));
+        }
+    }
+    CHECK(n_q_pairs >= 16);
+    CHECK(n_pairs >= 43);
+}
+
 TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {
     // EquationOfState had no user-declared constructor and declared its scalars
     // (`bool pseudo_pure;`, R_u, molar_mass, acentric, Ttriple, ptriple) with no

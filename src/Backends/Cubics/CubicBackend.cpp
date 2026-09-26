@@ -326,6 +326,12 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_alphar_deriv_nocache(const int 
 }
 
 void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // This switch bypasses HelmholtzEOSMixtureBackend::update, so the quality
+    // guard is repeated here; without it SRK Propane at Q = 5 returned a
+    // plausible density.  Covers the pure-fluid Qmass pairs too, which
+    // mass_to_molar_inputs would otherwise rewrite without looking at them.
+    check_input_quality(input_pair, value1, value2);
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
@@ -336,17 +342,9 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
     // before delegating to the molar-pair flash. The inherited HEOS override of
     // calc_phase_molar_masses (using SatL/SatV->mole_fractions and components[i].molar_mass())
     // works for cubic backends since they share the same SatL/SatV machinery.
-    if (CoolProp::is_Qmass_pair(input_pair)) {
-        if (mole_fractions.size() > 1) {
-            update_Qmass_pair(input_pair, value1, value2);
-            return;
-        }
-        // Pure / pseudo-pure falls through to mass_to_molar_inputs below, which
-        // rewrites the pair to its molar sibling without looking at the quality.
-        // update_Qmass_pair's [0,1] check is the only one there is, so apply it
-        // here or nothing does: Qmass = 1.05 and 1.5 previously flashed happily
-        // and returned a state reading Q() = 1.05 with phase = 6.
-        check_Qmass_pair_range(input_pair, value1, value2);
+    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
     }
 
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
@@ -364,17 +362,12 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
                 HelmholtzEOSMixtureBackend::update(PT_INPUTS, value1, value2);
             }
             break;
-        // This switch bypasses HelmholtzEOSMixtureBackend::update, so its
-        // quality guard has to be repeated here; without it SRK Propane at
-        // Q = 5 returned a plausible density.  is_in_closed_range rejects NaN.
         case QT_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, value1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
             saturation(input_pair);
             break;
         case PQ_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, value2)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _p = value1;
             _Q = value2;
             saturation(input_pair);

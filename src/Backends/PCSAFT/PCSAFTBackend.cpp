@@ -1731,6 +1731,12 @@ void PCSAFTBackend::post_update(bool optional_checks) {
 }
 
 void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Refuse a quality outside [0,1] (NaN included) before clear() or any
+    // SatL/SatV/_phase write, so a rejected input leaves the state intact
+    // (#2195).  Covers the pure-fluid Qmass pairs, which mass_to_molar_inputs
+    // would otherwise rewrite without looking at the quality.
+    check_input_quality(input_pair, value1, value2);
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
@@ -1740,21 +1746,9 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
     // before delegating to the molar-pair flash. Pure / pseudo-pure (size==1)
     // goes through mass_to_molar_inputs in the existing flow.
-    if (CoolProp::is_Qmass_pair(input_pair)) {
-        if (mole_fractions.size() > 1) {
-            update_Qmass_pair(input_pair, value1, value2);
-            return;
-        }
-        // Pure / pseudo-pure falls through to mass_to_molar_inputs below, which
-        // rewrites the pair to its molar sibling without looking at the quality.
-        // Unlike the cubic backend, PCSAFT is not fully open here: the QT_INPUTS
-        // and PQ_INPUTS cases downstream reject an out-of-range quality with
-        // OutOfRangeError.  Until those guards were rewritten to is_in_closed_range
-        // they were (v < 0) || (v > 1), which is false for NaN, so a NaN quality
-        // reached the flash and surfaced as "solution could not be found".  Both
-        // layers now refuse it; validating here keeps the diagnostic a Qmass one
-        // and matches the other backends.
-        check_Qmass_pair_range(input_pair, value1, value2);
+    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
     }
 
     // Converting input to CoolPropDbl
@@ -1808,11 +1802,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             }
             _rhomolar = solver_rho_Tp(value2 /*T*/, value1 /*p*/, _phase /*phase*/);
             break;
-        // Validate quality BEFORE touching _Q / SatL / SatV / _phase, so a
-        // rejected input does not leave the object half-mutated (#2195).
         case QT_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value1)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
             SatL->_Q = value1;
@@ -1832,9 +1822,6 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             flash_QT(*this);
             break;
         case PQ_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value2))) {
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
-            }
             _p = value1;
             _Q = value2;
             SatL->_p = value1;
