@@ -66,8 +66,10 @@ Behaviour notes:
   not analysed.  The flip side, shared with CI: a bug introduced purely by
   DELETING code (a removed null check or initializer) lands on an unchanged
   line and is not reported.  The changed-line list is cross-checked against
-  `git diff --numstat`; if a changed file cannot be mapped, preflight exits 2
-  rather than silently skipping it.
+  `git diff --numstat`; if a changed file cannot be mapped (a path git has to
+  quote, or a C/C++ file git treats as binary), preflight exits 2 rather than
+  silently skipping it.  Renames are diffed as delete + add, so a `git mv`d
+  file is linted as a whole file.
 - **What is checked is the working tree**, not the commits being pushed: a
   defect committed on the branch but fixed only in uncommitted edits passes.
   Untracked files are not included (`git add -N` them to include them).
