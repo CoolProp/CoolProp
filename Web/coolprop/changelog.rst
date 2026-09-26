@@ -50,6 +50,9 @@ Highlights:
   * R245fa: Perkins et al. (2016), replacing the Huber et al. (2003) ECS model.
   * Novec649: Perkins et al. (2018).
   * R1233zd(E): Perkins et al. (2017).
+  * Ammonia: Monogenidou et al. (2018), replacing Tufeu et al. (1984).
+  * n-Undecane: Assael et al. (2017).
+  * Tetrahydrofuran: Sotiriadou et al. (2024).
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
