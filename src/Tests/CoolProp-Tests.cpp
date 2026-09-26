@@ -636,6 +636,18 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Nitrogen", "T", 500, "Dmass", 1e-9, "L", 38.9095e-3, 1e-4),
   vel("Nitrogen", "T", 500, "Dmass", 320.0, "L", 59.6387e-3, 1e-4),
   vel("Nitrogen", "T", 500, "Dmass", 500.0, "L", 84.9555e-3, 1e-4),
+  // Sotiriadou et al. (2025), Table 6, saturated liquid: the only dense-liquid coverage
+  // (the 2004 model's 100 K / 25000 mol/m^3 point was removed).  Printed to four figures,
+  // so tested to half a unit in the last digit.
+  vel("Nitrogen", "T", 100, "Dmass", 689.35, "L", 100.1e-3, 5e-4),
+  // PINNED to CoolProp's output, not Table 6's 157.7.  At 70 K / 838.51 kg/m^3 the printed
+  // equations give no critical enhancement (delchi < 0), but the table was evidently
+  // generated with REFPROP.  Its TK3 routine applies
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)
+  // which adds about 0.04 mW/(m K) here (157.634 + 0.04 rounds to 157.7); nitrogen's TK8
+  // source is unavailable, but that step reproduces the table.  CoolProp follows the
+  // equations (Linear COO-49).
+  vel("Nitrogen", "T", 70, "Dmass", 838.51, "L", 157.63432933198801e-3, 1e-6),
 
   // Velliadou, Assael, Antoniadis & Huber, IJT, 2021 - Sec. 3 check value (see also the
   // contributions test below); the critical enhancement there is 6.2061 mW/(m K)
