@@ -1426,7 +1426,7 @@ class IsoLine(Base2DObject):
                     warnings.warn(
                   "An error occurred for near critical inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(one[index], two[index], str(index), str(e)),
                   UserWarning)
-                    pass
+                    continue    # keep the critical point; do not fall through to NaN
 
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(one[index], two[index], str(index), str(e)),
