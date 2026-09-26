@@ -198,6 +198,6 @@ if [ "$RAN" -gt 0 ] && [ "$SKIPPED" -eq "$RAN" ]; then
     echo "run-catch-sharded: all $RAN case(s) were skipped -- nothing was actually tested"
 fi
 if [ "$STATUS" -eq 0 ]; then
-    echo "run-catch-sharded: $RAN case(s) passed across $SHARDS shards on $JOBS worker(s)"
+    echo "run-catch-sharded: $RAN case(s) passed ($SKIPPED skipped) across $SHARDS shards on $JOBS worker(s)"
 fi
 exit "$STATUS"
