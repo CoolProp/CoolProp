@@ -46,36 +46,26 @@ class BollengierBackend : public AbstractState
         return s;
     }
 
-    /// Reference-state offsets (h0 [J/kg], s0 [J/kg/K]).
+    /// NOTE ON THE REFERENCE STATE.  This backend reports the published
+    /// surface as-is.  Bollengier et al. do not use the IAPWS convention:
+    /// at the triple-point saturated-liquid state (273.16 K, 611.657 Pa)
+    /// this model gives h = 71.0954 J/kg and s = 0.2576805 J/kg/K, where
+    /// IAPWS-95 has 0.6117817 and 0.
     ///
-    /// The published surface does not use the IAPWS convention, so without
-    /// a shift `Water` would silently disagree with itself depending on the
-    /// backend.  These are DERIVED from the surface at run time rather than
-    /// hard-coded, so they cannot drift away from the coefficients if those
-    /// are ever regenerated.
+    /// No shift is applied, deliberately.  h and s are defined only up to
+    /// a constant; silently re-anchoring them would mean CoolProp reporting
+    /// numbers that are not the published model's, so anyone checking
+    /// against the paper's own tables would see an unexplained ~70 J/kg
+    /// offset.  Reference state is a user-level concern in CoolProp, with
+    /// set_reference_stateS() / set_reference_stateD() as the supported
+    /// mechanism; a backend is not the place to preempt it.
     ///
-    /// Applied as G -> G + (h0 - T*s0), which yields h + h0 and s + s0
-    /// together.  Shifting h and s independently would break g = h - Ts.
-    struct RefShift
-    {
-        double h0;
-        double s0;
-    };
-    static const RefShift& ref_shift() {
-        static const RefShift r = [] {
-            // IAPWS-95 reference: u = s = 0 for saturated liquid at the
-            // triple point, giving h = p_t * v there.
-            constexpr double Tt = 273.16;          // K
-            constexpr double pt_MPa = 611.657e-6;  // 611.657 Pa
-            constexpr double h_iapws = 0.611781703;
-            constexpr double s_iapws = 0.0;
-            const double g_raw = surface().eval(pt_MPa, Tt);
-            const double s_raw = -surface().eval(pt_MPa, Tt, 0, 1);
-            const double h_raw = g_raw + Tt * s_raw;
-            return RefShift{h_iapws - h_raw, s_iapws - s_raw};
-        }();
-        return r;
-    }
+    /// Note also that re-anchoring to IAPWS would NOT buy cross-backend
+    /// agreement: it forces equality at the reference point and moves
+    /// everything else further away.  Measured at 300 K, 0.1 MPa the
+    /// unshifted model differs from IAPWS-95 by -5.5 J/kg in h; shifted it
+    /// differs by -76.  The residual is a genuine cp difference in the cold
+    /// liquid region, not a datum mismatch.
 
     /// Published validity domain, stated in the paper.  Written as literals
     /// rather than read back from the knot vectors so that a truncated or
@@ -172,13 +162,11 @@ class BollengierBackend : public AbstractState
         const double G_PT = G.eval(p_MPa, T_K, 1, 1);
         const double G_val = G.eval(p_MPa, T_K);
 
-        const RefShift& r = ref_shift();
         // v = (dG/dP)_T.  G is J/kg and P is MPa, so the 1e-6 converts to
         // m^3/kg (1 MPa = 1e6 Pa).
         _v = G_P * 1e-6;
-        _s = -G_T + r.s0;
-        const double g_shifted = G_val + r.h0 - T_K * r.s0;
-        _h = g_shifted + T_K * _s;
+        _s = -G_T;
+        _h = G_val + T_K * _s;
         _cp = -T_K * G_TT;
         // cv = cp + T (dv/dT)^2 / (dv/dP); the MPa factors cancel exactly.
         _cv = _cp + T_K * G_PT * G_PT / G_PP;

@@ -117,54 +117,50 @@ TEST_CASE("Bollengier backend range guard throws, and is pinned open", "[Bolleng
     }
 }
 
-TEST_CASE("Bollengier backend uses the IAPWS reference state", "[Bollengier][water][reference]") {
-    // The published surface does NOT use the IAPWS convention.  Without a
-    // shift, `Water` would silently disagree with itself depending on which
-    // backend answered -- the kind of inconsistency that surfaces as a
-    // baffling energy-balance error far from its cause.
+TEST_CASE("Bollengier backend reports the published reference state unshifted", "[Bollengier][water][reference]") {
+    // This model does NOT use the IAPWS convention, and this backend does
+    // not re-anchor it.  h and s are defined only up to a constant;
+    // silently shifting them would make CoolProp report numbers that are
+    // not the published model's, so anyone checking against the paper's own
+    // tables would see an unexplained offset.  Reference state is a
+    // user-level concern in CoolProp (set_reference_stateS /
+    // set_reference_stateD).
     auto AS = make();
 
-    SECTION("h and s at the triple-point saturated-liquid state") {
-        // IAPWS: u = s = 0 for saturated liquid at the triple point, so
-        // h = p_t * v there.
+    SECTION("the model's own reference state, documented not corrected") {
+        // At the triple-point saturated-liquid state IAPWS-95 has
+        // h = 0.6117817 J/kg, s = 0.  This model does not, and that is
+        // expected.  Pinning the values here means an accidental shift --
+        // or a regenerated coefficient set with a different datum -- shows
+        // up as a test failure rather than as a silent change in output.
         AS->update(PT_INPUTS, 611.657, 273.16);
         INFO("h = " << AS->hmass() << " J/kg, s = " << AS->smass() << " J/kg/K");
-        CHECK_THAT(AS->smass(), Catch::Matchers::WithinAbs(0.0, 1e-9));
-        CHECK_THAT(AS->hmass(), Catch::Matchers::WithinAbs(0.611781703, 1e-6));
+        CHECK_THAT(AS->hmass(), Catch::Matchers::WithinRel(71.0954117, 1e-7));
+        CHECK_THAT(AS->smass(), Catch::Matchers::WithinRel(0.257680474, 1e-7));
     }
 
-    SECTION("the shift preserves g = h - T s") {
-        // This is the real point of shifting G by (h0 - T*s0) rather than
-        // adjusting h and s separately: doing it separately would leave g
-        // inconsistent by a T-dependent amount, which no single-point check
-        // of h or s would catch.
+    SECTION("g = h - T s holds across the domain") {
+        // Guards the property map itself: h, s and u must stay mutually
+        // consistent regardless of where the energy datum sits.
         for (const double T : {250.0, 300.0, 450.0}) {
             for (const double p_MPa : {0.1, 100.0, 1500.0}) {
                 AS->update(PT_INPUTS, p_MPa * 1e6, T);
                 const double g_from_hs = AS->hmass() - T * AS->smass();
-                const double g_direct = AS->umass() + p_MPa * 1e6 / AS->rhomass() - T * AS->smass();
+                const double g_from_u = AS->umass() + p_MPa * 1e6 / AS->rhomass() - T * AS->smass();
                 INFO("T = " << T << " K, p = " << p_MPa << " MPa");
-                CHECK_THAT(g_from_hs, Catch::Matchers::WithinRel(g_direct, 1e-12));
+                CHECK_THAT(g_from_hs, Catch::Matchers::WithinRel(g_from_u, 1e-12));
             }
         }
     }
 
-    SECTION("energies stay within the two models' documented difference") {
-        // NOTE what this does and does not check.  It does NOT pin the
-        // reference shift -- the triple-point section above does that, and
-        // is exact.  Removing the shift entirely would actually make h
-        // agree with IAPWS-95 *better* here (-5.5 vs -76 J/kg), so this
-        // comparison cannot detect a missing shift.  It does catch a sign
-        // error, which would double the offset to ~141 J/kg.
-        //
-        // The residual difference is physical, not numerical: cp differs
-        // between the models by up to 1.2e-3 relative in the cold liquid
-        // region (peak near 281 K, vanishing above ~300 K), which integrates
-        // to -67.7 J/kg over 273-350 K.  That is inside IAPWS-95's own
-        // stated cp uncertainty of 1000 ppm and is precisely the region
-        // Bollengier et al. claim to improve.  Tightening these bounds would
-        // be asserting the two equations of state are identical, which they
-        // deliberately are not.
+    SECTION("energies remain comparable with IAPWS-95 despite the different datum") {
+        // Not a reference-state check -- it cannot be one, since the datum
+        // differs by construction.  It bounds the two models' genuine
+        // disagreement: cp differs by up to 1.2e-3 relative in the cold
+        // liquid region, peaking near 281 K and vanishing above ~300 K,
+        // which integrates to a few tens of J/kg.  Densities agree far more
+        // closely, because that difference is not an integral of a cp
+        // discrepancy.
         auto heos = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Water"));
         for (const double T : {280.0, 300.0, 350.0}) {
             AS->update(PT_INPUTS, 0.1e6, T);
@@ -173,8 +169,6 @@ TEST_CASE("Bollengier backend uses the IAPWS reference state", "[Bollengier][wat
                         << heos->smass());
             CHECK_THAT(AS->hmass(), Catch::Matchers::WithinAbs(heos->hmass(), 150.0));
             CHECK_THAT(AS->smass(), Catch::Matchers::WithinAbs(heos->smass(), 0.5));
-            // Densities agree far more closely than energies, because the
-            // density difference is not an integral of a cp discrepancy.
             CHECK_THAT(AS->rhomass(), Catch::Matchers::WithinRel(heos->rhomass(), 3e-6));
         }
     }
