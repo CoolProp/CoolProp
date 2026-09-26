@@ -95,33 +95,43 @@ const rustDeps = cargoMeta.packages
   }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
+if (rustDeps.length === 0) {
+  throw new Error("cargo metadata reported zero Rust crates — refusing to generate notices.");
+}
 console.log(`  → ${rustDeps.length} Rust crates`);
 
 console.log("Collecting npm package metadata via license-checker…");
-let npmDeps = [];
+// Fail closed: a license-checker crash must not ship notices with the npm
+// section silently missing.  license-checker is a devDependency, so after
+// `npm ci` it is always present; if it is not, the install is incomplete.
+let licenseCheckerOut;
 try {
-  const out = execSync("npx --no-install license-checker --production --json", {
+  licenseCheckerOut = execSync("npx --no-install license-checker --production --json", {
     cwd: guiDir,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
-  npmDeps = Object.entries(JSON.parse(out))
-    .filter(([k]) => !k.startsWith(`${pkg.name}@`))
-    .map(([k, v]) => {
-      const at = k.lastIndexOf("@");
-      return {
-        name: at > 0 ? k.slice(0, at) : k,
-        version: at > 0 ? k.slice(at + 1) : "",
-        license: Array.isArray(v.licenses) ? v.licenses.join(", ") : v.licenses || "(unspecified)",
-        repository: v.repository || "",
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
-  console.log(`  → ${npmDeps.length} npm packages`);
 } catch (e) {
-  console.warn("  ! license-checker not available — npm section will be empty.");
-  console.warn(`    (${e.message})`);
+  console.error("  ! license-checker failed — refusing to generate notices without the npm section.");
+  console.error("    Run `npm ci` in wrappers/GUI to install devDependencies.");
+  throw e;
 }
+const npmDeps = Object.entries(JSON.parse(licenseCheckerOut))
+  .filter(([k]) => !k.startsWith(`${pkg.name}@`))
+  .map(([k, v]) => {
+    const at = k.lastIndexOf("@");
+    return {
+      name: at > 0 ? k.slice(0, at) : k,
+      version: at > 0 ? k.slice(at + 1) : "",
+      license: Array.isArray(v.licenses) ? v.licenses.join(", ") : v.licenses || "(unspecified)",
+      repository: v.repository || "",
+    };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
+if (npmDeps.length === 0) {
+  throw new Error("license-checker reported zero production npm packages — refusing to generate notices.");
+}
+console.log(`  → ${npmDeps.length} npm packages`);
 
 const fmt = (d) => {
   const repo = d.repository ? ` ([source](${d.repository}))` : "";
@@ -140,7 +150,7 @@ ${rustDeps.map(fmt).join("\n")}
 
 ## npm packages (${npmDeps.length})
 
-${npmDeps.length ? npmDeps.map(fmt).join("\n") : "_(license-checker unavailable at build time)_"}
+${npmDeps.map(fmt).join("\n")}
 `;
 
 mkdirSync(dirname(outFile), { recursive: true });
