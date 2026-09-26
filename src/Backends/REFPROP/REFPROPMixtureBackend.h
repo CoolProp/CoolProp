@@ -12,10 +12,29 @@
 #include "CoolProp/CoolPropFluid.h"
 #include "CoolProp/DataStructures.h"
 
+#include <mutex>
 #include <string>
 #include <vector>
 
 namespace CoolProp {
+
+/// Process-wide lock that serializes every call into the REFPROP shared library.
+/**
+REFPROP is not thread-safe: the library holds one set of loaded fluids (and
+other state) per process, so two threads using REFPROP at once, even through
+different AbstractState instances, can silently compute with each other's
+fluids.  Every REFPROPMixtureBackend operation that touches the library or its
+shared globals holds this lock for its whole duration, and other threads block
+until it is released.  REFPROP access is therefore serialized process-wide:
+threads may each own REFPROP instances, but only one uses REFPROP at a time.
+
+The mutex is recursive because backend methods call one another (e.g.
+update() -> check_loaded_fluid() -> set_REFPROP_fluids()).  Code outside the
+backend that calls REFPROP routines directly must hold it too.
+*/
+std::recursive_mutex& REFPROP_mutex();
+/// RAII guard type for REFPROP_mutex()
+using REFPROPLock = std::scoped_lock<std::recursive_mutex>;
 
 /// Return the REFPROP .FLD stem for a CoolPropFluid.
 /// Falls back to `fallback` when REFPROPname is absent or the sentinel "N/A",
@@ -41,6 +60,8 @@ struct THERM0dllOutputs
     double gmol_Jmol;    /// Gibbs free energy [J/mol]
 };
 
+/// REFPROP-backed AbstractState.  All REFPROP access is serialized process-wide
+/// through REFPROP_mutex(); see there.
 class REFPROPMixtureBackend : public AbstractState
 {
    private:
@@ -50,7 +71,12 @@ class REFPROPMixtureBackend : public AbstractState
     std::size_t Ncomp;
     bool _mole_fractions_set;
 
+    /// Number of live instances; the library is unloaded when it drops to zero.
+    /// A plain size_t, not an atomic: it is only touched with REFPROP_mutex()
+    /// held, together with the load/unload it gates, so an atomic would add
+    /// nothing and would invite unlocked access.
     static std::size_t instance_counter;
+    /// Guarded by REFPROP_mutex()
     static bool _REFPROP_supported;
     std::vector<CoolPropDbl> mole_fractions_long_double;  // read-only
     std::vector<double> mole_fractions, mass_fractions;
@@ -72,6 +98,7 @@ class REFPROPMixtureBackend : public AbstractState
 
    public:
     REFPROPMixtureBackend() : Ncomp(0), _mole_fractions_set(false) {
+        const REFPROPLock refprop_lock(REFPROP_mutex());
         instance_counter++;
     }
 
