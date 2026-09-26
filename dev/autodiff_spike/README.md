@@ -325,3 +325,22 @@ Neither cost has been measured here.
 poles, like C1) are not included. Association is smooth in η at fixed (T, x), so a per-(T, x) fit
 from node evaluations works, though it isn't universal. The polar terms' Padé poles need the
 same singularity analysis.
+
+### Where the spurious roots live (`spurious_scan.py`)
+
+Brute-force root counts over T = 20–400 K and p = 1e-4 to 1e3 MPa.
+
+| fluid | GS2001: highest T with >3 roots | extra root η | triple point | Liang 2012 / 2014 constants |
+|---|---|---|---|---|
+| methane | 28 K | 0.71–0.74 | 90.7 K | none |
+| propane | 84 K | 0.63–0.74 | 85.5 K | none |
+| n-decane | 140 K | 0.56–0.73 | 243.5 K | none |
+| C1/C2/C3 | 54 K | 0.66–0.74 | — | none |
+| C1/nC10 70/30 | 88 K | 0.63–0.74 | — | none |
+
+- **Gross & Sadowski constants:** the extra roots occur only at or below the pure-fluid triple
+  point. For the mixtures, they appear only at temperatures far below where a liquid mixture
+  exists.
+- **Liang constants:** these remove the extra roots entirely over this range. Caveat: here they
+  are paired with the GS2001 pure-component parameters, not the refitted parameters they were
+  published with, so this is qualitative only.
