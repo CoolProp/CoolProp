@@ -7982,11 +7982,6 @@ TEST_CASE("Concurrent first use of one tabular dataset builds it once (COO-39)",
     CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
     const std::string fluid = R"(Nitrogen?{"grid":{"Nx":30,"Ny":30}})";
     const double p = 1e6, T = 300.0;
-    // Warm the process-wide lookup singletons (backend-name maps in
-    // DataStructures.cpp, fluid library) on this thread first: their lazy init
-    // is not yet thread-safe, and this test targets only the tabular dataset.
-    std::shared_ptr<CoolProp::AbstractState> warm(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
-    warm->update(CoolProp::PT_INPUTS, p, T);
 
     constexpr int N_THREADS = 6;
     std::vector<double> rho(N_THREADS, -1.0);
