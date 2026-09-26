@@ -344,3 +344,52 @@ Brute-force root counts over T = 20–400 K and p = 1e-4 to 1e3 MPa.
 - **Liang constants:** these remove the extra roots entirely over this range. Caveat: here they
   are paired with the GS2001 pure-component parameters, not the refitted parameters they were
   published with, so this is qualitative only.
+
+---
+
+# Experiment 5: speed of the universal-table Chebyshev solver (`chebsolve.cpp`)
+
+Build it with
+`c++ -std=c++20 -O3 -DNDEBUG -mcpu=native -I<eigen> chebsolve.cpp`.
+
+## What is computed when
+
+| tier | when | what | cost |
+|---|---|---|---|
+| universal | offline, once for all fluids | 8 fixed η-pieces on [0, 0.74]; degree-12 Chebyshev coefficients of 27 basis functions (×η, applied exactly); Π₀, Π₁, Π₂ of P² = Π₀ + m̄Π₁ + m̄²Π₂; three 2-D (η, a) chain tables, degree 10 in a ∈ [0.75, 2.5] | 55 kB; 0.4 ms to build |
+| components | once per fluid set | m_i, σ_i, ε_i, k_ij. Nothing else: no table is component-specific | — |
+| state (T, x) | every call | N `exp`s for d_i(T); s₀..s₃, r_n, m̄, c₁, c₂, E₁, E₂, A₁..A₃, B₁, B₂, a_i, w_i, q (about 30 scalars); then G = Σ W_j·U_j plus the chain contraction, per piece | 0.5–0.8 µs |
+| pressure | every call | t = p·q/(RT); subtract t·P²; certified subdivision on the pieces not proven root-free; ρ = η/q | 0.7–0.9 µs |
+
+P depends on composition only through m̄, and only affinely. So "rebuilding P and Q" at a new
+(T, x) is a linear combination of stored vectors with about 30 scalar weights. It is never a refit.
+q depends on (T, x), not on ρ, so t is known before rootfinding starts.
+
+## Results
+
+Cases: 7 temperatures (150–500 K) × 7 pressures (1 kPa – 100 MPa), 147 states, 227 roots. The
+reference is a 200 000-point scan of the explicit Z with 80-step bisection.
+
+| case | assemble | certified roots | total | max rel. root error | counts | colleague eigensolve | grid + Illinois | direct node fit (instead of assemble) |
+|---|---|---|---|---|---|---|---|---|
+| propane | 0.55 µs | 0.90 µs | **1.5 µs** | 1.5e-11 | all ok | 38 µs, 7e-5 | 1.5 µs, 5e-5 | 17 µs |
+| C1/nC10 70/30 | 0.52 | 0.91 | **1.4** | 2.2e-11 | all ok | 36 µs, 3e-7 | 1.5 µs, 1e-6 | 17 |
+| C1/C2/C3 | 0.79 | 0.68 | **1.5** | 2.9e-11 | all ok | 33 µs, 4e-5 | 1.3 µs, 4e-6 | 19 |
+
+- **Assembly accuracy:** G agrees with η·P²·Z from the model to ≤1e-9, scaled by
+  ηP²(1+|Z|). The worst point is at the close-packing end, η = 0.74.
+- **Certified subdivision.** On each piece: exclude if |c₀| > Σ|c_k|. If the derivative series
+  passes the same test, the piece is monotone, so bracket by endpoint signs and refine with
+  Illinois. Otherwise re-expand onto the two halves and recurse. The half-interval re-expansions
+  are two precomputed 14×14 matrices. This beats the eigensolve by 40× and is more accurate on
+  the tiny gas roots, because the recursion zooms in. A root can only be missed if it is a
+  tangency (double root) finer than the depth cap of 12.
+- **Direct fitting** at the nodes per (T, x) costs about 17 µs. That is why the universal tables
+  matter.
+
+**Not covered:**
+- **Temperature range:** T < 150 K is not timed. Deeply subcooled states need more pieces (Experiment 4).
+- **Table rectangle:** states with a_i outside [0.75, 2.5] are rejected (no fallback
+  implemented); none occurred here.
+- **Warm cache:** timings are warm, with the 55 kB of tables resident.
+- **Association and polar terms** are not included.
