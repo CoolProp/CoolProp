@@ -19,10 +19,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   Check locally: `CLANG_FORMAT='uvx clang-format@18.1.8' bash dev/ci/clang-format.sh HEAD origin/master`.
 - **clang-tidy in CI is line-anchored; preflight is whole-file.** CI runs
   `clang-tidy-diff.py` on `git diff -U0`, so touching one line of a legacy
-  file does not surface its backlog.  `preflight.sh` runs clang-tidy on the
-  whole file and will (tracked in Linear, "preflight.sh and CI gates
-  overhaul").  `.clang-tidy` is in whitelist mode (PR #2802) because the
-  broad set was ~60% style noise; clang-tidy CI is informational by design.
+  file does not surface its backlog.  `preflight.sh` passes whole files to
+  `run-clang-tidy-staged.sh`, so it does surface the untouched backlog of any
+  file you edit — despite its step being labelled "diff-only" (Linear
+  COO-14).  `.clang-tidy` is in whitelist mode (PR #2802) because the broad
+  set was ~60% style noise; clang-tidy CI is informational by design.
+- **clang-tidy in Docker:** delete `dev/.fluiddepcache` and
+  `dev/.incompdepcache` first; the host's pickle is incompatible with the
+  container's Python.
 - **clang-tidy `-fix` sweeps can corrupt code.** Anchor `--header-filter` to
   the repo root (`^<repo>/(include|src)/`) or it rewrites vendored headers
   under `build_catch/_deps`.  `run-clang-tidy`'s export+apply double-applies
@@ -73,16 +77,17 @@ recorded history of finished or abandoned work were dropped (they remain in
   verification blocks unattended TOTP logins).  Stay logged into TestPyPI in
   a browser, then `python3 dev/testpypi_delete.py --keep 10` (dry run) and
   `--do-it`.  See PR #3202.
-- **rapidjson is deprecated** and being removed; use nlohmann/json
-  (fetched via `cmake/dependencies.cmake`) for new JSON code.
+- **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
+  `cmake/dependencies.cmake`) and do not reintroduce it.
 
 ## REFPROP
 
 - **Running `[refprop]` Catch2 tests locally:** without configuration they
   SKIP silently (and `preflight.sh` reports green).  Point CoolProp at a
-  REFPROP install via `COOLPROP_REFPROP_ROOT`, or
-  `COOLPROP_ALTERNATIVE_REFPROP_PATH` + `COOLPROP_ALTERNATIVE_REFPROP_LIBRARY_PATH`
-  (CoolProp reads any config key from `COOLPROP_<KEY>`).
+  REFPROP install via the `COOLPROP_REFPROP_ROOT` environment variable, or
+  via the config keys `ALTERNATIVE_REFPROP_PATH` and
+  `ALTERNATIVE_REFPROP_LIBRARY_PATH` set as `COOLPROP_ALTERNATIVE_REFPROP_PATH`
+  etc. (config keys are read from `COOLPROP_<KEY>` environment variables).
 - **Fork PRs never run REFPROP tests.** `test_catch2.yml` builds REFPROP only
   when the PR head is in CoolProp/CoolProp (it needs
   `secrets.REFPROP_GPG_PASSPHRASE`).  A green fork PR is not evidence that
@@ -109,9 +114,20 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **Generate flash test points in (p,T), not density bands.** A (T,rho) grid
   lands states inside the spinodal (cv < 0), producing false failures and
   meaningless comparisons; (p,T) always lands on the stable root.
-- **`get_superanc()` throws for pseudo-pure fluids** — it is not a
-  null-returning probe.  Guard with `is_pure()`.  Pseudo-pure H,S / D+X flashes
-  use the dome-free legs of `hs_cascade` without a superancillary (PR #3182).
+- **The backend's `get_superanc()` throws for mixtures and pseudo-pure
+  fluids** (it returns nullptr only for a pure fluid that has none); guard it
+  with `is_pure()`.  H,S flashes without a superancillary (pseudo-pure, or
+  pure without one) use the dome-free legs of `hs_cascade` (PR #3182).
+- **HS cascade rules:** every cascade leg must be exception-guarded (a leg
+  leaving the EOS domain otherwise aborts the cascade), and phase
+  determination for two-phase (h,s) inputs is the dispatcher's job, done
+  before the single-phase cascade — the cascade only finds metastable
+  in-dome roots there.
+- **`solver_rho_Tp` is fragile on its own.** Called standalone with no
+  guess it fails on 25–65% of mixture (T,p) cells where the full PT flash
+  succeeds, clustered near phase boundaries; the flash succeeds only because
+  `update_TP` falls through to the bracketed `solver_rho_Tp_global`.  Don't
+  call it directly without a bracket/fallback.
 - **P+{H,S,U} is a 1-D problem.** A 2-D homotopy/continuation flash (good for
   HS) regressed P+X in the bulk and was reverted; speed P+X by improving the
   1-D solver (TOMS748, warm starts).  Validate flash speed on a whole
@@ -142,12 +158,16 @@ recorded history of finished or abandoned work were dropped (they remain in
 
 - **Superancillary provenance.** fastchebpure fits superancillaries from the
   CoolProp EOS via its submodule pin, and the docs deviation plots download a
-  pinned fastchebpure release.  Changing any EOS in `dev/fluids` trips the
+  pinned fastchebpure release.  Changing a fluid's EOS in `dev/fluids` trips the
   `superanc-pin` gate (`dev/scripts/check_superanc_release_pin.py`) until
   fastchebpure regenerates, is re-tagged, and the docs pin is bumped — or the
   fluid is added to `PENDING_UPSTREAM`.  Two independent freshness axes:
   EOS vs embedded superancillary (`source_eos_hash` + check points) and EOS vs
   docs reference.  Suspect provenance lag before the superancillary math.
+- **Don't differentiate a fitted Chebyshev expansion** when the derivative
+  has a closed form: sample the derivative directly at the nodes.
+  Differentiation truncates the top coefficient (a 180x accuracy loss was
+  measured at loose build tolerance).
 - **Regenerating a superancillary:** never hand-edit `source_eos_hash`.  Use
   fastchebpure's `fitcheb` CLI: `fitcheb -f FLUID -d <coolprop checkout>` to
   fit and check, then `fitcheb inject -f FLUID -d <coolprop checkout>` to
