@@ -760,8 +760,9 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   // was fitted with Mondejar et al. (2015).  The paper's equations on REFPROP 10.0's
   // Mondejar EOS with the paper's viscosity (19.053 uPa s) give 0.0261406, i.e. Table 2;
   // on the Akasaka & Lemmon EOS (REFPROP 10.1 FLD) they give 0.026048, and CoolProp,
-  // with its own viscosity, gives the value below (-0.35 %).  The enhancement-free
-  // background at this state is checked against the paper in the test case below.
+  // with its own viscosity, gives the value below (-0.35 %).  The pin therefore also
+  // moves if CoolProp's R1233zd(E) viscosity changes.  The enhancement-free background
+  // at this state is checked against the paper in the test case below.
   vel("R1233zd(E)", "T", 445, "Dmass", 168.52, "L", 0.02604904492595249, 1e-6),
 
   // Heavy Water, IAPWS formulation
