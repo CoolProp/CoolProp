@@ -432,8 +432,9 @@ New Catch2 tag `[expression]`.
    contraction: the compiler may fuse the routine's `summer += a[i]*pow(...)`
    into an FMA (clang defaults to `-ffp-contract=on`, GCC to `fast`), while the
    DSL tree walk always rounds each op separately. Whether it fuses depends on
-   the unroll/vectorize decision, so even an identical operation sequence is
-   **not** portably bit-exact. The `1e-14` relative gate therefore applies to
+   contraction settings, target FMA support and code generation (scalar code
+   can fuse too; unrolling/vectorization is not required), so even an
+   identical operation sequence is **not** portably bit-exact. The `1e-14` relative gate therefore applies to
    every form, and no form asserts 0 ULP. (Amended 2026-09-26: the original
    per-form bit-exact assertions failed (powers_of_Tr) or were at risk (fmadd
    present) on Apple clang/arm64.) If all Tier-A forms reproduce within this

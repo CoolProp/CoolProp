@@ -342,8 +342,9 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
 //     contract (clang default `-ffp-contract=on`, GCC `fast`) the routine's
 //     `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
 //     (virtual-dispatch tree walk) always rounds the multiply and the add
-//     separately.  Whether the routine fuses depends on the unroll/vectorize
-//     decision -- e.g. Apple clang 21 -O3 on arm64 emits a 4x-unrolled
+//     separately.  Whether the routine fuses depends on contraction settings,
+//     target FMA support and code generation (scalar code can fuse; no
+//     unrolling needed) -- e.g. Apple clang 21 -O3 on arm64 emits a 4x-unrolled
 //     unfused main loop plus an `fmadd` remainder loop, so n-Pentane's 4-term
 //     powers_of_Tr happened to match bit-for-bit on one toolchain and differ
 //     by up to ~9 ULP (cancellation at T=120 K) on another.  Observed max
@@ -388,7 +389,7 @@ TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -505,7 +506,7 @@ TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[ex
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -585,7 +586,7 @@ TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][gold
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -621,7 +622,7 @@ TEST_CASE("golden: conductivity dilute eta0_and_poly", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -654,7 +655,7 @@ TEST_CASE("golden: conductivity residual polynomial", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
