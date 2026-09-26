@@ -50,7 +50,8 @@ vel viscosity_validation_data[] = {
   // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
   // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
   // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
-  // 2026-09-26; REFPROP 10.1 instead keeps R14 on Nitrogen's 2004 models).  These pins
+  // 2026-09-26; REFPROP 10.1's R14.FLD instead names the reference fluid's VS1/TC1 models,
+  // i.e. Nitrogen's 2004 correlations).  These pins
   // make any future change to Nitrogen's transport visible in R14.
   vel("R14", "T", 150, "Dmass", 1500.0, "V", 183.50892653027e-6, 1e-6),
   vel("R14", "T", 300, "Dmass", 10.0, "V", 17.43725259137e-6, 1e-6),
@@ -507,7 +508,8 @@ vel conductivity_validation_data[] = {
   // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
   // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
   // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
-  // 2026-09-26; REFPROP 10.1 instead keeps R14 on Nitrogen's 2004 models).  These pins
+  // 2026-09-26; REFPROP 10.1's R14.FLD instead names the reference fluid's VS1/TC1 models,
+  // i.e. Nitrogen's 2004 correlations).  These pins
   // make any future change to Nitrogen's transport visible in R14.
   vel("R14", "T", 150, "Dmass", 1500.0, "L", 80.28870657840523e-3, 1e-6),
   vel("R14", "T", 300, "Dmass", 10.0, "L", 16.24624435074178e-3, 1e-6),
@@ -638,7 +640,8 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Nitrogen", "T", 500, "Dmass", 500.0, "L", 84.9555e-3, 1e-4),
   // Sotiriadou et al. (2025), Table 6, saturated liquid: the only dense-liquid coverage
   // (the 2004 model's 100 K / 25000 mol/m^3 point was removed).  Printed to four figures,
-  // so tested to half a unit in the last digit.
+  // so tested to half a unit in the last digit (CoolProp: 100.113).  REFPROP's dense-liquid
+  // step does not apply here (delchi = 0.060 > 0.01), so this is a clean check of the paper.
   vel("Nitrogen", "T", 100, "Dmass", 689.35, "L", 100.1e-3, 5e-4),
   // PINNED to CoolProp's output, not Table 6's 157.7.  At 70 K / 838.51 kg/m^3 the printed
   // equations give no critical enhancement (delchi < 0), but the table was evidently
