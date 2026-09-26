@@ -38,6 +38,20 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity for R161.** ``PropsSI("L", ..., "R161")`` previously raised.
+  The correlation is Tsolakidou, Assael, Huber and Perkins, *J. Phys. Chem. Ref. Data*
+  **46**\ (2):023103 (2017).  Its dilute and residual terms are expression-DSL data and
+  its critical enhancement is the native simplified Olchowy–Sengers block, the first
+  fluid to combine the two.  The cutoff wavelength is the published article's qD\ :sup:`-1` = 0.3104 nm; the
+  freely available accepted manuscript prints 0.530 nm, which does not reproduce the
+  paper's check values.  The
+  three check points of Table 11 where the enhancement vanishes agree to 1e-4, as does
+  the table's enhancement-free background at 375 K and 229 kg/m\ :sup:`3`.  The two
+  points that carry an enhancement do not yet agree: it uses the EOS, and CoolProp's
+  R161 EOS is Wu and Zhou (2012), not the Qi et al. (2016) EOS the correlation was
+  fitted with.  At 375 K and 229 kg/m\ :sup:`3` CoolProp gives 98.82 mW/(m K) against
+  the paper's 81.297.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
