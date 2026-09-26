@@ -888,6 +888,27 @@ void AbstractState::check_Qmass_pair_range(CoolProp::input_pairs pair, double v1
     }
 }
 
+void AbstractState::check_input_quality_value(double Q) {
+    if (!is_in_closed_range(0.0, 1.0, Q)) {
+        throw OutOfRangeError(format("Input vapor quality [Q] must be between 0 and 1, got %g", Q));
+    }
+}
+
+void AbstractState::check_input_quality(CoolProp::input_pairs pair, double v1, double v2) {
+    if (CoolProp::is_Qmass_pair(pair)) {
+        check_Qmass_pair_range(pair, v1, v2);
+        return;
+    }
+    // Fail closed: a pair split_input_pair does not know (INPUT_PAIR_INVALID, an
+    // out-of-range value, or a newly added pair nobody registered) throws here
+    // rather than skip the quality check.  A known pair that a backend merely does
+    // not support passes through to that backend's own "not supported" error.
+    parameters p1, p2;
+    split_input_pair(pair, p1, p2);
+    if (p1 == iQ) check_input_quality_value(v1);
+    if (p2 == iQ) check_input_quality_value(v2);
+}
+
 void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
     const QmassPairMapping m = qmass_pair_mapping(pair);
     const double Qmass_target = (m.qmass_slot == 1) ? v1 : v2;
