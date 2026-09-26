@@ -42,6 +42,7 @@ set -euo pipefail
 BASE_REF="origin/master"
 SKIP_CHECKS=""
 JOBS=""
+JOBS_GIVEN=0
 for arg in "$@"; do
     case "$arg" in
         --base=*) BASE_REF="${arg#*=}" ;;
@@ -49,7 +50,7 @@ for arg in "$@"; do
         # earlier one, so `--skip=a --skip=b` silently skipped only b and ran a.
         # Both forms now work -- CSV in one flag, or the flag repeated.
         --skip=*) SKIP_CHECKS="${SKIP_CHECKS:+$SKIP_CHECKS,}${arg#*=}" ;;
-        --jobs=*) JOBS="${arg#*=}" ;;
+        --jobs=*) JOBS="${arg#*=}"; JOBS_GIVEN=1 ;;
         --help|-h)
             # Print the header comment block, stopping at the first
             # non-comment line. A hardcoded end line silently truncated this
@@ -69,7 +70,9 @@ skip_check() {
 }
 
 # Parallelism for the builds, the sharded test run and clang-tidy.
-if [ -z "$JOBS" ]; then
+# The all-cores default applies only when --jobs is absent; an explicit
+# `--jobs=` falls through to the validation below and is rejected.
+if [ "$JOBS_GIVEN" = 0 ]; then
     JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
 fi
 # Leading zeros are rejected, not stripped: bash arithmetic reads 010 as
