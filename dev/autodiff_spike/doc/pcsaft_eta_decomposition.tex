@@ -1,0 +1,221 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[hidelinks]{hyperref}
+\newcommand{\etacp}{\eta_{\mathrm{cp}}}
+\newcommand{\mbar}{\bar m}
+
+\author{Ian Bell (with Claude Code)}
+\title{PC-SAFT in the packing fraction: separating temperature and density\\
+\large Internal working note (derivation record; not manuscript text)}
+\date{2026-09-26}
+
+\begin{document}
+\maketitle
+
+\noindent Scope: PC-SAFT hard chain + dispersion (Gross \& Sadowski 2001), non-associating,
+non-polar, arbitrary number of components, constant $k_{ij}$. Every identity below was checked
+numerically against a direct implementation (Sec.~\ref{sec:check}).
+
+\section{Why a $(T,\rho)$ subdivision looks impossible}
+
+In $(T,\rho)$ the hard-sphere pole sits at $\rho = 1/q(T)$, with $q$ defined in
+Eq.~\eqref{eq:q}. Because the segment diameter $d_i(T)$ depends on temperature, the pole moves
+with $T$. A fixed rectangle in $(T,\rho)$ therefore either contains the pole for some $T$ or
+wastes most of its area. The mixing rules are also not mole-fraction-weighted sums of
+per-component terms. The resolution is to use $\eta$ rather than $\rho$ as the density
+coordinate. After that, temperature needs \emph{no} subdivision at all.
+
+\section{Notation}
+
+\begin{align}
+d_i(T) &= \sigma_i\left[1 - 0.12\,e^{-3\varepsilon_i/(kT)}\right], &
+s_n(T,\mathbf x) &= \sum_i x_i m_i d_i^n \quad (n = 0\ldots3), &
+\mbar &= \sum_i x_i m_i, \\
+r_n &= s_n/s_3, &
+q(T,\mathbf x) &= \tfrac{\pi}{6} N_A \, 10^{-30}\, s_3 , &
+\eta &= \zeta_3 = \rho\, q. \label{eq:q}
+\end{align}
+Here $\sigma$ is in \AA, $\rho$ in mol\,m$^{-3}$ and $q$ in m$^3$\,mol$^{-1}$. The substitution
+that drives everything is
+\begin{equation}
+\boxed{\;\zeta_n = \tfrac{\pi}{6}\rho N_A 10^{-30} s_n = \eta\, r_n(T,\mathbf x)\;}
+\end{equation}
+All $\zeta_n$ are proportional to $\eta$, with coefficients that depend only on
+$(T,\mathbf x)$. The number density follows as $\rho N_A 10^{-30} = 6\eta/(\pi s_3)$.
+
+\section{Term by term}
+
+\paragraph{Hard sphere.}
+Substituting $\zeta_n = \eta r_n$ into the Boubl\'ik--Mansoori form, every $\eta$-dependence
+collapses onto three universal functions:
+\begin{equation}
+a^{\mathrm{hs}} = A_1\,\frac{\eta}{1-\eta} + A_2\,\frac{\eta}{(1-\eta)^2} + A_3\,\ln(1-\eta),
+\qquad A_1 = \frac{3 r_1 r_2}{r_0},\quad A_2 = \frac{r_2^3}{r_0},\quad A_3 = \frac{r_2^3}{r_0}-1 .
+\end{equation}
+
+\paragraph{Chain.} With $D_i = d_i/2$, define
+\begin{equation}
+a_i(T,\mathbf x) = 3 D_i r_2 .
+\end{equation}
+The contact value $g_{ii}^{\mathrm{hs}}$ then depends on $(T,\mathbf x)$ only through $a_i$,
+because the coefficient of the third term is $2D_i^2r_2^2 = 2a_i^2/9$ identically. Its numerator
+factorizes exactly:
+\begin{equation}
+g_{ii}^{\mathrm{hs}} = \frac{(1-\eta)^2 + a_i\eta(1-\eta) + \tfrac{2a_i^2}{9}\eta^2}{(1-\eta)^3}
+= \frac{\left(1-\tfrac{3-a_i}{3}\eta\right)\left(1+\tfrac{2a_i-3}{3}\eta\right)}{(1-\eta)^3},
+\end{equation}
+\begin{equation}
+\ln g_{ii}^{\mathrm{hs}} = \ln\!\left(1-\tfrac{3-a_i}{3}\eta\right) + \ln\!\left(1+\tfrac{2a_i-3}{3}\eta\right) - 3\ln(1-\eta).
+\end{equation}
+For a pure fluid, $a = 3/2$ and this reduces to Carnahan--Starling,
+$g = (1-\eta/2)/(1-\eta)^3$. The branch points are at
+$\eta = 3/(3-a_i)$ and $\eta = -3/(2a_i-3)$. Both satisfy $|\eta|\ge 1$ for
+$0 \le a_i \le 3$, i.e.\ for diameter ratios up to 2.
+
+\paragraph{Dispersion.}
+The double sums are $T$-free up to explicit powers of $1/T$:
+\begin{equation}
+\overline{m^2\varepsilon\sigma^3} = \frac{E_1}{T},\qquad
+\overline{m^2\varepsilon^2\sigma^3} = \frac{E_2}{T^2},\qquad
+E_\nu = \sum_{i,j} x_i x_j m_i m_j \sigma_{ij}^3 \left[\tfrac{\varepsilon_{ij}}{k}\right]^\nu,
+\quad \varepsilon_{ij} = \sqrt{\varepsilon_i\varepsilon_j}\,(1-k_{ij}).
+\end{equation}
+Using $\rho N_A 10^{-30} = 6\eta/(\pi s_3)$:
+\begin{equation}
+a^{\mathrm{disp}} = B_1\,\eta I_1(\eta;\mbar) + B_2\,\eta\,C_1(\eta;\mbar)\,I_2(\eta;\mbar),
+\qquad B_1 = -\frac{12 E_1}{s_3 T},\quad B_2 = -\frac{6\mbar E_2}{s_3 T^2}.
+\end{equation}
+$I_1$ and $I_2$ are affine in $(c_1,c_2) = \left(\frac{\mbar-1}{\mbar},\frac{\mbar-1}{\mbar}\frac{\mbar-2}{\mbar}\right)$,
+e.g.\ $I_1 = \sum_{k=0}^{6}\left(a_{0k} + c_1 a_{1k} + c_2 a_{2k}\right)\eta^k$.
+
+\section{Result}
+
+At fixed $(T,\mathbf x)$ the residual Helmholtz energy is a function of $\eta$ alone:
+\begin{equation}
+\boxed{\;
+\alpha^{\mathrm r}(T,\rho,\mathbf x) = \sum_k c_k(T,\mathbf x)\,\phi_k(\eta)
+\;-\; \sum_i w_i \ln g^{\mathrm{hs}}\!\bigl(\eta;\,a_i(T,\mathbf x)\bigr),
+\qquad \eta = \rho\, q(T,\mathbf x)\;}
+\end{equation}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+weight $c_k(T,\mathbf x)$ & basis $\phi_k(\eta)$ & depends on \\
+\midrule
+$\mbar A_1$ & $\eta/(1-\eta)$ & universal \\
+$\mbar A_2$ & $\eta/(1-\eta)^2$ & universal \\
+$\mbar A_3$ & $\ln(1-\eta)$ & universal \\
+$B_1,\ B_1c_1,\ B_1c_2$ & $\eta\sum_k a_{0k}\eta^k,\ \eta\sum_k a_{1k}\eta^k,\ \eta\sum_k a_{2k}\eta^k$ & universal \\
+$B_2$ & $\eta\,C_1(\eta;\mbar)\,I_2(\eta;\mbar)$ & one parameter, $\mbar$ \\
+$w_i = x_i(m_i-1)$ & $\ln g^{\mathrm{hs}}(\eta;a_i)$ & one parameter, $a_i$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The weights are cheap scalars: $N$ exponentials for $d_i(T)$ plus sums.
+
+\paragraph{Pressure.}
+Since $\rho\,\partial_\rho|_{T,\mathbf x} = \eta\,\partial_\eta|_{T,\mathbf x}$, we have
+$Z = 1 + \eta\,\partial\alpha^{\mathrm r}/\partial\eta$. Explicitly,
+\begin{align}
+Z = 1 &+ \mbar\left[A_1\frac{\eta}{(1-\eta)^2} + A_2\frac{\eta(1+\eta)}{(1-\eta)^3} - A_3\frac{\eta}{1-\eta}\right]
++ B_1\,\eta\frac{d(\eta I_1)}{d\eta} + B_2\,\eta\frac{d(\eta C_1 I_2)}{d\eta} \nonumber\\
+&- \sum_i w_i\,\eta\left[\frac{3}{1-\eta} - \frac{(3-a_i)/3}{1-\tfrac{3-a_i}{3}\eta} + \frac{(2a_i-3)/3}{1+\tfrac{2a_i-3}{3}\eta}\right],
+\end{align}
+and $p = \rho RT Z$ becomes
+\begin{equation}
+\boxed{\;F(\eta) \equiv \eta\,Z(\eta) = \frac{p\,q(T,\mathbf x)}{RT}\;}
+\label{eq:target}
+\end{equation}
+Pressure enters only as a constant on the right-hand side.
+
+\section{Consequence: subdivide in $\eta$ only}
+
+\paragraph{Domain.} $\eta\in[0,\etacp]$ with $\etacp = \pi/(3\sqrt2) \approx 0.7405$ (close
+packing). The interval is the same for every fluid, mixture, temperature and pressure. There
+is no compactification, and no calls fall outside the domain.
+
+\paragraph{Singularities.} These lie off the real interval and set the Chebyshev degree per piece:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+source & location & remedy \\
+\midrule
+$1/(1-\eta)$, $\ln(1-\eta)$ & $\eta = 1$ & grade pieces toward $\etacp$ \\
+$\ln g^{\mathrm{hs}}$ & $\eta = 3/(3-a_i),\ -3/(2a_i-3)$, $|\eta|\ge1$ & none needed \\
+$C_1$ & zeros of $P(\eta;\mbar)$, real $\approx -1/(3\mbar)$ for $\mbar \gtrsim 4$ & multiply by $P^2$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Here $1/C_1 = P(\eta;\mbar)/\bigl[(1-\eta)^4(2-\eta)^2\bigr]$, with
+\begin{equation}
+P = (1-\eta)^4(2-\eta)^2 + \mbar(8\eta-2\eta^2)(2-\eta)^2 + (1-\mbar)(20\eta-27\eta^2+12\eta^3-2\eta^4)(1-\eta)^2,
+\end{equation}
+a degree-6 polynomial that is \emph{affine in $\mbar$}. For small $\eta$,
+$P = 4 + 12\mbar\eta + O(\eta^2)$. For long chains its zero therefore approaches $\eta=0$ from
+the left, e.g.\ $-0.011$ at $\mbar = 30$, and would force many pieces. $F$ contains $C_1$ and
+$C_1'$, so $P^2F$ is free of these poles.
+
+\paragraph{Rootfinding function.} On each piece, solve
+\begin{equation}
+G(\eta) = P^2\bigl[F(\eta) - t\bigr] = \eta\,Q(\eta) - t\,P^2(\eta),\qquad Q = P^2 Z,\quad t = \frac{pq}{RT}.
+\end{equation}
+\begin{itemize}
+\item $Q$ is $O(1)$ and is what gets fitted.
+\item The factor $\eta$ is applied exactly, as a Chebyshev multiply-by-$x$, so the absolute
+error near $\eta=0$ scales with $\eta$ and the gas root keeps full relative precision.
+\item $P^2$ has degree 12 and is represented exactly.
+\item $t$ enters linearly, so one set of expansions per $(T,\mathbf x)$ serves every pressure.
+\end{itemize}
+
+\paragraph{Towards universal tables.} Every term of $P^2F$ is a scalar weight in $(T,\mathbf x)$
+times a function of $\eta$ that is \emph{independent of the fluid}. Two families carry a
+parameter:
+\begin{itemize}
+\item the $C_1I_2$ term, through $\mbar$. $P^2$ is quadratic in $\mbar$, so it splits into
+three universal pieces;
+\item the chain term, through $a_i$: one 2-D table on a rectangle in $(\eta,a)$.
+\end{itemize}
+This is the stacked per-term representation of Bell \& Alpert (2018), on fixed rectangles.
+It has not been built.
+
+\section{Numerical checks}\label{sec:check}
+
+Scripts are \texttt{pcsaft\_cheb.py} and \texttt{spurious\_scan.py} in
+\texttt{dev/autodiff\_spike/}, on branch\\
+\texttt{claude/coolprop-autodiff-comparison-ff35be}.
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+check & result \\
+\midrule
+factorization of the $g^{\mathrm{hs}}$ numerator & exact to $4\times10^{-16}$ \\
+explicit $Z$ above vs.\ direct model (3 fluids, 150--600\,K) & $\le 1.3\times10^{-14}$ relative \\
+root counts vs.\ brute-force scan (288 cases, 40--800\,K, $10^{-4}$--$10^{3}$\,MPa) & all match \\
+relative root error, $\sim$10 pieces at degree 12 & $\le 2\times10^{-9}$ \\
+pieces at degree 12 without / with the $P^2$ multiplier ($\mbar = 30$) & 14 / 5 (singularity bound) \\
+\bottomrule
+\end{tabular}
+\end{center}
+The singularity bound in the last row ignores how much $Z$ varies in magnitude within a piece.
+About twice as many pieces are needed in practice.
+
+\paragraph{Spurious roots.} With the Gross--Sadowski constants, a fourth root appears at
+$\eta \approx 0.56$--$0.74$ (cf.\ Privat et al.\ 2010). It occurs only at or below the pure
+fluid's triple point: methane $\le 28$\,K, propane $\le 84$\,K, n-decane $\le 140$\,K. With the
+Liang 2012 or 2014 universal constants it does not occur at 20--400\,K. That check paired the
+Liang constants with the Gross--Sadowski pure-fluid parameters, so it is qualitative only.
+
+\section{Not covered}
+\begin{itemize}
+\item \textbf{Association.} The site fractions solve an implicit equation. At fixed
+$(T,\mathbf x)$ the term is still smooth in $\eta$, so per-$(T,\mathbf x)$ fits from node values
+work, but those tables are not universal.
+\item \textbf{Polar terms (Gross--Vrabec).} Their Pad\'e form $a_2/(1-a_3/a_2)$ has poles of its
+own, which need the same analysis as $C_1$.
+\item \textbf{Temperature-dependent $\boldsymbol{k_{ij}}$} only makes $E_\nu$ depend on $T$. That is harmless.
+\end{itemize}
+
+\end{document}
