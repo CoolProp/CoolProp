@@ -443,7 +443,7 @@ else
             # would abort the script under `set -e` before `fail` records the
             # result.  It cannot mask the gate -- `fail` runs unconditionally.
             cat "$test_logdir/summary.txt" || true
-            fail "tests ($TAG_FILTER; per-shard logs: $test_logdir)"
+            fail "tests ($TAG_FILTER; per-shard logs: $test_logdir/shards)"
         fi
     fi
 fi

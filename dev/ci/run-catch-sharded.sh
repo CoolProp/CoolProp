@@ -33,12 +33,12 @@
 #     the per-shard case totals (successes+failures+expectedFailures+skips
 #     from <OverallResultsCases>) must sum to exactly <expected-cases>.  That
 #     catches a shard that exited 0 but ran fewer cases than it was given.
-#     The same element's failures= must be 0 in every shard, independently
-#     of the exit status (defence in depth; Catch2 already exits non-zero).
+#     It reads a machine-readable attribute, not the console summary, which
+#     a Catch2 upgrade could reword.  The same element's failures= must be 0
+#     in every shard, independently of the exit status (defence in depth;
+#     Catch2 already exits non-zero).
 #   - <logdir> must be empty, so a stale .rc/.xml from an earlier run can
 #     never stand in for a shard that did not run this time.
-#     It reads a machine-readable attribute, not the console summary, which
-#     a Catch2 upgrade could reword.
 #   - The caller keeps --warn UnmatchedTestSpec in <extra args>; Catch2
 #     evaluates it against the whole filter before sharding, so a stale tag
 #     still exits 3 in every shard (verified on Catch2 3.8.0).
@@ -81,7 +81,12 @@ if [ ! -d "$LOGDIR" ]; then
     echo "run-catch-sharded: log directory '$LOGDIR' does not exist" >&2
     exit 2
 fi
-if [ -n "$(ls -A "$LOGDIR")" ]; then
+# find's exit status is checked: an unreadable dir must not read as empty.
+if ! first_entry="$(find "$LOGDIR" -mindepth 1 -print -quit)"; then
+    echo "run-catch-sharded: cannot list log directory '$LOGDIR'" >&2
+    exit 2
+fi
+if [ -n "$first_entry" ]; then
     echo "run-catch-sharded: log directory '$LOGDIR' is not empty" >&2
     exit 2
 fi
