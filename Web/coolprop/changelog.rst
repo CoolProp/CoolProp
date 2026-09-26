@@ -41,7 +41,7 @@ Highlights:
 * **Thermal conductivity for ammonia, n-undecane and tetrahydrofuran.**
   ``PropsSI("L", ..., <fluid>)`` previously raised for n-undecane and tetrahydrofuran;
   ammonia moves from the Tufeu et al. (1984) correlation, which stays in the fluid file
-  as a fallback entry, to the current reference correlation.  As for R161, the dilute and
+  for reference but is no longer used, to the current reference correlation.  As for R161, the dilute and
   residual terms are expression-DSL data and the critical enhancement is the native
   simplified Olchowy–Sengers block:
 

@@ -530,6 +530,12 @@ vel conductivity_validation_data[] = {
   // background, 159.8246 (checked against the paper in the test case below).  Same
   // REFPROP dense-liquid step as for n-undecane above; CoolProp follows the equations.
   vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "L", 159.82456074842671e-3, 1e-6),
+  // The paper gives no check value with a nonzero critical enhancement, so this near-critical
+  // state guards THF's critical block (qD, zeta0, GAMMA, R0).  The reference is REFPROP 10.1's
+  // THF.FLD (same Fiedler 2023 EOS and Sotiriadou 2024 viscosity), a cross-check rather than a
+  // paper value.  At 545 K < T_ref and 320 kg/m^3 < 1.5 rhoc neither of REFPROP's undocumented
+  // TK3 steps applies; CoolProp agrees to 6.5e-7.
+  vel("Tetrahydrofuran", "T", 545, "Dmass", 320.0, "L", 87.8958240666558e-3, 1e-5),
 
   // From Assael, JPCRD, 2013
   vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
@@ -787,8 +793,8 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
 // coefficients (Table 2 labels them mW/(m K); they are W/(m K)) and the enhancement
 // parameters independently of one another.
 TEST_CASE("Ammonia conductivity contributions match Monogenidou (2018)", "[conductivity],[transport]") {
-    // Ammonia's conductivity is a list (new correlation first, Tufeu 1984 kept as a
-    // fallback entry); the loader must pick the first entry
+    // Ammonia's conductivity is a list (new correlation first, Tufeu 1984 kept for
+    // reference only); the loader must pick the first entry
     CHECK(CoolProp::get_fluid_param_string("Ammonia", "BibTeX-CONDUCTIVITY") == "Monogenidou-JPCRD-2018-ammonia-conductivity");
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ammonia"));
     AS->update(CoolProp::DmassT_INPUTS, 415.0, 390.0);
