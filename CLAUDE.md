@@ -14,25 +14,24 @@ policy:
 Co-authored-by: Claude Opus 5 <noreply@anthropic.com>
 ```
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
+## Issue Tracking — Linear
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+Issues live in **Linear**, team **CoolProp** (issue key `COO`), reached
+through the Linear MCP server (`mcp__linear-server__*` tools).
 
-### Quick Reference
+- Find work: `list_issues` with team `CoolProp`; read one with `get_issue COO-<n>`.
+- File follow-up work you notice but don't do in this change: `save_issue`
+  with team `CoolProp`, one label (`Bug`, `Feature` or `Improvement`) and a
+  priority (1 urgent … 4 low).  Put the evidence (file:line, repro,
+  measured numbers) in the description, not just a title.
+- Name the Linear id in the branch name or PR body (`Fixes COO-<n>`) so
+  Linear links the PR and closes the issue on merge.
 
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+Beads (`bd`) was retired on 2026-09-26.  `.beads/issues.jsonl` is a frozen,
+read-only archive: old `CoolProp-xxx` ids in commit messages, plans and
+code comments resolve there (`grep CoolProp-xxx .beads/issues.jsonl`), and
+each migrated Linear issue names its source Beads ids.  Do not run `bd`
+to create or update issues.
 
 ## Session Completion
 
@@ -40,13 +39,12 @@ bd close <id>         # Complete work
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Create Linear issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update issue status** - Close finished work in Linear, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -59,7 +57,6 @@ bd close <id>         # Complete work
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
 
 
 ## Build & Test
@@ -96,8 +93,8 @@ pre-push hook once via `ln -s ../../dev/ci/pre-push.sample
 If preflight passes, CI should pass with high probability.  See
 `dev/ci/README.md#preflightsh--local-pre-push-gate` for details.
 
-**`git commit --no-verify` only skips pre-commit hooks (clang-format,
-bd auto-export).  It does NOT skip the pre-push gate.**  If you must
+**`git commit --no-verify` only skips pre-commit hooks (clang-format).  It
+does NOT skip the pre-push gate.**  If you must
 push without preflight, use `git push --no-verify` and document why.
 
 ## Conventions & Patterns
@@ -184,18 +181,3 @@ REFPROP is installed on Ian's primary dev machine — `[refprop]`-tagged
 Catch2 tests *run* locally, they don't silently SKIP.  Don't narrow
 test filters assuming REFPROP-only tests are CI-gated; they're catchable
 locally and should be in the pre-push sweep.
-
-### `.beads/issues.jsonl` should not be in source PRs
-
-The `bd` pre-commit hook auto-exports + stages `.beads/issues.jsonl`.
-For source-code PRs, restore it explicitly before committing:
-
-```bash
-git restore --staged .beads/issues.jsonl
-git checkout .beads/issues.jsonl
-git commit --no-verify -m "..."   # --no-verify so the hook doesn't re-add it
-```
-
-The `--no-verify` here is intentional and scoped to ONE commit.  Always
-run `./dev/ci/preflight.sh` separately afterwards since `--no-verify`
-also skips clang-format checking.

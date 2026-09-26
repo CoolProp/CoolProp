@@ -80,19 +80,24 @@ Maintainers may request changes on, or close, a pull request that appears to be
 unreviewed AI output. Review capacity is the scarce resource here; generated
 volume that a human has not read first spends it without adding value.
 
-## Issue Tracking
+## Issue Tracking — Linear
 
-This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
+Issues live in **Linear**, team **CoolProp** (issue key `COO`), reached
+through the Linear MCP server (`mcp__linear-server__*` tools).
 
-### Quick Reference
+- Find work: `list_issues` with team `CoolProp`; read one with `get_issue COO-<n>`.
+- File follow-up work you notice but don't do in this change: `save_issue`
+  with team `CoolProp`, one label (`Bug`, `Feature` or `Improvement`) and a
+  priority (1 urgent … 4 low).  Put the evidence (file:line, repro,
+  measured numbers) in the description, not just a title.
+- Name the Linear id in the branch name or PR body (`Fixes COO-<n>`) so
+  Linear links the PR and closes the issue on merge.
 
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work atomically
-bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
-```
+Beads (`bd`) was retired on 2026-09-26.  `.beads/issues.jsonl` is a frozen,
+read-only archive: old `CoolProp-xxx` ids in commit messages, plans and
+code comments resolve there (`grep CoolProp-xxx .beads/issues.jsonl`), and
+each migrated Linear issue names its source Beads ids.  Do not run `bd`
+to create or update issues.
 
 ## Non-Interactive Shell Commands
 
@@ -118,39 +123,18 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
-
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
-
 ## Session Completion
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Create Linear issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update issue status** - Close finished work in Linear, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -163,4 +147,3 @@ bd close <id>         # Complete work
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
