@@ -10,6 +10,8 @@
 #    include <string>
 #    include <vector>
 #    include <catch2/catch_all.hpp>
+#    include "../Backends/Helmholtz/VLERoutines.h"
+#    include <Eigen/Dense>
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
 #    include <cmath>
@@ -1924,12 +1926,26 @@ TEST_CASE("PQ flash with built PE: N2/CH4", "[michelsen][flash][PQ_flash][PhaseE
     CAPTURE(npts);
     CHECK(npts > 0);
     CHECK(AS->get_phase_envelope_data().built);
-    // Use a separate (non-PE) object for PQ flash — PQ flash on the same
-    // object that built the PE can crash in the current codebase.
-    auto AS2 = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Methane"));
-    AS2->set_mole_fractions({0.5, 0.5});
-    REQUIRE_NOTHROW(AS2->update(PQ_INPUTS, 1.5e5, 0.5));
-    CHECK(AS2->phase() == iphase_twophase);
+    // Flash on the SAME object that built the envelope.  This used to be done on a separate
+    // envelope-free object, with a comment that flashing on the envelope owner "can crash in
+    // the current codebase" — that crash was the Eigen::Vector2d overflow fixed by #3196, so
+    // the workaround was stale and left the test taking the blind path despite its name
+    // (GH #3372).
+    REQUIRE_NOTHROW(AS->update(PQ_INPUTS, 1.5e5, 0.5));
+    CHECK(AS->phase() == iphase_twophase);
+    CHECK(std::isfinite(AS->T()));
+    // The mass balance below holds by construction for the two-phase solver (x_i = z_i/D_i,
+    // y_i = K_i x_i), so it does not prove convergence -- it proves the dispatch did not fall
+    // back to the bubble/dew solver, which does not satisfy it.  See the #3372 mass-balance
+    // test for the equal-fugacity check that does prove convergence.
+    const std::vector<double> x = AS->mole_fractions_liquid();
+    const std::vector<double> y = AS->mole_fractions_vapor();
+    double mass = 0;
+    for (std::size_t i = 0; i < 2; ++i) {
+        mass = std::max(mass, std::abs(0.5 - 0.5 * x[i] - 0.5 * y[i]));
+    }
+    CAPTURE(mass);
+    CHECK(mass < 1e-10);
 }
 
 TEST_CASE("PQ flash: 6-component no-throw sweep", "[michelsen][flash][PQ_flash]") {
@@ -2175,6 +2191,420 @@ TEST_CASE("HSU_D flash: single-phase N2/O2 HEOS regression", "[michelsen][hsu_d]
         REQUIRE_NOTHROW(AS2->update(DmolarUmolar_INPUTS, rho, U));
         CHECK(AS2->T() == Catch::Approx(T).epsilon(0.001));
         CHECK(AS2->p() == Catch::Approx(P).epsilon(0.001));
+    }
+}
+
+// GH #3372: newton_raphson_twophase seeded exactly as the blind PQ path seeds itself
+// (saturation_preconditioner -> saturation_Wilson -> successive_substitution), then called
+// directly at an interior quality.  Before all mole fractions were made independent variables,
+// this threw for every Q <= 0.5 on the 5-component mixture: the dependent component (Pentane)
+// is also the smallest (y ~ 1e-14), and forming it as 1 - sum(...) cost it ~1% relative
+// precision, which ln f_{N-1} carried into the residual and floored it above the gate.
+TEST_CASE("newton_raphson_twophase converges at interior Q (#3372)", "[flash][PQ_flash][twophase]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p;
+    };
+    const std::vector<Case> cases = {
+      // Wide-boiling, with the smallest component last -- the case that used to fail.
+      {"5comp", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5},
+      // Control: converged before this change too, must still converge.
+      {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6},
+      // Mirror of the 5comp case: a LIGHT trace component (K >> 1) rather than a heavy one
+      // (K << 1).  Determining x_i from the mass balance has gain (beta/(1-beta)) * K_i, which
+      // peaks at HIGH beta -- so if the elimination-free form is still mass-balance-limited it
+      // should fail at large Q here, mirroring the 5comp failure at small Q.
+      {"N2-trace", "Nitrogen&n-Propane&n-Butane&n-Pentane", {0.001, 0.40, 0.35, 0.249}, 1e5},
+    };
+
+    for (const auto& c : cases) {
+        for (double Q : {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 0.95, 0.99}) {
+            DYNAMIC_SECTION(c.name << " Q=" << Q) {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                AS->set_mole_fractions(c.z);
+                auto& HEOS = *static_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+                const std::vector<CoolPropDbl>& zz = HEOS.get_mole_fractions();
+
+                SaturationSolvers::mixture_VLE_IO io;
+                io.sstype = SaturationSolvers::imposed_p;
+                io.Nstep_max = 10;
+                CoolPropDbl Tg = SaturationSolvers::saturation_preconditioner(HEOS, c.p, SaturationSolvers::imposed_p, zz);
+                Tg = SaturationSolvers::saturation_Wilson(HEOS, Q, c.p, SaturationSolvers::imposed_p, zz, Tg);
+                std::vector<CoolPropDbl> K = HEOS.get_K();
+                REQUIRE_NOTHROW(SaturationSolvers::successive_substitution(HEOS, Q, Tg, c.p, zz, K, io));
+
+                SaturationSolvers::newton_raphson_twophase NR;
+                SaturationSolvers::newton_raphson_twophase_options IO;
+                IO.beta = Q;
+                IO.x = io.x;
+                IO.y = io.y;
+                IO.rhomolar_liq = io.rhomolar_liq;
+                IO.rhomolar_vap = io.rhomolar_vap;
+                IO.T = io.T;
+                IO.p = io.p;
+                IO.z = std::vector<CoolPropDbl>(c.z.begin(), c.z.end());
+                IO.Nstep_max = 30;
+                IO.imposed_variable = SaturationSolvers::newton_raphson_twophase_options::P_IMPOSED;
+
+                REQUIRE_NOTHROW(NR.call(HEOS, IO));
+
+                // The point of the change: the overall mass balance must actually hold.
+                double mass = 0, sx = 0, sy = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * IO.x[i] - Q * IO.y[i]));
+                    sx += IO.x[i];
+                    sy += IO.y[i];
+                    CHECK(IO.x[i] > 0.0);
+                    CHECK(IO.y[i] > 0.0);
+                }
+                CAPTURE(mass);
+                CAPTURE(IO.T);
+                CHECK(mass < 1e-12);
+                CHECK(sx == Catch::Approx(1.0).epsilon(1e-14));
+                CHECK(sy == Catch::Approx(1.0).epsilon(1e-14));
+                CHECK(IO.T > 0);
+            }
+        }
+    }
+}
+
+// GH #3372: the blind mixture PQ/QT path (no phase envelope) must satisfy the overall mass
+// balance z_i = (1-Q) x_i + Q y_i at an interior quality.  It previously used
+// newton_raphson_saturation, a bubble/dew-point solver with no mass-balance condition, so the
+// returned split satisfied equal fugacity but not the specification -- with the error peaking
+// in the Q ~ 0.2..0.4 band (1.2e-4 at p = 3e5 for the mixture below).
+//
+// The metric is the issue's own, computed entirely from the flash's published output.
+TEST_CASE("Mixture PQ/QT flash satisfies the overall mass balance (#3372)", "[michelsen][flash][PQ_flash][massbalance]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p;
+    };
+    const std::vector<Case> cases = {
+      {"5comp", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5},
+      {"ternary", "Nitrogen&Methane&Ethane", {0.10, 0.85, 0.05}, 5e5},
+      {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6},
+    };
+
+    for (const auto& c : cases) {
+        for (double Q : {0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 0.95}) {
+            DYNAMIC_SECTION(c.name << " Q=" << Q) {
+                auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                AS->set_mole_fractions(c.z);
+                // No build_phase_envelope() -- this is deliberately the blind path.
+                REQUIRE_NOTHROW(AS->update(PQ_INPUTS, c.p, Q));
+                REQUIRE(AS->phase() == iphase_twophase);
+
+                const std::vector<double> x = AS->mole_fractions_liquid();
+                const std::vector<double> y = AS->mole_fractions_vapor();
+                REQUIRE(x.size() == c.z.size());
+                REQUIRE(y.size() == c.z.size());
+
+                // ROUTING check, not a convergence check.  Read what it does and does not
+                // prove: the two-phase solver reconstructs x_i = z_i/D_i and y_i = K_i x_i with
+                // D_i = (1-Q) + Q K_i, so (1-Q)x_i + Q y_i = x_i D_i = z_i IDENTICALLY, for any
+                // K, converged or not.  What this catches is the dispatch falling back to
+                // newton_raphson_saturation, which does not construct x and y that way and
+                // whose mass-balance error reached 1.2e-4 in the Q ~ 0.2..0.4 band (GH #3372).
+                // Convergence is asserted separately, below.
+                double mass = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * x[i] - Q * y[i]));
+                }
+                CAPTURE(mass);
+                CAPTURE(AS->T());
+                CHECK(mass < 1e-10);
+
+                // CONVERGENCE check, and the one with teeth: re-solve each published
+                // composition as a single-phase state at the reported (T, p) and require equal
+                // fugacity.  This is computed by a separate code path from the published output,
+                // so unlike the mass balance it cannot be satisfied by construction.
+                const double fug = equilibrium_residual("HEOS", c.fluids, x, y, AS->T(), AS->p());
+                CAPTURE(fug);
+                CHECK(fug < 1e-6);
+
+                // Second independent leg: round-trip the reported (T, p) back through a PT
+                // flash and check the vapour fraction comes back.  The two-phase REQUIRE is
+                // deliberate -- guarding it with `if (RT->phase() == twophase)` would skip the
+                // assertion in exactly the case it exists to detect, a PQ flash returning a bad
+                // T that lands the PT flash outside the two-phase region.
+                if (Q > 0.02 && Q < 0.98) {
+                    auto RT = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+                    RT->set_mole_fractions(c.z);
+                    REQUIRE_NOTHROW(RT->update(PT_INPUTS, AS->p(), AS->T()));
+                    REQUIRE(RT->phase() == iphase_twophase);
+                    CAPTURE(RT->Q());
+                    // Looser below Q = 0.4, and deliberately so: this leg is limited by the
+                    // PT flash, not the PQ flash.  Measured worst |dQ| is 3.9e-6, all of it on
+                    // the wide-boiling 5-component mixture at low Q, where the fugacity residual
+                    // above is simultaneously tiny -- i.e. the PQ answer is converged and the
+                    // disagreement is the PT solve's.  Ternary and binary stay under 1.4e-10.
+                    CHECK(RT->Q() == Catch::Approx(Q).margin(Q < 0.4 ? 1e-5 : 1e-8));
+                }
+            }
+        }
+    }
+}
+
+// GH #3372: interior-Q coverage for the ENVELOPE-guided branch of the mixture PQ/QT dispatch.
+//
+// Before this, four tests built an envelope and then ran a mixture PQ flash, but only two
+// actually reached the envelope branch and both sat at Q = 0.5.  Two guards keep this one
+// honest, because either failing silently would make it vacuous:
+//   * REQUIRE(built) -- without it the dispatch falls straight through to the blind path
+//     (the pattern #3196 established).
+//   * the warning slot must be EMPTY afterwards -- PQ_flash reports every fallback to the
+//     blind solver through set_warning_string, so a non-empty slot means the envelope branch
+//     did not answer and the test would be measuring the blind path again.
+//
+// The mixtures and pressures are chosen because the envelope branch answers at every Q there;
+// it is not yet reliable everywhere (Methane&n-Butane falls back at every Q, for instance),
+// which is tracked separately as the envelope-seed work.
+TEST_CASE("Envelope-branch mixture PQ flash across interior Q (#3372)", "[flash][PQ_flash][PhaseEnvelope]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p;
+    };
+    const std::vector<Case> cases = {
+      {"CH4-C2H6", "Methane&Ethane", {0.5, 0.5}, 1e6},
+      {"N2-CH4", "Nitrogen&Methane", {0.5, 0.5}, 1e6},
+    };
+
+    for (const auto& c : cases) {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+        AS->set_mole_fractions(c.z);
+        AS->build_phase_envelope("");
+        REQUIRE(AS->get_phase_envelope_data().built);
+
+        // Reference on an envelope-free object: same state, forced down the blind path.
+        auto REF = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+        REF->set_mole_fractions(c.z);
+
+        for (double Q : {0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95}) {
+            DYNAMIC_SECTION(c.name << " Q=" << Q) {
+                get_global_param_string("warnstring");  // drain
+                REQUIRE_NOTHROW(AS->update(PQ_INPUTS, c.p, Q));
+                const std::string warn = get_global_param_string("warnstring");
+                CAPTURE(warn);
+                REQUIRE(warn.empty());  // the envelope branch answered, not the fallback
+
+                CHECK(AS->phase() == iphase_twophase);
+                CHECK(std::isfinite(AS->T()));
+                CHECK(AS->T() > 0);
+
+                const std::vector<double> x = AS->mole_fractions_liquid();
+                const std::vector<double> y = AS->mole_fractions_vapor();
+                double mass = 0;
+                for (std::size_t i = 0; i < c.z.size(); ++i) {
+                    mass = std::max(mass, std::abs(c.z[i] - (1 - Q) * x[i] - Q * y[i]));
+                }
+                CAPTURE(mass);
+                CHECK(mass < 1e-10);  // routing check -- identical by construction, see above
+
+                // Convergence check: equal fugacity, recomputed from the published state by a
+                // separate code path, so it cannot be satisfied by the parameterization.
+                const double fug = equilibrium_residual("HEOS", c.fluids, x, y, AS->T(), AS->p());
+                CAPTURE(fug);
+                CHECK(fug < 1e-6);
+
+                // The two branches must agree: #3192 was the envelope branch silently
+                // publishing a different (and wrong) state than the blind one.
+                REF->update(PQ_INPUTS, c.p, Q);
+                CAPTURE(REF->T());
+                CHECK(AS->T() == Catch::Approx(REF->T()).epsilon(1e-7));
+            }
+        }
+    }
+}
+
+// GH #3372: there was no QT_INPUTS coverage at all after a phase-envelope build.  Take the
+// temperature from a PQ flash and feed it back through QT at the same quality; the pressure
+// must come back, and the split must satisfy the overall mass balance.
+//
+// The QT leg does not assert per-state that the envelope branch answered, because its seed is
+// not yet reliable at every quality -- at the time of writing Q = 0.3 here falls back with a
+// seed pressure of 8.2e7 Pa for a state near 1e6 Pa, which is the envelope-seed defect tracked
+// as item 3 of the issue.  Pinning the exact set of failing qualities would just encode today's
+// bug.  Instead the test requires that SOME quality exercised the QT envelope branch
+// successfully -- enough to catch that path breaking entirely -- while the round-trip and
+// mass-balance checks below hold at every quality regardless of which branch answered.
+TEST_CASE("Envelope-branch mixture QT flash round-trips PQ (#3372)", "[flash][QT_flash][PhaseEnvelope]") {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Methane&Ethane"));
+    const std::vector<double> z = {0.5, 0.5};
+    AS->set_mole_fractions(z);
+    AS->build_phase_envelope("");
+    REQUIRE(AS->get_phase_envelope_data().built);
+
+    const double p = 1e6;
+    int qt_via_envelope = 0;
+    for (double Q : {0.1, 0.3, 0.5, 0.7, 0.9}) {
+        CAPTURE(Q);
+
+        get_global_param_string("warnstring");  // drain
+        REQUIRE_NOTHROW(AS->update(PQ_INPUTS, p, Q));
+        REQUIRE(get_global_param_string("warnstring").empty());  // PQ envelope branch answered
+        const double T = AS->T();
+        REQUIRE(std::isfinite(T));
+
+        get_global_param_string("warnstring");
+        REQUIRE_NOTHROW(AS->update(QT_INPUTS, Q, T));
+        if (get_global_param_string("warnstring").empty()) {
+            ++qt_via_envelope;
+        }
+
+        CHECK(AS->phase() == iphase_twophase);
+        CAPTURE(T);
+        CAPTURE(AS->p());
+        CHECK(AS->p() == Catch::Approx(p).epsilon(1e-6));
+
+        const std::vector<double> x = AS->mole_fractions_liquid();
+        const std::vector<double> y = AS->mole_fractions_vapor();
+        double mass = 0;
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            mass = std::max(mass, std::abs(z[i] - (1 - Q) * x[i] - Q * y[i]));
+        }
+        CAPTURE(mass);
+        CHECK(mass < 1e-10);
+    }
+    CAPTURE(qt_via_envelope);
+    CHECK(qt_via_envelope > 0);  // the QT envelope branch is reachable and works somewhere
+}
+
+// GH #3372: finite-difference check of newton_raphson_twophase's analytic Jacobian.
+//
+// newton_raphson_saturation has had a check_Jacobian() for a long time; this class never did,
+// and its Jacobian was rewritten wholesale for the ln K formulation.  Each column is checked by
+// central-differencing the residual vector around the converged state.  The ln K columns are
+// perturbed multiplicatively (K *= exp(+-h)), which is exactly a +-h step in w = ln K; the last
+// column perturbs the imposed-variable partner.
+//
+// Every evaluation restores the baseline first, and that is load-bearing: build_arrays() mutates
+// rhomolar_liq/vap (it re-solves both densities using the current values as warm starts) and
+// overwrites p with 0.5*(p_liq + p_vap).  Without the restore the two sides of the difference
+// start from different states, and the check would quietly measure warm-start history instead of
+// a derivative.
+//
+// Errors are scaled by the largest entry in each column.  An entry negligible next to its column
+// cannot be resolved by differencing the whole residual vector, so a per-entry relative error
+// would report a meaningless blow-up on entries the difference simply cannot see.
+TEST_CASE("newton_raphson_twophase Jacobian matches finite differences (#3372)", "[flash][twophase][jacobian]") {
+    struct Case
+    {
+        std::string name, fluids;
+        std::vector<double> z;
+        double p, Q;
+    };
+    const std::vector<Case> cases = {
+      {"binary", "Methane&n-Butane", {0.97, 0.03}, 2e6, 0.5},
+      {"ternary", "Nitrogen&Methane&Ethane", {0.10, 0.85, 0.05}, 5e5, 0.5},
+      {"5comp mid-Q", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5, 0.5},
+      // Low Q on the wide-boiling mixture: the state the (x, y) formulation could not solve, and
+      // where the trace component's K is ~1e-12.
+      {"5comp low-Q", "Nitrogen&Methane&Ethane&Butane&Pentane", {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 3e5, 0.1},
+    };
+
+    for (const auto& c : cases) {
+        DYNAMIC_SECTION(c.name) {
+            auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", c.fluids));
+            AS->set_mole_fractions(c.z);
+            auto& HEOS = *static_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+            const std::vector<CoolPropDbl>& zz = HEOS.get_mole_fractions();
+
+            SaturationSolvers::mixture_VLE_IO io;
+            io.sstype = SaturationSolvers::imposed_p;
+            io.Nstep_max = 10;
+            CoolPropDbl Tg = SaturationSolvers::saturation_preconditioner(HEOS, c.p, SaturationSolvers::imposed_p, zz);
+            Tg = SaturationSolvers::saturation_Wilson(HEOS, c.Q, c.p, SaturationSolvers::imposed_p, zz, Tg);
+            std::vector<CoolPropDbl> Kv = HEOS.get_K();
+            REQUIRE_NOTHROW(SaturationSolvers::successive_substitution(HEOS, c.Q, Tg, c.p, zz, Kv, io));
+
+            SaturationSolvers::newton_raphson_twophase NR;
+            SaturationSolvers::newton_raphson_twophase_options IO;
+            IO.beta = c.Q;
+            IO.x = io.x;
+            IO.y = io.y;
+            IO.rhomolar_liq = io.rhomolar_liq;
+            IO.rhomolar_vap = io.rhomolar_vap;
+            IO.T = io.T;
+            IO.p = io.p;
+            IO.z = std::vector<CoolPropDbl>(c.z.begin(), c.z.end());
+            IO.Nstep_max = 30;
+            IO.imposed_variable = SaturationSolvers::newton_raphson_twophase_options::P_IMPOSED;
+            REQUIRE_NOTHROW(NR.call(HEOS, IO));  // land on the converged state
+
+            const std::size_t N = NR.N;
+            const std::vector<CoolPropDbl> K0 = NR.K;
+            const double T0 = NR.T, p0 = NR.p, rhoL0 = NR.rhomolar_liq, rhoV0 = NR.rhomolar_vap;
+
+            auto restore = [&]() {
+                NR.K = K0;
+                NR.T = T0;
+                NR.p = p0;
+                NR.rhomolar_liq = rhoL0;
+                NR.rhomolar_vap = rhoV0;
+            };
+
+            restore();
+            NR.build_arrays();
+            const Eigen::MatrixXd Jan = NR.J;
+
+            for (std::size_t j = 0; j <= N; ++j) {
+                Eigen::VectorXd rp, rm;
+                double step = 0;
+                if (j < N) {
+                    step = 1e-6;  // in w = ln K
+                    restore();
+                    NR.K[j] = K0[j] * std::exp(step);
+                    NR.build_arrays();
+                    rp = NR.r;
+                    restore();
+                    NR.K[j] = K0[j] * std::exp(-step);
+                    NR.build_arrays();
+                    rm = NR.r;
+                } else {
+                    step = 1e-4 * T0;  // imposed-variable partner (T, since p is imposed)
+                    restore();
+                    NR.T = T0 + step;
+                    NR.build_arrays();
+                    rp = NR.r;
+                    restore();
+                    NR.T = T0 - step;
+                    NR.build_arrays();
+                    rm = NR.r;
+                }
+                const Eigen::VectorXd num = (rp - rm) / (2 * step);
+
+                double col_scale = 0;
+                for (std::size_t i = 0; i <= N; ++i) {
+                    col_scale = std::max(col_scale, std::abs(Jan(static_cast<Eigen::Index>(i), static_cast<Eigen::Index>(j))));
+                }
+                REQUIRE(col_scale > 0);  // a wholly zero column would make the check vacuous
+
+                double worst = 0;
+                std::size_t worst_i = 0;
+                for (std::size_t i = 0; i <= N; ++i) {
+                    const double a = Jan(static_cast<Eigen::Index>(i), static_cast<Eigen::Index>(j));
+                    const double rel = std::abs(num(static_cast<Eigen::Index>(i)) - a) / col_scale;
+                    if (rel > worst) {
+                        worst = rel;
+                        worst_i = i;
+                    }
+                }
+                CAPTURE(j);
+                CAPTURE(worst_i);
+                CAPTURE(col_scale);
+                CAPTURE(num(static_cast<Eigen::Index>(worst_i)));
+                CAPTURE(Jan(static_cast<Eigen::Index>(worst_i), static_cast<Eigen::Index>(j)));
+                CHECK(worst < 1e-4);  // measured worst across these four states is 6.6e-7
+            }
+            restore();
+        }
     }
 }
 
