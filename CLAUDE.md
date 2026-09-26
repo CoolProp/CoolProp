@@ -33,6 +33,11 @@ code comments resolve there (`grep CoolProp-xxx .beads/issues.jsonl`), and
 each migrated Linear issue names its source Beads ids.  Do not run `bd`
 to create or update issues.
 
+Durable knowledge (gotchas, design decisions, verification techniques)
+lives in [`dev/agent-notes.md`](dev/agent-notes.md). Read the section for
+the area you are touching, and add lessons there in the PR that taught
+them.
+
 ## Session Completion
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
