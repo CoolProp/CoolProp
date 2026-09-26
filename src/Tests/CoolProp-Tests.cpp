@@ -726,6 +726,19 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2),
   vel("Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2),
 
+  // Tsolakidou, JPCRD, 2017 - Table 11
+  vel("R161", "T", 250, "Dmass", 1e-9, "L", 9.892e-3, 1e-4),
+  vel("R161", "T", 250, "Dmass", 850.0, "L", 175.48e-3, 1e-4),
+  vel("R161", "T", 375, "Dmass", 1e-9, "L", 24.517e-3, 1e-4),
+  // The next two points are PINNED to CoolProp's own output, not the paper's values.
+  // The critical enhancement reads cp, cv and drho/dp from the EOS, and CoolProp's
+  // R161 is still Wu & Zhou (2012), whereas the correlation was fitted with Qi et al.
+  // (2016).  The paper's equations on REFPROP's Qi EOS give 9.8837 and 81.296, i.e.
+  // the Table 11 values 9.884 and 81.297; on the Wu EOS they give the values below.
+  // Restore both to Table 11 at 1e-4 once the EOS is updated (Linear COO-50).
+  vel("R161", "T", 250, "Dmass", 1.0, "L", 9.8828128609944e-3, 1e-6),
+  vel("R161", "T", 375, "Dmass", 229.0, "L", 98.81779057105196e-3, 1e-4),
+
   // Heavy Water, IAPWS formulation
   vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
   vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),

@@ -290,8 +290,15 @@ Three further errors are compile-time, not runtime:
 
 ### 3. JSON schema (additive)
 
-A transport sub-block (`dilute`, `initial_density`, `higher_order`, `residual`,
-`critical`) may use `"type": "expression"`:
+A transport sub-block (`dilute`, `initial_density`, `higher_order`, `residual`)
+may use `"type": "expression"`.  The conductivity `critical` block may **not**:
+the loader accepts only `hardcoded` and `simplified_Olchowy_Sengers` there, and
+rejects anything else with "type [...] is not understood".  The simplified
+Olchowy–Sengers enhancement needs `dp/drho|_T` at a *different* state
+`(T_ref, rho)` and the viscosity at the current state, and neither is reachable
+from a formula (see Future work).  A DSL `dilute`/`residual` block is instead
+paired with the native `simplified_Olchowy_Sengers` block in the same
+`conductivity` entry; R161 was the first fluid to do so.
 
 ```json
 "higher_order": {
@@ -507,7 +514,10 @@ e.evaluate(AS)
 
 - Register Tier-B derived variables (`dpdrho__constT`, `cpmolar`, `cvmolar`,
   correlation length, pressure parts) and express Olchowy–Sengers / friction
-  theory / Chung as data.
+  theory / Chung as data.  Registering the variables is not enough for
+  Olchowy–Sengers: it also needs `dp/drho|_T` evaluated at `(T_ref, rho)`, an
+  off-state evaluation `keyed_output()` cannot provide, and the viscosity, a
+  transport output that the allowlist policy excludes.
 - Optional bytecode compilation if profiling justifies it.
 - Possible migration of existing Tier-A fluid JSON to `"type":"expression"` once
   the path is proven (separate, reversible effort).
