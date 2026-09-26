@@ -485,6 +485,8 @@ the Chebyshev root is kept.
 | degree 12, 1e-4 | 22–42 | 1.38–1.65 | 0 | ≤3.3e-15 | all ok |
 | degree 12, 1e-3 | 18–38 | 1.41–1.69 | 0 | ≤3.3e-15 | all ok |
 | degree 16, 1e-6 | 22–38 | 1.31–1.43 | 0 | ≤3.5e-15 | all ok |
+| degree 16, 1e-4 | 14–33 | 1.36–1.57 | 0 | ≤3.5e-15 | all ok |
+| degree 16, 1e-3 | 13–33 | 1.36–1.61 | 0 | ≤3.5e-15 | all ok |
 
 Without the polish, 1e-6 tables already give roots within ≤3.3e-8 (degree 16), because the
 tolerance is in units of Z and applies at every point. Loosening from 1e-12 to 1e-6 cuts the
