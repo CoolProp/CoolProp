@@ -288,7 +288,10 @@ MISSING_RANGES=""
 # on an empty listing.
 git_diff --numstat -z --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}" >"$PF_LOGDIR/numstat.z"
 while IFS=$'\t' read -r -d '' ns_added _ns_deleted ns_path; do
-    case "$ns_added" in '' | - | 0) continue ;; esac   # binary, or deletions only
+    # 0: deletions only, nothing to lint.  "-": git treats the file as binary
+    # (a NUL byte, or a -diff/binary attribute), so it has no hunks and the
+    # line filters would drop all its findings -- report it as unmappable.
+    case "$ns_added" in 0) continue ;; esac
     if ! printf '%s\n' "$RANGE_FILES" | grep -qxF -- "$ns_path"; then
         MISSING_RANGES="$MISSING_RANGES $ns_path"
     fi
