@@ -41,7 +41,7 @@ Highlights:
 * **Thermal conductivity for ethylene, propylene and cyclohexane.**
   ``PropsSI("L", ..., "Ethylene")`` and ``"CycloHexane"`` previously raised, and
   propylene used an extended-corresponding-states estimate (Huber et al. 2003), which
-  stays in its fluid file as a fallback.  Ethylene and propylene are Assael, Koutian,
+  stays in its fluid file for reference but is no longer used.  Ethylene and propylene are Assael, Koutian,
   Huber and Perkins, *J. Phys. Chem. Ref. Data* **45**\ (3):033104 (2016); cyclohexane is
   Koutian, Assael, Huber and Perkins, *J. Phys. Chem. Ref. Data* **46**\ (1):013102
   (2017).  Their dilute and residual terms are expression-DSL data and their critical

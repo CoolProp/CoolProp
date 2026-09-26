@@ -1042,7 +1042,7 @@ class JSONFluidLibrary
 
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(const nlohmann::json& conductivity, CoolPropFluid& fluid) {
-        // If an array, use the first one, and then stop; the rest are kept as documented fallbacks (as for viscosity)
+        // If an array, use the first one, and then stop; later entries are older models kept for reference and are never parsed (as for viscosity)
         if (conductivity.is_array()) {
             if (conductivity.empty()) {
                 throw ValueError(format("conductivity list is empty for fluid %s", fluid.name.c_str()));
