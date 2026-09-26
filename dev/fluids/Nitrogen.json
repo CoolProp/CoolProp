@@ -3966,163 +3966,339 @@
     }
   },
   "TRANSPORT": {
-    "conductivity": {
-      "BibTeX": "Lemmon-IJT-2004",
-      "critical": {
-        "GAMMA": 0.055,
-        "R0": 1.01,
-        "T_ref": 252.384,
-        "gamma": 1.2415,
-        "qD": 2500000000.0,
-        "type": "simplified_Olchowy_Sengers",
-        "zeta0": 1.7e-10
+    "conductivity": [
+      {
+        "BibTeX": "Sotiriadou-IJT-2025-nitrogen",
+        "dilute": {
+          "type": "expression",
+          "note": "Eq. (2) of Sotiriadou, Assael & Huber, Int. J. Thermophys. 46:42 (2025) (open-access version of record), a fit to the ab initio values of Hellmann (2013), converted from mW/(m K) to W/(m K). Tc = 126.192 K is the paper's own value (Table 1, from the Span et al. EOS). Identical to NITROGEN.FLD in REFPROP 10.1.",
+          "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {
+            "Tc": 126.192
+          },
+          "arrays": {
+            "a": [
+              -50.4059,
+              1457.09,
+              -2580.5,
+              3616.59,
+              -695.367,
+              129.796,
+              4.03114
+            ],
+            "b": [
+              99.3852,
+              -151.972,
+              229.102,
+              -22.9451,
+              6.0789,
+              1.0
+            ]
+          }
+        },
+        "residual": {
+          "type": "expression",
+          "note": "Eq. (3) and Table 3 of Sotiriadou et al. (2025). Tc = 126.192 K and rhoc = 11.1839 mol/dm^3 are the paper's own reducing values (Table 1); rhoc is frozen here rather than read from the EOS block. Table 3 labels B1,i and B2,i as mW/(m K), but the coefficients are in W/(m K): only W/(m K) reproduces the paper's Table 8 check values (e.g. 59.6387 mW/(m K) at 500 K and 320 kg/m^3; mW/(m K) gives 38.93). Identical to NITROGEN.FLD in REFPROP 10.1.",
+          "formula": "let Tr = T/Tc\nlet rhor = Dmolar/1000/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "Tc": 126.192,
+            "rhoc": 11.1839
+          },
+          "arrays": {
+            "B1": [
+              0.0111638,
+              0.0176473,
+              -0.0165839,
+              0.00932251,
+              -0.00121718
+            ],
+            "B2": [
+              8.88313e-05,
+              -0.0019614,
+              0.00280261,
+              -0.00116666,
+              0.0001682
+            ],
+            "d": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "critical": {
+          "type": "simplified_Olchowy_Sengers",
+          "note": "Section 2.3, Eqs. (4)-(7) of Sotiriadou et al. (2025): R_D = 1.02, gamma = 1.239, Gamma = 0.058, xi0 = 0.163e-9 m, qD^-1 = 4.33e-10 m, T_ref = 1.5 Tc, printed as 189.29 K. NITROGEN.FLD in REFPROP 10.1 carries the same values in a TK8 block. With the viscosity of Huber et al. (2024), which is CoolProp's, the paper's equations on the Span et al. EOS give an enhancement of 353.3376 mW/(m K) at 126.2 K and 320 kg/m^3 against the paper's quoted 353.3371, and 385.9315 in total against Table 8's 385.931.",
+          "GAMMA": 0.058,
+          "R0": 1.02,
+          "gamma": 1.239,
+          "qD": 2309468822.170901,
+          "zeta0": 1.63e-10,
+          "T_ref": 189.29
+        }
       },
-      "dilute": {
-        "A": [
-          0.001511,
-          0.002117,
-          -0.003332
-        ],
-        "t": [
-          0,
-          -1.0,
-          -0.7
-        ],
-        "type": "eta0_and_poly"
-      },
-      "residual": {
-        "A": [
-          0.008862,
-          0.03111,
-          -0.07313,
-          0.02003,
-          -0.0007096,
-          0.0002672
-        ],
-        "d": [
-          1,
-          2,
-          3,
-          4,
-          8,
-          10
-        ],
-        "gamma": [
-          0,
-          0,
-          1,
-          1,
-          1,
-          1
-        ],
-        "l": [
-          0,
-          0,
-          1,
-          2,
-          2,
-          2
-        ],
-        "t": [
-          0.0,
-          0.03,
-          0.2,
-          0.8,
-          0.6,
-          1.9
-        ],
-        "type": "polynomial_and_exponential"
+      {
+        "BibTeX": "Lemmon-IJT-2004",
+        "critical": {
+          "GAMMA": 0.055,
+          "R0": 1.01,
+          "T_ref": 252.384,
+          "gamma": 1.2415,
+          "qD": 2500000000.0,
+          "type": "simplified_Olchowy_Sengers",
+          "zeta0": 1.7e-10
+        },
+        "dilute": {
+          "A": [
+            0.001511,
+            0.002117,
+            -0.003332
+          ],
+          "t": [
+            0,
+            -1.0,
+            -0.7
+          ],
+          "type": "eta0_and_poly"
+        },
+        "residual": {
+          "A": [
+            0.008862,
+            0.03111,
+            -0.07313,
+            0.02003,
+            -0.0007096,
+            0.0002672
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            8,
+            10
+          ],
+          "gamma": [
+            0,
+            0,
+            1,
+            1,
+            1,
+            1
+          ],
+          "l": [
+            0,
+            0,
+            1,
+            2,
+            2,
+            2
+          ],
+          "t": [
+            0.0,
+            0.03,
+            0.2,
+            0.8,
+            0.6,
+            1.9
+          ],
+          "type": "polynomial_and_exponential"
+        }
       }
-    },
-    "viscosity": {
-      "BibTeX": "Lemmon-IJT-2004",
-      "dilute": {
-        "C": 2.66958e-08,
-        "a": [
-          0.431,
-          -0.4623,
-          0.08406,
-          0.005341,
-          -0.00331
-        ],
-        "molar_mass": 0.02801348,
-        "molar_mass_units": "kg/mol",
-        "t": [
-          0,
-          1,
-          2,
-          3,
-          4
-        ],
-        "type": "collision_integral"
+    ],
+    "viscosity": [
+      {
+        "BibTeX": "Huber-IJT-2024-nitrogen",
+        "note": "Huber, Perkins & Lemmon, Int. J. Thermophys. 45:146 (2024) (open-access version of record), Eqs. (1), (3) and (5): the background viscosity. The paper's multiplicative critical enhancement (Eqs. 13-21, a Bhattacharjee-Ferrell crossover with qC^-1 = 1.81 nm and qD^-1 = 0.8 nm) is not included, since CoolProp has no viscosity critical enhancement; the paper's Table 7 and REFPROP 10.1 (NITROGEN.FLD VS7) also omit it. The paper says it matters only within about 3 % of Tc and 25 % of rhoc; its Table 8 gives a factor of up to 1.09 at 126.212 K and 333 kg/m^3.",
+        "dilute": {
+          "type": "expression",
+          "note": "Eq. (3) and Table 3 of Huber et al. (2024), the dilute-gas correlation of Xiao et al. with eta_0(298.15 K) = 17.7494 uPa s (Berg & Moldover), converted from uPa s to Pa s. Identical to NITROGEN.FLD in REFPROP 10.1.",
+          "formula": "let L = ln(T/T_ref)\n1e-6*eta_ref*exp(sum(i: a[i]*L^p[i]))",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {
+            "T_ref": 298.15,
+            "eta_ref": 17.7494
+          },
+          "arrays": {
+            "a": [
+              0.7734578,
+              -0.09310761,
+              0.02716958,
+              0.006175553,
+              -0.007201594,
+              0.002094372,
+              0.0001922676,
+              -0.0003454323,
+              0.0001051771,
+              -1.126739e-05
+            ],
+            "p": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          }
+        },
+        "higher_order": {
+          "type": "expression",
+          "note": "Eq. (5) and Table 4 of Huber et al. (2024), the whole residual term (no separate initial-density term), converted from uPa s to Pa s. Tc = 126.192 K and rhoc = 11.1839 mol/dm^3 are the paper's own reducing values (Table 2); rhoc is frozen here rather than read from the EOS block, whose rhoc differs in the eighth figure. Identical to NITROGEN.FLD in REFPROP 10.1 (whose t3 = -5.814455 is the paper's -5.81445500000).",
+          "formula": "let Tr = T/Tc\nlet rhor = Dmolar/1000/rhoc\n1e-6*sum(i: N[i]*Tr^t[i]*rhor^d[i])",
+          "state_variables": [
+            "T",
+            "Dmolar"
+          ],
+          "constants": {
+            "Tc": 126.192,
+            "rhoc": 11.1839
+          },
+          "arrays": {
+            "N": [
+              9.955235691668,
+              -6.165266404871,
+              0.213120936996,
+              -8.473713006806,
+              10.013103356639,
+              0.638966874603,
+              0.311620258213,
+              9.241856768911,
+              -5.252828814854,
+              -0.667072279228
+            ],
+            "t": [
+              -0.77512218631,
+              -2.00109608805,
+              -5.814455,
+              -0.67602596996,
+              0,
+              -0.71613185456,
+              -1.14069399597,
+              -2.3652583598,
+              -2.5463699255,
+              -1.00794034515
+            ],
+            "d": [
+              1,
+              1,
+              2,
+              2,
+              2,
+              6.96423363249,
+              8.38651257501,
+              2.99224857471,
+              3.42744617975,
+              7.97371767411
+            ]
+          }
+        }
       },
-      "epsilon_over_k": 98.94,
-      "epsilon_over_k_units": "K",
-      "higher_order": {
-        "T_reduce": 126.192,
-        "T_reduce_units": "K",
-        "a": [
-          1.072e-05,
-          3.989e-08,
-          1.208e-09,
-          -7.402e-06,
-          4.62e-06
-        ],
-        "d1": [
-          2,
-          10,
-          12,
-          2,
-          1
-        ],
-        "d2": [
-          1
-        ],
-        "f": [
-          0
-        ],
-        "g": [
-          1
-        ],
-        "gamma": [
-          0,
-          -1,
-          -1,
-          -1,
-          -1
-        ],
-        "h": [
-          0
-        ],
-        "l": [
-          0,
-          1,
-          1,
-          2,
-          3
-        ],
-        "p": [
-          1
-        ],
-        "q": [
-          0
-        ],
-        "rhomolar_reduce": 11183.9,
-        "rhomolar_reduce_units": "mol/m^3",
-        "t1": [
-          0.1,
-          0.25,
-          3.2,
-          0.9,
-          0.3
-        ],
-        "t2": [
-          0
-        ],
-        "type": "modified_Batschinski_Hildebrand"
-      },
-      "sigma_eta": 3.656e-10,
-      "sigma_eta_units": "m"
-    }
+      {
+        "BibTeX": "Lemmon-IJT-2004",
+        "dilute": {
+          "C": 2.66958e-08,
+          "a": [
+            0.431,
+            -0.4623,
+            0.08406,
+            0.005341,
+            -0.00331
+          ],
+          "molar_mass": 0.02801348,
+          "molar_mass_units": "kg/mol",
+          "t": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "type": "collision_integral"
+        },
+        "epsilon_over_k": 98.94,
+        "epsilon_over_k_units": "K",
+        "higher_order": {
+          "T_reduce": 126.192,
+          "T_reduce_units": "K",
+          "a": [
+            1.072e-05,
+            3.989e-08,
+            1.208e-09,
+            -7.402e-06,
+            4.62e-06
+          ],
+          "d1": [
+            2,
+            10,
+            12,
+            2,
+            1
+          ],
+          "d2": [
+            1
+          ],
+          "f": [
+            0
+          ],
+          "g": [
+            1
+          ],
+          "gamma": [
+            0,
+            -1,
+            -1,
+            -1,
+            -1
+          ],
+          "h": [
+            0
+          ],
+          "l": [
+            0,
+            1,
+            1,
+            2,
+            3
+          ],
+          "p": [
+            1
+          ],
+          "q": [
+            0
+          ],
+          "rhomolar_reduce": 11183.9,
+          "rhomolar_reduce_units": "mol/m^3",
+          "t1": [
+            0.1,
+            0.25,
+            3.2,
+            0.9,
+            0.3
+          ],
+          "t2": [
+            0
+          ],
+          "type": "modified_Batschinski_Hildebrand"
+        },
+        "sigma_eta": 3.656e-10,
+        "sigma_eta_units": "m"
+      }
+    ]
   }
 }
