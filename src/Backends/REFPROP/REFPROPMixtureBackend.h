@@ -31,6 +31,17 @@ threads may each own REFPROP instances, but only one uses REFPROP at a time.
 The mutex is recursive because backend methods call one another (e.g.
 update() -> check_loaded_fluid() -> set_REFPROP_fluids()).  Code outside the
 backend that calls REFPROP routines directly must hold it too.
+
+Serialization makes use from several threads exactly as safe as interleaved
+use of several instances from one thread.  Each instance reloads its own
+fluids before calling REFPROP, but only its fluids: state set inside REFPROP
+is lost when another instance loads different fluids.  That covers
+binary-interaction parameters set with set_binary_interaction_*, a
+non-default composition on a predefined .MIX mixture (the reload restores the
+file's composition), and reference states set with set_reference_stateS.
+Instances on different fluids also force a SETUP (a read of the fluid files)
+on nearly every call, and long operations such as phase envelopes hold the
+lock throughout, so concurrent REFPROP use is correct but not fast.
 */
 std::recursive_mutex& REFPROP_mutex();
 /// RAII guard type for REFPROP_mutex()
