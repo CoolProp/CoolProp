@@ -266,3 +266,62 @@ formulation's arithmetic: the 1/ζ₀ division and ζ₂³/ζ₃² − ζ₀ in 
 - **The remaining multiparameter gap to hand code is the exponentials.** Separable AD pays for
   2–4 single-variable Taylor `exp`s per term, while the hand code needs one scalar `exp` plus
   recursions on the argument.
+
+---
+
+# Experiment 4: Chebyshev density rootfinding for PC-SAFT (`pcsaft_cheb.py`)
+
+This asks whether a Bell & Alpert (2018) style all-roots density solver can work for PC-SAFT,
+including mixtures.
+
+**Reformulation.** With η = ζ₃ = ρ·q(T), fixed (T, x) makes the pressure equation univariate
+in η:
+
+  F(η) := ηZ = η + η²·dαr/dη = p·q(T)/(RT)
+
+The target only shifts the constant term. η ∈ [0, 0.74] is a natural bounded interval: close
+packing is π/(3√2) ≈ 0.7405, and the η = 1 pole lies outside it. So the Chebyshev domain is
+*fixed and bounded for every fluid, mixture and temperature*, with no compactification. T and x
+enter only through scalar weights (the same decomposition as Experiment 3). That decomposition
+reproduces ηZ from the direct model to ≤7e-12.
+
+**Singularities.** The distance of the nearest complex singularity from the interval sets the
+degree per piece.
+- η = 1: a pole and a log branch point.
+- Zeros of g_hs: η ≥ 1.5 or ≤ −1 for a ∈ [1, 3]. Note b_i = 2a_i²/9 identically, so the
+  chain term is a one-parameter family in a_i = 3·D_i·r₂.
+- **Poles of C1:** 1/C1 = P(η, m̄) / ((1−η)⁴(2−η)²), with P a degree-6 polynomial that is
+  *affine in m̄*. For long chains P has a real zero just left of η = 0: η ≈ −0.036 at m̄ = 10 and
+  −0.011 at m̄ = 30. That forces 11–14 pieces at n=12.
+  **Fix:** root-find G = P²·(F − target) instead. That is (P²F) − target·P², so the target still
+  enters linearly. The C1 poles are gone and the piece count at n=12 no longer depends on m̄.
+- **Gas root precision:** fit Q = P²Z, which is O(1), and apply the factor η exactly with a
+  Chebyshev multiply-by-x. The absolute error near η = 0 then scales with η.
+
+**Results.** The cases are propane, C1/C2/C3, 70/30 methane/n-decane and n-decane, at
+T = 40–800 K and p = 1e-4 to 1000 MPa (288 cases).
+- **Root counts:** the Chebyshev root count matched a 200 001-point scan with bisection in every
+  case.
+- **Spurious roots:** it finds Privat-type roots, with four roots at low T. The fourth, at
+  η ≈ 0.62–0.72, is past the physical liquid root. Those must be rejected by Gibbs energy, not by
+  mechanical stability.
+- **Accuracy:** the median relative root error is 1.4e-11. With the singularity-based 5 pieces
+  the worst is 4e-6, in n-decane at 40 K, where Z spans orders of magnitude inside the first
+  piece. The singularity bound ignores that amplitude variation. **About 10 pieces at n=12
+  give ≤2e-9 everywhere tested (≤1e-11 at 400 K), and 20 pieces give ≤1e-10.**
+
+**Towards universal tables (not built here).** After multiplying by P²:
+- every term of P²F is a scalar weight w_k(T, x) times a *fluid-independent* function of η;
+- P² is quadratic in m̄, and I₁ and I₂ are affine in (c₁ₘ, c₂ₘ);
+- the one exception is the per-component chain term, a smooth one-parameter family in a_i,
+  i.e. a 2-D table on the (η, a) rectangle.
+
+So the Bell–Alpert "stacked per-term representation" carries over: universal Chebyshev tables
+on fixed rectangles, with runtime assembly as weighted sums of coefficient vectors. Assembly
+cost is small next to the colleague-matrix eigensolves on the 1–3 pieces that can hold a root.
+Neither cost has been measured here.
+
+**Caveats.** Association (the site-fraction solve) and polar terms (Padé forms with their own
+poles, like C1) are not included. Association is smooth in η at fixed (T, x), so a per-(T, x) fit
+from node evaluations works, though it isn't universal. The polar terms' Padé poles need the
+same singularity analysis.
