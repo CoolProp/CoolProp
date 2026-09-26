@@ -4550,37 +4550,114 @@
     }
   },
   "TRANSPORT": {
-    "conductivity": {
-      "BibTeX": "Huber-IECR-2003",
-      "f_int": {
-        "T_reducing": 1.0,
-        "T_reducing_units": "K",
-        "a": [
-          0.00109939,
-          3.72539e-07
-        ],
-        "t": [
-          0,
-          1
-        ]
+    "conductivity": [
+      {
+        "BibTeX": "Assael-JPCRD-2016-Ethylene-Propylene",
+        "dilute": {
+          "type": "expression",
+          "note": "Eq. (18) of Assael, Koutian, Huber & Perkins, J. Phys. Chem. Ref. Data 45(3):033104 (2016), converted from mW/(m K) to W/(m K). Tc = 364.211 K is the paper's own value. The b[0] coefficient is the paper's 1.39367; PROPYLEN.FLD (REFPROP 10.0 and 10.1) carries 1.393679. The two differ by less than 1e-5 relative over 150-700 K, both reproduce the paper's 23.07 mW/(m K) at 350 K and the Table 9 zero-pressure values, and both deviate from the Eqs. (15)-(17) scheme by the same amount (at most 0.043%, at 150 K), so the paper's printed value is used.",
+          "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {
+            "Tc": 364.211
+          },
+          "arrays": {
+            "a": [
+              -1.37218,
+              17.3386,
+              -3.27682,
+              9.34452,
+              12.88,
+              -1.5705
+            ],
+            "b": [
+              1.39367,
+              -1.04648,
+              1.0
+            ]
+          }
+        },
+        "residual": {
+          "type": "expression",
+          "note": "Eq. (5) and Table 7 of Assael, Koutian, Huber & Perkins, J. Phys. Chem. Ref. Data 45(3):033104 (2016), converted from mW/(m K) to W/(m K). Tc = 364.211 K and rhoc = 229.63 kg/m^3 are the paper's own reducing values.",
+          "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-3*sum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+          "state_variables": [
+            "T",
+            "Dmass"
+          ],
+          "constants": {
+            "Tc": 364.211,
+            "rhoc": 229.63
+          },
+          "arrays": {
+            "B1": [
+              2.71511,
+              -36.3839,
+              106.159,
+              -61.6755,
+              10.5424
+            ],
+            "B2": [
+              9.94697,
+              24.2705,
+              -65.9429,
+              37.9916,
+              -5.6912
+            ],
+            "d": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "critical": {
+          "type": "simplified_Olchowy_Sengers",
+          "note": "Section 3.2.2 of Assael, Koutian, Huber & Perkins, J. Phys. Chem. Ref. Data 45(3):033104 (2016): R_D = 1.02, gamma = 1.239, Gamma = 0.057, xi0 = 0.198e-9 m, qD^-1 = 4.3e-10 m, T_ref = 1.5 Tc (the paper prints this rounded to 546.32 K; the rounding moves the check-point enhancement by less than 1e-5 mW/(m K)). All six parameters agree with the TK3 block of PROPYLEN.FLD in REFPROP 10.0 and 10.1. The paper evaluated the enhancement with the extended-corresponding-states viscosity of Huber et al. (2003), 53.841 uPa s at its check point, the same model CoolProp uses for propylene viscosity. CoolProp's ECS implementation gives 53.346 uPa s there, so its enhancement is 4.566 mW/(m K) instead of the paper's 4.52; rescaled by the viscosity ratio it reproduces 4.52.",
+          "GAMMA": 0.057,
+          "R0": 1.02,
+          "gamma": 1.239,
+          "qD": 2325581395.348837,
+          "zeta0": 1.98e-10,
+          "T_ref": 546.3165
+        }
       },
-      "psi": {
-        "a": [
-          1.3521,
-          -0.123177
-        ],
-        "rhomolar_reducing": 5309.0,
-        "rhomolar_reducing_units": "mol/m^3",
-        "t": [
-          0,
-          1
-        ]
-      },
-      "q_D": 1999999999.9999998,
-      "q_D_units": "m",
-      "reference_fluid": "Propane",
-      "type": "ECS"
-    },
+      {
+        "BibTeX": "Huber-IECR-2003",
+        "f_int": {
+          "T_reducing": 1.0,
+          "T_reducing_units": "K",
+          "a": [
+            0.00109939,
+            3.72539e-07
+          ],
+          "t": [
+            0,
+            1
+          ]
+        },
+        "psi": {
+          "a": [
+            1.3521,
+            -0.123177
+          ],
+          "rhomolar_reducing": 5309.0,
+          "rhomolar_reducing_units": "mol/m^3",
+          "t": [
+            0,
+            1
+          ]
+        },
+        "q_D": 1999999999.9999998,
+        "q_D_units": "m",
+        "reference_fluid": "Propane",
+        "type": "ECS"
+      }
+    ],
     "viscosity": {
       "BibTeX": "Huber-IECR-2003",
       "epsilon_over_k": 298.9,

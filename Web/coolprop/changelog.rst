@@ -38,6 +38,23 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity for ethylene, propylene and cyclohexane.**
+  ``PropsSI("L", ..., "Ethylene")`` and ``"CycloHexane"`` previously raised, and
+  propylene used an extended-corresponding-states estimate (Huber et al. 2003), which
+  stays in its fluid file as a fallback.  Ethylene and propylene are Assael, Koutian,
+  Huber and Perkins, *J. Phys. Chem. Ref. Data* **45**\ (3):033104 (2016); cyclohexane is
+  Koutian, Assael, Huber and Perkins, *J. Phys. Chem. Ref. Data* **46**\ (1):013102
+  (2017).  Their dilute and residual terms are expression-DSL data and their critical
+  enhancement is the native simplified Olchowy–Sengers block, as for R161.  Every
+  dilute and residual contribution at the papers' check points agrees with the printed
+  values, and the cyclohexane total (79.66 mW/(m K) at 554 K and 350 kg/m\ :sup:`3`)
+  agrees to 1e-4.  The ethylene and propylene totals do not, because the enhancement
+  divides by the viscosity and the papers used a different one: CoolProp gives 69.90
+  against 69.62 mW/(m K) for ethylene (it uses the Sotiriadou et al. 2024 viscosity,
+  the paper Holland et al. 1983) and 81.52 against 81.47 for propylene (CoolProp's ECS
+  viscosity is 0.9% below the value the paper quotes for the same model).  Rescaled by
+  the viscosity ratio, both enhancements reproduce the papers'.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
