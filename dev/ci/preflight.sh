@@ -343,6 +343,22 @@ else
             *) TAG_FILTER="${TAG_FILTER},[expression]" ;;
         esac
     fi
+    # The isopleth-tracer surface is ORTHOGONAL too.  Its umbrella tag [phase_envelope] covers
+    # the fast [tracers] cases, the documented-example [docs] cases and the [torture] corpus over
+    # every predefined mixture, and it intersects NONE of the branch filters above -- so without
+    # this the gate builds those files and runs none of them.  It has to catch a change to the
+    # test files themselves as well: editing a pinned count is exactly what a regression in this
+    # area looks like, and that alone would otherwise fall through to "~[slow]", which excludes
+    # [torture].  Cost is ~45 s for the torture case.
+    # Paths, and why each one is here: the backend that traces envelopes; the envelope tests
+    # themselves (editing a pinned count is exactly what a regression here looks like); the data
+    # structure they fill; the cubic backends, since the docs test builds an SRK envelope; the
+    # fluid and mixture data the corpus enumerates and pins counts against; and the docs the
+    # docs test transcribes.  Appended unconditionally -- Catch2 comma-ORs, so adding it to
+    # "~[slow]" is what pulls the [slow]-tagged [torture] case back in.
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/Cubics/|src/Tests/CoolProp-Tests-PhaseEnvelope.*\.cpp|include/CoolProp/fluids/PhaseEnvelope\.h|dev/fluids/|dev/mixtures/|Web/)"; then
+        TAG_FILTER="${TAG_FILTER},[phase_envelope]"
+    fi
     echo "  tag filter: $TAG_FILTER"
     # Gate on the runner's EXIT CODE, not on grepping its output.  The old
     # form piped into `grep -qE "failed|Errors:"`, so the `if` saw grep's
