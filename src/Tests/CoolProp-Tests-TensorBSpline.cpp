@@ -247,8 +247,11 @@ TEST_CASE("TensorBSpline2D rejects a degenerate last span", "[TensorBSpline][spl
                           Catch::Matchers::ContainsSubstring("degenerate last span"));
     }
     SECTION("proper domain whose right endpoint is the degenerate span") {
-        // Max run is 2, well under order 3 -- a run-length guard cannot see
-        // this.  Domain is [0, 3]; eval(3.0) is in-domain and was NaN.
+        // The degenerate pair knots[5] == knots[6] has multiplicity 2, so a
+        // run-length guard cannot see it.  (The vector's LONGEST run is 3,
+        // the leading zeros -- equal to the order, hence also accepted by
+        // such a guard.  Either way the degeneracy is invisible to it.)
+        // Domain is [0, 3]; eval(3.0) is in-domain and was NaN.
         const std::vector<double> kx{0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 4.0, 4.0};
         CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(kx, ky_ok, 3, 3, std::vector<double>(std::size_t{6} * 3, 1.0)),
                           Catch::Matchers::ContainsSubstring("degenerate last span"));
@@ -267,9 +270,11 @@ TEST_CASE("TensorBSpline2D rejects a degenerate last span", "[TensorBSpline][spl
 }
 
 TEST_CASE("TensorBSpline2D evaluates at the right endpoint of a minimal spline", "[TensorBSpline][spline]") {
-    // n == order exactly, evaluated AT knots[n] -- the find_span early-return
-    // path at the boundary the size guard protects.  Nothing else reaches it:
-    // other fixtures either only construct, or evaluate via the bisection.
+    // n == order exactly, evaluated AT knots[n].  The early-return path
+    // itself is well covered (five other cases reach it); what is unique
+    // here is the MINIMAL spline, n == order, which is the boundary the
+    // size guard leaves open -- other fixtures with n == order only
+    // construct, never evaluate at the right endpoint.
     const std::vector<double> k{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};  // order 3 -> n = 3 == order
     const cp_spline::TensorBSpline2D sp(k, k, 3, 3, std::vector<double>(9, 1.0));
     CHECK_THAT(sp.eval(1.0, 1.0), Catch::Matchers::WithinAbs(1.0, 1e-14));
@@ -351,7 +356,7 @@ TEST_CASE("TensorBSpline2D high-order derivatives do not overflow the scale fact
                                           -0.427407, 0.627322, -0.835184, -0.123440, 0.635408,  -0.182533, 0.035499,  -0.765920, 0.628013, -0.004265,
                                           -0.503442, 0.553372, 0.958457,  0.076686,  0.474300,  0.985521,  -0.939745, 0.197955,  0.934591, -0.765327};
     const cp_spline::TensorBSpline2D sp(highorder_kx, highorder_ky, 15, 2, highorder_c);
-    // {x, y, d00, d10_0, d12_0, d14_0}
+    // {x, y, d0_0, d10_0, d12_0, d14_0}
     const double ref[][6] = {
       {0.3, 0.5, 0.10790408280695911, 71934819558.937683, 3045415990388.0981, -278259267961772.72},
       {0.7, 0.25, 0.21663003118109, -11773121881.499836, -10597773524988.631, -362545500906504.19},
