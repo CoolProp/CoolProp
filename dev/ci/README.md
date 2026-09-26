@@ -63,7 +63,14 @@ Behaviour notes:
 - **Changed lines only** for cppcheck and clang-tidy, as in CI's diff-only
   lint jobs, so findings that predate the branch no longer make a file
   impossible to touch.  A `.cpp` whose hunks are all deletions is named and
-  not analysed.
+  not analysed.  The flip side, shared with CI: a bug introduced purely by
+  DELETING code (a removed null check or initializer) lands on an unchanged
+  line and is not reported.  The changed-line list is cross-checked against
+  `git diff --numstat`; if a changed file cannot be mapped, preflight exits 2
+  rather than silently skipping it.
+- **What is checked is the working tree**, not the commits being pushed: a
+  defect committed on the branch but fixed only in uncommitted edits passes.
+  Untracked files are not included (`git add -N` them to include them).
 - **Test scope only widens.**  `~[slow]` always runs; a path rule adds its
   tags on top (in practice, its `[slow]` cases), so touching more areas can
   never shrink the sweep.  A `dev/fluids/` change pulls in the slow SVD
@@ -72,7 +79,7 @@ Behaviour notes:
   not a REFPROP install, preflight looks in `~/REFPROP10`, `~/REFPROP`,
   `~/refprop` and `/Applications/REFPROP` and exports the first one that has
   a REFPROP library and a `FLUIDS`/`fluids` directory.  The test stage prints
-  which REFPROP it used.
+  which REFPROP it used.  Set `COOLPROP_REFPROP_ROOT=` (empty) to opt out.
 - **Build dirs.**  `build_catch` / `build_shared` are reconfigured from
   scratch when their `CMakeCache.txt` is missing, truncated, belongs to a
   different source tree, or has no generator file (an interrupted configure).
