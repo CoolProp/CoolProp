@@ -16,6 +16,7 @@
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #   ./dev/ci/preflight.sh --skip=install-headers        # subset
 #   ./dev/ci/preflight.sh --skip=incomp-sanity          # subset
+#   ./dev/ci/preflight.sh --skip=shellcheck,actionlint  # subset
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -24,6 +25,9 @@
 #                         (which already graceful-skips when clang-tidy or
 #                          compile_commands.json isn't around)
 #   - semgrep          : uvx semgrep with p/cpp + p/security-audit rulesets
+#   - shellcheck       : uvx shellcheck-py, changed *.sh only, warning+
+#   - actionlint       : uvx actionlint-py + shellcheck-py, changed
+#                         .github/workflows/*.yml only
 #   - Catch2 tests     : ./build_catch/CatchTestRunner with tag scope
 #                        auto-selected from the changed paths
 #
@@ -74,15 +78,59 @@ cd "$REPO_ROOT"
 # C-family checks care about.  Filters out deleted files (.cpp.cpp at
 # the same path would otherwise be checked even though it no longer
 # exists on disk).
+# --diff-filter=ACMR drops deletions from each diff on its own, but the range
+# diff and the working-tree diff are unioned below, and that union can still
+# name a file that is gone.  A file added in a commit and then deleted in the
+# working tree is "Added" in the range diff, so it survives, while the
+# working-tree diff that would have called it deleted has already filtered it
+# out.  Deleting a workflow file used to break the actionlint gate exactly that
+# way: actionlint was handed a path that no longer existed and refused to run,
+# which fails the gate for a reason that has nothing to do with the workflows.
+keep_existing() {
+    local f dropped=0
+    # "|| [[ -n $f ]]" so a final line with no trailing newline is not eaten.
+    # Every caller below pipes through sort and grep, which always terminate
+    # their output, so this cannot bite today; it bites the first time somebody
+    # reorders the pipeline or calls this directly.
+    while IFS= read -r f || [[ -n "$f" ]]; do
+        if [[ -n "$f" && -e "$f" ]]; then
+            printf '%s\n' "$f"
+        elif [[ -n "$f" ]]; then
+            dropped=$(( dropped + 1 ))
+            printf 'preflight: skipping %s (no longer on disk)\n' "$f" >&2
+        fi
+    done
+    # Dropping paths silently would make a bad cwd or a mangled checkout look
+    # like "no files in diff", and every gate would then skip and report green
+    # while checking nothing.  Saying so on stderr costs nothing and makes that
+    # loud.
+    if (( dropped > 0 )); then
+        printf 'preflight: %d path(s) in the diff no longer exist\n' "$dropped" >&2
+    fi
+    return 0
+}
+
 CHANGED_CPP="$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
 # Also pick up uncommitted changes in the working tree — preflight is
 # meant to gate pushes, but agents often run it mid-edit too.
-UNSTAGED_CPP="$(git diff --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
-ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' || true)"
+UNSTAGED_CPP="$(git diff HEAD --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
+ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' | keep_existing || true)"
 
 # All paths changed (any extension) — used for tag auto-selection.
 ALL_PATHS="$(git diff --name-only "$BASE_REF"...HEAD; git diff --name-only)"
 ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
+
+# Shell scripts and GitHub Actions workflows, same ACMR filtering as the C++
+# set above.  Every C-family check below skips when a diff carries no .cpp/.h,
+# which left a branch made entirely of shell, CMake and YAML (a packaging or
+# CI change, exactly the shape that breaks quietly) reporting
+# "0 passed / 0 failed" and gating nothing.
+CHANGED_SH="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.sh' '*.bash'
+                 git diff HEAD --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
+               | sort -u | grep -v '^$' | keep_existing || true)"
+CHANGED_WORKFLOWS="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml'
+                        git diff HEAD --name-only --diff-filter=ACMR -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; } \
+                      | sort -u | grep -v '^$' | keep_existing || true)"
 
 # ---------- pretty helpers -------------------------------------------
 
@@ -526,6 +574,85 @@ else
         fail "semgrep (see /tmp/preflight-semgrep.log)"
     else
         ok "semgrep ($(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
+    fi
+fi
+
+# ---------- check 6b: shellcheck (changed shell scripts) -------------
+#
+# Scoped to changed files on purpose: a handful of legacy scripts carry
+# pre-existing findings (two missing shebangs, and broken `[` test expressions
+# in wrappers/Fluent/), and blocking an unrelated push on those helps nobody.
+# --severity=warning keeps style and info out of the way for the same reason;
+# drop it once the tree is clean if you want SC2086 enforced too.
+step "shellcheck (changed shell scripts)"
+if skip_check shellcheck; then
+    skip "shellcheck" "--skip=shellcheck"
+elif [ -z "$CHANGED_SH" ]; then
+    skip "shellcheck" "no shell scripts in diff"
+elif ! command -v uvx >/dev/null 2>&1; then
+    skip "shellcheck" "uvx not on PATH"
+else
+    # Unquoted on purpose, as with $ALL_CPP above: the file list has to split.
+    # shellcheck disable=SC2086
+    if ! uvx --from shellcheck-py shellcheck --severity=warning $CHANGED_SH \
+         > /tmp/preflight-shellcheck.log 2>&1; then
+        cat /tmp/preflight-shellcheck.log
+        fail "shellcheck (see /tmp/preflight-shellcheck.log)"
+    else
+        ok "shellcheck ($(printf '%s\n' "$CHANGED_SH" | wc -l | tr -d ' ') file(s))"
+    fi
+fi
+
+# ---------- check 6c: actionlint (changed workflows) -----------------
+#
+# Catches the GitHub Actions mistakes that only show up as a red run: bad
+# `needs:` references, unknown contexts, deprecated runner images, and broken
+# shell inside `run:` blocks (through shellcheck, see below).
+#
+# Note for anyone editing the comments here: a line starting with the word
+# "shellcheck" after the # is parsed as a shellcheck directive, and an
+# unparseable one is an SC1073 error. Keep the word off the start of a comment.
+step "actionlint (changed workflows)"
+if skip_check actionlint; then
+    skip "actionlint" "--skip=actionlint"
+elif [ -z "$CHANGED_WORKFLOWS" ]; then
+    skip "actionlint" "no workflow files in diff"
+elif ! command -v uvx >/dev/null 2>&1; then
+    skip "actionlint" "uvx not on PATH"
+else
+    # --with shellcheck-py is load-bearing, not a nicety.  actionlint shells out
+    # to a shellcheck BINARY to lint `run:` blocks, and silently lints none of
+    # them when there is no such binary on PATH: a workflow whose shell is
+    # plainly broken then exits 0.  Verified both ways before relying on it.
+    #
+    # SHELLCHECK_OPTS matches the severity floor of the check above, so touching
+    # a workflow does not fail on style findings in steps you did not write.
+    # Confirmed it filters rather than disables: a warning-level bug in a `run:`
+    # block still fails with it set.  (Some warnings legitimately disappear
+    # regardless, because actionlint prepends `set -e` as Actions does, under
+    # which SC2164 and friends are dropped by design.)
+    # Prove the binary is really there before trusting the run.  Everything
+    # above rides on uv happening to expose shellcheck on PATH inside the
+    # ephemeral environment, and NOTHING in the lint itself says whether it
+    # did: with no binary, actionlint lints zero `run:` blocks and exits 0, so
+    # the step would report a pass while gating nothing.  That is the
+    # fail-open shape CLAUDE.md calls out, and it would arrive silently - a uv
+    # change to `--with` entry points, a platform with no shellcheck-py wheel,
+    # or somebody "simplifying" the flag away.  Fail the step instead.
+    if ! uvx --with shellcheck-py --from actionlint-py \
+         sh -c 'command -v shellcheck' > /tmp/preflight-actionlint-probe.log 2>&1; then
+        cat /tmp/preflight-actionlint-probe.log
+        fail "actionlint (no shellcheck binary in the uvx environment; run: blocks would not be linted)"
+    else
+        # shellcheck disable=SC2086
+        if ! SHELLCHECK_OPTS="--severity=warning" \
+             uvx --with shellcheck-py --from actionlint-py actionlint $CHANGED_WORKFLOWS \
+             > /tmp/preflight-actionlint.log 2>&1; then
+            cat /tmp/preflight-actionlint.log
+            fail "actionlint (see /tmp/preflight-actionlint.log)"
+        else
+            ok "actionlint ($(printf '%s\n' "$CHANGED_WORKFLOWS" | wc -l | tr -d ' ') file(s), shell linting confirmed active)"
+        fi
     fi
 fi
 

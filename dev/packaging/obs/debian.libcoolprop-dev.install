@@ -1,0 +1,4 @@
+usr/include/CoolProp
+usr/lib/*/libCoolProp.so
+usr/lib/*/pkgconfig/coolprop.pc
+usr/lib/*/cmake/CoolProp
