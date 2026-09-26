@@ -183,3 +183,86 @@ solve costs a further factor of about 2–5.
    triangle costs 7–11× more than the targeted `Dual2`/`Dual3` request (789 vs ~110 ns).
    Filling to N=2 costs about 1.5×. A tiered cache sidesteps the choice: fill to N=2 by default
    and upgrade to N=4 lazily when a 3rd/4th-order quantity is requested.
+
+---
+
+# Experiment 3: exploiting structure — hand derivatives vs structure-aware AD
+
+This asks whether the ~17× penalty is intrinsic to AD or comes from ignoring the model's
+structure. The experiment has two halves:
+
+- **Multiparameter (CoolProp, hand-coded).** `coolprop_bench.cpp` times
+  `ResidualHelmholtzGeneralizedExponential::all()`, which fills the whole i+j ≤ 4 triangle, and
+  `all_deltaonly()`. It compares them against a value-only loop over the same term arrays, a naive
+  `Taylor2<4>` pass over every term, and a **separable AD** version. The separable version runs a
+  single-variable `Taylor1<4>` in δ and in τ per term, then forms the outer product n·F_j(δ)·G_i(τ).
+  The bench checks that the GenExp block is the fluid's entire residual.
+- **PC-SAFT, structure-aware AD** (`methods_all/a_structured.cpp`). The model is written in
+  (η, T) with η = ρ·q(T). At fixed composition, αr = Σ cₖ(T)·φₖ(η) + Σᵢ ln gᵢᵢ(η; T). All the η
+  arithmetic (I₁, I₂, C₁, the hard-sphere rationals) runs in single-variable Taylor arithmetic,
+  and so does all the T arithmetic. The only bivariate work is composing onto
+  η(u, v) = ρ₀(1+v)·q(u): shared powers of H = η − η₀, one axpy per φₖ, one
+  single-variable × bivariate product per coefficient, and one bivariate log per component.
+
+Build the multiparameter bench against a Release static CoolProp:
+
+```bash
+cmake -B build_rel -S ../.. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON && cmake --build build_rel -j8
+# then compile coolprop_bench.cpp with the CXX_INCLUDES from
+# build_rel/CMakeFiles/CoolProp.dir/flags.make, plus -I. and build_rel/libCoolProp.a
+```
+
+## Multiparameter: ns per call, whole N=4 triangle (15 values)
+
+| fluid, state | terms | value only | **hand `all()`** | hand δ-only | naive AD | separable AD |
+|---|---|---|---|---|---|---|
+| propane, 300 K, 11 000 mol/m³ | 18 | 111 | **315** (2.8×) | 209 (1.9×) | 1670 (15×) | 576 (5.2×) |
+| propane, 300 K, 100 mol/m³ | 18 | 105 | **317** (3.0×) | 209 | 1628 (16×) | 564 (5.4×) |
+| nitrogen, 100 K, 25 000 mol/m³ | 36 | 235 | **678** (2.9×) | 471 | 4037 (17×) | 1324 (5.6×) |
+| nitrogen, 300 K, 400 mol/m³ | 36 | 246 | **707** (2.9×) | 495 | 3996 (16×) | 1350 (5.5×) |
+| R1234yf, 300 K, 10 000 mol/m³ | 17 | 106 | **298** (2.8×) | 196 | 1450 (14×) | 551 (5.2×) |
+| n-decane, 400 K, 4500 mol/m³ | 12 | 80 | **208** (2.6×) | 137 | 1075 (13×) | 315 (3.9×) |
+
+Agreement with the hand values is ≤2e-14 at the dense states. At the dilute states, the naive and
+separable AD differ from the hand code by up to 4e-11 and 5e-12 respectively, concentrated in the
+small high-order δ-terms. There is no independent reference here, so which side is right is
+unresolved.
+
+## PC-SAFT: ns per call, whole triangle (same run and machine state as the table below)
+
+| | value only | N=2 | N=4 | N=4 / value |
+|---|---|---|---|---|
+| propane (liquid) | 55 | | | |
+| naive one-shot (`taylor2`) | | 200 | 1025 | 19× |
+| teqp scheme | | 545 | 8671 | 158× |
+| **structure-aware** | | **117** | **320** | **5.8×** |
+| C1/C2/C3 mixture | 114 | | | |
+| naive one-shot | | 323 | 1982 | 17× |
+| **structure-aware** | | **188** | **518** | **4.5×** |
+
+Compile cost at N=4 is 0.16 s and 12 kB per model, about the same as polarization and a third
+of the naive one-shot or teqp scheme.
+
+**Accuracy: this corrects Experiments 1–2.** The structure-aware form stays at ≤9e-15 through
+4th order *at the dilute gas state*, where every generic formulation lost 5–6 digits (1e-9).
+The loss attributed above to "evaluating αr in double" is really cancellation in the generic
+formulation's arithmetic: the 1/ζ₀ division and ζ₂³/ζ₃² − ζ₀ in a_hs, where the terms scale like
+1/ρ and cancel. It is a property of that computational graph. Writing the model in η removes it.
+
+## Summary: cost of the full 4th-order triangle relative to one value evaluation
+
+| model | hand | structure-aware AD | naive one-shot AD |
+|---|---|---|---|
+| multiparameter (GenExp) | 2.6–3.0× | 3.9–5.6× | 13–17× |
+| PC-SAFT | (not hand-coded) | 4.5–5.8× | 17–19× |
+
+- **Hand derivatives are cheap, but not quite "a couple of flops per order".** The recursion adds
+  about 70 flops per term against 1–3 transcendentals in the value. Measured, the full triangle is
+  about 2.8× a value evaluation, and the δ-only path is about 1.9×.
+- **Most of the naive AD penalty is structure, not AD.** Generic bivariate AD costs about 15× on
+  the multiparameter form too. With structure respected, AD lands within 1.5–2× of hand code on
+  the multiparameter form. PC-SAFT then costs about the same per value evaluation as CoolProp's
+  hand-coded multiparameter derivatives.
+- **The remaining multiparameter gap to hand code is the exponentials.** Separable AD pays for
+  2–4 single-variable Taylor `exp`s per term, while the hand code needs one scalar `exp` plus
+  recursions on the argument.

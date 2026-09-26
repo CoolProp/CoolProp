@@ -6,7 +6,7 @@
 #include "api_all.hpp"
 
 using namespace spike;
-MethodAll methodall_taylor2(int), methodall_polar(int), methodall_teqp(int);
+MethodAll methodall_taylor2(int), methodall_polar(int), methodall_teqp(int), methodall_structured(int);
 MethodTable method_double(int), method_numdual(int);
 
 template <class F>
@@ -40,7 +40,7 @@ int main() {
     };
     std::printf("kind,method,N,state,i,j,value\n");
     volatile double sink = 0;
-    for (auto mk : {methodall_taylor2, methodall_polar, methodall_teqp}) {
+    for (auto mk : {methodall_taylor2, methodall_polar, methodall_teqp, methodall_structured}) {
         const MethodAll m = mk(0);
         for (int N = 1; N <= NMAXORDER; ++N) {
             if (!m.byN[N]) continue;

@@ -16,7 +16,7 @@ import mpmath as mp
 
 from run_spike import CXX, HERE, INC, STATES, alphar_mp, text_size
 
-METHODS = ["taylor2", "polar", "teqp"]
+METHODS = ["taylor2", "polar", "teqp", "structured"]
 
 
 def cc(src, out, *flags):
