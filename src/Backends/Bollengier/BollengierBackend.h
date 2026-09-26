@@ -49,7 +49,7 @@ class BollengierBackend : public AbstractState
     /// NOTE ON THE REFERENCE STATE.  This backend reports the published
     /// surface as-is.  Bollengier et al. do not use the IAPWS convention:
     /// at the triple-point saturated-liquid state (273.16 K, 611.657 Pa)
-    /// this model gives h = 71.0954 J/kg and s = 0.2576805 J/kg/K, where
+    /// this model gives h = 71.2317874 J/kg and s = 0.2581766665 J/kg/K, where
     /// IAPWS-95 has 0.6117817 and 0.
     ///
     /// No shift is applied, deliberately.  h and s are defined only up to
@@ -68,8 +68,8 @@ class BollengierBackend : public AbstractState
     /// Note also that re-anchoring to IAPWS would NOT buy cross-backend
     /// agreement: it forces equality at the reference point and moves
     /// everything else further away.  Measured at 300 K, 0.1 MPa the
-    /// unshifted model differs from IAPWS-95 by -5.5 J/kg in h; shifted it
-    /// differs by -76.  The residual is a genuine cp difference in the cold
+    /// unshifted model differs from IAPWS-95 by -4.25 J/kg in h; shifted it
+    /// differs by -74.9.  The residual is a genuine cp difference in the cold
     /// liquid region, not a datum mismatch.
 
     /// Published validity domain, as stated in the paper.  These are
@@ -118,6 +118,12 @@ class BollengierBackend : public AbstractState
         }();
         return d;
     }
+
+    /// Upper bound on the isentropic stiffness, expressed as a speed of
+    /// sound [m/s].  Measured from this surface: max w below 1500 MPa is
+    /// 3120 m/s, p99 over the full rectangle is 4375 m/s.  See the guard in
+    /// update() for why a finiteness test alone is insufficient.
+    static constexpr double kMaxSoundSpeed = 6000.0;
 
     /// Molar mass of water, IAPWS-95 value [kg/mol].
     static constexpr double kMolarMass = 0.018015268;
@@ -241,19 +247,36 @@ class BollengierBackend : public AbstractState
         const double dvdP_s = dvdP_T + T_K * dvdT_P * dvdT_P / _cp;
         _w = std::sqrt(-_v * _v / dvdP_s);
 
-        // The advertised domain is a RECTANGLE, but the paper's real validity
-        // is bounded by the melting curve: the cold high-pressure corner
-        // (p >~ 1817 MPa, T <~ 249 K) lies deep in the ice VI/VII field, and
-        // there the fitted surface has (dv/dP)_T >= 0.  That makes dvdP_s
-        // positive, so w comes out NaN -- and cv comes out negative or
-        // absurd -- at ~0.1% of in-domain points.  Returning those would be
-        // exactly the silent non-finite propagation TensorBSpline2D refuses
-        // to do, one layer up.
-        if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0) {
-            throw ValueError(format("BollengierBackend: the surface is not thermodynamically stable at p = %g Pa, T = %g K "
-                                    "((dv/dP)_T >= 0). This corner of the published rectangle lies inside the ice VI/VII "
-                                    "field, where the liquid representation does not apply.",
-                                    p_Pa, T_K));
+        // The advertised domain is a RECTANGLE, but the fit is not
+        // physically admissible throughout it: in the cold high-pressure
+        // region (p >~ 1815 MPa, T <~ 250 K) it loses convexity, and
+        // (dv/dP)_s passes through zero.
+        //
+        // Guarding on isfinite alone is NOT enough, and that was the first
+        // attempt here.  Approaching the sign change from the stable side
+        // (dv/dP)_s -> 0 CONTINUOUSLY, so w -> +inf and cv -> 0 smoothly:
+        // every point before the flip is finite and passes.  Measured, that
+        // let through 2303 points with w > 6000 m/s -- including
+        // w = 121 km/s with cv = 2.2 J/kg/K at 1901.8 MPa, 239 K, one MPa
+        // from a rejection -- against only 776 points actually rejected.
+        // The absurd-but-finite band was three times larger than the band
+        // the guard caught.  Rejecting NaN while serving 121 km/s is not a
+        // safeguard, it is a safeguard-shaped no-op.
+        //
+        // So bound the isentropic stiffness directly.  kMaxSoundSpeed is
+        // set from the surface itself, not guessed: over the whole domain
+        // below 1500 MPa -- deep liquid, far from the bad corner -- w never
+        // exceeds 3120 m/s, and the 99th percentile across the entire
+        // rectangle is 4375 m/s.  6000 m/s leaves ~2x headroom over any
+        // value the model produces where it is physical, and is still half
+        // the speed of sound in diamond, which compressed water cannot
+        // approach.
+        if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0 || _w > kMaxSoundSpeed) {
+            throw ValueError(format("BollengierBackend: the fitted surface is not physically admissible at p = %g Pa, T = %g K "
+                                    "(speed of sound %g m/s, cv %g J/kg/K). This is where the representation loses convexity, "
+                                    "in the cold high-pressure corner of the published rectangle; it is a limit of the fit, "
+                                    "not a domain boundary.",
+                                    p_Pa, T_K, _w, _cv));
         }
 
         _p_Pa = p_Pa;

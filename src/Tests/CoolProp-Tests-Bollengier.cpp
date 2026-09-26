@@ -52,9 +52,9 @@ TEST_CASE("Bollengier backend agrees with IAPWS-95 where both are well constrain
             // cp, cv and w had no coverage at all before; all three come from
             // second partials, where a sign or unit error is most likely and
             // least visible in density.
-            CHECK_THAT(AS->cpmass(), Catch::Matchers::WithinRel(ref->cpmass(), 2e-3));
-            CHECK_THAT(AS->cvmass(), Catch::Matchers::WithinRel(ref->cvmass(), 2e-3));
-            CHECK_THAT(AS->speed_sound(), Catch::Matchers::WithinRel(ref->speed_sound(), 3e-3));
+            CHECK_THAT(AS->cpmass(), Catch::Matchers::WithinRel(ref->cpmass(), 2e-4));
+            CHECK_THAT(AS->cvmass(), Catch::Matchers::WithinRel(ref->cvmass(), 2e-4));
+            CHECK_THAT(AS->speed_sound(), Catch::Matchers::WithinRel(ref->speed_sound(), 5e-4));
             // Stability, independent of any reference: these must hold for
             // any physically sensible liquid.
             CHECK(AS->cvmass() < AS->cpmass());
@@ -197,14 +197,28 @@ TEST_CASE("Bollengier backend range guard throws, and is pinned open", "[Bolleng
         CHECK_THROWS_AS(AS->update(PT_INPUTS, -std::numeric_limits<double>::denorm_min(), 300.0), CoolProp::ValueError);
     }
     SECTION("the advertised bounds are the paper's, to within a ULP") {
-        // Pins the bounds against being widened OR narrowed, which
-        // CHECK_THROWS_AS alone cannot do -- the spline throws the same
-        // exception type, so a widened backend guard would still "throw"
-        // and pass.  Comparing the reported limits to the paper's literals
-        // catches it.
         CHECK_THAT(AS->pmax(), Catch::Matchers::WithinRel(kPmaxMPa * 1e6, 1e-9));
         CHECK_THAT(AS->Tmin(), Catch::Matchers::WithinRel(kTminK, 1e-9));
         CHECK_THAT(AS->Tmax(), Catch::Matchers::WithinRel(kTmaxK, 1e-9));
+    }
+    SECTION("the backend guards the domain itself, not the spline underneath") {
+        // The fitted knots and the paper's literals differ at ULP level
+        // (2300.5999999999995 vs 2300.6).  If the guard compared against
+        // the literal, p = 2300.6 MPa would pass it and then throw from
+        // INSIDE TensorBSpline2D.
+        //
+        // Asserting only CHECK_THROWS_AS(..., ValueError) cannot tell those
+        // apart -- the spline throws the same type -- so this pins the
+        // message SOURCE.  Verified by mutation: reverting the guard to the
+        // paper literals left all other assertions in this file passing.
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, kPmaxMPa * 1e6, 400.0), Catch::Matchers::ContainsSubstring("BollengierBackend"));
+        // ...and the backend must accept its OWN advertised limit, which is
+        // the other half: a guard that simply refused everything near the
+        // top would also produce a BollengierBackend message.
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, AS->pmax(), 400.0));
+        CHECK(std::isfinite(AS->rhomass()));
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, 1e5, AS->Tmin()));
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, 1e5, AS->Tmax()));
     }
     SECTION("just inside each bound, in the stable region, it must NOT throw") {
         const double eps = 1e-6;
@@ -221,20 +235,64 @@ TEST_CASE("Bollengier backend range guard throws, and is pinned open", "[Bolleng
     }
 }
 
-TEST_CASE("Bollengier backend refuses the ice-field corner rather than returning NaN", "[Bollengier][water][nan]") {
-    // The advertised domain is a RECTANGLE, but the model's real validity is
-    // bounded by the melting curve.  The cold high-pressure corner lies deep
-    // in the ice VI/VII field, and there the fitted surface has
-    // (dv/dP)_T >= 0, which makes the speed of sound NaN and cv negative or
-    // absurd.  Returning those would be precisely the silent non-finite
-    // propagation TensorBSpline2D refuses to do, one layer up.
+TEST_CASE("Bollengier backend refuses states where the fit is not physical", "[Bollengier][water][nan]") {
+    // The advertised domain is a RECTANGLE, but the fit loses convexity in
+    // its cold high-pressure corner.  A finiteness test alone is NOT a
+    // sufficient guard there: (dv/dP)_s passes through zero continuously,
+    // so w diverges smoothly and everything short of the sign flip is
+    // finite.  Measured, that admitted w = 121 km/s at 1901.8 MPa / 239 K.
     auto AS = make();
-    CHECK_THROWS_AS(AS->update(PT_INPUTS, kPmaxMPa * 1e6, kTminK), CoolProp::ValueError);
-    CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2290.0e6, 240.0), Catch::Matchers::ContainsSubstring("not thermodynamically stable"));
-    // The same pressure at a warmer temperature is fine, so this is not a
-    // pressure-bound problem in disguise.
-    REQUIRE_NOTHROW(AS->update(PT_INPUTS, 2290.0e6, 400.0));
-    CHECK(std::isfinite(AS->speed_sound()));
+
+    SECTION("a finite but absurd state is refused") {
+        // NOT at a domain edge -- 1901.8 MPa is comfortably inside the
+        // rectangle, and the NEIGHBOURING pressure yields NaN.  This point
+        // is the one that passed every clause of the first guard.
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1901.829e6, 239.0), Catch::Matchers::ContainsSubstring("not physically admissible"));
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2175.0e6, 239.0), Catch::Matchers::ContainsSubstring("not physically admissible"));
+    }
+    SECTION("the NaN case is refused too") {
+        // Interior, away from any bound, so the range guard cannot be what
+        // fires -- an earlier version of this test used p = pmax exactly and
+        // was satisfied by the PRESSURE guard, passing even with the
+        // stability guard deleted.
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1900.0e6, 239.0), Catch::Matchers::ContainsSubstring("not physically admissible"));
+    }
+    SECTION("the same pressures are fine when warm") {
+        // So this is not a disguised pressure bound.
+        for (const double p_MPa : {1900.0, 2175.0, 2290.0}) {
+            INFO("p = " << p_MPa << " MPa, T = 400 K");
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, p_MPa * 1e6, 400.0));
+            CHECK(std::isfinite(AS->speed_sound()));
+        }
+    }
+    SECTION("every accepted state is physically sane") {
+        // Sweeps the rectangle and asserts that whatever survives the guard
+        // has a sensible sound speed and heat capacity.  Nothing previously
+        // bounded an ACCEPTED point's w or cv, which is how the absurd band
+        // went unnoticed.
+        int accepted = 0;
+        for (int i = 0; i <= 60; ++i) {
+            for (int j = 0; j <= 40; ++j) {
+                const double p_MPa = 2300.0 * i / 60.0;
+                const double T = 239.0 + (501.0 - 239.0) * j / 40.0;
+                try {
+                    AS->update(PT_INPUTS, p_MPa * 1e6, T);
+                } catch (const CoolProp::ValueError&) {
+                    continue;  // refused on purpose
+                }
+                ++accepted;
+                INFO("p = " << p_MPa << " MPa, T = " << T << " K");
+                REQUIRE(std::isfinite(AS->speed_sound()));
+                CHECK(AS->speed_sound() > 800.0);
+                CHECK(AS->speed_sound() < 6000.0);
+                CHECK(AS->cvmass() > 0.0);
+                CHECK(AS->cvmass() < AS->cpmass());
+                CHECK(AS->rhomass() > 700.0);
+                CHECK(AS->rhomass() < 1600.0);
+            }
+        }
+        REQUIRE(accepted > 2000);  // the guard must not be rejecting the domain
+    }
 }
 
 TEST_CASE("Bollengier backend reports the published reference state unshifted", "[Bollengier][water][reference]") {
@@ -282,7 +340,10 @@ TEST_CASE("Bollengier backend property map satisfies the Maxwell relations", "[B
             // zero (~15 J/kg/K at 1000 MPa on this datum), where a purely
             // relative tolerance measures the wrong thing.
             CHECK_THAT(s_fd, Catch::Matchers::WithinRel(AS->smass(), 5e-5) || Catch::Matchers::WithinAbs(AS->smass(), 1e-2));
-            CHECK_THAT(v_fd, Catch::Matchers::WithinRel(1.0 / AS->rhomass(), 5e-5));
+            // The v branch is NOT truncation-limited the way the s branch
+            // is -- measured residuals are 1e-11..1e-10 -- so 5e-5 there
+            // would let a 1e-7 error in the MPa unit factor pass unnoticed.
+            CHECK_THAT(v_fd, Catch::Matchers::WithinRel(1.0 / AS->rhomass(), 1e-8));
         }
     }
 }
