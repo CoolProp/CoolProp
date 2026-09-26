@@ -504,6 +504,31 @@ vel conductivity_validation_data[] = {
   vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
   vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 3e-3),  // Relaxed tolerance because conductivity was fit using older viscosity correlation
 
+  // Monogenidou, JPCRD, 2018 - Sec. 3 check value (see also the contributions test below)
+  vel("Ammonia", "T", 390, "Dmass", 415.0, "L", 264.129743e-3, 1e-4),
+
+  // Assael, JPCRD, 2017 - Table 11
+  vel("n-Undecane", "T", 550, "Dmass", 1e-9, "L", 31.153e-3, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 10, "L", 31.211e-3, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 1e-9, "L", 41.522e-3, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 325, "L", 78.669e-3, 1e-4),
+  // PINNED to CoolProp's own output, not Table 11's 104.28 mW/(m K).  The EOS is the
+  // paper's (Aleksandrov 2011), but Table 11 was generated with REFPROP, whose TK3
+  // enhancement keeps a small dense-liquid contribution that Eq. (19) of the paper does
+  // not have.  Here the paper's equations give an enhancement of 0.144 mW/(m K) (also
+  // evaluated independently on REFPROP's EOS: 104.2449 in total) where REFPROP gives
+  // 0.175 (104.276).  CoolProp follows the equations.
+  vel("n-Undecane", "T", 550, "Dmass", 600, "L", 104.24492571630205e-3, 1e-6),
+
+  // Sotiriadou, IJT, 2024 - Sec. 4.2
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-9, "L", 12.2206e-3, 1e-4),
+  // PINNED to CoolProp's own output, not the paper's 159.8654 mW/(m K).  The EOS is the
+  // paper's (Fiedler 2023), but the paper's value includes a 0.0408 mW/(m K) critical
+  // enhancement from REFPROP's TK3 routine; with the paper's Eq. (17) the susceptibility
+  // difference is negative here, so the enhancement is zero and the total is the
+  // background, 159.8246 (checked against the paper in the test case below).
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "L", 159.82456074842671e-3, 1e-6),
+
   // From Assael, JPCRD, 2013
   vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
   vel("Ethanol", "T", 400, "Dmass", 2, "L", 26.108e-3, 1e-4),
@@ -653,10 +678,6 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 2e-4),
   vel("R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4),
 
-  // From REFPROP 9.1 since no sample data provided in Tufeu
-  vel("Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4),
-  vel("Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 2e-3),
-
   // From Hands, Cryogenics, 1981
   vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-2),
   vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-2),
@@ -755,6 +776,60 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
         CAPTURE(el.expected);
         CAPTURE(actual);
         CHECK(std::abs(actual / el.expected - 1) < el.tol);
+    }
+}
+
+// Monogenidou, Assael & Huber, JPCRD 47:043101 (2018), Sec. 3: at 390 K / 415 kg/m^3
+// the dilute, residual and critical contributions are 35.969501, 218.750277 and
+// 9.409965 mW/(m K).  Checking each term separately guards the units of the residual
+// coefficients (Table 2 labels them mW/(m K); they are W/(m K)) and the enhancement
+// parameters independently of one another.
+TEST_CASE("Ammonia conductivity contributions match Monogenidou (2018)", "[conductivity],[transport]") {
+    // Ammonia's conductivity is a list (new correlation first, Tufeu 1984 kept as a
+    // fallback entry); the loader must pick the first entry
+    CHECK(CoolProp::get_fluid_param_string("Ammonia", "BibTeX-CONDUCTIVITY") == "Monogenidou-JPCRD-2018-ammonia-conductivity");
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ammonia"));
+    AS->update(CoolProp::DmassT_INPUTS, 415.0, 390.0);
+    CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+    AS->conductivity_contributions(dilute, initial_density, residual, critical);
+    CAPTURE(dilute);
+    CAPTURE(initial_density);
+    CAPTURE(residual);
+    CAPTURE(critical);
+    CHECK(std::abs(dilute / 35.969501e-3 - 1) < 1e-6);
+    CHECK(initial_density == 0);
+    CHECK(std::abs(residual / 218.750277e-3 - 1) < 1e-6);
+    CHECK(std::abs(critical / 9.409965e-3 - 1) < 1e-6);
+}
+
+// n-Undecane: Assael, Papalas & Huber, JPCRD 46:033103 (2017), Table 11, footnote a:
+// 69.829 mW/(m K) at 635 K / 325 kg/m^3 with the critical enhancement set to zero.
+// Tetrahydrofuran: Sotiriadou et al., IJT 45:123 (2024), Sec. 4.2: 159.8654 mW/(m K)
+// at 300 K / 900 kg/m^3, of which the paper attributes 0.0408 to the critical
+// enhancement, so the background is 159.8246.
+TEST_CASE("n-Undecane and THF conductivity backgrounds match their papers", "[conductivity],[transport]") {
+    struct Case
+    {
+        std::string fluid;
+        double T, rho, background;
+    };
+    for (const Case& c : {Case{"n-Undecane", 635.0, 325.0, 69.829e-3}, Case{"Tetrahydrofuran", 300.0, 900.0, 159.8246e-3}}) {
+        CAPTURE(c.fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluid));
+        AS->update(CoolProp::DmassT_INPUTS, c.rho, c.T);
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(std::abs((dilute + initial_density + residual) / c.background - 1) < 1e-4);
+        // Both states carry a well-defined enhancement from the paper's own equations:
+        // positive at the near-critical undecane state, exactly zero in the THF liquid
+        if (c.fluid == "n-Undecane") {
+            CHECK(critical > 0);
+        } else {
+            CHECK(critical == 0);
+        }
     }
 }
 

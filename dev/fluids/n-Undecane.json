@@ -4145,6 +4145,81 @@
           ]
         }
       }
+    },
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2017-undecane",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (14) of Assael, Papalas & Huber, J. Phys. Chem. Ref. Data 46:033103 (2017), converted from mW/(m K) to W/(m K). Tc = 638.8 K is the paper's own value (from the Aleksandrov et al. EOS).",
+        "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 638.8
+        },
+        "arrays": {
+          "a": [
+            -37.3793,
+            767.377,
+            -3043.34,
+            9056.43,
+            -5922.11,
+            1527.46
+          ],
+          "b": [
+            27.743,
+            27.1621,
+            1.0
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (15) and Table 6 of Assael et al. (2017), converted from mW/(m K) to W/(m K). Tc = 638.8 K and rhoc = 236.7914 kg/m^3 are the paper's own reducing values.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-3*sum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 638.8,
+          "rhoc": 236.7914
+        },
+        "arrays": {
+          "B1": [
+            -57.3413,
+            81.5949,
+            -35.4049,
+            8.31716,
+            -0.723814
+          ],
+          "B2": [
+            64.6731,
+            -44.3965,
+            1.53679,
+            3.20177,
+            -0.308355
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Section 3.3 of Assael et al. (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.059, xi0 = 0.267e-9 m, qD^-1 = 8.66e-10 m, T_ref = 1.5 Tc = 958.2 K. (The PMC rendering of Sec. 3.3 prints the amplitude as 'gamma = 0.059'; it is Gamma.) Identical to the TK3 block of C11.FLD in REFPROP 10.0 and 10.1. On REFPROP's Aleksandrov EOS, the paper's equations reproduce the Table 11 values at 550 K / 10 kg/m^3 and 635 K / 325 kg/m^3, but at 550 K / 600 kg/m^3 they give 104.245 mW/(m K) against the tabulated 104.28. There the susceptibility difference of Eq. (19) is barely positive and the enhancement is 0.144 mW/(m K); REFPROP's TK3 routine gives 0.175, and 104.276 in total, because it holds the correlation length at a floor in the dense liquid that Eq. (19) does not have. Table 11 was evidently generated with REFPROP. This block follows the paper's equations.",
+        "GAMMA": 0.059,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 1154734411.0854504,
+        "zeta0": 2.67e-10,
+        "T_ref": 958.2
+      }
     }
   }
 }
