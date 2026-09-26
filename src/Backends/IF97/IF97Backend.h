@@ -175,11 +175,22 @@ class IF97Backend : public AbstractState
     @param value2 Second input value
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override {
-        // Refuse a quality outside [0,1] (NaN included) before clear() or any
-        // _p/_Q/_T write, so a rejected input leaves the state intact.
+        // Quality first, so a non-finite or out-of-range Q keeps the
+        // "[Q] must be between 0 and 1" diagnostic every backend uses.
         check_input_quality(input_pair, value1, value2);
 
         double H, S, hLmass, hVmass, sLmass, sVmass;
+
+        // Reject non-finite inputs up front, for every pair.  IF97's region
+        // selectors do not propagate NaN: HmassP / PSmass with p = NaN and
+        // HmassSmass with h or s = NaN previously returned T = 273.15 K and a
+        // gas / two-phase state without complaint.  Same exception type and
+        // "is not a valid number" wording as HEOS's post-update checks.  Any
+        // quality has already passed check_input_quality, so it is finite.
+        if (!std::isfinite(value1) || !std::isfinite(value2)) {
+            throw ValueError(format("IF97: input [%s] is not a valid number: value1 = %g, value2 = %g", get_input_pair_short_desc(input_pair).c_str(),
+                                    value1, value2));
+        }
 
         clear();  //clear the few cached values we are using
 
