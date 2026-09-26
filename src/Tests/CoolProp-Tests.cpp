@@ -5976,6 +5976,44 @@ TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality
             CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::PQ_INPUTS, 1e6, q, guesses), between_0_and_1);
             CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QT_INPUTS, q, 300.0, guesses), between_0_and_1);
         }
+        // The DQ/HQ/QS arms used to write _Q (and rho/h/s) before the guard, so
+        // a rejected quality stayed readable through Q().  Start from a
+        // single-phase state and check the bad value never lands.
+        for (auto pair : {CoolProp::DmolarQ_INPUTS, CoolProp::HmolarQ_INPUTS, CoolProp::QSmolar_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+                if (pair == CoolProp::QSmolar_INPUTS) {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, q, 100.0, guesses), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, 100.0, q, guesses), between_0_and_1);
+                }
+                CHECK(AS->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(AS->Q() == 5.0);
+                CHECK_FALSE(std::isnan(AS->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 rejects the quality before mutating the object") {
+        // Same ordering bug as PCSAFT: the PQ/QT arms wrote _p/_Q/_T before
+        // the guard, so Q() read back the rejected value.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(IF->update(pair, q, 400.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(IF->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(IF->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(IF->Q() == 5.0);
+                CHECK_FALSE(std::isnan(IF->Q()));
+            }
+        }
     }
 
     SECTION("PCSAFT rejects the quality before mutating the object") {
