@@ -24,3 +24,7 @@
 # The EES library file is a text body wrapped in a header that records its
 # length, so a line ending conversion would leave that header wrong.
 wrappers/EES/CoolProp.LIB binary
+
+# Shipped verbatim in every wheel/sdist and byte-compared by
+# dev/ci/check_dist_notices.py; keep LF on every platform (incl. Windows builds).
+THIRD_PARTY_NOTICES.md text eol=lf
