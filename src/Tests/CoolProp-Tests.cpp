@@ -740,11 +740,11 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   // PINNED to CoolProp's own output, not Table 3's 0.065259.  CoolProp uses the paper's
   // EOS (McLinden et al. 2015) and viscosity (Wen et al. 2017), and the paper's
   // Eqs. (3)-(9) evaluated independently on REFPROP 10.0 (same EOS) give 0.0652073, the
-  // value below.  0.065259 is REFPROP 10.0's own TCX output: in the compressed liquid
-  // REFPROP's enhancement behaves as if the correlation length were floored near
-  // 0.4*xi0 (1.01e-10 m here, inferred by inverting its output), whereas Eq. (9) gives
-  // 5.2e-11 m.  The R245fa and R1233zd(E) papers' liquid check values do follow the
-  // equations without that floor.
+  // value below.  0.065259 is REFPROP 10.0's own TCX output, which includes a
+  // dense-liquid adjustment the paper does not describe: in TK3 (TRNS_TCX.FOR),
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)
+  // i.e. xi ~= xi0*(0.01/Gamma)^(nu/gamma) = 0.40*xi0 here, against 5.2e-11 m from Eq. (9).
+  // CoolProp follows the published equations (decided 2026-09-26; Linear COO-49).
   vel("Novec649", "T", 300, "Dmass", 1673.3, "L", 0.06520725656268984, 1e-6),
   vel("Novec649", "T", 445, "Dmass", 1e-9, "L", 0.022632, 1e-4),
   vel("Novec649", "T", 445, "Dmass", 685.0, "L", 0.036508, 1e-4),
