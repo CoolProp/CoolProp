@@ -764,6 +764,45 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Propylene", "T", 400, "Dmass", 1e-9, "L", 29.18e-3, 6e-4),
   vel("Propylene", "T", 500, "Dmass", 1e-9, "L", 42.64e-3, 6e-4),
 
+  // Perkins, Huber & Assael, JCED 61:3286 (2016) - R245fa, Table 4
+  vel("R245fa", "T", 250, "Dmass", 1e-9, "L", 8.309e-3, 1e-4),
+  vel("R245fa", "T", 250, "Dmass", 1500.0, "L", 111.40e-3, 1e-4),
+  // Table 4 prints this one to four figures only: the equations give 24.6330, and half
+  // a unit in the last printed place is 2.0e-4 of the value.
+  vel("R245fa", "T", 430, "Dmass", 1e-9, "L", 24.63e-3, 2.1e-4),
+  vel("R245fa", "T", 430, "Dmass", 530.0, "L", 66.75e-3, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 63:2783 (2018) - Novec649, Table 3
+  vel("Novec649", "T", 300, "Dmass", 1e-9, "L", 0.011876, 1e-4),
+  vel("Novec649", "T", 300, "Dmass", 5.50, "L", 0.011813, 1e-4),
+  // PINNED to CoolProp's own output, not Table 3's 0.065259.  CoolProp uses the paper's
+  // EOS (McLinden et al. 2015) and viscosity (Wen et al. 2017), and the paper's
+  // Eqs. (3)-(9) evaluated independently on REFPROP 10.0 (same EOS) give 0.0652073, the
+  // value below.  0.065259 is REFPROP 10.0's own TCX output, which includes a
+  // dense-liquid adjustment the paper does not describe: in TK3 (TRNS_TCX.FOR),
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)
+  // i.e. xi ~= xi0*(0.01/Gamma)^(nu/gamma) = 0.40*xi0 here, against 5.2e-11 m from Eq. (9).
+  // CoolProp follows the published equations (decided 2026-09-26; Linear COO-49).
+  vel("Novec649", "T", 300, "Dmass", 1673.3, "L", 0.06520725656268984, 1e-6),
+  vel("Novec649", "T", 445, "Dmass", 1e-9, "L", 0.022632, 1e-4),
+  vel("Novec649", "T", 445, "Dmass", 685.0, "L", 0.036508, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 62:2659 (2017) - R1233zd(E), Table 2
+  vel("R1233zd(E)", "T", 300, "Dmass", 1e-9, "L", 0.010659, 1e-4),
+  vel("R1233zd(E)", "T", 300, "Dmass", 5.4411, "L", 0.010766, 1e-4),
+  vel("R1233zd(E)", "T", 300, "Dmass", 1308.8, "L", 0.091399, 1e-4),
+  vel("R1233zd(E)", "T", 445, "Dmass", 1e-9, "L", 0.021758, 1e-4),
+  // PINNED to CoolProp's own output, not Table 2's 0.026141.  The critical enhancement
+  // reads cp, cv and drho/dp from the EOS (and Tc, pc, rhoc from its reducing state),
+  // and CoolProp's R1233zd(E) EOS is Akasaka & Lemmon (2022), whereas the correlation
+  // was fitted with Mondejar et al. (2015).  The paper's equations on REFPROP 10.0's
+  // Mondejar EOS with the paper's viscosity (19.053 uPa s) give 0.0261406, i.e. Table 2;
+  // on the Akasaka & Lemmon EOS (REFPROP 10.1 FLD) they give 0.026048, and CoolProp,
+  // with its own viscosity, gives the value below (-0.35 %).  The pin therefore also
+  // moves if CoolProp's R1233zd(E) viscosity changes.  The enhancement-free background
+  // at this state is checked against the paper in the background test case below.
+  vel("R1233zd(E)", "T", 445, "Dmass", 168.52, "L", 0.02604904492595249, 1e-6),
+
   // Heavy Water, IAPWS formulation
   vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
   vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),
@@ -820,6 +859,13 @@ TEST_CASE("Conductivity backgrounds with the critical enhancement off match publ
       // this state is pinned above until the R161 EOS is updated (Linear COO-50); the
       // enhancement is what that pinned total depends on.
       {"R161", 375.0, 229.0, 32.433e-3, Enhancement::positive},
+      // Perkins, Huber & Assael, JCED 61:3286 (2016), Table 4, footnote b
+      {"R245fa", 430.0, 530.0, 36.73e-3, Enhancement::positive},
+      // Perkins, Huber & Assael, JCED 63:2783 (2018), Table 3, footnote **
+      {"Novec649", 445.0, 685.0, 0.024976, Enhancement::positive},
+      // Perkins, Huber & Assael, JCED 62:2659 (2017), Table 2, footnote **.  The total
+      // at this state is pinned above (CoolProp's R1233zd(E) EOS is not the paper's).
+      {"R1233zd(E)", 445.0, 168.52, 0.023992, Enhancement::positive},
     };
     for (const auto& pt : points) {
         CAPTURE(pt.fluid);
@@ -851,6 +897,8 @@ TEST_CASE("The first entry of a transport model list is the one loaded", "[condu
     const std::vector<LoadedModel> models = {
       // Propylene: Assael et al. (2016) first, the Huber et al. (2003) ECS model kept
       {"Propylene", "BibTeX-CONDUCTIVITY", "Assael-JPCRD-2016-Ethylene-Propylene"},
+      // R245fa: Perkins et al. (2016) first, the Huber et al. (2003) ECS model kept
+      {"R245fa", "BibTeX-CONDUCTIVITY", "Perkins-JCED-2016-R245fa"},
     };
     for (const auto& m : models) {
         CAPTURE(m.fluid);
