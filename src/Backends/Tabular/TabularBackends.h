@@ -3,6 +3,7 @@
 
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/detail/msgpack.h"
+#include <atomic>
 #include <memory>
 #include <mutex>
 using std::shared_ptr;
@@ -984,7 +985,15 @@ class CellCoeffs
 class TabularDataSet
 {
    public:
-    bool tables_loaded;
+    /// True once the tables are complete (loaded from disk, or built, packed
+    /// and written).  Atomic because the library reads it under its own mutex
+    /// while a builder publishes it under build_mutex.
+    std::atomic<bool> tables_loaded;
+    /// Serializes the build-pack-write of this dataset (TabularBackend::check_tables)
+    /// and build_coeffs(), so concurrent first users of the same dataset build it
+    /// exactly once.  Lock order: build_mutex, then TabularDataLibrary::data_mutex;
+    /// nothing holding data_mutex takes build_mutex.
+    std::mutex build_mutex;
     LogPHTable single_phase_logph;
     LogPTTable single_phase_logpT;
     PureFluidSaturationTableData pure_saturation;
@@ -1393,23 +1402,33 @@ class TabularBackend : public AbstractState
                 if (get_debug_level() > 0) {
                     std::cout << format("Table loading failed with error: %s\n", e.what());
                 }
-                /// Check directory size
-                std::string table_path = path_to_tables();
-                double directory_size_in_GB = CalculateDirSize(table_path) / POW3(1024.0);
-                double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
-                if (get_debug_level() > 0) {
-                    std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";
+                // load_tables() set `dataset` before throwing.  Only one thread
+                // may build a given dataset: the others wait here, then see
+                // tables_loaded and skip straight to the load below.
+                std::scoped_lock build_lock(dataset->build_mutex);
+                if (!dataset->tables_loaded) {
+                    /// Check directory size
+                    std::string table_path = path_to_tables();
+                    double directory_size_in_GB = CalculateDirSize(table_path) / POW3(1024.0);
+                    double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
+                    if (get_debug_level() > 0) {
+                        std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";
+                    }
+                    if (directory_size_in_GB > 1.5 * allowed_size_in_GB) {
+                        throw DirectorySizeError(
+                          format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
+                    } else if (directory_size_in_GB > allowed_size_in_GB) {
+                        set_warning_string(
+                          format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
+                    }
+                    /// If you cannot load the tables, build them and then write them to file
+                    dataset->build_tables(this->AS);
+                    pack_matrices();
+                    write_tables();
+                    // Publish only now that build, pack and write are all done, so a
+                    // thread taking the lock-free fast path never sees a half-built set.
+                    dataset->tables_loaded = true;
                 }
-                if (directory_size_in_GB > 1.5 * allowed_size_in_GB) {
-                    throw DirectorySizeError(
-                      format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
-                } else if (directory_size_in_GB > allowed_size_in_GB) {
-                    set_warning_string(format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
-                }
-                /// If you cannot load the tables, build them and then write them to file
-                dataset->build_tables(this->AS);
-                pack_matrices();
-                write_tables();
                 /// Load the tables back into memory as a consistency check
                 load_tables();
                 // Set the flag saying tables have been successfully loaded
