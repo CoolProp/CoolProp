@@ -19,8 +19,10 @@
 // G is in J/kg, P in MPa, T in K.  Order is the B-spline ORDER (degree + 1),
 // matching CoolProp::spline::TensorBSpline2D.
 //
-// Domain: P in [0.0, 2300.6] MPa, T in [239.0, 501.0] K.  Liquid only --
-// this representation has no vapour branch and no saturation curve.
+// Knot support: P in [0.0, 2300.6] MPa,
+// T in [239.0, 501.0] K.  That is the span of the FIT, not a
+// validity claim -- the paper states 240-500 K, which is what the backend
+// advertises.  Liquid only: no vapour branch, no saturation curve.
 
 #ifndef COOLPROP_BOLLENGIER_WATER_COEFFICIENTS_H
 #define COOLPROP_BOLLENGIER_WATER_COEFFICIENTS_H

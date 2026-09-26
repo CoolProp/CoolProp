@@ -19,7 +19,7 @@ namespace CoolProp {
 ///
 /// WHY THIS EXISTS.  CoolProp's IAPWS-95 refuses the entire region below the
 /// melting line: 250 K/200 MPa, 300 K/2000 MPa and similar all throw.  This
-/// backend covers P in [0, 2300.6] MPa, T in [239, 501] K, which includes
+/// backend covers P in [0, 2300.6] MPa, T in [240, 500] K, which includes
 /// that region, and is more accurate than IAPWS-95 above ~100 MPa.
 ///
 /// PT_INPUTS ONLY, by design.  For a Gibbs-explicit model (P, T) is the
@@ -277,21 +277,39 @@ class BollengierBackend : public AbstractState
         //
         // In particular there is NO sound-speed ceiling.  An earlier version
         // had one, on the theory that absurd stiffness marked the fit
-        // breaking down.  It cannot work: measured, an unphysical state at
-        // 1661.5 MPa / 239 K has w = 3368 m/s while a perfectly physical one
-        // at 2300.6 MPa / 300 K has w = 3587.  The populations overlap in w,
-        // so no threshold separates them, and the reference implementation
-        // makes no such claim in the first place.
+        // breaking down.  The populations OVERLAP in w near the physical
+        // range: measured on the shipped code, an unphysical state at
+        // 1660 MPa / 240 K (cv = 1041, a quarter of water's) has
+        // w = 3367.9 m/s, while a perfectly physical 2200 MPa / 300 K
+        // (cv = 3630) has w = 3512.7 -- the bad one is SLOWER.  So no
+        // threshold near the physical range can separate them.
         //
-        // WHAT THIS MEANS FOR CALLERS.  In the cold high-pressure corner
-        // (p >~ 1660 MPa, T <~ 260 K) the surface is an unconstrained
-        // extrapolation -- deep inside the ice VI/VII field, where no liquid
-        // data exists to have fitted against.  It stays thermodynamically
-        // self-consistent (cv > 0, (dv/dP)_T < 0) but stops describing
-        // water: cv falls as low as ~416 J/kg/K against roughly 3800 for
-        // real water, with cp/cv ~ 5.4.  Those states are SERVED, as the
-        // reference serves them.  A caller who needs to know whether the
-        // liquid is the stable phase there must ask separately.
+        // A far higher cut (tens of km/s) would catch the worst pathology,
+        // but that is not the argument for omitting one.  The argument is
+        // that the reference implementation makes no such claim: SeaFreeze
+        // serves this region deliberately, and inventing a criterion it
+        // does not apply is what produced two failed guards here already.
+        //
+        // WHAT THIS MEANS FOR CALLERS -- read this before using the cold
+        // high-pressure corner.  From about 1526 MPa at the 240 K edge the
+        // surface is unconstrained extrapolation, deep inside the ice
+        // VI/VII field where no liquid data existed to fit against.  The
+        // authors decline to publish there at all: Supplementary Material E
+        // omits 250 K above 900 MPa in every property it tabulates.
+        //
+        // Those states stay thermodynamically self-consistent (cv > 0,
+        // (dv/dP)_T < 0, cv < cp) but stop describing water, and the
+        // degradation is UNBOUNDED, not merely large.  Measured over the
+        // advertised rectangle on a 2001x1001 grid, admitted states reach
+        // cv = 0.047 J/kg/K (water is ~3800), cp/cv = 56002, and
+        // w = 1.18e6 m/s.  cv -> 0 continuously at the convexity flip, so
+        // those are sampling artefacts of the grid, not extrema: the true
+        // infimum of cv is 0 and w is unbounded above.
+        //
+        // They are SERVED regardless, matching the reference implementation.
+        // A caller who needs to know whether liquid is the stable phase --
+        // or whether these numbers mean anything -- must determine that
+        // separately.
         if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0) {
             throw ValueError(format("BollengierBackend: the representation is not evaluable at p = %g Pa, T = %g K "
                                     "((dv/dP)_T >= 0, or a non-finite result). The reference implementation returns NaN "

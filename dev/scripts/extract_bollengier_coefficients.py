@@ -46,11 +46,16 @@ from pathlib import Path
 GROUP = "G_H2O_2GPa_500K"
 EXPECTED_MAT_SHA256 = "7f630a868db76a8e29f3ed911be93e69f8ee0500c75a04ab5a95dad479a52b27"
 
-# Independently stated in the paper, NOT read back from the file.  Used to
-# verify the extraction rather than to describe it: if a future supplement
-# revision moves these, the mismatch should be loud.
-PAPER_P_MIN_MPA, PAPER_P_MAX_MPA = 0.0, 2300.6
-PAPER_T_MIN_K, PAPER_T_MAX_K = 239.0, 501.0
+# Expected SUPPORT of the fitted surface -- the knot span, used to verify
+# the extraction rather than to describe the model's validity.  If a future
+# supplement revision moves these, the mismatch should be loud.
+#
+# NOTE these are deliberately NOT the paper's stated validity range.  The
+# paper's title and abstract give 240-500 K; the fitted knots run slightly
+# wider.  The backend advertises the PAPER's range (see
+# BollengierBackend::kPaperTminK); these values describe the data file.
+SUPPORT_P_MIN_MPA, SUPPORT_P_MAX_MPA = 0.0, 2300.6
+SUPPORT_T_MIN_K, SUPPORT_T_MAX_K = 239.0, 501.0
 PAPER_ORDER = (6, 6)
 PAPER_SHAPE = (80, 40)
 
@@ -157,10 +162,10 @@ def main(argv):
     def _near(a, b):
         return abs(a - b) <= 1e-9 * max(1.0, abs(b))
 
-    if not (_near(kx[ox - 1], PAPER_P_MIN_MPA) and _near(kx[nx], PAPER_P_MAX_MPA)):
-        problems.append(f"P support {(kx[ox-1], kx[nx])} != paper {(PAPER_P_MIN_MPA, PAPER_P_MAX_MPA)}")
-    if not (_near(ky[oy - 1], PAPER_T_MIN_K) and _near(ky[ny], PAPER_T_MAX_K)):
-        problems.append(f"T support {(ky[oy-1], ky[ny])} != paper {(PAPER_T_MIN_K, PAPER_T_MAX_K)}")
+    if not (_near(kx[ox - 1], SUPPORT_P_MIN_MPA) and _near(kx[nx], SUPPORT_P_MAX_MPA)):
+        problems.append(f"P support {(kx[ox-1], kx[nx])} != paper {(SUPPORT_P_MIN_MPA, SUPPORT_P_MAX_MPA)}")
+    if not (_near(ky[oy - 1], SUPPORT_T_MIN_K) and _near(ky[ny], SUPPORT_T_MAX_K)):
+        problems.append(f"T support {(ky[oy-1], ky[ny])} != paper {(SUPPORT_T_MIN_K, SUPPORT_T_MAX_K)}")
     if problems:
         for p in problems:
             print("ERROR: " + p, file=sys.stderr)
@@ -194,8 +199,10 @@ def main(argv):
 // G is in J/kg, P in MPa, T in K.  Order is the B-spline ORDER (degree + 1),
 // matching CoolProp::spline::TensorBSpline2D.
 //
-// Domain: P in [{PAPER_P_MIN_MPA}, {PAPER_P_MAX_MPA}] MPa, T in [{PAPER_T_MIN_K}, {PAPER_T_MAX_K}] K.  Liquid only --
-// this representation has no vapour branch and no saturation curve.
+// Knot support: P in [{SUPPORT_P_MIN_MPA}, {SUPPORT_P_MAX_MPA}] MPa,
+// T in [{SUPPORT_T_MIN_K}, {SUPPORT_T_MAX_K}] K.  That is the span of the FIT, not a
+// validity claim -- the paper states 240-500 K, which is what the backend
+// advertises.  Liquid only: no vapour branch, no saturation curve.
 
 #ifndef COOLPROP_BOLLENGIER_WATER_COEFFICIENTS_H
 #define COOLPROP_BOLLENGIER_WATER_COEFFICIENTS_H

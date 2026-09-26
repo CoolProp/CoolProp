@@ -159,10 +159,12 @@ TEST_CASE("Bollengier backend reproduces the authors' published tables", "[Bolle
         const double p_MPa = r[0], T = r[1];
         INFO("p = " << p_MPa << " MPa, T = " << T << " K");
         AS->update(PT_INPUTS, p_MPa * 1e6, T);
-        // 2e-5 is set by the tables' own precision -- they carry six
-        // significant figures, so the smallest tabulated values quantise at
-        // ~1e-6 relative.  Measured agreement is 5.2e-6 (rho), 1.4e-6 (cp),
-        // 3.2e-6 (w), i.e. at round-off throughout.
+        // 2e-5 is set by the tables' own precision.  Every value is printed
+        // to two decimals, so the rounding half-width is LARGEST in relative
+        // terms at the smallest entry -- 6.0e-6 at 828.90, falling to 1.1e-6
+        // at 4686.78.  2e-5 is ~3.3x that worst case.  Measured agreement is
+        // 5.2e-6 (rho), 1.4e-6 (cp), 3.2e-6 (w), i.e. at round-off
+        // throughout.
         CHECK_THAT(AS->rhomass(), Catch::Matchers::WithinRel(r[2], 2e-5));
         CHECK_THAT(AS->cpmass(), Catch::Matchers::WithinRel(r[3], 2e-5));
         CHECK_THAT(AS->speed_sound(), Catch::Matchers::WithinRel(r[4], 2e-5));
@@ -336,6 +338,17 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         warm->update(PT_INPUTS, 2200.0e6, 300.0);
         CHECK(warm->cvmass() > 3000.0);                  // physical
         CHECK(warm->speed_sound() < AS->speed_sound());  // yet SLOWER
+
+        // AND a state with an absurdly HIGH sound speed must also be
+        // served.  Without this the no-ceiling policy is not pinned at
+        // all: reinstating the reverted `_w > 6000` guard passed every
+        // other assertion in this file, because nothing asserted that a
+        // FAST state survives -- only that a served state was slow.  Any
+        // ceiling from ~3600 m/s upward could be reintroduced silently.
+        auto fast = make();
+        REQUIRE_NOTHROW(fast->update(PT_INPUTS, 2185.0e6, 240.0));
+        INFO("w at 2185 MPa / 240 K = " << fast->speed_sound());
+        CHECK(fast->speed_sound() > 6000.0);  // ~12688 m/s, and served
     }
     SECTION("the same pressures are ordinary when warm") {
         for (const double p_MPa : {1900.0, 2175.0, 2290.0}) {
@@ -369,7 +382,7 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
                 CHECK(AS->rhomass() < 1600.0);
             }
         }
-        // Binds: the committed guard accepts 2493 of 2501.
+        // Binds: the committed guard accepts 2495 of 2501 (6 refused).
         REQUIRE(accepted > 2450);
     }
 }
