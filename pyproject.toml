@@ -85,6 +85,13 @@ wheel.exclude = [
     "**/*.cpp",  # Exclude generated C++ from Cython
 ]
 
+# Ship third-party notices alongside CoolProp's own LICENSE in
+# dist-info/licenses/.  The components compiled into the extension modules
+# (Eigen, fmt, nanobind, ...) require their notices to accompany binary
+# redistribution.  Listed explicitly: the scikit-build-core default globs
+# (LICEN[CS]E*, NOTICE*, ...) do not match THIRD_PARTY_NOTICES.md.
+wheel.license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+
 # Resolve the version at build time via a small Python provider (see
 # dev/coolprop_version_provider.py).  It parses the base version from
 # CMakeLists.txt — the single source of truth — and honors an optional
