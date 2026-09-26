@@ -700,6 +700,9 @@ bool IncompressibleFluid::checkX(double x) {
     // is_in_closed_range, not (x < lo || x > hi): the latter is false for NaN.
     if (!is_in_closed_range(0.0, 1.0, xmin)) throw ValueError("Please specify the minimum concentration between 0 and 1.");
     if (!is_in_closed_range(0.0, 1.0, xmax)) throw ValueError("Please specify the maximum concentration between 0 and 1.");
+    // is_in_closed_range swaps its bounds, so inverted data would otherwise be
+    // accepted as the swapped range.
+    if (!(xmin <= xmax)) throw ValueError(format("The minimum concentration %g exceeds the maximum concentration %g.", xmin, xmax));
     if (!is_in_closed_range(xmin * (1 - INCOMP_EPSILON), xmax * (1 + INCOMP_EPSILON), x)) {
         throw ValueError(format("Your composition %g is not between %g and %g.", x, xmin, xmax));
     }

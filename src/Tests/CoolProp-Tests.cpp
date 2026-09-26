@@ -6087,12 +6087,24 @@ TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality
 
     SECTION("INCOMP solution rejects a NaN mass fraction") {
         auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
-        CHECK_THROWS_AS(
+        CHECK_THROWS_WITH(
           [&] {
               AS->set_mass_fractions(std::vector<CoolPropDbl>{qnan});
               AS->update(CoolProp::PT_INPUTS, 1e5, 280.0);
           }(),
-          CoolProp::ValueError);
+          Catch::Matchers::ContainsSubstring("Mass fractions must be set to a vector with one entry between 0 and 1"));
+        // IncompressibleFluid::checkX has its own NaN-safe composition guard.
+        CoolProp::IncompressibleFluid bounded;
+        bounded.setxmin(0.2);
+        bounded.setxmax(0.6);
+        CHECK(bounded.checkX(0.4));
+        CHECK_THROWS_WITH(bounded.checkX(qnan), Catch::Matchers::ContainsSubstring("is not between 0.2 and 0.6"));
+        // Inverted composition bounds are refused rather than read as the
+        // swapped range (is_in_closed_range orders its bounds).
+        CoolProp::IncompressibleFluid inverted;
+        inverted.setxmin(0.6);
+        inverted.setxmax(0.2);
+        CHECK_THROWS_WITH(inverted.checkX(0.4), Catch::Matchers::ContainsSubstring("exceeds the maximum concentration"));
         // A legal fraction still works on a fresh object.
         auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
         AS2->set_mass_fractions(std::vector<CoolPropDbl>{0.3});
