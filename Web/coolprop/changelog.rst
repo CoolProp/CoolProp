@@ -44,8 +44,9 @@ Highlights:
   its critical enhancement is the native simplified Olchowy–Sengers block, the first
   fluid to combine the two.  The cutoff wavelength follows the paper's own check values
   (qD\ :sup:`-1` = 0.3104 nm) rather than the 0.530 nm printed in its Sec. 3.3.  The
-  three check points of Table 11 that the EOS cannot affect agree to 1e-4.  The two
-  near-critical points do not yet agree: the enhancement uses the EOS, and CoolProp's
+  three check points of Table 11 where the enhancement vanishes agree to 1e-4, as does
+  the table's enhancement-free background at 375 K and 229 kg/m\ :sup:`3`.  The two
+  points that carry an enhancement do not yet agree: it uses the EOS, and CoolProp's
   R161 EOS is Wu and Zhou (2012), not the Qi et al. (2016) EOS the correlation was
   fitted with.  At 375 K and 229 kg/m\ :sup:`3` CoolProp gives 98.82 mW/(m K) against
   the paper's 81.297.

@@ -771,6 +771,24 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
     }
 }
 
+// Tsolakidou et al., JPCRD 46:023103 (2017), Table 11, footnote a: 32.433 mW/(m K)
+// at 375 K / 229 kg/m^3 with the critical enhancement set to zero.  Unlike the total
+// at that state, which is pinned to CoolProp's own output above until the R161 EOS is
+// updated (Linear COO-50), this background value reads no EOS property, so it is
+// checked against the paper directly.
+TEST_CASE("R161 conductivity background near the critical point matches Tsolakidou (2017)", "[conductivity],[transport]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R161"));
+    AS->update(CoolProp::DmassT_INPUTS, 229.0, 375.0);
+    CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+    AS->conductivity_contributions(dilute, initial_density, residual, critical);
+    CAPTURE(dilute);
+    CAPTURE(residual);
+    CAPTURE(critical);
+    CHECK(std::abs((dilute + initial_density + residual) / 32.433e-3 - 1) < 1e-4);
+    // The enhancement is what the pinned total depends on; it must be present.
+    CHECK(critical > 0);
+}
+
 }; /* namespace TransportValidation */
 
 // #2768 swapped R1233zd(E) to the Akasaka & Lemmon (JPCRD 2022) international

@@ -4554,7 +4554,7 @@
       },
       "critical": {
         "type": "simplified_Olchowy_Sengers",
-        "note": "Section 3.3 of Tsolakidou et al. (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.055, xi0 = 0.183e-9 m, T_ref = 1.5 Tc (the paper prints this rounded to 562.88 K). This block deliberately differs from the paper's text for the cutoff: qD^-1 = 0.3104e-9 m, not the 5.30e-10 m printed in Sec. 3.3. With the Qi et al. (2016) EOS and the paper's own viscosity, 0.3104e-9 reproduces the paper's Table 11 check value at 375 K / 229 kg/m^3 (81.296 vs 81.297 mW/(m K)), while 5.30e-10 gives 73.41. R161.FLD in REFPROP 10.0 and 10.1 carries 0.3104e-9.",
+        "note": "Section 3.3 of Tsolakidou et al. (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.055, xi0 = 0.183e-9 m, T_ref = 1.5 Tc (the paper prints this rounded to 562.88 K). This block deliberately differs from the paper's text for the cutoff: qD^-1 = 0.3104e-9 m, not the 5.30e-10 m printed in Sec. 3.3. With the Qi et al. (2016) EOS and the paper's own viscosity, 0.3104e-9 reproduces both Table 11 check values that carry an enhancement: 375 K / 229 kg/m^3 (81.296 vs 81.297 mW/(m K); 5.30e-10 gives 73.41) and 250 K / 1 kg/m^3 (9.8838 vs 9.884; 5.30e-10 gives 9.8805). R161.FLD in REFPROP 10.0 and 10.1 carries 0.3104e-9.",
         "GAMMA": 0.055,
         "R0": 1.02,
         "gamma": 1.239,
