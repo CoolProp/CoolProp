@@ -388,8 +388,9 @@ See "Authoring from Python" below for the Python surface built on it.
   produces a silently-wrong correlation and never crashes.
 - **Eval-time, inside the formula:** numeric domain results follow `std::pow/log`
   semantics exactly (e.g. `log` of a non-positive argument → NaN/-inf as in the
-  current C++), so DSL output matches the hardcoded routines bit-for-bit in
-  behavior, including at domain edges. No domain guards, no exceptions.
+  current C++), so DSL output matches the hardcoded routines' domain behavior
+  (NaN/-inf propagation), including at domain edges. No domain guards, no
+  exceptions.
 - **Eval-time, on the way in:** the *inputs* are guarded, which is a different
   thing. `evaluate_at()` throws `CoolProp::ValueError` naming the input if a
   `keyed_output()` comes back non-finite. This is the one exception the hot path
@@ -434,9 +435,9 @@ New Catch2 tag `[expression]`.
    the unroll/vectorize decision, so even an identical operation sequence is
    **not** portably bit-exact. The `1e-14` relative gate therefore applies to
    every form, and no form asserts 0 ULP. (Amended 2026-09-26: the original
-   per-form bit-exact assertions failed on Apple clang/arm64.) If all Tier-A
-   forms reproduce within this gate, the DSL is provably complete for the
-   scope.
+   per-form bit-exact assertions failed (powers_of_Tr) or were at risk (fmadd
+   present) on Apple clang/arm64.) If all Tier-A forms reproduce within this
+   gate, the DSL is provably complete for the scope.
 
 Per project convention (`CLAUDE.md`), changes here run under `[SBTL]`-style
 umbrella discipline only if they touch those paths; this feature is new code, so

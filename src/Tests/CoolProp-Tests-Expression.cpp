@@ -336,10 +336,11 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
 //   * EVERY form matches to <1e-14 relative (the real completeness proof) at
 //     every grid point — asserted on all 8 forms.
 //   * No form is asserted BIT-EXACT.  The DSL and the routine perform the
-//     identical op sequence, but the last-ULP result is compiler-codegen
-//     dependent: on FMA-capable targets (arm64; x86-64 only with -mfma) the
-//     compiler may contract (clang default `-ffp-contract=on`, GCC `fast`) the
-//     routine's `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
+//     same op sequence modulo contraction, but the last-ULP result is
+//     compiler-codegen dependent: on FMA-capable targets (arm64; x86-64 only
+//     when FMA is enabled, e.g. -mfma or -march=x86-64-v3) the compiler may
+//     contract (clang default `-ffp-contract=on`, GCC `fast`) the routine's
+//     `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
 //     (virtual-dispatch tree walk) always rounds the multiply and the add
 //     separately.  Whether the routine fuses depends on the unroll/vectorize
 //     decision -- e.g. Apple clang 21 -O3 on arm64 emits a 4x-unrolled
