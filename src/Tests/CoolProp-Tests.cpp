@@ -6285,6 +6285,116 @@ TEST_CASE("Aly-Lee alpha0 term rejects a constant list that is not length 5", "[
     }
 }
 
+// The ideal-gas terms index their coefficient vectors in lockstep up to the
+// first one's size, so mismatched lengths were out-of-bounds reads -- and, for
+// PlanckEinsteinFunctionT, an out-of-bounds write.  The length checks used to
+// be asserts (compiled out in Release) or absent (COO-60).
+TEST_CASE("alpha0 terms reject coefficient vectors of mismatched length", "[alpha0],[add_one]") {
+    using nlohmann::json;
+    auto parse = [](const json& terms) { return CoolProp::JSONFluidLibrary::parse_alpha0(terms); };
+    const json two = {1.0, 2.0}, one = {1.0}, three = {1.0, 2.0, 3.0};
+
+    SECTION("a single mismatched term throws") {
+        const std::vector<json> bad = {
+          {{"type", "IdealGasHelmholtzPower"}, {"n", two}, {"t", one}},
+          {{"type", "IdealGasHelmholtzPlanckEinsteinGeneralized"}, {"n", two}, {"t", two}, {"c", one}, {"d", two}},
+          {{"type", "IdealGasHelmholtzPlanckEinstein"}, {"n", two}, {"t", one}},
+          // v longer than n: the out-of-bounds write
+          {{"type", "IdealGasHelmholtzPlanckEinsteinFunctionT"}, {"n", one}, {"v", three}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzPlanckEinsteinFunctionT"}, {"n", three}, {"v", one}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzGERG2004Cosh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzCP0PolyT"}, {"c", two}, {"t", one}, {"Tc", 500.0}, {"T0", 298.15}},
+        };
+        for (const auto& term : bad) {
+            CAPTURE(term.dump());
+            CHECK_THROWS_AS(parse(json::array({term})), CoolProp::ValueError);
+            CHECK_THROWS_WITH(parse(json::array({term})), Catch::Matchers::ContainsSubstring("must all have the same length"));
+        }
+    }
+
+    SECTION("a mismatched second term throws through extend()") {
+        const std::vector<std::pair<json, json>> pairs = {
+          {{{"type", "IdealGasHelmholtzPlanckEinsteinGeneralized"}, {"n", one}, {"t", one}, {"c", one}, {"d", one}},
+           {{"type", "IdealGasHelmholtzPlanckEinsteinGeneralized"}, {"n", two}, {"t", two}, {"c", two}, {"d", one}}},
+          {{{"type", "IdealGasHelmholtzGERG2004Cosh"}, {"n", one}, {"theta", one}, {"Tcrit", 500.0}},
+           {{"type", "IdealGasHelmholtzGERG2004Cosh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}}},
+          {{{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", one}, {"theta", one}, {"Tcrit", 500.0}},
+           {{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}}},
+        };
+        for (const auto& p : pairs) {
+            CAPTURE(p.second.dump());
+            CHECK_NOTHROW(parse(json::array({p.first})));
+            CHECK_THROWS_WITH(parse(json::array({p.first, p.second})), Catch::Matchers::ContainsSubstring("must all have the same length"));
+        }
+    }
+
+    SECTION("GERG2004Sinh::extend appends its arguments") {
+        // extend() used to name its parameters (c, t) while the body read the
+        // members n and theta, so it appended each member to itself and ignored
+        // the new term.  Two terms must now equal one term with both entries.
+        auto sinh = [](const json& n, const json& theta) {
+            return json{{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", n}, {"theta", theta}, {"Tcrit", 500.0}};
+        };
+        CoolProp::IdealHelmholtzContainer split = parse(json::array({sinh({1.5}, {0.7}), sinh({-0.4}, {2.1})}));
+        CoolProp::IdealHelmholtzContainer joined = parse(json::array({sinh({1.5, -0.4}, {0.7, 2.1})}));
+        split.set_Tred(500.0);
+        joined.set_Tred(500.0);
+        const double tau = 1.3, delta = 0.9;
+        CoolProp::HelmholtzDerivatives a = split.all(tau, delta), b = joined.all(tau, delta);
+        CHECK(a.alphar == Catch::Approx(b.alphar).epsilon(1e-14));
+        CHECK(a.dalphar_dtau == Catch::Approx(b.dalphar_dtau).epsilon(1e-14));
+        CHECK(a.d2alphar_dtau2 == Catch::Approx(b.d2alphar_dtau2).epsilon(1e-14));
+    }
+
+    SECTION("every shipped fluid's alpha0 still parses") {
+        // Guards against a check tighter than the shipped data.
+        int n_fluids = 0;
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            json doc = json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            for (const auto& eos : doc.at("EOS")) {
+                CAPTURE(fluid);
+                CHECK_NOTHROW(parse(eos.at("alpha0")));
+            }
+            ++n_fluids;
+        }
+        CHECK(n_fluids > 100);
+    }
+}
+
+// Twu and Mathias-Copeman alpha functions read c[0..2] unchecked, in
+// CubicBackend and in the HEOS "-SRK"/"-PengRobinson" path.  The only guard is
+// the cubic fluid schema (minItems = maxItems = 3), which every add is
+// validated against; this pins it so relaxing the schema fails here (COO-60).
+TEST_CASE("Cubic alpha functions reject a coefficient list that is not length 3", "[cubic],[alpha0]") {
+    using nlohmann::json;
+    auto fluid = [](const std::string& name, const std::string& CAS, const std::string& type, const json& c) {
+        return json::array({{{"name", name},
+                             {"CAS", CAS},
+                             {"Tc", 400.0},
+                             {"Tc_units", "K"},
+                             {"pc", 4e6},
+                             {"pc_units", "Pa"},
+                             {"acentric", 0.2},
+                             {"molemass", 0.05},
+                             {"molemass_units", "kg/mol"},
+                             {"aliases", json::array()},
+                             {"alpha", {{"type", type}, {"c", c}}}}});
+    };
+    // Positive control: the same fluid with three coefficients loads, so the
+    // rejections below are due to "c" and not to some other schema violation.
+    // No test walks the cubic fluid list, so leaving this registered is harmless.
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaOK", "999-99-81", "Twu", json{0.1, 0.9, 1.5}).dump()));
+    for (const std::string type : {"Twu", "Mathias-Copeman"}) {
+        CAPTURE(type);
+        for (const json& c : {json::array(), json{0.1, 0.2}, json{0.1, 0.2, 0.3, 0.4}}) {
+            CAPTURE(c.dump());
+            CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaBad", "999-99-80", type, c).dump()),
+                              Catch::Matchers::ContainsSubstring("against schema"));
+        }
+    }
+}
+
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
     // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
     // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa

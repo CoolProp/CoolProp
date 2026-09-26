@@ -236,6 +236,8 @@ class JSONFluidLibrary
                 // Retrieve the values
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
                 std::vector<CoolPropDbl> v = cpjson::get_long_double_array(contribution.at("v")), theta(n.size(), 0.0);
+                // theta is sized from n but filled from v, so a longer v would write out of bounds
+                check_alpha0_lengths("IdealGasHelmholtzPlanckEinsteinFunctionT", {n.size(), v.size()});
                 // Calculate theta
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 for (std::size_t i = 0; i < v.size(); ++i) {
