@@ -4,6 +4,7 @@
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/detail/msgpack.h"
 #include <memory>
+#include <mutex>
 using std::shared_ptr;
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/CoolProp.h"
@@ -1016,6 +1017,10 @@ class TabularDataLibrary
 {
    private:
     std::map<std::string, TabularDataSet> data;
+    /// Serializes get_set_of_tables(): lookup, insert, and the disk load of a
+    /// freshly inserted entry.  Held only inside get_set_of_tables, which does
+    /// not re-enter the library.
+    std::mutex data_mutex;
 
    public:
     TabularDataLibrary() = default;

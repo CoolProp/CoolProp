@@ -12,6 +12,7 @@
 #include "CoolProp/CoolPropFluid.h"
 #include "CoolProp/DataStructures.h"
 
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -50,7 +51,7 @@ class REFPROPMixtureBackend : public AbstractState
     std::size_t Ncomp;
     bool _mole_fractions_set;
 
-    static std::size_t instance_counter;
+    static std::atomic<std::size_t> instance_counter;
     static bool _REFPROP_supported;
     std::vector<CoolPropDbl> mole_fractions_long_double;  // read-only
     std::vector<double> mole_fractions, mass_fractions;

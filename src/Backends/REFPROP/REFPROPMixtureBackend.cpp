@@ -219,9 +219,10 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
     // Decrement the counter for the number of instances
-    REFPROPMixtureBackend::instance_counter--;
-    // Unload the shared library when the last instance is about to be destroyed
-    if (REFPROPMixtureBackend::instance_counter == 0) {
+    // Unload the shared library when the last instance is about to be destroyed.
+    // Decrement and test in one atomic step so two concurrent destructors can't
+    // both (or neither) observe zero.
+    if (--REFPROPMixtureBackend::instance_counter == 0) {
         force_unload_REFPROP();
     }
 }
@@ -229,8 +230,8 @@ void REFPROPMixtureBackend::check_loaded_fluid() {
     this->set_REFPROP_fluids(this->fluid_names);
 }
 
-std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
-bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+std::atomic<std::size_t> REFPROPMixtureBackend::instance_counter{0};  // initialise with 0
+bool REFPROPMixtureBackend::_REFPROP_supported = true;                // initialise with true
 bool REFPROPMixtureBackend::REFPROP_supported() {
     /*
      * Here we build the bridge from macro definitions

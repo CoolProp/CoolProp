@@ -7911,6 +7911,38 @@ TEST_CASE("TABULAR_NX/NY config keys exist and default to 200", "[Configuration]
     CHECK(CoolProp::get_config_int(TABULAR_NY) == 200);
 }
 
+TEST_CASE("Configuration accessors are safe under concurrent calls (COO-13)", "[Configuration][threads]") {
+    // The global Configuration is lazily created behind std::call_once.  In
+    // this test binary it is usually already initialized by an earlier test,
+    // so the cold-start race itself is only reliably exercised under TSAN;
+    // what this checks deterministically is that concurrent readers all see
+    // one consistent instance (same values as the main thread).
+    const bool expected_bool = CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS);
+    const int expected_int = CoolProp::get_config_int(TABULAR_NX);
+    constexpr int N_THREADS = 8;
+    std::atomic<int> mismatches{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back([&]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            for (int i = 0; i < 1000; ++i) {
+                if (CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS) != expected_bool || CoolProp::get_config_int(TABULAR_NX) != expected_int) {
+                    mismatches.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& t : threads) {
+        t.join();
+    }
+    CHECK(mismatches.load() == 0);
+}
+
 TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][1950]") {
     // Issue #1950: BICUBIC&HEOS update(PT_INPUTS, p, T) where T is just below
     // Tsat(p) and the saturation curve sits inside the table cell:

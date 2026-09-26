@@ -1557,6 +1557,11 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
     // of evicting each other.  The on-disk directory stays resolution-agnostic;
     // deserialize() rejects a mis-sized file and triggers a rebuild.
     const std::string key = path + "@" + std::to_string(Nx) + "x" + std::to_string(Ny);
+    // Concurrent first loads would otherwise race on the std::map insert and on
+    // the new entry's tables_loaded flag.  The lock also covers the disk load so
+    // a second thread never observes a half-loaded entry; load_tables() only
+    // touches this dataset and the caller's AbstractState, never the library.
+    std::scoped_lock lock(data_mutex);
     // Try to find tabular set if it is already loaded
     auto it = data.find(key);
     if (it != data.end()) {
