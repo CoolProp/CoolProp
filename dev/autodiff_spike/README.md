@@ -471,3 +471,29 @@ Low-temperature states have up to 5 real roots of the GERG equation, all of them
 - **Tangencies:** the depth cap of 16 means a root pair closer than 2⁻¹⁶ of a piece width
   (tangency at a spinodal) can be missed.
 - **Wider sampling:** this is a grid of states, not random sampling.
+
+### Loose tables plus a Newton polish on the true equation
+
+`POLISH=1 ./gerg_cheb 4 <tol>` runs one Newton step or more on the *true* grouped term sum,
+starting from each Chebyshev root. Each step reuses the assembly's group weights, so it costs one
+pow and one exp per δ-group. A step that moves the root more than 1e-3 relative is rejected, and
+the Chebyshev root is kept.
+
+| tables | pieces | Newton steps / root | rejected | max rel. error after polish | root counts |
+|---|---|---|---|---|---|
+| degree 12, 1e-6 | 33–49 | 1.36–1.49 | 0 of 760 | ≤3.3e-15 | all ok |
+| degree 12, 1e-4 | 22–42 | 1.38–1.65 | 0 | ≤3.3e-15 | all ok |
+| degree 12, 1e-3 | 18–38 | 1.41–1.69 | 0 | ≤3.3e-15 | all ok |
+| degree 16, 1e-6 | 22–38 | 1.31–1.43 | 0 | ≤3.5e-15 | all ok |
+
+Without the polish, 1e-6 tables already give roots within ≤3.3e-8 (degree 16), because the
+tolerance is in units of Z and applies at every point. Loosening from 1e-12 to 1e-6 cuts the
+pieces from 43–60 to 22–38. Below about 1e-4 the count stops falling: it is then set by the
+absolute budget on the piece touching δ = 0 and by the roundoff floor.
+
+**Risk.** Loosening affects the *root count*, not Newton convergence. A fit error ε in Z can merge
+or split a near-tangent root pair, i.e. at pressures within about ε (relative) of a spinodal
+pressure. Near a spinodal the Newton basin shrinks (radius ~ |G′/G″|), so a start within 1 ppm can
+converge onto the partner root. The 1e-3 guard does not catch that. The fix is a polish that is
+bracketed: the subdivision's bracket ends have certified signs for the *true* G wherever
+|G_cheb| > ε there.

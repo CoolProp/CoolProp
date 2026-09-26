@@ -60,6 +60,28 @@ struct Term
         }
         return std::pow(D, d) * std::exp(u) * (d + D * du);
     }
+    // chi and d(chi)/d(delta): chi = delta^d e^u (d + delta u'),  chi' = delta^(d-1) e^u [a^2 + delta u' + delta^2 u''], a = d + delta u'
+    void chi_d(double D, double& f, double& df) const {
+        double u = 0, du = 0, d2u = 0;
+        if (has_cl) {
+            const double dl = std::pow(D, l);
+            u -= c * dl;
+            du -= c * l * dl / D;
+            d2u -= c * l * (l - 1) * dl / (D * D);
+        }
+        if (has_e1) {
+            u -= e1 * (D - eps1);
+            du -= e1;
+        }
+        if (has_e2) {
+            u -= e2 * (D - eps2) * (D - eps2);
+            du -= 2 * e2 * (D - eps2);
+            d2u -= 2 * e2;
+        }
+        const double base = std::pow(D, d) * std::exp(u), a = d + D * du;
+        f = base * a;
+        df = base / D * (a * a + D * du + D * D * d2u);
+    }
     // tau part
     double kappa(double tau, double ltau) const {
         double u = t * ltau;
@@ -445,7 +467,8 @@ struct Solver
     {
         std::vector<VecG> G;
         std::vector<double> margin;
-        double rhor, t_scale;  // t = p * t_scale
+        std::vector<double> W;  // group weights, reused by the polish
+        double rhor, t_scale;   // t = p * t_scale
     };
     void assemble(double T, const std::vector<double>& x, State& S, std::vector<double>& W) const {
         const double Tr = H->Reducing->Tr(x), rhor = H->Reducing->rhormolar(x), tau = Tr / T, lt = std::log(tau);
@@ -473,6 +496,7 @@ struct Solver
             S.G[p] = times_x(q, edges[p], edges[p + 1]);
             S.margin[p] = 1e-13 * scale * edges[p + 1];  // fit tolerance + roundoff, times |delta| <= hi
         }
+        S.W = W;
         S.rhor = rhor;
         S.t_scale = 1.0 / (rhor * H->gas_constant() * T);
     }
@@ -500,7 +524,35 @@ struct Solver
                 rho[n++] = D * S.rhor;
             }
         }
+        if (polish)
+            for (int k = 0; k < n; ++k)
+                rho[k] = S.rhor * polish_root(S, t, rho[k] / S.rhor);
         return n;
+    }
+    // Newton on the true equation (grouped term sum with the assembly's weights)
+    bool polish = false;
+    mutable long pol_its = 0, pol_calls = 0, pol_fail = 0;
+    double polish_root(const State& S, double t, double D) const {
+        ++pol_calls;
+        const double D0 = D;
+        for (int it = 0; it < 8; ++it) {
+            ++pol_its;
+            double Z = 1, dZ = 0;
+            for (std::size_t g = 0; g < reps.size(); ++g) {
+                double f, df;
+                reps[g].chi_d(D, f, df);
+                Z += S.W[g] * f;
+                dZ += S.W[g] * df;
+            }
+            const double G = D * Z - t, dG = Z + D * dZ, step = G / dG;
+            D -= step;
+            if (std::abs(step) <= 2 * DBL_EPSILON * D) break;
+        }
+        if (!(std::abs(D - D0) <= 1e-3 * D0)) {  // wandered off: keep the Chebyshev root
+            ++pol_fail;
+            return D0;
+        }
+        return D;
     }
     // direct evaluation of G(delta) from the terms (reference)
     double G_direct(double T, const std::vector<double>& x, double D, double p) const {
@@ -570,6 +622,7 @@ int main(int argc, char** argv) {
         auto* HEOS = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
         AS->set_mole_fractions(mx.x);
         Solver Sv;
+        Sv.polish = std::getenv("POLISH") != nullptr;
         const auto tb = std::chrono::steady_clock::now();
         double Tcmax = 0;
         for (const auto& c : HEOS->get_components())
@@ -635,6 +688,8 @@ int main(int argc, char** argv) {
         }
 
         if (!FAST) std::printf("   worst: %s\n", wdesc);
+        if (Sv.polish && Sv.pol_calls)
+            std::printf("   polish: %.2f Newton its per root, %ld of %ld rejected\n", double(Sv.pol_its) / Sv.pol_calls, Sv.pol_fail, Sv.pol_calls);
         // 2. timing
         volatile double sink = 0;
         auto time = [&](auto&& fn, int REP) {
