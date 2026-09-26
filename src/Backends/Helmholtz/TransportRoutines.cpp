@@ -1281,7 +1281,8 @@ CoolPropDbl TransportRoutines::viscosity_rhosr(HelmholtzEOSMixtureBackend& HEOS)
     double psi_liq = 1 / (1 + exp(-crossover_sharpness * (x - data.x_crossover)));
 
     // Evaluated using Horner's method
-    const std::vector<double>&cL = data.c_liq, cV = data.c_vap;
+    const std::vector<double>& cL = data.c_liq;
+    const std::vector<double>& cV = data.c_vap;
     double f_liq = cL[0] + x * (cL[1] + x * (cL[2] + x * (cL[3])));
     double f_vap = cV[0] + x * (cV[1] + x * (cV[2] + x * (cV[3])));
 
