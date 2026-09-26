@@ -1042,6 +1042,15 @@ class JSONFluidLibrary
 
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(const nlohmann::json& conductivity, CoolPropFluid& fluid) {
+        // If an array, use the first one, and then stop; the rest are kept as documented fallbacks (as for viscosity)
+        if (conductivity.is_array()) {
+            if (conductivity.empty()) {
+                throw ValueError(format("conductivity list is empty for fluid %s", fluid.name.c_str()));
+            }
+            parse_thermal_conductivity(conductivity.front(), fluid);
+            return;
+        }
+
         // Load the BibTeX key
         fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity, "BibTeX");
 
