@@ -393,3 +393,81 @@ reference is a 200 000-point scan of the explicit Z with 80-step bisection.
   implemented); none occurred here.
 - **Warm cache:** timings are warm, with the 55 kB of tables resident.
 - **Association and polar terms** are not included.
+
+---
+
+# Experiment 6: GERG-2008 multi-fluid Chebyshev density solver (`gerg_cheb.cpp`)
+
+Build it against the Release static library. `-force_load` is needed so that the GERG backend's
+static registration survives linking:
+
+```bash
+c++ -std=c++20 -O3 -DNDEBUG -mcpu=native -DNQ_DEG=20 <CoolProp CXX_INCLUDES> -I. gerg_cheb.cpp \
+    -Wl,-force_load,build_rel/libCoolProp.a -o gerg_cheb
+./gerg_cheb [delta_max=4] [tol=1e-12] [fast]
+```
+
+`gen_cheb2bern.py` emits `cheb2bern.hpp`: exact Chebyshev-to-Bernstein matrices, computed in
+rational arithmetic and then rounded.
+
+## Structure
+
+Every GERG-2008 residual term, pure-fluid and departure, is n·τᵗ·e^{u_τ(τ)} · δᵈ·e^{u_δ(δ)}. This
+includes water and CO₂, because the GERG backend builds its own pure-fluid EOS from power terms
+only; the GERG departure β(δ−γ) terms are stored as δ-linear. With ρ = δ·ρ_r(x):
+
+  G(δ) = δ·Z(δ) − p/(ρ_r·R·T),  Z = 1 + Σ_g W_g(T, x)·χ_g(δ)
+
+where χ_g = δ·d/dδ[δᵈe^{u_δ}] and W_g = Σ over the group's terms of X_k·κ_k(τ), with X_k equal to
+x_i or x_i·x_j·F_ij.
+
+| tier | what | cost |
+|---|---|---|
+| component set | collect terms; **group terms with identical δ-parameters** (91→32, 164→38 and 92→30 δ-functions for C1/C2/C3, 5-component natural gas and humid air); adaptive shared δ-pieces on [0, 4]; degree-20 Chebyshev tables | 5–12 ms; 90–260 kB |
+| per (T, x) | τ, ρ_r from CoolProp's reducing function; one `exp` per term for κ; G per piece as Σ_g W_g·C_g | 2–8 µs |
+| per p | subtract t; per piece: coefficient exclusion, then Bernstein conversion (exact matrix, rigorous roundoff bound), Descartes + de Casteljau subdivision, safeguarded Newton on the Chebyshev series | 2–6 µs |
+
+## What had to be fixed along the way
+
+- **Piece acceptance.** A test relative to each term's own size never converges for the
+  exp(−δ⁶) terms, which are about 1e-24 by δ ≈ 2 (this produced 1 100–1 900 pieces). The error
+  has to be budgeted in units of Z, weighted by max|κ(τ)| over the τ range of use. Weights reach
+  n·τ³⁰ at low T.
+- **Budget relative to the smallest local magnitude, not the piece maximum.** Otherwise the gas
+  root at δ ~ 1e-4 (1 kPa, 100 K) came out at 5e-6. There is no roundoff floor on the piece
+  touching δ = 0.
+- **Rootfinding.** Chebyshev-coefficient exclusion and monotonicity tests are loose on strongly
+  varying pieces. Bernstein/Descartes is tighter. The bigger fix was the refinement stopping test:
+  a 1e-16 absolute bracket width never triggered, which cost 50–77 iterations per root. Safeguarded
+  Newton with a ulp-relative stop takes 10–14.
+- **Memory layout.** Piece-major tables let the assembly stream contiguously.
+
+## Results
+
+Degree 20, table tolerance 1e-12. The states are 9 temperatures × 8 pressures (1 kPa – 100 MPa)
+per mixture. The reference is a 100 000-point scan of the direct term sum on δ ∈ (0, 6] with
+bisection. The term sum reproduces CoolProp's GERG2008 pressure to ≤2e-15.
+
+| mixture | δ-groups | pieces | roots | max rel. error | counts | roots with δ > 4 | assemble | roots | total | CoolProp `solver_rho_Tp` (one root) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| C1/C2 50/50 | 25 | 32 | 184 | 1.5e-13 | all ok | 0 | 3.9 µs | 5.3 µs | 9.2 µs | 18 µs |
+| C1/C2/C3 50/30/20 | 32 | 38 | 180 | 4.5e-14 | all ok | 0 | 5.7 | 5.5 | 11.2 | 32 |
+| natural gas (C1, N₂, CO₂, C2, C3) | 38 | 41 | 158 | 3.0e-14 | all ok | 0 | 7.6 | 4.9 | 12.5 | 54 |
+| C1/H₂S 50/50 (type III) | 20 | 28 | 166 | 4.1e-13 | all ok | 0 | 2.1 | 4.5 | 6.6 | 8 |
+| humid air (N₂, O₂, Ar, CO₂, H₂O) | 30 | 37 | 72 | 3.4e-14 | all ok | 0 | 5.3 | 2.2 | 7.5 | 17 |
+
+**Caveat: timings were taken on a heavily loaded machine.** The load average was 12–34 from
+other sessions' test suites; CoolProp's own solver timed 39 µs, then 106 µs, for the same
+natural-gas calls. Ratios against `solver_rho_Tp` in the same run (0.23–0.83) are more
+meaningful than the absolute numbers. Note that `solver_rho_Tp` returns one root from a guess;
+this solver returns all roots in [0, δ_max].
+
+Low-temperature states have up to 5 real roots of the GERG equation, all of them found.
+
+**Not covered:**
+- **Range:** δ_max = 4 is fixed, and the scan found no roots in (4, 6].
+- **Non-analytic terms:** none are handled. Reference-EOS water and CO₂ (IAPWS-95, Span–Wagner)
+  would need a direct add-in.
+- **Tangencies:** the depth cap of 16 means a root pair closer than 2⁻¹⁶ of a piece width
+  (tangency at a spinodal) can be missed.
+- **Wider sampling:** this is a grid of states, not random sampling.
