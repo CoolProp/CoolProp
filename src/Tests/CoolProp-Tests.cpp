@@ -46,6 +46,15 @@ struct vel
 };
 
 vel viscosity_validation_data[] = {
+  // R14 regression pins, not published values.  R14's ECS transport uses Nitrogen as its
+  // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
+  // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
+  // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
+  // 2026-09-26; REFPROP 10.1's R14.FLD instead names the reference fluid's VS1/TC1 models,
+  // i.e. Nitrogen's 2004 correlations).  These pins
+  // make any future change to Nitrogen's transport visible in R14.
+  vel("R14", "T", 150, "Dmass", 1500.0, "V", 183.50892653027e-6, 1e-6),
+  vel("R14", "T", 300, "Dmass", 10.0, "V", 17.43725259137e-6, 1e-6),
   // From Vogel, JPCRD, 1998
   vel("Propane", "T", 90, "Dmolar", 16.52e3, "V", 7388e-6, 1e-3),
   vel("Propane", "T", 150, "Dmolar", 15.14e3, "V", 656.9e-6, 5e-3),
@@ -112,13 +121,18 @@ vel viscosity_validation_data[] = {
   vel("Ammonia", "T", 300, "Dmass", 8.0, "V", 9.9219e-6, 1e-5),
   vel("Ammonia", "T", 300, "Dmass", 609.0, "V", 133.3937e-6, 1e-5),
 
-  // From Lemmon and Jacobsen, JPCRD, 2004
-  vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),
-  vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "V", 17.8771e-6, 1e-3),
-  vel("Nitrogen", "T", 100, "Dmolar", 25000, "V", 79.7418e-6, 1e-3),
-  vel("Nitrogen", "T", 200, "Dmolar", 10000, "V", 21.0810e-6, 1e-3),
-  vel("Nitrogen", "T", 300, "Dmolar", 5000, "V", 20.7430e-6, 1e-3),
-  vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "V", 18.2978e-6, 1e-3),
+  // Huber, Perkins & Lemmon, IJT, 2024 - Table 7 (no critical enhancement, as in CoolProp)
+  vel("Nitrogen", "T", 90, "Dmass", 1e-9, "V", 6.07115583e-6, 1e-8),
+  vel("Nitrogen", "T", 90, "Dmass", 756, "V", 108.42550781e-6, 1e-8),
+  vel("Nitrogen", "T", 300, "Dmass", 1e-9, "V", 17.83446070e-6, 1e-8),
+  vel("Nitrogen", "T", 300, "Dmass", 28, "V", 18.23478803e-6, 1e-8),
+  vel("Nitrogen", "T", 300, "Dmass", 560, "V", 50.59605975e-6, 1e-8),
+  // Table 8, the background eta_0 + eta_res of each near-critical row.  CoolProp has no
+  // viscosity critical enhancement, so the paper's multiplicative factor (1.033, 1.091 and
+  // 1.026 at these states) is not applied; the background is what CoolProp computes.
+  vel("Nitrogen", "T", 126.192, "Dmass", 265, "V", (8.43716205 + 7.20032032) * 1e-6, 1e-8),
+  vel("Nitrogen", "T", 126.212, "Dmass", 333, "V", (8.43843818 + 11.03805357) * 1e-6, 1e-8),
+  vel("Nitrogen", "T", 126.952, "Dmass", 300, "V", (8.48562461 + 9.04720938) * 1e-6, 1e-8),
   vel("Argon", "T", 100, "Dmolar", 1e-14, "V", 8.18940e-6, 1e-3),
   vel("Argon", "T", 300, "Dmolar", 1e-14, "V", 22.7241e-6, 1e-3),
   vel("Argon", "T", 100, "Dmolar", 33000, "V", 184.232e-6, 1e-3),
@@ -490,6 +504,15 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
 }
 
 vel conductivity_validation_data[] = {
+  // R14 regression pins, not published values.  R14's ECS transport uses Nitrogen as its
+  // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
+  // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
+  // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
+  // 2026-09-26; REFPROP 10.1's R14.FLD instead names the reference fluid's VS1/TC1 models,
+  // i.e. Nitrogen's 2004 correlations).  These pins
+  // make any future change to Nitrogen's transport visible in R14.
+  vel("R14", "T", 150, "Dmass", 1500.0, "L", 80.28870657840523e-3, 1e-6),
+  vel("R14", "T", 300, "Dmass", 10.0, "L", 16.24624435074178e-3, 1e-6),
   ///\todo Re-enable the conductivity tests that fail due to not having viscosity correlation
 
   // From Assael, JPCRD, 2013
@@ -608,13 +631,48 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Ethane", "T", 440, "Dmolar", 1520, "L", 45.9e-3, 1e-2),
   vel("Ethane", "T", 310, "Dmolar", 4130, "L", 45.4e-3, 1e-2),
 
-  // From Lemmon and Jacobsen, JPCRD, 2004
-  vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "L", 9.27749e-3, 1e-4),
-  vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "L", 25.9361e-3, 1e-4),
-  vel("Nitrogen", "T", 100, "Dmolar", 25000, "L", 103.834e-3, 1e-4),
-  vel("Nitrogen", "T", 200, "Dmolar", 10000, "L", 36.0099e-3, 1e-4),
-  vel("Nitrogen", "T", 300, "Dmolar", 5000, "L", 32.7694e-3, 1e-4),
-  vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "L", 675.800e-3, 1e-4),
+  // Sotiriadou, Assael & Huber, IJT, 2025 - Table 8.  126.2 K / 320 kg/m^3 carries a
+  // critical enhancement of 353.3371 mW/(m K); see also the contributions test below.
+  vel("Nitrogen", "T", 126.2, "Dmass", 1e-9, "L", 11.7110e-3, 1e-4),
+  vel("Nitrogen", "T", 126.2, "Dmass", 320.0, "L", 385.931e-3, 1e-4),
+  vel("Nitrogen", "T", 500, "Dmass", 1e-9, "L", 38.9095e-3, 1e-4),
+  vel("Nitrogen", "T", 500, "Dmass", 320.0, "L", 59.6387e-3, 1e-4),
+  vel("Nitrogen", "T", 500, "Dmass", 500.0, "L", 84.9555e-3, 1e-4),
+  // Sotiriadou et al. (2025), Table 6, saturated liquid: the only dense-liquid coverage
+  // (the 2004 model's 100 K / 25000 mol/m^3 point was removed).  Printed to four figures,
+  // so tested to half a unit in the last digit (CoolProp: 100.113).  REFPROP's dense-liquid
+  // step does not apply here (delchi = 0.060 > 0.01), so this is a clean check of the paper.
+  vel("Nitrogen", "T", 100, "Dmass", 689.35, "L", 100.1e-3, 5e-4),
+  // PINNED to CoolProp's output, not Table 6's 157.7.  At 70 K / 838.51 kg/m^3 the printed
+  // equations give no critical enhancement (delchi < 0), but the table was evidently
+  // generated with REFPROP.  Its TK3 routine applies
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)
+  // which adds about 0.04 mW/(m K) here (157.634 + 0.04 rounds to 157.7); nitrogen's TK8
+  // source is unavailable, but that step reproduces the table.  CoolProp follows the
+  // equations (Linear COO-49).
+  vel("Nitrogen", "T", 70, "Dmass", 838.51, "L", 157.63432933198801e-3, 1e-6),
+
+  // Velliadou, Assael, Antoniadis & Huber, IJT, 2021 - Sec. 3 check value (see also the
+  // contributions test below); the critical enhancement there is 6.2061 mW/(m K)
+  vel("Xenon", "T", 300, "Dmass", 1200.0, "L", 22.7675e-3, 1e-4),
+  // Table 7, printed to 0.01 mW/(m K), so each point is checked to half a unit in that
+  // last digit (0.005 mW/(m K)).  300 K / 1744 kg/m^3 has a 0.94 mW/(m K) enhancement.
+  vel("Xenon", "T", 200, "Dmass", 8.032, "L", 3.76e-3, 0.005 / 3.76),
+  vel("Xenon", "T", 400, "Dmass", 3.956, "L", 7.24e-3, 0.005 / 7.24),
+  vel("Xenon", "T", 600, "Dmass", 2.633, "L", 10.33e-3, 0.005 / 10.33),
+  vel("Xenon", "T", 300, "Dmass", 1744.0, "L", 26.48e-3, 0.005 / 26.48),
+  vel("Xenon", "T", 350, "Dmass", 724.4, "L", 13.16e-3, 0.005 / 13.16),
+  vel("Xenon", "T", 400, "Dmass", 501.1, "L", 11.22e-3, 0.005 / 11.22),
+  // PINNED to CoolProp's own output, not Table 7's 63.70 mW/(m K).  The EOS and viscosity
+  // are the paper's (Lemmon & Span 2006, Velliadou 2021), but Table 7 was generated with
+  // REFPROP, whose TK3 enhancement keeps a small dense-liquid contribution that the paper's
+  // Eqs. (4)-(7) do not have.  At 2725 kg/m^3 (2.5 rhoc) the equations give an enhancement
+  // of 0.0236 mW/(m K) and 63.6732 in total (also evaluated independently on REFPROP's EOS);
+  // with REFPROP's step it is 0.0553 and 63.7049.  CoolProp follows the equations
+  // (Linear COO-49).  The REFPROP step is
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)   (TRNS_TCX.FOR, TK3)
+  vel("Xenon", "T", 300, "Dmass", 2725.0, "L", 63.673176997097902e-3, 1e-6),
+
   vel("Argon", "T", 100, "Dmolar", 1e-14, "L", 6.36587e-3, 1e-4),
   vel("Argon", "T", 300, "Dmolar", 1e-14, "L", 17.8042e-3, 1e-4),
   vel("Argon", "T", 100, "Dmolar", 33000, "L", 111.266e-3, 1e-4),
@@ -755,6 +813,46 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
         CAPTURE(el.expected);
         CAPTURE(actual);
         CHECK(std::abs(actual / el.expected - 1) < el.tol);
+    }
+}
+
+// Nitrogen: Sotiriadou, Assael & Huber, IJT 46:42 (2025), Sec. 5: at 126.2 K / 320 kg/m^3
+// the critical enhancement is 353.3371 mW/(m K) of Table 8's 385.931.  The paper quotes it
+// to 7 figures, so it is checked to 1e-5; checking it separately from the total guards the
+// enhancement parameters independently of the background.  Its viscosity input is the new
+// Huber et al. (2024) background, so this also exercises the two new correlations together.
+// Xenon: Velliadou, Assael, Antoniadis & Huber, IJT 42:51 (2021), Sec. 3: at 300 K /
+// 1200 kg/m^3 the dilute, residual and critical contributions are 5.4993, 11.0621 and
+// 6.2061 mW/(m K).
+TEST_CASE("Nitrogen and xenon conductivity contributions match their papers", "[conductivity],[transport]") {
+    // Nitrogen's conductivity and viscosity are lists (new correlation first, Lemmon &
+    // Jacobsen 2004 kept for reference only); the loader must pick the first entry
+    CHECK(CoolProp::get_fluid_param_string("Nitrogen", "BibTeX-CONDUCTIVITY") == "Sotiriadou-IJT-2025-nitrogen");
+    CHECK(CoolProp::get_fluid_param_string("Nitrogen", "BibTeX-VISCOSITY") == "Huber-IJT-2024-nitrogen");
+    CHECK(CoolProp::get_fluid_param_string("Xenon", "BibTeX-CONDUCTIVITY") == "Velliadou-IJT-2021-xenon-conductivity");
+    CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+    SECTION("Nitrogen") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
+        AS->update(CoolProp::DmassT_INPUTS, 320.0, 126.2);
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(initial_density == 0);
+        CHECK(std::abs(critical / 353.3371e-3 - 1) < 1e-5);
+        CHECK(std::abs((dilute + residual + critical) / 385.931e-3 - 1) < 1e-4);
+    }
+    SECTION("Xenon") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Xenon"));
+        AS->update(CoolProp::DmassT_INPUTS, 1200.0, 300.0);
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(initial_density == 0);
+        CHECK(std::abs(dilute / 5.4993e-3 - 1) < 1e-4);
+        CHECK(std::abs(residual / 11.0621e-3 - 1) < 1e-4);
+        CHECK(std::abs(critical / 6.2061e-3 - 1) < 1e-4);
     }
 }
 

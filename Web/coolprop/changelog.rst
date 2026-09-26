@@ -38,6 +38,36 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity for xenon and nitrogen, and viscosity for nitrogen.**
+  ``PropsSI("L", ..., "Xenon")`` previously raised; nitrogen moves from the Lemmon and
+  Jacobsen (2004) viscosity and conductivity, which stay in the fluid file for reference
+  but are no longer used, to the current reference correlations.  As for R161, the
+  dilute and residual terms are expression-DSL data and the conductivity critical
+  enhancement is the native simplified Olchowy–Sengers block:
+
+  * **Xenon conductivity** — Velliadou, Assael, Antoniadis and Huber,
+    *Int. J. Thermophys.* **42**\ (4):51 (2021).  Its check value at 300 K and
+    1200 kg/m\ :sup:`3`, and each of its three contributions, agree to 1e-4, as do six
+    values of Table 7 to the 0.01 mW/(m K) it is printed at.  One dense-liquid value of
+    Table 7, 300 K and 2725 kg/m\ :sup:`3`, does not (CoolProp 63.673 mW/(m K), table
+    63.70), for the same reason as n-undecane's: the table was generated with REFPROP,
+    whose enhancement routine keeps a small dense-liquid contribution the paper's
+    equations do not have.
+  * **Nitrogen conductivity** — Sotiriadou, Assael and Huber, *Int. J. Thermophys.*
+    **46**\ (3):42 (2025).  All five Table 8 values agree to 1e-4, including 126.2 K and
+    320 kg/m\ :sup:`3`, where the critical enhancement is 353.3 of 385.9 mW/(m K).
+  * **Nitrogen viscosity** — Huber, Perkins and Lemmon, *Int. J. Thermophys.*
+    **45**\ (10):146 (2024).  Agrees with Table 7 and with the background columns of
+    Table 8 to 1e-8.  The paper's viscosity critical enhancement is not included; it
+    matters only within about 3 % of the critical temperature and 25 % of the critical
+    density.
+
+  The residual coefficients in Table 3 of both conductivity papers are labelled
+  mW/(m K) but are in W/(m K).  R14's viscosity and conductivity, extended corresponding
+  states models that use nitrogen as their reference fluid, change with nitrogen's: at
+  150 K and 1500 kg/m\ :sup:`3` the viscosity rises by 3.4 % and the conductivity falls by
+  1.2 %; in the dilute gas they change by less than 1e-5.  Air is a separate fluid and is unaffected.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
