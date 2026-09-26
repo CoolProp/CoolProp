@@ -4404,6 +4404,84 @@
           ]
         }
       }
+    },
+    "conductivity": {
+      "BibTeX": "Assael-JPCRD-2016-Ethylene-Propylene",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (13) of Assael, Koutian, Huber & Perkins, J. Phys. Chem. Ref. Data 45(3):033104 (2016), converted from mW/(m K) to W/(m K). Tc = 282.35 K is the paper's own value. The b[3] coefficient is the paper's -2.92695; ETHYLENE.FLD (REFPROP 10.0 and 10.1) carries -2.9269. The two differ by less than 1e-5 relative over 110-680 K and both give the paper's 21.01 mW/(m K) at 300 K, so the check value cannot separate them and the paper's printed value is used.",
+        "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 282.35
+        },
+        "arrays": {
+          "a": [
+            -54.1761,
+            541.904,
+            -656.108,
+            667.048,
+            -109.992,
+            60.6511,
+            -1.01377
+          ],
+          "b": [
+            26.5363,
+            -20.1401,
+            19.4152,
+            -2.92695,
+            1.0
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (5) and Table 2 of Assael, Koutian, Huber & Perkins, J. Phys. Chem. Ref. Data 45(3):033104 (2016), converted from mW/(m K) to W/(m K). Tc = 282.35 K and rhoc = 214.24 kg/m^3 are the paper's own reducing values. ETHYLENE.FLD reduces density by 7.637 mol/L (214.247 kg/m^3 with REFPROP 10.0's molar mass) instead of 214.24; that moves the residual by 5e-5 relative at 300 K / 300 kg/m^3 (44.484 vs 44.482) and both round to the paper's 44.48.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-3*sum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 282.35,
+          "rhoc": 214.24
+        },
+        "arrays": {
+          "B1": [
+            26.1453,
+            -21.8619,
+            36.2068,
+            -13.6642,
+            1.84752
+          ],
+          "B2": [
+            -11.3225,
+            26.9282,
+            -22.3164,
+            3.90241,
+            0.668286
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Section 3.1.2 of Assael, Koutian, Huber & Perkins, J. Phys. Chem. Ref. Data 45(3):033104 (2016): R_D = 1.02, gamma = 1.239, Gamma = 0.058, xi0 = 1.81e-10 m, qD^-1 = 4.9e-10 m, T_ref = 1.5 Tc (the paper prints this rounded to 423.53 K; the rounding moves the check-point enhancement by less than 1e-5 mW/(m K)). All six parameters agree with the TK3 block of ETHYLENE.FLD in REFPROP 10.0 and 10.1. The paper evaluated the enhancement with the Holland et al. (1983) viscosity (33.791 uPa s at its check point); CoolProp divides by its own ethylene viscosity, Sotiriadou et al. (2024), 31.668 uPa s there, so CoolProp's enhancement at 300 K / 300 kg/m^3 is 4.401 mW/(m K) instead of the paper's 4.12; rescaled by the viscosity ratio it reproduces 4.12, i.e. the EOS contribution agrees.",
+        "GAMMA": 0.058,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 2040816326.5306125,
+        "zeta0": 1.81e-10,
+        "T_ref": 423.52500000000003
+      }
     }
   }
 }

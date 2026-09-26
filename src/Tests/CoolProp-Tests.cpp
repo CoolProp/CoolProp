@@ -720,6 +720,31 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3),
   vel("Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2),
 
+  // Koutian, Assael, Huber & Perkins, JPCRD 46:013102 (2017), Sec. 3.1.4 check point
+  vel("CycloHexane", "T", 554, "Dmass", 350, "L", 79.66e-3, 1e-4),
+  // Assael, Koutian, Huber & Perkins, JPCRD 45:033104 (2016), Secs. 3.1.4 and 3.2.4
+  // check points.  Both are PINNED to CoolProp's own output, not the paper's totals
+  // (69.62 and 81.47 mW/(m K)).  The critical enhancement divides by the viscosity, and
+  // the paper evaluated it with a different viscosity than CoolProp's: ethylene with
+  // Holland et al. (1983), 33.791 uPa s, where CoolProp uses Sotiriadou et al. (2024),
+  // 31.668 uPa s; propylene with the Huber et al. (2003) ECS model as implemented by
+  // NIST, 53.841 uPa s, where CoolProp's ECS implementation of the same model gives
+  // 53.346 uPa s.  The EOS agrees: the paper's equations on REFPROP 10.0 thermodynamics
+  // with CoolProp's viscosity give 69.898 and 81.516.  Dilute, residual and the
+  // viscosity-rescaled enhancement are checked against the paper below.
+  vel("Ethylene", "T", 300, "Dmass", 300, "L", 69.89832964124323e-3, 1e-6),
+  vel("Propylene", "T", 350, "Dmass", 385, "L", 81.51587879413222e-3, 1e-6),
+  // Zero-pressure rows of Tables 5 (ethylene) and 9 (propylene); printed to four
+  // significant figures, so the tolerance is the half-unit rounding of 8.75.
+  vel("Ethylene", "T", 200, "Dmass", 1e-9, "L", 10.39e-3, 6e-4),
+  vel("Ethylene", "T", 300, "Dmass", 1e-9, "L", 21.01e-3, 6e-4),
+  vel("Ethylene", "T", 400, "Dmass", 1e-9, "L", 36.36e-3, 6e-4),
+  vel("Ethylene", "T", 500, "Dmass", 1e-9, "L", 55.05e-3, 6e-4),
+  vel("Propylene", "T", 200, "Dmass", 1e-9, "L", 8.75e-3, 6e-4),
+  vel("Propylene", "T", 300, "Dmass", 1e-9, "L", 17.55e-3, 6e-4),
+  vel("Propylene", "T", 400, "Dmass", 1e-9, "L", 29.18e-3, 6e-4),
+  vel("Propylene", "T", 500, "Dmass", 1e-9, "L", 42.64e-3, 6e-4),
+
   // Sykioti, JPCRD, 2013
   vel("Methanol", "T", 300, "Dmass", 850, "L", 241.48e-3, 1e-2),
   vel("Methanol", "T", 400, "Dmass", 2, "L", 25.803e-3, 1e-2),
@@ -755,6 +780,42 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
         CAPTURE(el.expected);
         CAPTURE(actual);
         CHECK(std::abs(actual / el.expected - 1) < el.tol);
+    }
+}
+
+// The check points of Assael et al., JPCRD 45:033104 (2016) (ethylene, propylene) and
+// Koutian et al., JPCRD 46:013102 (2017) (cyclohexane) also tabulate each contribution
+// and the viscosity the enhancement was evaluated with.  The enhancement is inversely
+// proportional to that viscosity, so rescaling CoolProp's enhancement by
+// eta_CoolProp/eta_paper removes the viscosity difference that forces the ethylene and
+// propylene totals above to be pinned, and leaves the EOS-dependent part checked
+// against the paper.
+TEST_CASE("Ethylene, propylene and cyclohexane conductivity contributions match the published check points", "[conductivity],[transport]") {
+    struct Contrib
+    {
+        std::string fluid;
+        double T, rho, dilute, residual, critical;  // K, kg/m^3, mW/(m K)
+        double eta_paper;                           // Pa s
+    };
+    std::vector<Contrib> pts = {{"Ethylene", 300.0, 300.0, 21.01, 44.48, 4.12, 33.791e-6},
+                                {"Propylene", 350.0, 385.0, 23.07, 53.88, 4.52, 53.841e-6},
+                                {"CycloHexane", 554.0, 350.0, 43.09, 22.03, 14.54, 44.42e-6}};
+    for (const auto& p : pts) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", p.fluid));
+        AS->update(CoolProp::DmassT_INPUTS, p.rho, p.T);
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(p.fluid);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        double eta = AS->viscosity();
+        CAPTURE(eta);
+        // The papers print two decimals, so the tolerance is half a unit in the last place
+        CHECK(std::abs(dilute * 1e3 - p.dilute) <= 0.005);
+        CHECK(initial_density == 0);
+        CHECK(std::abs(residual * 1e3 - p.residual) <= 0.005);
+        CHECK(std::abs(critical * eta / p.eta_paper * 1e3 - p.critical) <= 0.005);
     }
 }
 
