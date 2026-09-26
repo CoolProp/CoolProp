@@ -217,31 +217,66 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             o.T = HEOS.T();
             o.p = HEOS.p();
             o.omega = 1.0;
+            if (wilson_seeded) {
+                // Seed the vapor fraction from the guessed split (beta = (z-x)/(y-x) on the widest-spread
+                // component) so the two-phase Newton solver starts near the solution.  A stiff near-pure
+                // split (e.g. water/CO2, beta ~ 0.9999) diverges from an unseeded beta.
+                std::size_t ib = 0;
+                CoolPropDbl best = 0;
+                for (std::size_t i = 0; i < o.z.size(); ++i) {
+                    CoolPropDbl d = std::abs(o.y[i] - o.x[i]);
+                    if (d > best) { best = d; ib = i; }
+                }
+                if (best > 0) {
+                    CoolPropDbl b = (o.z[ib] - o.x[ib]) / (o.y[ib] - o.x[ib]);
+                    if (ValidNumber(b) && b > 0 && b < 1) o.beta = b;
+                }
+            }
             CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
             if (wilson_seeded) {
-                // The Wilson split is speculative (the stability test said "stable"): a failure
-                // to converge, or a trivial (x == y) result, must fall back to the single-phase
-                // path rather than abort the flash or publish a bogus split.
-                try {
-                    solver.solve();
-                } catch (const CoolProp::CoolPropBaseError&) {
-                    do_twophase = false;
-                }
-                if (do_twophase) {
-                    // Accept the speculative split only if it is a genuine, non-degenerate
-                    // equilibrium: a non-trivial composition spread AND equal fugacities
-                    // (recomputed on the published split).  This guards the forced path against
-                    // publishing a degenerate (x == y) or unconverged split, since the base
-                    // two-phase solver does not itself gate on convergence.
-                    bool ok = false;
+                // The recovery split is speculative (the stability test said "stable"): accept it only
+                // as a genuine, non-degenerate equilibrium -- a non-trivial composition spread AND equal
+                // fugacities -- otherwise fall back to single phase rather than publish a bogus split.
+                // Refine with the two-phase Newton solver first; but a stiff near-pure split (extreme
+                // beta, e.g. a near-pure water liquid condensing from CO2) can make the Newton solver
+                // overshoot even from a good seed, while the SS-refined seed is itself a valid,
+                // mass-balanced equilibrium -- so on a Newton failure the seed is restored and accepted
+                // if it verifies within a looser recovery tolerance (well below the ~0.1 fugacity
+                // residual of a genuinely trivial / diverged split).
+                const std::vector<CoolPropDbl> x_seed = o.x, y_seed = o.y;
+                const CoolPropDbl rhoL_seed = o.rhomolar_liq, rhoV_seed = o.rhomolar_vap, beta_seed = o.beta;
+                auto verify_split = [&](double tol) -> bool {
                     try {
                         CoolPropDbl spread = 0;
                         for (std::size_t i = 0; i < o.z.size(); ++i)
                             spread = std::max(spread, std::abs(o.x[i] - o.y[i]));
+                        if (!(spread >= 1e-6)) return false;
+                        // Material balance: the accepted (x, y, beta) must reconstruct the feed,
+                        // z_i = (1-beta)*x_i + beta*y_i, for EVERY component.  Equal fugacities and
+                        // phase-pressure consistency do not imply this on the loose recovery path,
+                        // where beta was seeded from a single widest-spread component (see the
+                        // beta seed above) -- an inconsistent split would reconstruct a different
+                        // feed, so verify it directly and cheaply before the EOS density updates.
+                        for (std::size_t i = 0; i < o.z.size(); ++i) {
+                            const CoolPropDbl z_recon = (1.0 - o.beta) * o.x[i] + o.beta * o.y[i];
+                            if (!ValidNumber(z_recon) || std::abs(z_recon - o.z[i]) > 1e-6) return false;
+                        }
                         HEOS.SatL->set_mole_fractions(o.x);
                         HEOS.SatL->update_DmolarT_direct(o.rhomolar_liq, o.T);
                         HEOS.SatV->set_mole_fractions(o.y);
                         HEOS.SatV->update_DmolarT_direct(o.rhomolar_vap, o.T);
+                        // Phase-pressure consistency: update_DmolarT_direct fixes (rho, T) but does NOT
+                        // enforce P(rho, T) == o.p.  For a genuine equilibrium both phase densities sit
+                        // at the target pressure (to the SS fixed-point precision, ~1e-5 here); a spurious
+                        // seed does not -- e.g. a "liquid" root the SS landed on in the negative-pressure
+                        // spinodal region for a single-phase feed below its dew point is off by a factor
+                        // (~12% in the CO2/water case) -- and its fugacities would then balance at the
+                        // WRONG pressure, fooling the residual test below.  Reject unless both phases sit
+                        // at o.p within a tolerance loose enough for the SS precision but far tighter than
+                        // the spinodal mismatch.
+                        const double p_tol = 1e-3;
+                        if (!ValidNumber(HEOS.SatL->p()) || std::abs(HEOS.SatL->p() / o.p - 1.0) > p_tol) return false;
+                        if (!ValidNumber(HEOS.SatV->p()) || std::abs(HEOS.SatV->p() / o.p - 1.0) > p_tol) return false;
                         CoolPropDbl fug_resid = 0;
                         for (std::size_t i = 0; i < o.z.size(); ++i) {
                             if (o.x[i] < 1e-12 || o.y[i] < 1e-12) continue;  // trace in one phase
@@ -249,12 +284,27 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                             CoolPropDbl lnfV = std::log(o.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
                             fug_resid = std::max(fug_resid, std::abs(lnfV - lnfL));
                         }
-                        ok = (spread >= 1e-6) && ValidNumber(fug_resid) && (fug_resid <= 1e-7);
+                        return ValidNumber(fug_resid) && fug_resid <= tol;
                     } catch (const CoolProp::CoolPropBaseError&) {
-                        ok = false;
+                        return false;
                     }
-                    if (!ok) do_twophase = false;  // trivial / unconverged / unverifiable -> single phase
+                };
+                bool solved = true;
+                try {
+                    solver.solve();
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    solved = false;
                 }
+                bool ok = solved && verify_split(1e-7);  // prefer the tightly-converged Newton result
+                if (!ok) {
+                    o.x = x_seed;
+                    o.y = y_seed;
+                    o.rhomolar_liq = rhoL_seed;
+                    o.rhomolar_vap = rhoV_seed;
+                    o.beta = beta_seed;
+                    ok = verify_split(1e-4);  // mass-balanced SS seed the Newton solver could not tighten
+                }
+                do_twophase = ok;
             } else {
                 // Genuine instability from the stability test.  #3170: solve_michelsen's
                 // convergence gate (o.nonconvergence, GitHub #3168) throws on a non-converged
