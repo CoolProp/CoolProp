@@ -27,8 +27,8 @@
 #   - semgrep          : uvx semgrep with p/cpp + p/security-audit rulesets
 #   - Catch2 tests     : ./build_catch/CatchTestRunner with tag scope
 #                        auto-selected from the changed paths, sharded
-#                        across --jobs cores by dev/ci/run-catch-sharded.sh,
-#                        with BENCHMARK blocks skipped (CI still runs them)
+#                        across --jobs cores by dev/ci/run-catch-sharded.sh;
+#                        BENCHMARK bodies run once, as in CI
 #
 # Exit codes: 0 = all checks passed (or were skipped intentionally),
 # non-zero = at least one check failed.  When invoked as a pre-push hook
@@ -72,22 +72,29 @@ skip_check() {
 if [ -z "$JOBS" ]; then
     JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
 fi
-case "$JOBS" in '' | *[!0-9]* | 0)
-    echo "preflight: --jobs must be a positive integer, got '$JOBS'" >&2
+# Leading zeros are rejected, not stripped: bash arithmetic reads 010 as
+# octal 8 and 08 as an error, while xargs -P reads them as decimal.
+case "$JOBS" in '' | *[!0-9]* | 0*)
+    echo "preflight: --jobs must be a positive integer without leading zeros, got '$JOBS'" >&2
     exit 2
     ;;
 esac
 
-# Share CPM dependency downloads across worktrees.  Without this every fresh
-# build dir re-clones all nine dependencies -- measured at most of the 19-22 s
-# a fresh configure takes, paid twice per worktree (build_catch and
-# build_shared).  CPM caches the value per build dir, so this only affects
-# build dirs configured from here on; existing ones keep what they have.  CPM
-# takes a file lock per package, so concurrent worktrees can share it.
-export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE:-$HOME/.cache/CPM}"
+# Share CPM dependency downloads across worktrees.  cmake/dependencies.cmake
+# already defaults the cache to <worktree>/.cpm_cache, so build dirs WITHIN a
+# worktree share it -- but every new worktree still re-clones all of the
+# dependencies on its first configure, which was most of the 19 s that
+# configure took.  CPM stores the value as a cache variable per build dir, so
+# this only affects build dirs configured from here on; existing ones keep
+# what they have.  CPM takes a file lock per package, so concurrent worktrees
+# can share one cache.  `-` rather than `:-`: an explicitly empty
+# CPM_SOURCE_CACHE is an opt-out and is respected.
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE-$HOME/.cache/CPM}"
 
-# Ninja when available: it is what CI and the documented build_catch setup
-# use, and it schedules the build better than Unix Makefiles.
+# Ninja when available: it is what CI uses, and it schedules the build better
+# than Unix Makefiles.  Only applied when preflight configures a build dir
+# itself (the dir does not exist yet), so it can never clash with the
+# generator an existing CMakeCache.txt records.
 CMAKE_GEN_ARGS=()
 if command -v ninja >/dev/null 2>&1; then
     CMAKE_GEN_ARGS=(-G Ninja)
@@ -196,7 +203,7 @@ elif [ ! -d build_catch ]; then
     # default CMAKE_BUILD_TYPE, so without it the runner is built unoptimized
     # and every test stage after this is several times slower.
     cmake -B build_catch -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 || {
-        fail "build (cmake configure failed; run cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release manually)"
+        fail "build (cmake configure failed; rm -rf build_catch, then run cmake -B build_catch -S . ${CMAKE_GEN_ARGS[*]-} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release manually)"
     }
 fi
 if ! skip_check build && [ -d build_catch ]; then
@@ -416,14 +423,20 @@ else
         # the cases that ran add up to $matched, so a shard that crashed or
         # silently ran nothing fails rather than shrinking the gate.
         #
-        # --skip-benchmarks: BENCHMARK blocks assert nothing, and the two
-        # cases that carry them ("Benchmarking caching options", "Benchmark
-        # class construction", plus the superancillary timing blocks) were
-        # ~10 s of the default ~[slow] run; [superanc],[caching] alone drops
-        # from 25.9 s to 0.9 s.  The cases still run -- only the timing loops
-        # are skipped -- and CI keeps running them with --benchmark-samples 1.
-        elif ./dev/ci/run-catch-sharded.sh ./build_catch/CatchTestRunner "$TAG_FILTER" "$matched" "$JOBS" "$test_logdir" \
-                 --warn UnmatchedTestSpec --skip-benchmarks >"$test_logdir/summary.txt" 2>&1; then
+        # BENCHMARK flags: the same one-sample settings CI uses.  Catch2's
+        # defaults take 100 samples plus analysis, which made
+        # [superanc],[caching] alone 25.9 s.  --skip-benchmarks would be
+        # faster still but is NOT safe: a BENCHMARK body that throws fails its
+        # test case, and some bodies are the only place a code path runs
+        # ("Performance regression for TS; on/off" [2438] is the only
+        # update(SmolarT_INPUTS) call in its case; the #2773 update_with_guesses
+        # paths in [caching] run only inside BENCHMARK).  Running each body
+        # once costs ~1 s over skipping them once the run is sharded.
+        elif mkdir "$test_logdir/shards" \
+             && ./dev/ci/run-catch-sharded.sh ./build_catch/CatchTestRunner "$TAG_FILTER" "$matched" "$JOBS" "$test_logdir/shards" \
+                 --warn UnmatchedTestSpec \
+                 --benchmark-samples 1 --benchmark-no-analysis --benchmark-warmup-time 0 \
+                 >"$test_logdir/summary.txt" 2>&1; then
             ok "tests ($TAG_FILTER, $matched cases, sharded over $JOBS jobs)"
         else
             # `|| true` guards the DISPLAY only: without it a failed cat

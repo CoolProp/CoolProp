@@ -33,6 +33,10 @@
 #     the per-shard case totals (successes+failures+expectedFailures+skips
 #     from <OverallResultsCases>) must sum to exactly <expected-cases>.  That
 #     catches a shard that exited 0 but ran fewer cases than it was given.
+#     The same element's failures= must be 0 in every shard, independently
+#     of the exit status (defence in depth; Catch2 already exits non-zero).
+#   - <logdir> must be empty, so a stale .rc/.xml from an earlier run can
+#     never stand in for a shard that did not run this time.
 #     It reads a machine-readable attribute, not the console summary, which
 #     a Catch2 upgrade could reword.
 #   - The caller keeps --warn UnmatchedTestSpec in <extra args>; Catch2
@@ -58,8 +62,8 @@ case "$EXPECTED" in '' | *[!0-9]*)
     exit 2
     ;;
 esac
-case "$JOBS" in '' | *[!0-9]* | 0)
-    echo "run-catch-sharded: jobs must be a positive integer, got '$JOBS'" >&2
+case "$JOBS" in '' | *[!0-9]* | 0*)
+    echo "run-catch-sharded: jobs must be a positive integer without leading zeros, got '$JOBS'" >&2
     exit 2
     ;;
 esac
@@ -75,6 +79,10 @@ if [ ! -x "$RUNNER" ]; then
 fi
 if [ ! -d "$LOGDIR" ]; then
     echo "run-catch-sharded: log directory '$LOGDIR' does not exist" >&2
+    exit 2
+fi
+if [ -n "$(ls -A "$LOGDIR")" ]; then
+    echo "run-catch-sharded: log directory '$LOGDIR' is not empty" >&2
     exit 2
 fi
 
@@ -113,6 +121,7 @@ fi
 FAILED_SHARDS=()
 RAN=0
 SKIPPED=0
+FAILED_CASES=0
 i=0
 while [ "$i" -lt "$SHARDS" ]; do
     rc_file="$LOGDIR/$i.rc"
@@ -129,22 +138,25 @@ while [ "$i" -lt "$SHARDS" ]; do
     # up short and fails the completeness check.
     xml="$LOGDIR/$i.xml"
     if [ -f "$xml" ]; then
-        # Prints "<total> <skips>" or nothing.
+        # Prints "<total> <skips> <failures>" or nothing.
         counts="$(awk '
             /<OverallResultsCases/ {
                 for (f = 1; f <= NF; f++) {
                     if (match($f, /^(successes|failures|expectedFailures|skips)="[0-9]+"/)) {
                         v = $f; sub(/^[a-zA-Z]+="/, "", v); sub(/".*/, "", v); s += v
                         if ($f ~ /^skips=/) k += v
+                        if ($f ~ /^failures=/) x += v
                     }
                 }
                 found = 1
             }
-            END { if (found) print s + 0, k + 0 }
+            END { if (found) print s + 0, k + 0, x + 0 }
         ' "$xml")"
         if [ -n "$counts" ]; then
-            RAN=$((RAN + ${counts% *}))
-            SKIPPED=$((SKIPPED + ${counts#* }))
+            read -r c_total c_skips c_failures <<<"$counts"
+            RAN=$((RAN + c_total))
+            SKIPPED=$((SKIPPED + c_skips))
+            FAILED_CASES=$((FAILED_CASES + c_failures))
         fi
     fi
     i=$((i + 1))
@@ -171,6 +183,10 @@ fi
 if [ "$RAN" -ne "$EXPECTED" ]; then
     STATUS=1
     echo "run-catch-sharded: $RAN case(s) ran across $SHARDS shards, but the filter lists $EXPECTED -- incomplete run"
+fi
+if [ "$FAILED_CASES" -ne 0 ]; then
+    STATUS=1
+    echo "run-catch-sharded: the XML reports $FAILED_CASES failed case(s)"
 fi
 if [ "$RAN" -gt 0 ] && [ "$SKIPPED" -eq "$RAN" ]; then
     STATUS=1

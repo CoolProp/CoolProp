@@ -37,7 +37,7 @@ predicts a green CI.
 |---|---|---|
 | clang-format | uvx clang-format (version pinned from `.pre-commit-config.yaml`) dry-run on changed `.cpp` / `.h` files | `--skip=clang-format` |
 | build | cmake builds `CatchTestRunner` in `build_catch/` (auto-configures on first run: Release, Ninja when available) | `--skip=build` |
-| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths.  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` blocks are skipped (CI still runs them) | `--skip=tests` |
+| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths.  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` bodies run once, with CI's one-sample flags | `--skip=tests` |
 | cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers | `--skip=cppcheck` |
 | clang-tidy | changed `.cpp` files via `run-clang-tidy-staged.sh`, one process per file, `--jobs` at a time; requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
 | semgrep | `p/security-audit` + local `.semgrep/` rules (uvx-resolved, Python 3.12 pinned) | `--skip=semgrep` |
@@ -59,12 +59,18 @@ Speed notes:
   Catch2's `--shard-count` splits the list into contiguous chunks and the
   heavy cases sit next to each other.  It fails if any shard exits non-zero
   (exit 4, "all skipped", is accepted per shard but not for the whole run),
-  or if the per-shard case counts from Catch2's XML reporter don't add up
-  to the listed count.
-- **Dependency downloads are shared.**  preflight exports
-  `CPM_SOURCE_CACHE=~/.cache/CPM` when it is unset, so a fresh worktree's
-  build dirs reuse downloaded dependencies instead of re-cloning them.
-  CPM caches the setting per build dir, so existing build dirs are unaffected.
+  if the per-shard case counts from Catch2's XML reporter don't add up to
+  the listed count, or if any shard's XML reports a failed case.
+- **Sharding changes test order context.**  Each shard is a fresh process,
+  so a case never sees `set_config_*` state leaked by an earlier case in
+  another shard.  CI runs the suite serially, so an order-dependent failure
+  can show up in CI and not in preflight (or the reverse).
+- **Dependency downloads are shared across worktrees.**  Build dirs in one
+  worktree already share `<worktree>/.cpm_cache` (`cmake/dependencies.cmake`),
+  but a new worktree re-clones every dependency on first configure.
+  preflight exports `CPM_SOURCE_CACHE=~/.cache/CPM` when it is unset so
+  new worktrees reuse one cache (set it to empty to opt out).  CPM stores
+  the setting per build dir, so existing build dirs are unaffected.
 - Under a heavily loaded machine (several worktrees building at once) pass
   a smaller `--jobs`.
 
