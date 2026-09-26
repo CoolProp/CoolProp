@@ -337,16 +337,19 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
 //     every grid point — asserted on all 8 forms.
 //   * No form is asserted BIT-EXACT.  The DSL and the routine perform the
 //     identical op sequence, but the last-ULP result is compiler-codegen
-//     dependent: under clang's default `-ffp-contract=on` the optimized routine
-//     may fuse `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
+//     dependent: on FMA-capable targets (arm64; x86-64 only with -mfma) the
+//     compiler may contract (clang default `-ffp-contract=on`, GCC `fast`) the
+//     routine's `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
 //     (virtual-dispatch tree walk) always rounds the multiply and the add
 //     separately.  Whether the routine fuses depends on the unroll/vectorize
 //     decision -- e.g. Apple clang 21 -O3 on arm64 emits a 4x-unrolled
 //     unfused main loop plus an `fmadd` remainder loop, so n-Pentane's 4-term
 //     powers_of_Tr happened to match bit-for-bit on one toolchain and differ
 //     by up to ~9 ULP (cancellation at T=120 K) on another.  Observed max
-//     relative error is ~2.4e-15, so the 1e-14 assertion holds with margin.
-//     This is a codegen artifact, NOT an algebra difference.
+//     relative error is ~2.4e-15, so the 1e-14 assertion has held with margin
+//     (an observation, not a proven bound: sum|terms|/|sum| is ~30 at
+//     n-Pentane T=120 K).  This is a codegen artifact, NOT an algebra
+//     difference.
 //
 // TEST-ONLY: no production code is touched.
 // ---------------------------------------------------------------------------
@@ -384,7 +387,7 @@ TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
             ++checks;
         }
     }
@@ -501,7 +504,7 @@ TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[ex
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
             ++checks;
         }
     }
@@ -581,7 +584,7 @@ TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][gold
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
             ++checks;
         }
     }
@@ -617,7 +620,7 @@ TEST_CASE("golden: conductivity dilute eta0_and_poly", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
             ++checks;
         }
     }
@@ -650,7 +653,7 @@ TEST_CASE("golden: conductivity residual polynomial", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA/-ffp-contract-class rounding)
             ++checks;
         }
     }
