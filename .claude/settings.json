@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "bd prime",
+            "command": "BEADS_SHIM_NO_INSTALL=1 bd prime",
             "type": "command"
           }
         ],
@@ -15,8 +15,9 @@
       {
         "hooks": [
           {
-            "command": "bd prime",
-            "type": "command"
+            "command": "sh \"${CLAUDE_PROJECT_DIR}/dev/ci/bootstrap-beads.sh\"",
+            "type": "command",
+            "timeout": 30
           }
         ],
         "matcher": ""
