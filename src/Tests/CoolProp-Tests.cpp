@@ -7,6 +7,7 @@
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "../Backends/Tabular/TabularBackends.h"
 #include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
@@ -7972,14 +7973,32 @@ TEST_CASE("Concurrent first use of one tabular dataset builds it once (COO-39)",
     // and races to build.  The per-dataset build_mutex must let one thread
     // build/pack/write while the rest wait and then reuse the result.  A small
     // grid keeps the single real build to well under a second.
-    const std::string prev = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
     // Unique directory => unique in-memory cache key, so the dataset is cold
     // even if another test already built Nitrogen tables in this process.
     const std::string dir =
       (std::filesystem::temp_directory_path() / ("CoolProp-COO39-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())))
         .string()
       + "/";
+    // Restore the table directory and remove the temp dir even if a CHECK or
+    // an exception unwinds the test early.
+    struct TableDirGuard
+    {
+        std::string prev, dir;
+        TableDirGuard(std::string p, std::string d) : prev(std::move(p)), dir(std::move(d)) {}
+        TableDirGuard(const TableDirGuard&) = delete;
+        TableDirGuard& operator=(const TableDirGuard&) = delete;
+        TableDirGuard(TableDirGuard&&) = delete;
+        TableDirGuard& operator=(TableDirGuard&&) = delete;
+        ~TableDirGuard() {
+            CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    } guard(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY), dir);
     CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+    // Threads rebuilding the same deterministic tables would give identical
+    // densities, so count the builds directly.
+    const int builds_before = CoolProp::TabularDataSet::build_count.load();
     const std::string fluid = R"(Nitrogen?{"grid":{"Nx":30,"Ny":30}})";
     const double p = 1e6, T = 300.0;
 
@@ -8013,11 +8032,8 @@ TEST_CASE("Concurrent first use of one tabular dataset builds it once (COO-39)",
     ref->update(CoolProp::PT_INPUTS, p, T);
     const double rho_ref = ref->rhomolar();
 
-    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
-    std::error_code ec;
-    std::filesystem::remove_all(dir, ec);
-
     CHECK(errors.load() == 0);
+    CHECK(CoolProp::TabularDataSet::build_count.load() - builds_before == 1);
     for (int t = 0; t < N_THREADS; ++t) {
         CAPTURE(t);
         CHECK(rho[t] == rho_ref);

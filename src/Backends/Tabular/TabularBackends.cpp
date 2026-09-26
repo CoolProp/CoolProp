@@ -1529,7 +1529,10 @@ void CoolProp::TabularDataSet::load_tables(const std::string& path_to_tables, sh
     }
 };
 
+std::atomic<int> CoolProp::TabularDataSet::build_count{0};
+
 void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>& AS) {
+    build_count.fetch_add(1, std::memory_order_relaxed);
     // Pure or pseudo-pure fluid
     if (AS->get_mole_fractions().size() == 1) {
         pure_saturation.build(AS);

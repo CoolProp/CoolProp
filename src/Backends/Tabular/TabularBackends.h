@@ -999,6 +999,9 @@ class TabularDataSet
     PureFluidSaturationTableData pure_saturation;
     PackablePhaseEnvelopeData phase_envelope;
     std::vector<std::vector<CellCoeffs>> coeffs_ph, coeffs_pT;
+    /// Process-wide count of build_tables() calls, across all datasets.  A test
+    /// hook: lets tests assert that concurrent first use builds a dataset once.
+    static std::atomic<int> build_count;
 
     TabularDataSet() : tables_loaded(false) {}
     /// Set the grid resolution of both single-phase tables.  Must be called
