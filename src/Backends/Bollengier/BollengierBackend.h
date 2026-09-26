@@ -78,24 +78,34 @@ class BollengierBackend : public AbstractState
     /// quietly redefine what "in range" means.
     static constexpr double kPaperPminMPa = 0.0;
     static constexpr double kPaperPmaxMPa = 2300.6;
-    static constexpr double kPaperTminK = 239.0;
-    static constexpr double kPaperTmaxK = 501.0;
+    static constexpr double kPaperTminK = 240.0;
+    static constexpr double kPaperTmaxK = 500.0;
 
-    /// The domain actually evaluable by the loaded surface, taken from its
-    /// knots, together with a check that it matches the paper.
+    /// The advertised domain, and the check that the data supports it.
     ///
-    /// Two distinct jobs, and they must not be conflated.  The fitted knots
-    /// carry ULP-class noise -- the upper P knot is 2300.5999999999995, not
-    /// 2300.6 -- so guarding on the paper's rounded literal would accept
-    /// p = 2300.6 MPa and then throw from INSIDE the spline, which is both a
-    /// worse message and a guard that disagrees with the thing it guards.
-    /// Conversely, deriving the bounds from the data alone would mean a
-    /// truncated coefficient set silently redefines the domain.
+    /// TEMPERATURE comes from the PAPER: 240-500 K, as stated in its title
+    /// and abstract.  The fitted knots run slightly wider
+    /// (238.99999999999991 to 501.00000000000023), but a knot span is a
+    /// property of the fit, not a claim of validity, and advertising it
+    /// would promise a degree of coverage the authors never did.
     ///
-    /// So: the guard uses the surface's true support, and construction
-    /// verifies that support agrees with the paper to 1e-9 relative.  A
-    /// truncated or wrong-revision dataset fails the second check; a
-    /// legitimate ULP difference passes it and does not create a gap.
+    /// PRESSURE comes from the surface's own support, because the paper's
+    /// "2300 MPa" is a rounded statement of a fitted bound that is actually
+    /// 2300.5999999999995.  Guarding on the rounded literal would accept
+    /// p = 2300.6 MPa and then throw from INSIDE the spline -- a worse
+    /// message, from a guard that disagrees with the thing it guards.
+    ///
+    /// Construction checks that the knots COVER the advertised range
+    /// (rather than equal it), so a truncated or wrong-revision coefficient
+    /// set still fails loudly, while a legitimate ULP difference does not.
+    ///
+    /// WHERE THE AUTHORS DECLINE TO REPORT.  Supplementary Material E
+    /// tabulates rho, cp and w on a 250-500 K x 0.1-2200 MPa grid, and
+    /// OMITS 250 K above 900 MPa in all three properties -- the cold
+    /// high-pressure corner, deep in the ice VI/VII field.  The surface is
+    /// still evaluable there and this backend serves it, matching the
+    /// reference implementation, but the authors publish no values to check
+    /// against and the fit is unconstrained; see update().
     struct Domain
     {
         double p_min, p_max, T_min, T_max;
@@ -104,17 +114,24 @@ class BollengierBackend : public AbstractState
         static const Domain d = [] {
             const spline::TensorBSpline2D& s = surface();
             (void)s;  // built for its validation side effect
-            const Domain got{Bollengier::kKnotsP[Bollengier::kOrderP - 1], Bollengier::kKnotsP[Bollengier::kNP],
-                             Bollengier::kKnotsT[Bollengier::kOrderT - 1], Bollengier::kKnotsT[Bollengier::kNT]};
+            const double kp_lo = Bollengier::kKnotsP[Bollengier::kOrderP - 1];
+            const double kp_hi = Bollengier::kKnotsP[Bollengier::kNP];
+            const double kt_lo = Bollengier::kKnotsT[Bollengier::kOrderT - 1];
+            const double kt_hi = Bollengier::kKnotsT[Bollengier::kNT];
             auto near = [](double a, double b) { return std::fabs(a - b) <= 1e-9 * std::fmax(1.0, std::fabs(b)); };
-            if (!near(got.p_min, kPaperPminMPa) || !near(got.p_max, kPaperPmaxMPa) || !near(got.T_min, kPaperTminK)
-                || !near(got.T_max, kPaperTmaxK)) {
-                throw ValueError(format("BollengierBackend: the loaded coefficient set spans p [%.17g, %.17g] MPa, "
-                                        "T [%.17g, %.17g] K, which does not match the published domain "
-                                        "[%g, %g] MPa x [%g, %g] K",
-                                        got.p_min, got.p_max, got.T_min, got.T_max, kPaperPminMPa, kPaperPmaxMPa, kPaperTminK, kPaperTmaxK));
+            // p: the support IS the advertised bound, to within ULP noise.
+            if (!near(kp_lo, kPaperPminMPa) || !near(kp_hi, kPaperPmaxMPa)) {
+                throw ValueError(format("BollengierBackend: the loaded coefficients span p [%.17g, %.17g] MPa, which does not "
+                                        "match the published [%g, %g]",
+                                        kp_lo, kp_hi, kPaperPminMPa, kPaperPmaxMPa));
             }
-            return got;
+            // T: the support must COVER the paper's range, not equal it.
+            if (kt_lo > kPaperTminK || kt_hi < kPaperTmaxK) {
+                throw ValueError(format("BollengierBackend: the loaded coefficients span T [%.17g, %.17g] K, which does not "
+                                        "cover the published [%g, %g]",
+                                        kt_lo, kt_hi, kPaperTminK, kPaperTmaxK));
+            }
+            return Domain{kp_lo, kp_hi, kPaperTminK, kPaperTmaxK};
         }();
         return d;
     }

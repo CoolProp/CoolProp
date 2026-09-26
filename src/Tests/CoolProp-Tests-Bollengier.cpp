@@ -24,8 +24,10 @@ namespace {
 // file.  A test that took its bounds from the data it is validating could
 // not detect a truncated or mis-parsed coefficient set.
 constexpr double kPmaxMPa = 2300.6;
-constexpr double kTminK = 239.0;
-constexpr double kTmaxK = 501.0;
+// The paper's stated range (title and abstract), NOT the knot span --
+// the knots run marginally wider, but that is a property of the fit.
+constexpr double kTminK = 240.0;
+constexpr double kTmaxK = 500.0;
 
 std::shared_ptr<AbstractState> make() {
     return std::shared_ptr<AbstractState>(AbstractState::factory("BOLLENGIER", "Water"));
@@ -113,8 +115,11 @@ TEST_CASE("Bollengier backend reproduces the authors' published tables", "[Bolle
     auto AS = make();
     // p [MPa], T [K], rho [kg/m3], cp [J/kg/K], w [m/s] -- Bollengier,
     // Brown & Shaw (2019) Supplementary Material E, verbatim.  Note the
-    // authors do NOT tabulate 250 K above 900 MPa; that omission is
-    // reproduced here rather than filled in.
+    // authors do NOT tabulate 250 K above 900 MPa -- the cold
+    // high-pressure corner, where the fit is unconstrained and they
+    // publish nothing.  That omission is reproduced here rather than
+    // filled in, and is the clearest statement available of where the
+    // representation stops being supported by data.
     const double kPublished[][5] = {
       {0.1, 250, 991.24, 4554.71, 1248.32},   {0.1, 300, 996.56, 4180.6, 1501.7},     {0.1, 350, 973.73, 4194.57, 1555.01},
       {0.1, 400, 937.41, 4256.01, 1508.94},   {0.1, 450, 889.79, 4396.46, 1396.59},   {0.1, 500, 828.9, 4686.78, 1226.63},
@@ -307,8 +312,8 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
     SECTION("where (dv/dP)_T >= 0 there is no answer, so it throws") {
         // Interior, far from any bound, so the range guard cannot be what
         // fires.
-        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1900.0e6, 239.0), Catch::Matchers::ContainsSubstring("not evaluable"));
-        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2250.0e6, 239.0), Catch::Matchers::ContainsSubstring("not evaluable"));
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1850.0e6, 240.0), Catch::Matchers::ContainsSubstring("not evaluable"));
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2290.0e6, 240.0), Catch::Matchers::ContainsSubstring("not evaluable"));
     }
     SECTION("the extrapolated corner IS served, and is documented as such") {
         // These states are self-consistent but are no longer water: the fit
@@ -316,20 +321,21 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // liquid data existed to fit against.  SeaFreeze serves them; so do
         // we.  Pinned so that a future change to that policy is deliberate
         // rather than accidental, and so the magnitude is on record.
-        AS->update(PT_INPUTS, 1661.544e6, 239.0);
+        AS->update(PT_INPUTS, 1700.0e6, 240.0);
         INFO("cv = " << AS->cvmass() << " J/kg/K, w = " << AS->speed_sound());
         CHECK(std::isfinite(AS->cvmass()));
         CHECK(AS->cvmass() > 0.0);
         CHECK(AS->cvmass() < 1500.0);  // real water is ~3800 here
-        // And the sound speed does NOT flag it -- 3368 m/s, LOWER than the
-        // 3587 m/s at a perfectly physical 2300.6 MPa / 300 K.  This is why
-        // no sound-speed threshold can separate the two populations, and
-        // why this backend does not try.
+        // And the sound speed does NOT flag it: 3561 m/s here, against
+        // 3513 m/s at a perfectly physical 2200 MPa / 300 K.  The two
+        // populations OVERLAP in w, so no sound-speed threshold separates
+        // them -- which is why this backend does not try, and why an
+        // earlier attempt to do so had to be reverted.
         CHECK(AS->speed_sound() < 4000.0);
         auto warm = make();
-        warm->update(PT_INPUTS, 2300.0e6, 300.0);
-        CHECK(warm->speed_sound() > AS->speed_sound());
-        CHECK(warm->cvmass() > 3000.0);
+        warm->update(PT_INPUTS, 2200.0e6, 300.0);
+        CHECK(warm->cvmass() > 3000.0);                  // physical
+        CHECK(warm->speed_sound() < AS->speed_sound());  // yet SLOWER
     }
     SECTION("the same pressures are ordinary when warm") {
         for (const double p_MPa : {1900.0, 2175.0, 2290.0}) {
@@ -347,7 +353,7 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         for (int i = 0; i <= 60; ++i) {
             for (int j = 0; j <= 40; ++j) {
                 const double p_MPa = 2300.0 * i / 60.0;
-                const double T = 239.0 + (501.0 - 239.0) * j / 40.0;
+                const double T = kTminK + (kTmaxK - kTminK) * j / 40.0;
                 try {
                     AS->update(PT_INPUTS, p_MPa * 1e6, T);
                 } catch (const CoolProp::ValueError&) {
