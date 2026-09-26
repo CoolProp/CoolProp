@@ -42,8 +42,9 @@ Highlights:
   The correlation is Tsolakidou, Assael, Huber and Perkins, *J. Phys. Chem. Ref. Data*
   **46**\ (2):023103 (2017).  Its dilute and residual terms are expression-DSL data and
   its critical enhancement is the native simplified Olchowy–Sengers block, the first
-  fluid to combine the two.  The cutoff wavelength follows the paper's own check values
-  (qD\ :sup:`-1` = 0.3104 nm) rather than the 0.530 nm printed in its Sec. 3.3.  The
+  fluid to combine the two.  The cutoff wavelength is the published article's qD\ :sup:`-1` = 0.3104 nm; the
+  freely available accepted manuscript prints 0.530 nm, which does not reproduce the
+  paper's check values.  The
   three check points of Table 11 where the enhancement vanishes agree to 1e-4, as does
   the table's enhancement-free background at 375 K and 229 kg/m\ :sup:`3`.  The two
   points that carry an enhancement do not yet agree: it uses the EOS, and CoolProp's
