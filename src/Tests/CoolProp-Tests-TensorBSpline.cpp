@@ -11,6 +11,7 @@
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
 
+#    include <cstddef>
 #    include <cmath>
 #    include <limits>
 #    include <vector>
@@ -234,9 +235,9 @@ TEST_CASE("TensorBSpline2D rejects knot multiplicity above the order", "[TensorB
     // fail-open this class exists to prevent.  Refuse it at construction.
     const std::vector<double> bad{0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};  // run of 1.0 has length 4 > order 3
     const std::vector<double> ok{0.0, 0.0, 0.0, 1.0, 1.0, 1.0};
-    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ok, 3, 3, std::vector<double>(4 * 3, 1.0)),
+    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(bad, ok, 3, 3, std::vector<double>(std::size_t{4} * 3, 1.0)),
                       Catch::Matchers::ContainsSubstring("knot multiplicity"));
-    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(ok, bad, 3, 3, std::vector<double>(3 * 4, 1.0)),
+    CHECK_THROWS_WITH(cp_spline::TensorBSpline2D(ok, bad, 3, 3, std::vector<double>(std::size_t{3} * 4, 1.0)),
                       Catch::Matchers::ContainsSubstring("knot multiplicity"));
 
     // Multiplicity exactly == order is the normal clamped case and must pass.
