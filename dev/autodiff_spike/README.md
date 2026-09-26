@@ -105,3 +105,81 @@ Header parsing alone costs: autodiff `dual.hpp` 0.47 s, `real.hpp` 0.46 s, `numd
      public header ever sees them.
 4. **mcx** is a fine reference oracle, but it is about 100× slower and about 3× the compile cost per
    model. **FD** is not acceptable past the first derivative.
+
+---
+
+# Experiment 2: the whole half-matrix A_ij (i + j ≤ N) in one call
+
+This models CoolProp's approach of filling every derivative up to 4th order at once
+(`HelmholtzDerivatives`). The half-matrix has 15 entries for N=4. Run it with
+`python3 run_all.py`; the code is in `methods_all/`.
+
+| method | how |
+|---|---|
+| `taylor2` | `taylor2.hpp`: a bivariate truncated Taylor type carrying all (N+1)(N+2)/2 coefficients in **one pass**, in scaled variables (1/T₀)(1+u), ρ₀(1+v), so A_ij = i!j!·c_ij |
+| `polar` | polarization: **N+1 passes** of autodiff's univariate `Real<N>` along directions (1, s_m) at Chebyshev nodes s_m, then a Vandermonde solve per degree recovers the mixed terms |
+| `teqp` | teqp's scheme: `Real<N>` in ρ, `Real<N>` in 1/T, plus **one `HigherOrderDual<i+j>` pass per mixed (i,j)**; that is 6 extra passes at N=4 |
+
+### Speed: ns per call for the whole triangle
+
+| | N=1 (3 values) | N=2 (6) | N=3 (10) | N=4 (15) |
+|---|---|---|---|---|
+| **pure propane** (1 plain evaluation = 46 ns) | | | | |
+| taylor2 | 84 | 167 | 358 | **789** |
+| polar | 197 | 367 | 772 | 1474 |
+| teqp | 169 | 438 | 1764 | 7004 |
+| **C1/C2/C3 mixture** (1 plain evaluation = 88 ns) | | | | |
+| taylor2 | 134 | 269 | 708 | **1656** |
+| polar | 276 | 624 | 1311 | 2484 |
+| teqp | 254 | 669 | 2988 | 12616 |
+
+For comparison, requesting only what you need with the purpose-built types costs 112–153 ns for
+A00..A03 (`Dual3`) and 126–189 ns for A11 (`HyperDual`).
+
+### Accuracy: max relative error vs 60-digit mpmath, by total order k
+
+| state | method | k=0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|---|
+| dense (liq, mixture) | all three | ≤1e-15 | ≤2e-15 | ≤3e-15 | ≤1e-14 | ≤2e-14 |
+| dilute gas | taylor2 / teqp | 1e-15 | 2e-16 | ≤4e-14 | ≤3e-11 | 1e-9 |
+| dilute gas | polar | 1e-15 | 4e-16 | 2e-13 | 5e-11 | 3e-9 |
+
+The dilute-gas losses are in A03 ≈ −1.6e-6 and A04 ≈ −1.5e-7, which are tiny numbers built
+from cancellation. All the exact methods lose those digits equally. Polarization's Vandermonde
+solve costs a further factor of about 2–5.
+
+### Compile cost: one TU, only order N instantiated
+
+| method | N | K=1 | K=16 | s / extra model | kB / extra model |
+|---|---|---|---|---|---|
+| taylor2 | 2 | 0.74 s / 8 kB | 1.48 s / 126 kB | 0.05 | 8 |
+| taylor2 | 4 | 1.28 s / 28 kB | 5.69 s / 424 kB | 0.29 | 26 |
+| polar | 2 | 0.56 s / 8 kB | 1.38 s / 113 kB | 0.05 | 7 |
+| polar | 4 | 0.64 s / 14 kB | 2.36 s / 213 kB | **0.11** | **13** |
+| teqp | 2 | 0.78 s / 21 kB | 3.01 s / 272 kB | 0.15 | 17 |
+| teqp | 4 | 1.33 s / 63 kB | 6.57 s / 636 kB | 0.35 | 38 |
+
+### Findings
+
+1. **For all-at-once to 4th order, one-shot is the fastest method: about 17× a plain evaluation.**
+   That is 9× faster than teqp's per-derivative scheme and 2× faster than polarization. teqp's
+   cost explodes because the mixed terms go through nested duals, where `HigherOrderDual<4>`
+   carries 16 components per pass and needs 6 separate passes.
+2. **Polarization is the compile-time winner.** Every model instantiates exactly one number type,
+   `Real<N>`. It has no expression templates and its body is small, so it costs 0.11 s and 13 kB
+   per model at N=4, a third of teqp's cost. It runs at about 2× the one-shot cost, and it reuses a
+   type teqp already has.
+3. **One-shot costs compile time and code size at high order.** The product is C(N+4,4) = 70
+   FMAs per multiply at N=4, and it must be fully unrolled to be fast. Without
+   `#pragma clang loop unroll(full)`, clang keeps an indexed, latency-bound loop from N=3 upward,
+   which is about 4–10× slower. The unrolling is what grows the code. It also makes the result
+   depend on the compiler: MSVC needs its own unroll strategy or hand-generated kernels.
+4. **The order is the real knob.** The cost roughly doubles per order: 167 → 358 → 789 ns for the
+   one-shot on propane. At N=2 every approach is cheap to build (≤0.15 s, ≤17 kB per model), and
+   the one-shot runs at 3.6× a plain evaluation. Most properties (p, s, h, cv, cp, w, dp/dT…) need
+   only i+j ≤ 2. Third order is needed for things like the fundamental derivative and d²p/dρ², and
+   4th order mostly for critical-point conditions.
+5. **All-at-once vs on-demand.** If a flash iteration only needs p and ∂p/∂ρ, filling the N=4
+   triangle costs 7–11× more than the targeted `Dual2`/`Dual3` request (789 vs ~110 ns).
+   Filling to N=2 costs about 1.5×. A tiered cache sidesteps the choice: fill to N=2 by default
+   and upgrade to N=4 lazily when a 3rd/4th-order quantity is requested.
