@@ -58,7 +58,12 @@ class BollengierBackend : public AbstractState
     /// against the paper's own tables would see an unexplained ~70 J/kg
     /// offset.  Reference state is a user-level concern in CoolProp, with
     /// set_reference_stateS() / set_reference_stateD() as the supported
-    /// mechanism; a backend is not the place to preempt it.
+    /// mechanism -- though note that as of writing neither reaches this
+    /// backend: set_reference_stateS() silently no-ops on an unrecognised
+    /// backend prefix and set_reference_stateD() throws, so there is
+    /// currently NO supported way to re-anchor it (tracked separately).
+    /// That is an argument for fixing that plumbing, not for baking a datum
+    /// in here.
     ///
     /// Note also that re-anchoring to IAPWS would NOT buy cross-backend
     /// agreement: it forces equality at the reference point and moves
@@ -67,15 +72,52 @@ class BollengierBackend : public AbstractState
     /// differs by -76.  The residual is a genuine cp difference in the cold
     /// liquid region, not a datum mismatch.
 
-    /// Published validity domain, stated in the paper.  Written as literals
-    /// rather than read back from the knot vectors so that a truncated or
-    /// mis-parsed coefficient set cannot quietly redefine what "in range"
-    /// means.  dev/scripts/extract_bollengier_coefficients.py checks the
-    /// data against these same values at extraction time.
-    static constexpr double kPminMPa = 0.0;
-    static constexpr double kPmaxMPa = 2300.6;
-    static constexpr double kTminK = 239.0;
-    static constexpr double kTmaxK = 501.0;
+    /// Published validity domain, as stated in the paper.  These are
+    /// LITERALS, deliberately -- they are used to validate the coefficient
+    /// data, not derived from it, so a truncated or mis-parsed set cannot
+    /// quietly redefine what "in range" means.
+    static constexpr double kPaperPminMPa = 0.0;
+    static constexpr double kPaperPmaxMPa = 2300.6;
+    static constexpr double kPaperTminK = 239.0;
+    static constexpr double kPaperTmaxK = 501.0;
+
+    /// The domain actually evaluable by the loaded surface, taken from its
+    /// knots, together with a check that it matches the paper.
+    ///
+    /// Two distinct jobs, and they must not be conflated.  The fitted knots
+    /// carry ULP-class noise -- the upper P knot is 2300.5999999999995, not
+    /// 2300.6 -- so guarding on the paper's rounded literal would accept
+    /// p = 2300.6 MPa and then throw from INSIDE the spline, which is both a
+    /// worse message and a guard that disagrees with the thing it guards.
+    /// Conversely, deriving the bounds from the data alone would mean a
+    /// truncated coefficient set silently redefines the domain.
+    ///
+    /// So: the guard uses the surface's true support, and construction
+    /// verifies that support agrees with the paper to 1e-9 relative.  A
+    /// truncated or wrong-revision dataset fails the second check; a
+    /// legitimate ULP difference passes it and does not create a gap.
+    struct Domain
+    {
+        double p_min, p_max, T_min, T_max;
+    };
+    static const Domain& domain() {
+        static const Domain d = [] {
+            const spline::TensorBSpline2D& s = surface();
+            (void)s;  // built for its validation side effect
+            const Domain got{Bollengier::kKnotsP[Bollengier::kOrderP - 1], Bollengier::kKnotsP[Bollengier::kNP],
+                             Bollengier::kKnotsT[Bollengier::kOrderT - 1], Bollengier::kKnotsT[Bollengier::kNT]};
+            auto near = [](double a, double b) { return std::fabs(a - b) <= 1e-9 * std::fmax(1.0, std::fabs(b)); };
+            if (!near(got.p_min, kPaperPminMPa) || !near(got.p_max, kPaperPmaxMPa) || !near(got.T_min, kPaperTminK)
+                || !near(got.T_max, kPaperTmaxK)) {
+                throw ValueError(format("BollengierBackend: the loaded coefficient set spans p [%.17g, %.17g] MPa, "
+                                        "T [%.17g, %.17g] K, which does not match the published domain "
+                                        "[%g, %g] MPa x [%g, %g] K",
+                                        got.p_min, got.p_max, got.T_min, got.T_max, kPaperPminMPa, kPaperPmaxMPa, kPaperTminK, kPaperTmaxK));
+            }
+            return got;
+        }();
+        return d;
+    }
 
     /// Molar mass of water, IAPWS-95 value [kg/mol].
     static constexpr double kMolarMass = 0.018015268;
@@ -127,6 +169,22 @@ class BollengierBackend : public AbstractState
     }
 
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override {
+        // Invalidate FIRST, before anything that can throw.  Two separate
+        // hazards, both of which returned stale values from a previous
+        // successful update():
+        //
+        //  - AbstractState caches speed_sound, hmolar, smolar, cpmolar and
+        //    friends in its own CacheArray.  Without clear() those freeze at
+        //    the first value ever computed, and it reaches PropsSI --
+        //    successive queries in one process return the PREVIOUS query's
+        //    answer.  IF97Backend::clear() carries a comment describing this
+        //    exact symptom ("a constant speed_sound surface").
+        //  - _valid must be cleared ahead of the input-pair check below, not
+        //    after it: a rejected pair otherwise throws while leaving the
+        //    old state readable.
+        clear();
+        _valid = false;
+
         if (input_pair != PT_INPUTS) {
             // Deliberately exhaustive-by-default.  A liquid-only,
             // Gibbs-explicit surface has no honest answer for a density,
@@ -136,7 +194,6 @@ class BollengierBackend : public AbstractState
                                     "pairs is a deliberate follow-up, not an oversight.",
                                     get_input_pair_short_desc(input_pair).c_str()));
         }
-        _valid = false;
         const double p_Pa = value1;
         const double T_K = value2;
         const double p_MPa = p_Pa * 1e-6;
@@ -146,11 +203,19 @@ class BollengierBackend : public AbstractState
         if (!std::isfinite(p_Pa) || !std::isfinite(T_K)) {
             throw ValueError("BollengierBackend: non-finite pressure or temperature");
         }
-        if (p_MPa < kPminMPa || p_MPa > kPmaxMPa) {
-            throw ValueError(format("BollengierBackend: pressure %g Pa is outside the published domain [%g, %g] MPa", p_Pa, kPminMPa, kPmaxMPa));
+        // Tested on p_Pa, not p_MPa: a tiny negative pressure underflows to
+        // -0.0 under the 1e-6 conversion, and -0.0 < 0.0 is false, so the
+        // range check below would admit it.
+        if (p_Pa < 0.0) {
+            throw ValueError(format("BollengierBackend: negative pressure %g Pa", p_Pa));
         }
-        if (T_K < kTminK || T_K > kTmaxK) {
-            throw ValueError(format("BollengierBackend: temperature %g K is outside the published domain [%g, %g] K", T_K, kTminK, kTmaxK));
+        const Domain& dom = domain();
+        if (p_MPa < dom.p_min || p_MPa > dom.p_max) {
+            throw ValueError(
+              format("BollengierBackend: pressure %g Pa is outside the published domain [%g, %g] MPa", p_Pa, kPaperPminMPa, kPaperPmaxMPa));
+        }
+        if (T_K < dom.T_min || T_K > dom.T_max) {
+            throw ValueError(format("BollengierBackend: temperature %g K is outside the published domain [%g, %g] K", T_K, kPaperTminK, kPaperTmaxK));
         }
 
         const spline::TensorBSpline2D& G = surface();
@@ -176,8 +241,28 @@ class BollengierBackend : public AbstractState
         const double dvdP_s = dvdP_T + T_K * dvdT_P * dvdT_P / _cp;
         _w = std::sqrt(-_v * _v / dvdP_s);
 
+        // The advertised domain is a RECTANGLE, but the paper's real validity
+        // is bounded by the melting curve: the cold high-pressure corner
+        // (p >~ 1817 MPa, T <~ 249 K) lies deep in the ice VI/VII field, and
+        // there the fitted surface has (dv/dP)_T >= 0.  That makes dvdP_s
+        // positive, so w comes out NaN -- and cv comes out negative or
+        // absurd -- at ~0.1% of in-domain points.  Returning those would be
+        // exactly the silent non-finite propagation TensorBSpline2D refuses
+        // to do, one layer up.
+        if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0) {
+            throw ValueError(format("BollengierBackend: the surface is not thermodynamically stable at p = %g Pa, T = %g K "
+                                    "((dv/dP)_T >= 0). This corner of the published rectangle lies inside the ice VI/VII "
+                                    "field, where the liquid representation does not apply.",
+                                    p_Pa, T_K));
+        }
+
         _p_Pa = p_Pa;
         _T_K = T_K;
+        // B2: the base class's _p/_T back T(), p() and keyed_output(); without
+        // these they stay at -_HUGE from clear() and every consumer that does
+        // not go through PropsSI's input short-circuit sees -inf.
+        _p = p_Pa;
+        _T = T_K;
         _phase = iphase_liquid;
         _Q = -1;
         _valid = true;
@@ -247,13 +332,13 @@ class BollengierBackend : public AbstractState
         return 8.31446261815324;
     }
     CoolPropDbl calc_Tmin() override {
-        return kTminK;
+        return domain().T_min;
     }
     CoolPropDbl calc_Tmax() override {
-        return kTmaxK;
+        return domain().T_max;
     }
     CoolPropDbl calc_pmax() override {
-        return kPmaxMPa * 1e6;
+        return domain().p_max * 1e6;
     }
     CoolPropDbl calc_Ttriple() override {
         return 273.16;

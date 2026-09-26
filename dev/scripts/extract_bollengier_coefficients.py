@@ -56,8 +56,17 @@ PAPER_SHAPE = (80, 40)
 
 
 def _h5dump_numbers(mat, path):
-    """Read a numeric dataset via the h5dump CLI (no h5py needed)."""
-    out = subprocess.run(["h5dump", "-d", path, str(mat)], capture_output=True, text=True, check=True).stdout
+    """Read a numeric dataset via the h5dump CLI (no h5py needed).
+
+    `-m %.17g` is NOT optional.  h5dump's default float format is %g, i.e.
+    SIX significant figures.  Without this flag every coefficient and knot
+    comes back truncated -- and truncated values still round-trip through
+    `%.17g` on output, so the generated header looks like full-precision
+    doubles while carrying ~1e-6 relative error.  That is worth ~0.2% in
+    sound speed and ~1e-4 in density, far outside the paper's uncertainty
+    and outside this project's own test tolerances.
+    """
+    out = subprocess.run(["h5dump", "-m", "%.17g", "-d", path, str(mat)], capture_output=True, text=True, check=True).stdout
     idx = re.compile(r"^\((\d+)(?:,(\d+))?\):\s*(.*)$")
     flt = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
     vals = []
@@ -101,6 +110,12 @@ def read_spline(mat):
             flat = [float(v) for v in np.array(g["coefs"]).ravel()]
 
     nx, ny = number
+    # Check the RAW read before reshaping.  The comprehension below always
+    # produces exactly nx*ny elements regardless of how many were read, so a
+    # short or long `flat` would otherwise be silently masked (or raise an
+    # opaque IndexError) instead of reported.
+    if len(flat) != nx * ny:
+        raise ValueError(f"read {len(flat)} coefficients from {GROUP}/coefs, expected {nx} x {ny} = {nx * ny}")
     # HDF5 stores the (nx, ny) MATLAB array transposed as (ny, nx).
     coefs = [flat[b * nx + a] for a in range(nx) for b in range(ny)]
     return order[0], order[1], kx, ky, coefs
@@ -130,9 +145,21 @@ def main(argv):
         problems.append(f"shape {(nx, ny)} != paper {PAPER_SHAPE}")
     if len(coefs) != nx * ny:
         problems.append(f"{len(coefs)} coefficients for a {nx}x{ny} grid")
-    if (kx[ox - 1], kx[nx]) != (PAPER_P_MIN_MPA, PAPER_P_MAX_MPA):
+    # Compared with a tolerance, NOT exact equality.  The fitted knots carry
+    # ULP-class noise -- the true upper P knot is 2300.5999999999995, not
+    # 2300.6 -- so an exact comparison against the paper's rounded literals
+    # rejects the correct data and accepts a truncated copy.  An earlier
+    # version of this script did exactly that: it passed only because the
+    # values had been degraded to six significant figures, and refused to
+    # run at all on full precision.  The sha256 gate above already pins the
+    # file's content; these checks exist to catch a mis-parse or a different
+    # revision, which a 1e-9 relative tolerance detects perfectly well.
+    def _near(a, b):
+        return abs(a - b) <= 1e-9 * max(1.0, abs(b))
+
+    if not (_near(kx[ox - 1], PAPER_P_MIN_MPA) and _near(kx[nx], PAPER_P_MAX_MPA)):
         problems.append(f"P support {(kx[ox-1], kx[nx])} != paper {(PAPER_P_MIN_MPA, PAPER_P_MAX_MPA)}")
-    if (ky[oy - 1], ky[ny]) != (PAPER_T_MIN_K, PAPER_T_MAX_K):
+    if not (_near(ky[oy - 1], PAPER_T_MIN_K) and _near(ky[ny], PAPER_T_MAX_K)):
         problems.append(f"T support {(ky[oy-1], ky[ny])} != paper {(PAPER_T_MIN_K, PAPER_T_MAX_K)}")
     if problems:
         for p in problems:
