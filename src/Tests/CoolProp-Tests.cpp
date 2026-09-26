@@ -46,6 +46,14 @@ struct vel
 };
 
 vel viscosity_validation_data[] = {
+  // R14 regression pins, not published values.  R14's ECS transport uses Nitrogen as its
+  // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
+  // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
+  // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
+  // 2026-09-26; REFPROP 10.1 instead keeps R14 on Nitrogen's 2004 models).  These pins
+  // make any future change to Nitrogen's transport visible in R14.
+  vel("R14", "T", 150, "Dmass", 1500.0, "V", 183.50892653027e-6, 1e-6),
+  vel("R14", "T", 300, "Dmass", 10.0, "V", 17.43725259137e-6, 1e-6),
   // From Vogel, JPCRD, 1998
   vel("Propane", "T", 90, "Dmolar", 16.52e3, "V", 7388e-6, 1e-3),
   vel("Propane", "T", 150, "Dmolar", 15.14e3, "V", 656.9e-6, 5e-3),
@@ -495,6 +503,14 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
 }
 
 vel conductivity_validation_data[] = {
+  // R14 regression pins, not published values.  R14's ECS transport uses Nitrogen as its
+  // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
+  // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
+  // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
+  // 2026-09-26; REFPROP 10.1 instead keeps R14 on Nitrogen's 2004 models).  These pins
+  // make any future change to Nitrogen's transport visible in R14.
+  vel("R14", "T", 150, "Dmass", 1500.0, "L", 80.28870657840523e-3, 1e-6),
+  vel("R14", "T", 300, "Dmass", 10.0, "L", 16.24624435074178e-3, 1e-6),
   ///\todo Re-enable the conductivity tests that fail due to not having viscosity correlation
 
   // From Assael, JPCRD, 2013
