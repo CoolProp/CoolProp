@@ -93,7 +93,7 @@ pre-push hook once via `ln -s ../../dev/ci/pre-push.sample
 If preflight passes, CI should pass with high probability.  See
 `dev/ci/README.md#preflightsh--local-pre-push-gate` for details.
 
-**`git commit --no-verify` only skips pre-commit hooks (clang-format).  It
+**`git commit --no-verify` only skips pre-commit hooks (clang-format and, locally, the [SBTL] gate).  It
 does NOT skip the pre-push gate.**  If you must
 push without preflight, use `git push --no-verify` and document why.
 
