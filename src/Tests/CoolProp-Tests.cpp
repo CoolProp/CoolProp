@@ -6114,6 +6114,7 @@ TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality
 }
 
 TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)", "[REFPROP][refprop][quality][nonfinite]") {
+    CoolProp::Skip_if_No_REFPROP();
     // REFPROP catches Q = 5 itself, but a NaN quality came back as a plausible
     // saturated state with an EMPTY error string:
     //     PropsSI("T","P",5e5,"Q",nan,"REFPROP::PROPANE") -> 274.87...
