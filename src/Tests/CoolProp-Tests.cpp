@@ -2595,6 +2595,27 @@ TEST_CASE("Test that reference states yield proper values using high-level inter
         }
     }
 }
+TEST_CASE("set_reference_stateS refuses backends it cannot apply to instead of silently doing nothing", "[reference_states]") {
+    // Before this was fixed, any backend prefix other than the literal
+    // "REFPROP", "HEOS" or none fell off the end of set_reference_stateS's
+    // dispatch chain and returned having done nothing -- not even validating
+    // the reference-state string.  GERG has its own NotImplementedError arm
+    // (see CoolProp-Tests-GERG.cpp); everything else gets a ValueError.
+    for (const char* fluid :
+         {"SRK::Propane", "PR::Propane", "VTPR::Propane", "PCSAFT::Propane", "INCOMP::MEG-20%", "IF97::Water", "BICUBIC&HEOS::Methane",
+          "TTSE&HEOS::Methane", "HelmholtzEOSBackend::Methane", "HEOS?::Methane", "NOT_A_BACKEND::Methane"}) {
+        CAPTURE(fluid);
+        CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NBP"), CoolProp::ValueError);
+        // Refused regardless of whether the reference-state string is valid.
+        CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NOT_A_REFERENCE_STATE"), CoolProp::ValueError);
+    }
+    // The message names the offending backend.
+    CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("[SRK]"));
+    // The supported spellings are unaffected.  RESET is the restore idiom
+    // used elsewhere in this suite (h and s bit-identical afterwards).
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("HEOS::Propane", "RESET"));
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("Propane", "RESET"));
+}
 TEST_CASE("Test that reference states yield proper values using low-level interface", "[reference_states]") {
     struct ref_entry
     {
