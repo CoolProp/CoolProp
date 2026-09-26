@@ -36,10 +36,10 @@ predicts a green CI.
 | Check | What it does | Skip flag |
 |---|---|---|
 | clang-format | uvx clang-format (version pinned from `.pre-commit-config.yaml`) dry-run on changed `.cpp` / `.h` files | `--skip=clang-format` |
-| build | cmake builds `CatchTestRunner` in `build_catch/` (auto-configures on first run) | `--skip=build` |
-| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths | `--skip=tests` |
+| build | cmake builds `CatchTestRunner` in `build_catch/` (auto-configures on first run: Release, Ninja when available) | `--skip=build` |
+| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths.  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` bodies run once, with CI's one-sample flags | `--skip=tests` |
 | cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers | `--skip=cppcheck` |
-| clang-tidy | diff-only via existing `run-clang-tidy-staged.sh`, requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
+| clang-tidy | changed `.cpp` files via `run-clang-tidy-staged.sh`, one process per file, `--jobs` at a time; requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
 | semgrep | `p/security-audit` + local `.semgrep/` rules (uvx-resolved, Python 3.12 pinned) | `--skip=semgrep` |
 | incomp-sanity | `dev/incompressible_liquids/test_json_sanity.py` on the committed incompressible JSON — rejects optimizer starting guesses, all-zero fits, non-finite/boolean coefficients and cleared vital properties. Only runs when `dev/incompressible_liquids/` is in the diff; falls back to calling the `test_*` functions directly when pytest is unavailable | `--skip=incomp-sanity` |
 
@@ -49,7 +49,30 @@ Invocation:
 ./dev/ci/preflight.sh                          # check vs origin/master
 ./dev/ci/preflight.sh --base=HEAD~1            # check vs an earlier ref
 ./dev/ci/preflight.sh --skip=cppcheck,semgrep  # subset
+./dev/ci/preflight.sh --jobs=4                 # cap parallelism (default: all cores)
 ```
+
+Speed notes:
+
+- **Tests are sharded.**  `run-catch-sharded.sh` cuts the selected cases
+  into ~4x more shards than jobs and feeds them through a work queue, since
+  Catch2's `--shard-count` splits the list into contiguous chunks and the
+  heavy cases sit next to each other.  It fails if any shard exits non-zero
+  (exit 4, "all skipped", is accepted per shard but not for the whole run),
+  if the per-shard case counts from Catch2's XML reporter don't add up to
+  the listed count, or if any shard's XML reports a failed case.
+- **Sharding changes test order context.**  Each shard is a fresh process,
+  so a case never sees `set_config_*` state leaked by an earlier case in
+  another shard.  CI runs the suite serially, so an order-dependent failure
+  can show up in CI and not in preflight (or the reverse).
+- **Dependency downloads are shared across worktrees.**  Build dirs in one
+  worktree already share `<worktree>/.cpm_cache` (`cmake/dependencies.cmake`),
+  but a new worktree re-clones every dependency on first configure.
+  preflight exports `CPM_SOURCE_CACHE=~/.cache/CPM` when it is unset so
+  new worktrees reuse one cache (set it to empty to opt out).  CPM stores
+  the setting per build dir, so existing build dirs are unaffected.
+- Under a heavily loaded machine (several worktrees building at once) pass
+  a smaller `--jobs`.
 
 Tools missing locally (`semgrep`, `clang-tidy`) are *gracefully skipped*
 rather than blocking — but the skip count is reported in the summary so
