@@ -1108,7 +1108,10 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
         // validating reference_state.  A caller asking for a reference state
         // and silently keeping the old one is the worst outcome for this
         // function, so refuse instead.
-        throw ValueError(format("set_reference_stateS is not supported for the [%s] backend (fluid string [%s]); only the HEOS and REFPROP "
+        // The message must keep the phrase "reference state" (and avoid "key"
+        // and "cannot use"): the Mathcad wrapper classifies this ValueError by
+        // substring (wrappers/MathCAD/CoolPropMathcad.cpp).
+        throw ValueError(format("Cannot set the reference state for the [%s] backend (fluid string [%s]); only the HEOS and REFPROP "
                                 "backends are supported, spelled \"HEOS::\" or \"REFPROP::\", or with no backend prefix for HEOS",
                                 backend.c_str(), FluidName.c_str()));
     }

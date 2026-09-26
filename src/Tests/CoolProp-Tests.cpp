@@ -2611,6 +2611,9 @@ TEST_CASE("set_reference_stateS refuses backends it cannot apply to instead of s
     }
     // The message names the offending backend.
     CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("[SRK]"));
+    // ...and says "reference state", which the Mathcad wrapper relies on to
+    // classify it as a bad-parameter error rather than UNKNOWN.
+    CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("reference state"));
     // The supported spellings are unaffected.  RESET is the restore idiom
     // used elsewhere in this suite (h and s bit-identical afterwards).
     CHECK_NOTHROW(CoolProp::set_reference_stateS("HEOS::Propane", "RESET"));
