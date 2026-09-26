@@ -104,23 +104,31 @@ export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE-$HOME/.cache/CPM}"
 # Probe the usual install locations and export the first one that looks like
 # a REFPROP root (shared library + fluid files).  The test summary reports
 # the skipped count either way.
+case "$(uname -s)" in
+    Darwin) REFPROP_LIBS="librefprop.dylib" ;;
+    Linux) REFPROP_LIBS="librefprop.so" ;;
+    *) REFPROP_LIBS="REFPRP64.dll REFPROP.dll" ;;
+esac
 refprop_root_ok() {
     [ -d "$1" ] || return 1
     [ -d "$1/FLUIDS" ] || [ -d "$1/fluids" ] || return 1
-    # Any ONE library name is enough (an unmatched glob stays literal, so
-    # testing each candidate with -e is what makes this an "any").
     local lib
-    for lib in "$1"/librefprop.so "$1"/librefprop.dylib "$1"/REFPRP64.dll "$1"/REFPROP.dll; do
-        [ -e "$lib" ] && return 0
+    for lib in $REFPROP_LIBS; do
+        [ -e "$1/$lib" ] && return 0
     done
     return 1
 }
-if [ -n "${COOLPROP_REFPROP_ROOT:-}" ]; then
+if [ -n "${COOLPROP_REFPROP_ROOT+set}" ] && [ -z "$COOLPROP_REFPROP_ROOT" ]; then
+    # Explicitly empty: opt out.  Unset it so the backend does not treat ""
+    # as a root, and skip the probe.
+    unset COOLPROP_REFPROP_ROOT
+    REFPROP_NOTE="REFPROP: disabled (COOLPROP_REFPROP_ROOT set empty); [REFPROP] cases will SKIP"
+elif [ -n "${COOLPROP_REFPROP_ROOT:-}" ]; then
     REFPROP_NOTE="REFPROP: \$COOLPROP_REFPROP_ROOT=$COOLPROP_REFPROP_ROOT"
 elif refprop_root_ok /opt/refprop; then
     REFPROP_NOTE="REFPROP: /opt/refprop (backend default)"
 else
-    REFPROP_NOTE="REFPROP: not found; [REFPROP] cases will SKIP (set COOLPROP_REFPROP_ROOT)"
+    REFPROP_NOTE="REFPROP: not found; [REFPROP] cases will SKIP (set COOLPROP_REFPROP_ROOT; set it empty to opt out of the probe)"
     for rp in "$HOME/REFPROP10" "$HOME/REFPROP" "$HOME/refprop" /Applications/REFPROP; do
         if refprop_root_ok "$rp"; then
             export COOLPROP_REFPROP_ROOT="$rp"
@@ -212,14 +220,34 @@ if ! MERGE_BASE="$(git merge-base "$BASE_REF" HEAD 2>/dev/null)"; then
 fi
 CPP_GLOBS=('*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx')
 
+# One git diff invocation for everything below, with every output-shaping
+# setting pinned so user config cannot change what the parsers read:
+# diff.mnemonicPrefix / srcPrefix / dstPrefix / noprefix change the "b/"
+# prefix, core.quotePath quotes non-ASCII paths, diff.relative rewrites paths
+# against the cwd, and external diff / textconv replace the output entirely.
+# --no-renames: a moved file shows as delete + add, so ALL_PATHS carries the
+# OLD path too and a file moved out of a rule's directory still triggers it.
+git_diff() {
+    git -c core.quotePath=false -c diff.noprefix=false -c diff.mnemonicPrefix=false \
+        diff --no-color --no-ext-diff --no-textconv --no-renames --no-relative \
+        --src-prefix=a/ --dst-prefix=b/ "$@"
+}
+
 # C-family files that still exist (deleted files are filtered out: there is
 # nothing on disk to check).
-ALL_CPP="$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE" -- "${CPP_GLOBS[@]}")"
+ALL_CPP="$(git_diff --name-only --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}")"
 ALL_CPP="$(printf '%s\n' "$ALL_CPP" | sort -u | grep -v '^$' || true)"
+# The same list as an array, for passing to tools: expanding $ALL_CPP
+# unquoted split a path containing a space into several nonexistent files,
+# and cppcheck then skipped the real one without failing.
+ALL_CPP_ARR=()
+while IFS= read -r _f; do
+    [ -n "$_f" ] && ALL_CPP_ARR+=("$_f")
+done <<< "$ALL_CPP"
 
 # All paths changed (any extension, deletions included) — used for tag
 # auto-selection.
-ALL_PATHS="$(git diff --name-only "$MERGE_BASE")"
+ALL_PATHS="$(git_diff --name-only "$MERGE_BASE")"
 ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
 
 # Added/modified line ranges of the C-family files, one "path<TAB>first<TAB>last"
@@ -227,15 +255,49 @@ ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
 # clang-tidy see.  Pure-deletion hunks (+c,0) add no lines and are dropped.
 # CI's clang-tidy job scopes to changed lines the same way (clang-tidy-diff),
 # so this also stops preflight failing on findings that predate the branch.
-CHANGED_RANGES="$(git diff -U0 --no-color --no-ext-diff --diff-filter=ACMR "$MERGE_BASE" -- "${CPP_GLOBS[@]}" | awk '
-    /^\+\+\+ / { f = substr($0, 5); sub(/^b\//, "", f); next }
+#
+# The file name is taken only from the "+++ " line of a file's HEADER (between
+# "diff --git" and its first "@@"): inside a hunk, an added source line that
+# starts with "++ " also reads "+++ ...".  git appends a TAB to that line when
+# the path contains a space, so one trailing TAB is stripped.
+CHANGED_RANGES="$(git_diff -U0 --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}" | awk '
+    /^diff --git / { hdr = 1; f = ""; next }
+    hdr && /^\+\+\+ / {
+        f = substr($0, 5); sub(/\t$/, "", f)
+        f = (substr(f, 1, 2) == "b/") ? substr(f, 3) : ""
+        next
+    }
     /^@@ / {
-        if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
+        hdr = 0
+        if (f != "" && match($0, /\+[0-9]+(,[0-9]+)?/)) {
             n = split(substr($0, RSTART + 1, RLENGTH - 1), p, ",")
             cnt = (n > 1) ? p[2] + 0 : 1
             if (cnt > 0) printf "%s\t%d\t%d\n", f, p[1], p[1] + cnt - 1
         }
     }')"
+
+# Completeness: every C-family file that gained lines must have ranges.  Both
+# lint gates DROP findings outside CHANGED_RANGES, so a parse that loses a
+# file (a path shape or git setting the parser did not anticipate) would make
+# them pass having checked nothing.  --numstat -z is a separate, NUL-safe
+# listing of the same diff; if the two disagree, stop.
+RANGE_FILES="$(printf '%s\n' "$CHANGED_RANGES" | awk -F'\t' 'NF == 3 { print $1 }' | sort -u)"
+MISSING_RANGES=""
+# Written to a file first so a failing git aborts here under set -e; inside
+# the process substitution its status would be lost and the check would pass
+# on an empty listing.
+git_diff --numstat -z --diff-filter=ACM "$MERGE_BASE" -- "${CPP_GLOBS[@]}" >"$PF_LOGDIR/numstat.z"
+while IFS=$'\t' read -r -d '' ns_added _ns_deleted ns_path; do
+    case "$ns_added" in '' | - | 0) continue ;; esac   # binary, or deletions only
+    if ! printf '%s\n' "$RANGE_FILES" | grep -qxF -- "$ns_path"; then
+        MISSING_RANGES="$MISSING_RANGES $ns_path"
+    fi
+done <"$PF_LOGDIR/numstat.z"
+if [ -n "$MISSING_RANGES" ]; then
+    echo "preflight: could not map changed lines for:$MISSING_RANGES" >&2
+    echo "           (the cppcheck/clang-tidy line filters would skip these files; refusing to run)" >&2
+    exit 2
+fi
 
 # ---------- pretty helpers -------------------------------------------
 
@@ -601,19 +663,20 @@ else
     #
     # Fail-closed rules for the filter:
     #   - exit status must be 0 or 1; anything else (crash, bad option) fails.
-    #   - exit 1 with NO parseable finding fails: cppcheck also exits 1 for
-    #     usage errors, which must not read as "findings, all filtered away".
+    #   - exit 1 with an EMPTY findings log fails: cppcheck also exits 1 for
+    #     usage errors (printed on stdout, not in this log), which must not
+    #     read as "findings, all filtered away".
     #   - analysis-failure ids (syntaxError, internal*, preprocessorError-
     #     Directive, cppcheckError) and findings at line 0 are kept whatever
     #     their line: they mean part of the file was not analysed at all.
+    #     (unknownMacro, the other such id, stays suppressed as before.)
     #   - a finding line that does not parse is kept, not dropped.
     printf '%s\n' "$CHANGED_RANGES" >"$PF_LOGDIR/changed-ranges.tsv"
     CPPCHECK_RC=0
-    # shellcheck disable=SC2086  # ALL_CPP is newline-separated; pre-existing
     cppcheck --enable=warning --error-exitcode=1 --quiet --inline-suppr --language=c++ --std=c++17 \
              --suppress=missingIncludeSystem --suppress=unknownMacro \
              --template='{file}\t{line}\t{severity}\t{id}\t{message}' \
-             $ALL_CPP 2>"$PF_LOGDIR/cppcheck.log" || CPPCHECK_RC=$?
+             "${ALL_CPP_ARR[@]}" 2>"$PF_LOGDIR/cppcheck.log" || CPPCHECK_RC=$?
     if [ "$CPPCHECK_RC" -ne 0 ] && [ "$CPPCHECK_RC" -ne 1 ]; then
         tail -30 "$PF_LOGDIR/cppcheck.log" || true
         fail "cppcheck (exited $CPPCHECK_RC -- crashed or rejected its arguments; see $PF_LOGDIR/cppcheck.log)"
@@ -732,39 +795,53 @@ else
                 'COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh "-line-filter=$1" "$3" >"$0/$2.log" 2>&1 && rc=0 || rc=$?; echo "$rc" >"$0/$2.rc"' \
                 "$CT_LOGDIR" "$CT_FILTER"
         cat "$CT_LOGDIR"/*.log >"$PF_LOGDIR/clang-tidy.log"
-        if grep -aq "^warning:.*skipping" "$PF_LOGDIR/clang-tidy.log"; then
+        # Per-file verdicts first.  The verdict used to come from grepping the
+        # combined log alone, behind a `|| true` on the run: a clang-tidy that
+        # crashed or died before printing anything left no "warning:" line
+        # and passed.  Each file's exit status now has to agree with its log:
+        # 0 is fine, 1 must come with at least one finding (it is what
+        # WarningsAsErrors produces), anything else -- a signal, a usage
+        # error -- fails.  The wrapper's graceful skip (no clang-tidy binary,
+        # no compile_commands.json) prints a "skipping" warning and exits 0;
+        # the stage is reported as skipped only when EVERY file says so, so
+        # one file's marker cannot hide another file's crash.
+        CT_BAD=()
+        CT_SKIPPED=0
+        CT_TOTAL=0
+        ct_i=0
+        while IFS= read -r ct_f; do
+            [ -n "$ct_f" ] || continue
+            ct_id="$(printf '%04d' "$ct_i")"
+            ct_i=$((ct_i + 1))
+            CT_TOTAL=$((CT_TOTAL + 1))
+            if [ ! -f "$CT_LOGDIR/$ct_id.rc" ]; then
+                CT_BAD+=("$ct_f (no exit status recorded)")
+                continue
+            fi
+            ct_rc="$(cat "$CT_LOGDIR/$ct_id.rc")"
+            if [ "$ct_rc" = 0 ] && grep -aq '^warning:.*skipping' "$CT_LOGDIR/$ct_id.log"; then
+                CT_SKIPPED=$((CT_SKIPPED + 1))
+                continue
+            fi
+            ct_n="$(grep -acE 'warning: |error: ' "$CT_LOGDIR/$ct_id.log" || true)"
+            if [ "$ct_rc" = 1 ] && [ "${ct_n:-0}" -eq 0 ]; then
+                CT_BAD+=("$ct_f (exit 1 with no findings)")
+            elif [ "$ct_rc" != 0 ] && [ "$ct_rc" != 1 ]; then
+                CT_BAD+=("$ct_f (exit $ct_rc)")
+            fi
+        done <<< "$CT_FILES"
+        if [ "${#CT_BAD[@]}" -eq 0 ] && [ "$CT_TOTAL" -gt 0 ] && [ "$CT_SKIPPED" -eq "$CT_TOTAL" ]; then
             skip "clang-tidy" "$(grep -a -m1 '^warning:' "$PF_LOGDIR/clang-tidy.log" | sed 's/^warning: //')"
+        elif [ "$CT_SKIPPED" -gt 0 ]; then
+            [ "${#CT_BAD[@]}" -eq 0 ] || printf '  %s\n' "${CT_BAD[@]}"
+            fail "clang-tidy (skipped $CT_SKIPPED of $CT_TOTAL file(s) -- a partial skip is not a pass; logs in $CT_LOGDIR)"
         else
-            # The verdict used to come from grepping the log alone, behind a
-            # `|| true` on the run: a clang-tidy that crashed or died before
-            # printing anything left no "warning:" line and passed.  Each
-            # file's exit status now has to agree with its log: 0 is fine, 1
-            # must come with at least one finding (it is what
-            # WarningsAsErrors produces), anything else -- a signal, a usage
-            # error -- fails.
-            CT_BAD=()
-            ct_i=0
-            while IFS= read -r ct_f; do
-                [ -n "$ct_f" ] || continue
-                ct_id="$(printf '%04d' "$ct_i")"
-                ct_i=$((ct_i + 1))
-                if [ ! -f "$CT_LOGDIR/$ct_id.rc" ]; then
-                    CT_BAD+=("$ct_f (no exit status recorded)")
-                    continue
-                fi
-                ct_rc="$(cat "$CT_LOGDIR/$ct_id.rc")"
-                ct_n="$(grep -acE 'warning: |error: ' "$CT_LOGDIR/$ct_id.log" || true)"
-                if [ "$ct_rc" = 1 ] && [ "${ct_n:-0}" -eq 0 ]; then
-                    CT_BAD+=("$ct_f (exit 1 with no findings)")
-                elif [ "$ct_rc" != 0 ] && [ "$ct_rc" != 1 ]; then
-                    CT_BAD+=("$ct_f (exit $ct_rc)")
-                fi
-            done <<< "$CT_FILES"
             # -a on every grep: with the binary-content heuristic, grep prints
             # "Binary file ... matches" instead of the lines.  One observed run
             # reported "1 signal / 1434 raw" where the true signal count was
             # 132; had that one line matched the noise list, the gate would
-            # have passed with every finding hidden.
+            # have passed with every finding hidden.  The per-file check above
+            # backs this up: a file that exited 1 must show a finding line.
             RAW="$(grep -acE 'warning: |error: ' "$PF_LOGDIR/clang-tidy.log" || true)"
             [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
@@ -777,8 +854,6 @@ else
             if [ "${#CT_BAD[@]}" -gt 0 ]; then
                 printf '  %s\n' "${CT_BAD[@]}"
                 fail "clang-tidy (${#CT_BAD[@]} file(s) did not complete normally; logs in $CT_LOGDIR)"
-            elif [ "$SIGNAL_COUNT" -gt "$RAW" ]; then
-                fail "clang-tidy (signal count $SIGNAL_COUNT exceeds raw count $RAW -- the log did not parse; see $PF_LOGDIR/clang-tidy.log)"
             elif [ "$SIGNAL_COUNT" -gt 0 ]; then
                 printf '\n--- signal findings on changed lines (noise-filtered, see #2926) ---\n'
                 printf '%s\n' "$SIGNAL_LINES" | head -30
@@ -810,7 +885,7 @@ else
     if [ -d ".semgrep" ]; then
         SEMGREP_CONFIG="$SEMGREP_CONFIG --config .semgrep/"
     fi
-    if ! uvx --python 3.12 semgrep $SEMGREP_CONFIG --error --quiet $ALL_CPP 2>"$PF_LOGDIR/semgrep.log"; then
+    if ! uvx --python 3.12 semgrep $SEMGREP_CONFIG --error --quiet "${ALL_CPP_ARR[@]}" 2>"$PF_LOGDIR/semgrep.log"; then
         tail -30 "$PF_LOGDIR/semgrep.log"
         fail "semgrep (see $PF_LOGDIR/semgrep.log)"
     else
