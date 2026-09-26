@@ -29,17 +29,19 @@ any `git push` succeeds.
 ## preflight.sh — local pre-push gate
 
 `dev/ci/preflight.sh` is a single script that runs the same checks CI
-runs against the diff between HEAD and the upstream branch.  Designed
-to be invoked from a pre-push git hook so a passing preflight strongly
-predicts a green CI.
+runs against the diff between the merge-base with `origin/master` (or
+`--base`) and the **working tree** — committed, staged and unstaged changes
+alike.  Designed to be invoked from a pre-push git hook so a passing
+preflight strongly predicts a green CI.  An unresolvable `--base` is an
+error (exit 2), not an empty diff.
 
 | Check | What it does | Skip flag |
 |---|---|---|
 | clang-format | uvx clang-format (version pinned from `.pre-commit-config.yaml`) dry-run on changed `.cpp` / `.h` files | `--skip=clang-format` |
-| build | cmake builds `CatchTestRunner` in `build_catch/` (auto-configures on first run: Release, Ninja when available) | `--skip=build` |
-| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths.  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` bodies run once, with CI's one-sample flags | `--skip=tests` |
-| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers | `--skip=cppcheck` |
-| clang-tidy | changed `.cpp` files via `run-clang-tidy-staged.sh`, one process per file, `--jobs` at a time; requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
+| build | cmake builds `CatchTestRunner` in `build_catch/` (configures it when missing or unusable: Release, Ninja when available) | `--skip=build` |
+| tests | Catch2 runner over `~[slow]` **plus** the tags of every path rule the diff matches (`[SBTL]`, `[Helmholtz]`, `[melting]`, …).  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` bodies run once, with CI's one-sample flags; the verdict reports how many cases skipped | `--skip=tests` |
+| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers; findings **on changed lines** fail (analysis failures always fail) | `--skip=cppcheck` |
+| clang-tidy | changed `.cpp` files via `run-clang-tidy-staged.sh` with `-line-filter` = the changed lines, one process per file, `--jobs` at a time; each file's exit status must agree with its log; requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
 | semgrep | `p/security-audit` + local `.semgrep/` rules (uvx-resolved, Python 3.12 pinned) | `--skip=semgrep` |
 | incomp-sanity | `dev/incompressible_liquids/test_json_sanity.py` on the committed incompressible JSON — rejects optimizer starting guesses, all-zero fits, non-finite/boolean coefficients and cleared vital properties. Only runs when `dev/incompressible_liquids/` is in the diff; falls back to calling the `test_*` functions directly when pytest is unavailable | `--skip=incomp-sanity` |
 
@@ -52,7 +54,28 @@ Invocation:
 ./dev/ci/preflight.sh --jobs=4                 # cap parallelism (default: all cores)
 ```
 
-Speed notes:
+Behaviour notes:
+
+- **Logs.**  Every run writes its logs to a fresh `mktemp -d` directory,
+  printed as `preflight logs: <dir>` at the start and named in every failure
+  message.  (They used to be fixed `/tmp/preflight-*.log` paths that
+  concurrent runs in different worktrees overwrote.)
+- **Changed lines only** for cppcheck and clang-tidy, as in CI's diff-only
+  lint jobs, so findings that predate the branch no longer make a file
+  impossible to touch.  A `.cpp` whose hunks are all deletions is named and
+  not analysed.
+- **Test scope only widens.**  `~[slow]` always runs; a path rule adds its
+  tags on top (in practice, its `[slow]` cases), so touching more areas can
+  never shrink the sweep.  A `dev/fluids/` change pulls in the slow SVD
+  table tests and `[melting]`.
+- **REFPROP.**  If `COOLPROP_REFPROP_ROOT` is unset and `/opt/refprop` is
+  not a REFPROP install, preflight looks in `~/REFPROP10`, `~/REFPROP`,
+  `~/refprop` and `/Applications/REFPROP` and exports the first one that has
+  a REFPROP library and a `FLUIDS`/`fluids` directory.  The test stage prints
+  which REFPROP it used.
+- **Build dirs.**  `build_catch` / `build_shared` are reconfigured from
+  scratch when their `CMakeCache.txt` is missing, truncated, belongs to a
+  different source tree, or has no generator file (an interrupted configure).
 
 - **Tests are sharded.**  `run-catch-sharded.sh` cuts the selected cases
   into ~4x more shards than jobs and feeds them through a work queue, since
