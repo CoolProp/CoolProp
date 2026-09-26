@@ -178,6 +178,19 @@ class IF97Backend : public AbstractState
 
         double H, S, hLmass, hVmass, sLmass, sVmass;
 
+        // Reject non-finite inputs up front, for every pair.  IF97's region
+        // selectors do not propagate NaN: HmassP / PSmass with p = NaN and
+        // HmassSmass with h or s = NaN previously returned T = 273.15 K and a
+        // gas / two-phase state without complaint.  Same exception type and
+        // "is not a valid number" wording as HEOS's post-update checks.  A
+        // non-finite QUALITY is left to the PQ/QT arms' own range guard so it
+        // keeps the "[Q] must be between 0 and 1" diagnostic every backend uses.
+        const bool q_is_v1 = (input_pair == QT_INPUTS), q_is_v2 = (input_pair == PQ_INPUTS);
+        if ((!q_is_v1 && !std::isfinite(value1)) || (!q_is_v2 && !std::isfinite(value2))) {
+            throw ValueError(format("IF97: input [%s] is not a valid number: value1 = %g, value2 = %g", get_input_pair_short_desc(input_pair).c_str(),
+                                    value1, value2));
+        }
+
         clear();  //clear the few cached values we are using
 
         switch (input_pair) {

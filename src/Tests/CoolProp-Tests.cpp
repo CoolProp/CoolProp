@@ -5977,14 +5977,43 @@ TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality
         }
     }
 
-    SECTION("IF97 does not clamp a NaN lever-rule quality to 0") {
-        // std::min(1, std::max(0, NaN)) is 0, so HmassP with h = NaN (and PSmass
-        // with s = NaN) landed in the Region-4 branch and reported Q = 0,
-        // phase = twophase -- a NaN input dressed up as saturated liquid.
+    SECTION("IF97 rejects non-finite inputs instead of inventing a state (COO-7, COO-40)") {
+        // Two holes.  (1) std::min(1, std::max(0, NaN)) is 0, so HmassP with
+        // h = NaN (and PSmass with s = NaN) landed in the Region-4 branch and
+        // reported Q = 0, phase = twophase.  (2) IF97's region selectors do not
+        // propagate NaN at all: HmassP / PSmass with p = NaN and HmassSmass with
+        // h or s = NaN returned T = 273.15 K and a gas / two-phase state.  Both
+        // are now refused by one finiteness check at update() entry (the
+        // lever-rule guard stays as a backstop).  A non-finite QUALITY keeps the
+        // shared "[Q] must be between 0 and 1" message, tested above.
         auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
-        const auto not_finite = Catch::Matchers::ContainsSubstring("quality is not a finite number");
-        CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, qnan, 1e6), not_finite);
-        CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, 1e6, qnan), not_finite);
+        const auto not_valid = Catch::Matchers::ContainsSubstring("is not a valid number");
+        for (double bad : {qnan, std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()}) {
+            CAPTURE(bad);
+            CHECK_THROWS_AS(IF->update(CoolProp::HmassP_INPUTS, bad, 1e6), CoolProp::ValueError);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, bad, 1e6), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, 2e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, bad, 5000.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, 1e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassSmass_INPUTS, bad, 5000.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassSmass_INPUTS, 2e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PT_INPUTS, bad, 300.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PT_INPUTS, 1e5, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmolarP_INPUTS, bad, 1e6), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmolar_INPUTS, 1e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmolarSmolar_INPUTS, bad, 100.0), not_valid);
+            // The non-quality half of a Q pair is covered too.
+            CHECK_THROWS_WITH(IF->update(CoolProp::PQ_INPUTS, bad, 0.5), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::QT_INPUTS, 0.5, bad), not_valid);
+        }
+        // Normal single-phase states still work.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+        const double h1 = IF->hmass(), s1 = IF->smass();
+        CHECK_NOTHROW(IF->update(CoolProp::HmassP_INPUTS, h1, 1e5));
+        CHECK(IF->T() == Catch::Approx(300.0).margin(0.1));  // IF97 backward eqs are ~25 mK here
+        CHECK_NOTHROW(IF->update(CoolProp::HmassSmass_INPUTS, h1, s1));
+        CHECK(IF->p() == Catch::Approx(1e5).epsilon(1e-3));
         // A genuine two-phase state is unaffected.
         IF->update(CoolProp::PQ_INPUTS, 1e6, 0.4);
         const double h = IF->hmass(), s = IF->smass();
