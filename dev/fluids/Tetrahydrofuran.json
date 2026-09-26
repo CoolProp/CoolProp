@@ -4235,6 +4235,82 @@
           "f6": -6.693194542
         }
       }
+    },
+    "conductivity": {
+      "BibTeX": "Sotiriadou-IJT-2024-THF",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (12) of Sotiriadou, Ntonti, Assael, Antoniadis & Huber, Int. J. Thermophys. 45:123 (2024), converted from mW/(m K) to W/(m K). Tc = 540.2 K is the paper's own value (from the Fiedler et al. EOS).",
+        "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 540.2
+        },
+        "arrays": {
+          "a": [
+            -1.94973,
+            19.5154,
+            -63.3241,
+            87.1979,
+            12.5447,
+            -7.42725,
+            0.933011
+          ],
+          "b": [
+            0.0360636,
+            0.13434,
+            1.0
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (13) and Table 7 of Sotiriadou et al. (2024). Tc = 540.2 K and rhoc = 317.265168 kg/m^3 are the paper's own reducing values. Table 7 labels B1,i and B2,i as mW/(m K), but the coefficients are in W/(m K): only W/(m K) reproduces the paper's check value at 300 K and 900 kg/m^3, and THF.FLD (REFPROP 10.1) carries the same numbers with a reducing conductivity of 1 W/(m K). No unit conversion is therefore applied.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 540.2,
+          "rhoc": 317.265168
+        },
+        "arrays": {
+          "B1": [
+            0.0137024,
+            0.0417645,
+            -0.0442346,
+            0.0198436,
+            -0.00278328
+          ],
+          "B2": [
+            0.00767387,
+            -0.0491144,
+            0.0579725,
+            -0.0284934,
+            0.00495863
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Section 3.3 of Sotiriadou et al. (2024): R_D = 1.02, gamma = 1.239, Gamma = 0.057, xi0 = 0.207e-9 m, qD^-1 = 5.99e-10 m, T_ref = 1.5 Tc = 810.3 K (the paper prints this rounded to 810 K; THF.FLD in REFPROP 10.1 carries 810.30). Otherwise identical to the TK3 block of THF.FLD. Sec. 4.2 of the paper quotes an enhancement of 0.0408 mW/(m K) at 300 K and 900 kg/m^3, but there the susceptibility difference of Eq. (17) is negative and the paper's equations give no enhancement; the 0.0408 is the small dense-liquid enhancement that REFPROP's TK3 routine keeps (it gives 159.8654 mW/(m K) in total). This block follows the paper's equations, which give 159.8246 at that state, i.e. the paper's 159.8654 less its quoted 0.0408.",
+        "GAMMA": 0.057,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 1669449081.803005,
+        "zeta0": 2.07e-10,
+        "T_ref": 810.3
+      }
     }
   }
 }

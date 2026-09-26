@@ -38,6 +38,30 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity for ammonia, n-undecane and tetrahydrofuran.**
+  ``PropsSI("L", ..., <fluid>)`` previously raised for n-undecane and tetrahydrofuran;
+  ammonia moves from the Tufeu et al. (1984) correlation, which stays in the fluid file
+  for reference but is no longer used, to the current reference correlation.  As for R161, the dilute and
+  residual terms are expression-DSL data and the critical enhancement is the native
+  simplified Olchowy–Sengers block:
+
+  * **Ammonia** — Monogenidou, Assael and Huber, *J. Phys. Chem. Ref. Data*
+    **47**\ (4):043101 (2018).  Its check value at 390 K and 415 kg/m\ :sup:`3`, and
+    each of its three contributions, agree to 1e-4.
+  * **n-Undecane** — Assael, Papalas and Huber, *J. Phys. Chem. Ref. Data*
+    **46**\ (3):033103 (2017).  Five of the six Table 11 values agree to 1e-4.
+  * **Tetrahydrofuran** — Sotiriadou, Ntonti, Assael, Antoniadis and Huber,
+    *Int. J. Thermophys.* **45**\ (9):123 (2024).  The dilute-gas check value agrees to 1e-4.
+
+  Each correlation was fitted with the equation of state CoolProp uses for that fluid.
+  Two published check values in dense liquid do not agree, n-undecane at 550 K and
+  600 kg/m\ :sup:`3` (CoolProp 104.245 mW/(m K), paper 104.28) and tetrahydrofuran at
+  300 K and 900 kg/m\ :sup:`3` (159.825 against 159.865).  The papers' tables were
+  generated with REFPROP, whose critical-enhancement routine keeps a small enhancement
+  in the dense liquid that the papers' equations do not have; CoolProp follows the
+  equations.  The residual coefficients in Table 2 of the ammonia paper and Table 7 of
+  the tetrahydrofuran paper are labelled mW/(m K) but are in W/(m K).
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
