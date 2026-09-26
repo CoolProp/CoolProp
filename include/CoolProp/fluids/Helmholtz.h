@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstring>  // for std::memset, used below -- libstdc++ does not pull it in transitively
 #include <initializer_list>
+#include <string>
 #include <vector>
 #include "CoolProp/detail/tools.h"  // for CoolPropDbl
 //#include "Eigen/Core"
@@ -922,7 +923,11 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
 inline void check_alpha0_lengths(const char* term, std::initializer_list<std::size_t> sizes) {
     for (std::size_t size : sizes) {
         if (size != *sizes.begin()) {
-            throw ValueError(format("%s: coefficient vectors must all have the same length", term));
+            std::string got;
+            for (std::size_t s : sizes) {
+                got += (got.empty() ? "" : ", ") + std::to_string(s);
+            }
+            throw ValueError(format("%s: coefficient vectors must all have the same length; got [%s]", term, got.c_str()));
         }
     }
 }

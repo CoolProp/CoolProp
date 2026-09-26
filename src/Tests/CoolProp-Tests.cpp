@@ -6,6 +6,7 @@
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
+#include "../Backends/Cubics/UNIFACLibrary.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
 #include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
@@ -6362,10 +6363,12 @@ TEST_CASE("alpha0 terms reject coefficient vectors of mismatched length", "[alph
     }
 }
 
-// Twu and Mathias-Copeman alpha functions read c[0..2] unchecked, in
-// CubicBackend and in the HEOS "-SRK"/"-PengRobinson" path.  The only guard is
-// the cubic fluid schema (minItems = maxItems = 3), which every add is
-// validated against; this pins it so relaxing the schema fails here (COO-60).
+// Twu and Mathias-Copeman alpha functions read c[0..2] unchecked in
+// CubicBackend (and Twu in the HEOS "-SRK"/"-PengRobinson" path).  For the
+// cubic library the guard is the cubic fluid schema (minItems = maxItems = 3),
+// which every add is validated against; this pins it so relaxing the schema
+// fails here.  VTPR's UNIFAC components have no schema and are checked in
+// UNIFACParameterLibrary::populate instead -- see the next test (COO-60).
 TEST_CASE("Cubic alpha functions reject a coefficient list that is not length 3", "[cubic],[alpha0]") {
     using nlohmann::json;
     auto fluid = [](const std::string& name, const std::string& CAS, const std::string& type, const json& c) {
@@ -6381,16 +6384,44 @@ TEST_CASE("Cubic alpha functions reject a coefficient list that is not length 3"
                              {"aliases", json::array()},
                              {"alpha", {{"type", type}, {"c", c}}}}});
     };
-    // Positive control: the same fluid with three coefficients loads, so the
-    // rejections below are due to "c" and not to some other schema violation.
-    // No test walks the cubic fluid list, so leaving this registered is harmless.
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaOK", "999-99-81", "Twu", json{0.1, 0.9, 1.5}).dump()));
+    // Positive controls: the same fluid with three coefficients loads for each
+    // type, so the rejections below are due to "c" and not to some other schema
+    // violation.  No test walks the cubic fluid list, so leaving these
+    // registered is harmless.
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaTwuOK", "999-98-01", "Twu", json{0.1, 0.9, 1.5}).dump()));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaMCOK", "999-98-02", "Mathias-Copeman", json{0.5, -0.1, 0.2}).dump()));
     for (const std::string type : {"Twu", "Mathias-Copeman"}) {
         CAPTURE(type);
         for (const json& c : {json::array(), json{0.1, 0.2}, json{0.1, 0.2, 0.3, 0.4}}) {
             CAPTURE(c.dump());
-            CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaBad", "999-99-80", type, c).dump()),
+            CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaBad", "999-98-00", type, c).dump()),
                               Catch::Matchers::ContainsSubstring("against schema"));
+        }
+    }
+}
+
+// VTPR's UNIFAC components carry an optional Twu/Mathias-Copeman alpha block
+// that VTPRBackend reads as c[0..2].  Unlike the cubic library, no schema is
+// applied on this path (the files come from VTPR_UNIFAC_PATH), so populate()
+// itself must reject any other count (COO-60).  A local library instance keeps
+// this out of the process-wide VTPR library.
+TEST_CASE("UNIFAC component alpha functions reject a coefficient list that is not length 3", "[VTPR],[alpha0]") {
+    using nlohmann::json;
+    auto populate = [](const std::string& type, const json& c) {
+        json comp = {
+          {"inchikey", "X"},  {"registry_number", "999-98-03"}, {"name", "CatchUNIFACAlpha"},         {"Tc", 400.0}, {"pc", 4e6}, {"acentric", 0.2},
+          {"molemass", 0.05}, {"groups", json::array()},        {"alpha", {{"type", type}, {"c", c}}}};
+        std::string groups = "[]", interactions = "[]", decomps = json::array({comp}).dump();
+        UNIFACLibrary::UNIFACParameterLibrary lib;
+        lib.populate(groups, interactions, decomps);
+    };
+    for (const std::string type : {"Twu", "MathiasCopeman", "Mathias-Copeman"}) {
+        CAPTURE(type);
+        CHECK_NOTHROW(populate(type, json{0.1, 0.9, 1.5}));
+        for (const json& c : {json::array(), json{0.1, 0.2}, json{0.1, 0.2, 0.3, 0.4}}) {
+            CAPTURE(c.dump());
+            CHECK_THROWS_AS(populate(type, c), CoolProp::ValueError);
+            CHECK_THROWS_WITH(populate(type, c), Catch::Matchers::ContainsSubstring("requires exactly 3 coefficients"));
         }
     }
 }
