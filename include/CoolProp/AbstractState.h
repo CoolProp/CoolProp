@@ -363,7 +363,7 @@ class AbstractState
     static void check_input_quality(CoolProp::input_pairs pair, double v1, double v2);
 
     /// Throw OutOfRangeError unless 0 <= Q <= 1 (NaN included).  The single home of
-    /// the "Input vapor quality [Q] must be between 0 and 1" message.
+    /// the "Input vapor quality [Q] must be between 0 and 1, got <Q>" message.
     static void check_input_quality_value(double Q);
 
     /// Default iterative Qmass-pair solver (secant on Qmolar). Backends may

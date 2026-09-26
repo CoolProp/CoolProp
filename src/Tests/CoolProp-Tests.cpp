@@ -6200,17 +6200,49 @@ TEST_CASE("check_input_quality guards exactly the quality slot of every input pa
     const auto qmass_msg = Catch::Matchers::ContainsSubstring("Qmass out of range");
     const double ok_other = 300.0;  // any finite value; the non-Q slot is never range-checked
 
-    int n_pairs = 0, n_q_pairs = 0;
-    for (int i = static_cast<int>(CoolProp::INPUT_PAIR_INVALID); i <= static_cast<int>(CoolProp::DmolarUmolar_INPUTS); ++i) {
-        const auto pair = static_cast<CoolProp::input_pairs>(i);
-        std::string desc;
+    // input_pairs has no sentinel, so rather than stop at a hard-coded last
+    // enumerator, probe well past it.  Every described value must form one
+    // contiguous run 1..last (INPUT_PAIR_INVALID = 0 is the only undescribed value
+    // below it), split_input_pair must know exactly the described values, and the
+    // exact counts below pin the size: appending a pair (with its description, as
+    // the enum's header comment requires) changes n_pairs and fails here.
+    // UPDATE THESE COUNTS when an input pair is added or removed.
+    constexpr int expected_pairs = 43;
+    constexpr int expected_q_pairs = 16;  // 8 molar-Q + 8 Qmass
+    constexpr int probe_limit = 255;
+
+    auto is_described = [](CoolProp::input_pairs pair) {
         try {
-            desc = CoolProp::get_input_pair_long_desc(pair);
+            CoolProp::get_input_pair_long_desc(pair);
+            return true;
         } catch (const CoolProp::ValueError&) {
-            continue;  // INPUT_PAIR_INVALID and any other hole in the enum
+            return false;
         }
+    };
+    auto is_splittable = [](CoolProp::input_pairs pair) {
+        CoolProp::parameters p1, p2;
+        try {
+            CoolProp::split_input_pair(pair, p1, p2);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+
+    int n_pairs = 0, n_q_pairs = 0, last_described = -1;
+    std::vector<int> skipped;
+    for (int i = 0; i <= probe_limit; ++i) {
+        const auto pair = static_cast<CoolProp::input_pairs>(i);
+        CAPTURE(i);
+        CHECK(is_splittable(pair) == is_described(pair));
+        if (!is_described(pair)) {
+            skipped.push_back(i);
+            continue;
+        }
+        last_described = i;
         ++n_pairs;
-        CAPTURE(i, desc);
+        const std::string desc = CoolProp::get_input_pair_long_desc(pair);
+        CAPTURE(desc);
 
         const auto comma = desc.find(',');
         REQUIRE(comma != std::string::npos);
@@ -6247,8 +6279,17 @@ TEST_CASE("check_input_quality guards exactly the quality slot of every input pa
             CHECK_NOTHROW(q1 ? check(0.5, bad) : check(bad, 0.5));
         }
     }
-    CHECK(n_q_pairs >= 16);
-    CHECK(n_pairs >= 43);
+    CHECK(n_pairs == expected_pairs);
+    CHECK(n_q_pairs == expected_q_pairs);
+    // Contiguous: the described values are exactly 1..last_described, so the only
+    // value skipped at or below it is INPUT_PAIR_INVALID.
+    CHECK(last_described == expected_pairs);
+    CHECK(last_described == static_cast<int>(CoolProp::DmolarUmolar_INPUTS));
+    std::vector<int> skipped_below;
+    for (int v : skipped) {
+        if (v <= last_described) skipped_below.push_back(v);
+    }
+    CHECK(skipped_below == std::vector<int>{static_cast<int>(CoolProp::INPUT_PAIR_INVALID)});
 }
 
 TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {

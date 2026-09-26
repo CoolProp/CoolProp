@@ -890,7 +890,7 @@ void AbstractState::check_Qmass_pair_range(CoolProp::input_pairs pair, double v1
 
 void AbstractState::check_input_quality_value(double Q) {
     if (!is_in_closed_range(0.0, 1.0, Q)) {
-        throw OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+        throw OutOfRangeError(format("Input vapor quality [Q] must be between 0 and 1, got %g", Q));
     }
 }
 
