@@ -330,8 +330,8 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
     SECTION("where (dv/dP)_T >= 0 there is no answer, so it throws") {
         // Interior, far from any bound, so the range guard cannot be what
         // fires.
-        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1850.0e6, 240.0), Catch::Matchers::ContainsSubstring("not evaluable"));
-        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2290.0e6, 240.0), Catch::Matchers::ContainsSubstring("not evaluable"));
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1850.0e6, 240.0), Catch::Matchers::ContainsSubstring("not thermodynamically admissible"));
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2290.0e6, 240.0), Catch::Matchers::ContainsSubstring("not thermodynamically admissible"));
     }
     SECTION("the extrapolated corner IS served, and is documented as such") {
         // These states are self-consistent but are no longer water: the fit

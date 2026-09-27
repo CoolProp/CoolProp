@@ -17,13 +17,25 @@ namespace CoolProp {
 /// (2019) -- a Gibbs energy surface represented as a tensor B-spline in
 /// (P, T), doi:10.1063/1.5097179.
 ///
-/// WHY THIS EXISTS.  CoolProp's IAPWS-95 refuses the entire region below the
-/// melting line: 250 K/200 MPa, 300 K/2000 MPa and similar all throw.  This
-/// backend covers P up to 2300.5999999999995 MPa -- the fitted bound.
-/// (2300.6 is this code's rounding of it, and is REFUSED; the paper says
-/// "2300 MPa".  See domain().)  And
-/// T in [240, 500] K, which includes
-/// that region, and is more accurate than IAPWS-95 above ~100 MPa.
+/// WHY THIS EXISTS.  CoolProp's IAPWS-95 refuses the entire region below
+/// the melting line: 250 K/200 MPa, 300 K/2000 MPa and similar all throw.
+/// This backend covers T in [240, 500] K and P up to
+/// 2300.5999999999995 MPa, which includes that region, and is more
+/// accurate than IAPWS-95 above ~100 MPa.  (The pressure bound is the
+/// fitted knot.  The paper says "2300 MPa"; 2300.6 is this code's
+/// rounding of the knot and is REFUSED -- see domain().)
+///
+/// ONE CARVE-OUT INSIDE THAT DOMAIN.  The advertised bounds are the
+/// paper's, and they are kept as published rather than narrowed to dodge
+/// this: in a small cold high-pressure corner the fitted surface is not
+/// thermodynamically admissible, and update() throws there.  Measured on
+/// the published coefficients, cv <= 0 over p in [1832.8, 2300.6] MPa,
+/// T in [240.0, 249.5] K -- 0.06% of the rectangle -- with
+/// (dv/dP)_T >= 0 over a subset.  That corner is ~2.6x deeper in
+/// pressure than any datum below 293 K in the authors' own fitted set,
+/// and Supplementary Material E declines to tabulate 250 K above
+/// 900 MPa.  Reported upstream to SeaFreeze.  It is a limit of the
+/// published fit, not of this implementation.
 ///
 /// PT_INPUTS ONLY, by design.  For a Gibbs-explicit model (P, T) is the
 /// native pair: one surface evaluation plus five partials yields every
@@ -349,9 +361,12 @@ class BollengierBackend : public AbstractState
         // or whether these numbers mean anything -- must determine that
         // separately.
         if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0) {
-            throw ValueError(format("BollengierBackend: the representation is not evaluable at p = %g Pa, T = %g K "
-                                    "((dv/dP)_T >= 0, or a non-finite result). The reference implementation returns NaN "
-                                    "here; CoolProp throws rather than propagating one.",
+            throw ValueError(format("BollengierBackend: the published surface is not thermodynamically admissible at "
+                                    "p = %g Pa, T = %g K ((dv/dP)_T >= 0 or cv <= 0), so no properties can be returned. "
+                                    "This is a known carve-out inside the paper's stated domain -- a small cold "
+                                    "high-pressure corner far beyond any data the fit was constrained by -- not a "
+                                    "failure of this backend. The reference implementation returns NaN here; CoolProp "
+                                    "throws rather than propagate one.",
                                     p_Pa, T_K));
         }
 
