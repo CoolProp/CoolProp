@@ -1,6 +1,7 @@
 #include "CoolProp/Configuration.h"
 #include "CoolProp/detail/json.h"
 #include "src/Backends/REFPROP/REFPROPMixtureBackend.h"
+#include <mutex>
 
 namespace {
 
@@ -124,11 +125,15 @@ configuration_keys config_string_to_key(const std::string& s) {
 };
 
 std::unique_ptr<Configuration> pconfig;
+// Thread-safe lazy initialization of the global configuration, matching the
+// FluidLibrary singleton.  The previous `if (!pconfig) pconfig = ...` pattern
+// raced when threads first-called get_/set_config_* concurrently: each could
+// construct its own instance, the last assignment won, and settings made
+// through a losing instance were silently lost.
+static std::once_flag pconfig_init_flag;
 /// A helper function to ensure that configuration is not accessed before it is initialized (was formerly static)
 Configuration* _get_config() {
-    if (!pconfig) {
-        pconfig = std::make_unique<Configuration>();
-    }
+    std::call_once(pconfig_init_flag, [] { pconfig = std::make_unique<Configuration>(); });
     return pconfig.get();
 }
 
