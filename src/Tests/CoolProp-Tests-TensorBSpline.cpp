@@ -286,15 +286,30 @@ TEST_CASE("TensorBSpline2D throws rather than returning an overflowed value", "[
     // Pins the isfinite backstop in eval().  With the degenerate-span guard
     // in place, a zero denominator is no longer reachable from a
     // constructible surface, so genuine floating-point overflow is what
-    // remains: finite but enormous coefficients whose high derivatives
-    // exceed DBL_MAX.  Deleting the backstop makes this return inf.
+    // remains: finite coefficients whose high derivatives exceed DBL_MAX.
+    // Deleting the backstop makes this return inf.
+    //
+    // The signs ALTERNATE along x on purpose.  With every coefficient equal
+    // the surface is constant by partition of unity, so its exact 14th
+    // derivative is ZERO -- such a test still trips the backstop, but only
+    // because individual terms overflow before cancelling, which is not
+    // what this is meant to check.  Alternating signs make the true
+    // derivative genuinely enormous, so the test exercises the case its
+    // name describes.  Both y coefficients for a given x are equal, so the
+    // y direction contributes a plain partition of unity.
     std::vector<double> k(30);
     for (int i = 0; i < 15; ++i) {
         k[i] = 0.0;
         k[15 + i] = 1.0;
     }
     const std::vector<double> ky{0.0, 0.0, 1.0, 1.0};
-    const cp_spline::TensorBSpline2D sp(k, ky, 15, 2, std::vector<double>(std::size_t{15} * 2, 1e300));
+    std::vector<double> coefs(std::size_t{15} * 2);
+    for (std::size_t i = 0; i < 15; ++i) {
+        const double c = (i % 2 == 0) ? 1e300 : -1e300;
+        coefs[i * 2] = c;
+        coefs[i * 2 + 1] = c;
+    }
+    const cp_spline::TensorBSpline2D sp(k, ky, 15, 2, coefs);
     CHECK_THROWS_WITH(sp.eval(0.3, 0.5, 14, 0), Catch::Matchers::ContainsSubstring("non-finite result"));
     // The same surface at a modest derivative order stays finite.
     CHECK(std::isfinite(sp.eval(0.3, 0.5)));
