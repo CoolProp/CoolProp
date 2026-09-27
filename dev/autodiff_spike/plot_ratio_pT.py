@@ -35,6 +35,7 @@ def load(files):
 def main(out, files):
     mixes = load(files)
     n = len(mixes)
+    nstates = max(len(v) for v in mixes.values())
     ncol = 3
     nrow = math.ceil(n / ncol)
     fig, axes = plt.subplots(nrow, ncol, figsize=(4.6 * ncol, 4.1 * nrow + 0.9), squeeze=False)
@@ -54,13 +55,15 @@ def main(out, files):
                 continue
             Q = float(r["Q_cp"])
             pts.append((float(r["T"]), float(r["p"]) / 1e6, math.log10(tcp / trp), 0 < Q < 1))
+        # marker size shrinks with density so a 10k-state map still reads as points
+        sc = math.sqrt(2000.0 / max(len(rows), 1))
         # single phase first, two-phase on top
         for two in (False, True):
             sel = [q for q in pts if q[3] == two]
             if not sel:
                 continue
             ax.scatter([q[0] for q in sel], [q[1] for q in sel], c=[max(-LIM, min(LIM, q[2])) for q in sel], cmap=CMAP, norm=norm,
-                       s=11 if two else 9, linewidths=0.6 if two else 0.25, edgecolors=INK if two else "#b8b7b0", zorder=3 if two else 2)
+                       s=(11 if two else 9) * sc, linewidths=(0.6 if two else 0.25) * math.sqrt(sc), edgecolors=INK if two else "#b8b7b0", zorder=3 if two else 2)
         lr = sorted(q[2] for q in pts)
         med = 10 ** lr[len(lr) // 2]
         faster = sum(1 for v in lr if v < 0) / len(lr)
@@ -89,7 +92,7 @@ def main(out, files):
     cb.ax.tick_params(labelsize=8, colors=INK)
     cb.outline.set_edgecolor("#d4d3cc")
     cb.set_label("CoolProp PT flash time / REFPROP 10 TPFLSH time", fontsize=9, color=INK)
-    fig.suptitle("Updated CoolProp PT flash vs REFPROP 10 TPFLSH, per state (2000 states per mixture, min of 3 timings each)\n"
+    fig.suptitle(f"Updated CoolProp PT flash vs REFPROP 10 TPFLSH, per state ({nstates} states per mixture, min of 3 timings each{', mixtures run as parallel processes' if nstates > 2000 else ''})\n"
                  "CoolProp: master + #3427 SS-skip + Chebyshev density kernel.  Dark outline: CoolProp publishes a two-phase state.\n"
                  "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model).",
                  fontsize=10, color=INK, x=0.06, ha="left", y=0.975)
