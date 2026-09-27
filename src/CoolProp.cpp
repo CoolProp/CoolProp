@@ -1000,7 +1000,16 @@ static bool is_gerg_backend_string(const std::string& backend) {
 void set_reference_stateS(const std::string& FluidName, const std::string& reference_state) {
     std::string backend, fluid;
     extract_backend(FluidName, backend, fluid);
-    if (backend == "REFPROP") {
+    // Dispatch on the resolved backend FAMILY, not the literal token, so every
+    // factory spelling of HEOS ("HEOS", "HelmholtzEOSBackend", "HEOS?<options>")
+    // and of REFPROP reaches its arm.  The "?<options>" suffix is stripped with a
+    // plain substr for the reason given in is_gerg_backend_string.  A composed
+    // string ("BICUBIC&HEOS") names a tabular backend, not HEOS, so any '&'
+    // sends it to the refusal below.  No prefix at all ("?") means HEOS.
+    backend_families family = INVALID_BACKEND_FAMILY, second_family = INVALID_BACKEND_FAMILY;
+    extract_backend_families(backend.substr(0, backend.find('?')), family, second_family);
+    const bool single_family = (backend.find('&') == std::string::npos);
+    if (single_family && family == REFPROP_BACKEND_FAMILY) {
 
         int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
@@ -1020,7 +1029,7 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             hrf[hrf.size() - 1] = '\0';
         }
         REFPROP_SETREF(hrf.data(), ixflag, x0, h0, s0, t0, p0, ierr, herr.data(), 3, 255);
-    } else if (backend == "HEOS" || backend == "?") {
+    } else if (backend == "?" || (single_family && family == HEOS_BACKEND_FAMILY)) {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
         if (reference_state == "IIR") {
             if (HEOS.Ttriple() > 273.15) {
@@ -1100,19 +1109,16 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
                  "101325 Pa; see the GERG documentation for how to compare them against HEOS.",
                  backend.c_str()));
     } else {
-        // Every other prefix -- SRK, PR, VTPR, PCSAFT, INCOMP, IF97, the
-        // tabular backends, and also the non-literal HEOS/REFPROP spellings
-        // ("HelmholtzEOSBackend", "HEOS?<options>", "REFPROPBackend", ...)
-        // that the literal comparisons above do not match -- used to fall off
-        // the end of this chain and return having done NOTHING, without even
-        // validating reference_state.  A caller asking for a reference state
+        // Every other prefix -- SRK, PR, VTPR, PCSAFT, INCOMP, IF97 and the
+        // tabular backends -- used to fall off the end of this chain and
+        // return having done NOTHING, without even validating reference_state.  A caller asking for a reference state
         // and silently keeping the old one is the worst outcome for this
         // function, so refuse instead.
         // The message must keep the phrase "reference state" (and avoid "key"
         // and "cannot use"): the Mathcad wrapper classifies this ValueError by
         // substring (wrappers/MathCAD/CoolPropMathcad.cpp).
         throw ValueError(format("Cannot set the reference state for the [%s] backend (fluid string [%s]); only the HEOS and REFPROP "
-                                "backends are supported, spelled \"HEOS::\" or \"REFPROP::\", or with no backend prefix for HEOS",
+                                "backends are supported (e.g. \"HEOS::\", \"REFPROP::\"), or no backend prefix for HEOS",
                                 backend.c_str(), FluidName.c_str()));
     }
     // NOTE: one fail-open hole remains, and cannot be closed from inside this

@@ -2601,9 +2601,8 @@ TEST_CASE("set_reference_stateS refuses backends it cannot apply to instead of s
     // dispatch chain and returned having done nothing -- not even validating
     // the reference-state string.  GERG has its own NotImplementedError arm
     // (see CoolProp-Tests-GERG.cpp); everything else gets a ValueError.
-    for (const char* fluid :
-         {"SRK::Propane", "PR::Propane", "VTPR::Propane", "PCSAFT::Propane", "INCOMP::MEG-20%", "IF97::Water", "BICUBIC&HEOS::Methane",
-          "TTSE&HEOS::Methane", "HelmholtzEOSBackend::Methane", "HEOS?::Methane", "NOT_A_BACKEND::Methane"}) {
+    for (const char* fluid : {"SRK::Propane", "PR::Propane", "VTPR::Propane", "PCSAFT::Propane", "INCOMP::MEG-20%", "IF97::Water",
+                              "BICUBIC&HEOS::Methane", "TTSE&HEOS::Methane", "NOT_A_BACKEND::Methane"}) {
         CAPTURE(fluid);
         CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NBP"), CoolProp::ValueError);
         // Refused regardless of whether the reference-state string is valid.
@@ -2618,6 +2617,25 @@ TEST_CASE("set_reference_stateS refuses backends it cannot apply to instead of s
     // used elsewhere in this suite (h and s bit-identical afterwards).
     CHECK_NOTHROW(CoolProp::set_reference_stateS("HEOS::Propane", "RESET"));
     CHECK_NOTHROW(CoolProp::set_reference_stateS("Propane", "RESET"));
+}
+TEST_CASE("set_reference_stateS resolves every factory spelling of HEOS", "[reference_states]") {
+    // The backend is matched by family, so "HelmholtzEOSBackend" and
+    // "HEOS?<options>" apply the reference state exactly like "HEOS" does.
+    // The reference state is process-global and other tests change it, so
+    // don't rely on Propane's default: set NBP then IIR through each spelling.
+    // Each step moves a value the other state pins, so a spelling that
+    // silently did nothing fails whichever state it started from.
+    auto h_at = [](const char* in, double val) { return CoolProp::PropsSI("Hmass", in, val, "Q", 0, "Propane"); };
+    for (const char* fluid : {"HEOS::Propane", "HelmholtzEOSBackend::Propane", "HEOS?::Propane"}) {
+        CAPTURE(fluid);
+        CoolProp::set_reference_stateS(fluid, "NBP");  // h = 0 for the saturated liquid at 1 atm
+        CHECK(std::abs(h_at("P", 101325)) < 1e-3);
+        CHECK(std::abs(h_at("T", 273.15) - 200000) > 1000);
+        CoolProp::set_reference_stateS(fluid, "IIR");  // h = 200 kJ/kg for the saturated liquid at 0 degC
+        CHECK(h_at("T", 273.15) == Catch::Approx(200000).margin(1e-3));
+        CHECK(std::abs(h_at("P", 101325)) > 1000);
+    }
+    CoolProp::set_reference_stateS("Propane", "RESET");
 }
 TEST_CASE("Test that reference states yield proper values using low-level interface", "[reference_states]") {
     struct ref_entry
