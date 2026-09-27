@@ -44,6 +44,9 @@ Highlights:
   the fluid files and tests.
 
   * R161: Tsolakidou et al. (2017).
+  * Ethylene and propylene: Assael et al. (2016). For propylene this replaces the Huber
+    et al. (2003) ECS model.
+  * Cyclohexane: Koutian et al. (2017).
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
