@@ -2144,6 +2144,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         const int max_ss_loops = 4;  // Each loop does 2 SS steps + 1 GDEM step
         const double cntol = 1e-7;
         bool ss_decided = false;
+        bool ss_stable = false;  // SS concluded this trial is stable (stationary point with tm >= 0, or trivial solution)
 
         for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
             std::array<double, 2> esq_pair = {0, 0};
@@ -2171,12 +2172,14 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 CoolPropDbl tm = 1.0;  // Modified TPD: tm = 1 + sum Y_i*(ln Y_i + ln phi_i - d_i - 1)
                 CoolPropDbl gmax = 0;
                 double esq = 0;
+                bool diffs_finite = true;  // std::max below silently drops a NaN diff
                 for (std::size_t i = 0; i < N; ++i) {
                     double ln_phi_y = std::log(HEOS.SatV->fugacity_coefficient(i));
                     double ln_Y_new = ln_f_z[i] - ln_phi_y;
                     double ln_Y_old = std::log(std::max(Y[i], 1e-300));
                     double diff = ln_Y_new - ln_Y_old;
                     err[i] = diff;
+                    diffs_finite = diffs_finite && ValidNumber(diff);
                     esq += Y[i] * diff * diff;
                     gmax = std::max(gmax, std::abs(diff));
 
@@ -2204,9 +2207,14 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                     return;
                 }
 
-                // Converged to a stationary point
+                // Converged to a stationary point.  tm < -cntol returned above, so tm >= -cntol here --
+                // unless tm or a diff is NaN (a non-finite fugacity coefficient), which fails every
+                // comparison and would pass gmax < cntol vacuously.  Only a finite stationary point
+                // is a stable verdict; otherwise the minimizer below runs, as it always did, and
+                // typically reports the trial non-conclusive.
                 if (gmax < cntol) {
                     ss_decided = true;
+                    ss_stable = diffs_finite && ValidNumber(tm);
                     break;
                 }
 
@@ -2219,7 +2227,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 }
                 if (distance_sq < 0) distance_sq = -distance_sq;
                 if (std::sqrt(distance_sq) < 0.1 && curvature > 0 && tm / curvature > 0.8) {
-                    ss_decided = true;
+                    ss_decided = ss_stable = true;
                     break;
                 }
 
@@ -2246,6 +2254,15 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // --- Phase 2: Second-order TPD minimization ---
         // If SS did not conclusively decide stability, use quasi-Newton
         // minimization in alpha variables. See [Michelsen1982a] Eq. 25-27.
+        //
+        // When SS did decide, the trial is stable and the minimizer is skipped.  Either SS reached
+        // a stationary point with tm >= 0, which the minimizer would only re-confirm, or the
+        // proximity test found the trial converging to the trivial solution ([M&M2007] Ch. 12);
+        // that test is a heuristic, but a descent method started there typically converges to
+        // the same trivial minimum.  Previously the minimizer ran regardless: ~3 Newton
+        // iterations (each an N x N Hessian of composition derivatives) and ~5 trial-density
+        // solves per trial, most of the cost of a PT flash.
+        if (ss_stable) continue;
         bool trial_unstable = false;
         bool trial_ok = minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable);
         if (!trial_ok) any_uncertain = true;  // could not conclude this trial -> not a clean "stable"
