@@ -18,46 +18,41 @@ Breaking Changes:
 
 Highlights:
 
-* **Viscosity for ethylene, propylene glycol, tetrahydrofuran and krypton.**
-  ``PropsSI("V", ..., <fluid>)`` previously raised for all four; these are purely
-  additive.  Each is shipped as fluid-file data using the expression DSL, with no
-  new C++, and each is checked against its source paper's own tabulated values:
+* **Transport properties.**  New and replacement reference correlations for viscosity
+  and thermal conductivity, most from the Assael, Huber and Perkins series.  They ship
+  as fluid-file data in a new expression language (``"type": "expression"``), which
+  writes a correlation as formulas with a declared list of ``state_variables`` instead
+  of C++ (`#3185 <https://github.com/CoolProp/CoolProp/pull/3185>`_, `#3333 <https://github.com/CoolProp/CoolProp/pull/3333>`_).  Each is checked against the verification values its
+  paper publishes, and any discrepancy is recorded in the fluid file.  A replaced model
+  stays in the fluid file behind the new one unless noted.  The viscosities are the
+  background only, with no critical enhancement.
 
-  * **Ethylene** — Sotiriadou, Ntonti, Assael, Perkins and Huber, *Int. J. Thermophys.*
-    **45**\ (6):87 (2024).  Agrees with the paper's Table 8 background column to 4.0e-8.
-  * **Propylene glycol** — Velliadou, Antoniadis, Assael and Huber,
-    *Int. J. Thermophys.* **43**\ (3):42 (2022).  Agrees with Table 7 to 2.7e-5.
-  * **Tetrahydrofuran** — Sotiriadou, Ntonti, Assael, Antoniadis and Huber,
-    *Int. J. Thermophys.* **45**\ (9):123 (2024).  Agrees with Tables 9 and 10 to within the precision those tables are printed at.
-  * **Krypton** — Polychroniadou, Antoniadis, Assael and Bell, *Int. J. Thermophys.*
-    **43**\ (1):6 (2022), a correlation from **entropy scaling** rather than the usual
-    dilute/initial-density/residual decomposition: the residual term is a function of the
-    residual entropy and of the second virial coefficient and its temperature
-    derivative.  Agrees with the paper's
-    Table 3 to 6.5e-14.
+  * Ammonia: viscosity and conductivity Monogenidou et al. (2018), replacing Fenghour et al. (1995) and Tufeu et al. (1984).
+  * Cyclohexane: conductivity Koutian et al. (2017), new.
+  * Ethylbenzene: viscosity Meng et al. (2017), replacing an ECS model from an unpublished source, which is removed.
+  * Ethylene: viscosity Sotiriadou et al. (2024) and conductivity Assael et al. (2016), both new.
+  * Krypton: viscosity Polychroniadou et al. (2022), new; an entropy-scaling correlation in the residual entropy and the second virial coefficient.
+  * Methane: viscosity Sotiriadou et al. (2025), replacing Quiñones-Cisneros and Deiters (2006).
+  * n-Undecane: viscosity and conductivity Assael et al. (2017), new.
+  * Nitrogen: viscosity Huber et al. (2024) and conductivity Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004).  R14, whose ECS model uses nitrogen as its reference fluid, changes with it.
+  * Novec649: viscosity Wen et al. (2017) and conductivity Perkins et al. (2018), new.
+  * Propylene: conductivity Assael et al. (2016), replacing the Huber et al. (2003) ECS model.
+  * Propylene glycol: viscosity Velliadou et al. (2022), new.
+  * R-1233zd(E): conductivity Perkins et al. (2017), new.  Viscosity, which 8.0.0 dropped (`#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`_), is restored with its ``rhosr-CS`` constant refit to the Miyara et al. (2018) liquid data (AAD 2.6%); saturated-liquid values are 29-38% below 7.2.0's, which ran high (`#1826 <https://github.com/CoolProp/CoolProp/issues/1826>`_, `#3335 <https://github.com/CoolProp/CoolProp/pull/3335>`_).
+  * R-1234yf and R-1234ze(E): viscosity Huber and Assael (2016), replacing the Purdue ``rhosr-CS`` model; the unpublished 2015 ECS fits are removed.
+  * R-161: viscosity and conductivity Tsolakidou et al. (2017), new.
+  * R-245fa: viscosity and conductivity Perkins et al. (2016), replacing the Purdue ``rhosr-CS`` viscosity and the Huber et al. (2003) ECS conductivity.
+  * R-32: viscosity Velliadou et al. (2022), replacing the Purdue ``rhosr-CS`` model.
+  * Tetrahydrofuran: viscosity and conductivity Sotiriadou et al. (2024), new.
+  * Xenon: viscosity and conductivity Velliadou et al. (2021), new.
 
-  The critical enhancement is not included for any of them; the correlations are the
-  background viscosity, which is what the comparisons above are against.
-
-* **Thermal conductivity from the reference correlations of Assael, Huber, Perkins and
-  co-workers.**  Where a model is replaced, the old one stays in the fluid file for
-  reference.  Check values that CoolProp does not reproduce, and why, are documented in
-  the fluid files and tests.
-
-  * R161: Tsolakidou et al. (2017).
-  * Ethylene and propylene: Assael et al. (2016). For propylene this replaces the Huber
-    et al. (2003) ECS model.
-  * Cyclohexane: Koutian et al. (2017).
-  * R245fa: Perkins et al. (2016), replacing the Huber et al. (2003) ECS model.
-  * Novec649: Perkins et al. (2018).
-  * R1233zd(E): Perkins et al. (2017).
-  * Ammonia: Monogenidou et al. (2018), replacing Tufeu et al. (1984).
-  * n-Undecane: Assael et al. (2017).
-  * Tetrahydrofuran: Sotiriadou et al. (2024).
-  * Xenon: Velliadou et al. (2021).
-  * Nitrogen: Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004); nitrogen
-    viscosity also moves to Huber et al. (2024). R14, whose ECS model uses nitrogen as
-    its reference fluid, changes with it.
+  Four papers print an equation that does not reproduce their own verification table.
+  For xenon and ethanol CoolProp follows the published errata; R-161 and krypton have
+  none, and the shipped form is the one that reproduces the table.  Viscosity for
+  R-134a and ethanol was implemented but is not shipped: R-134a is the ECS reference
+  fluid for seven refrigerants, and the ethanol correlation has a pole in reachable
+  superheated vapor.  (`#3334 <https://github.com/CoolProp/CoolProp/pull/3334>`_, `#3352 <https://github.com/CoolProp/CoolProp/pull/3352>`_, `#3399 <https://github.com/CoolProp/CoolProp/pull/3399>`_, `#3402 <https://github.com/CoolProp/CoolProp/pull/3402>`_, `#3403 <https://github.com/CoolProp/CoolProp/pull/3403>`_,
+  `#3404 <https://github.com/CoolProp/CoolProp/pull/3404>`_, `#3406 <https://github.com/CoolProp/CoolProp/pull/3406>`_, `#3428 <https://github.com/CoolProp/CoolProp/pull/3428>`_)
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
@@ -69,34 +64,11 @@ Highlights:
   ``CoolProp::CoolProp``; that choice is baked into the package, while
   consumers can select either explicit variant target.
 
-* **Eleven more viscosity correlations**, as fluid-file data using the expression DSL.
-  Each is validated against the verification points its source paper publishes.
-
-  * New — ``PropsSI("V", ...)`` previously raised: **xenon** (Velliadou, *IJT* 2021),
-    **R-161** (Tsolakidou, *JPCRD* 2017), **Novec 649** (Wen, *JCED* 2017),
-    **n-undecane** (Assael, *JPCRD* 2017).
-  * Replaces the previous model, so returned viscosities change: **ammonia**,
-    **ethylbenzene**, **methane**, **R-1234yf**, **R-1234ze(E)**, **R-245fa**, **R-32**.
-    The previous model is kept in the fluid file behind the new one, except for
-    ethylbenzene, whose unpublished ECS model was removed.
-
-  Four source papers print an equation that does not reproduce their own verification
-  table, so the shipped form differs from the typeset one.  Xenon and ethanol have
-  published errata, which CoolProp follows and cites; R-161 and krypton do not.  Each
-  fluid file records the discrepancy.
-
-  **R-134a** and **ethanol** were implemented but are not shipped — R-134a is the ECS
-  reference fluid for seven refrigerants, and ethanol's correlation has a pole in
-  reachable superheated vapour.  Both stay on their previous models.
-
-  No critical enhancement, as with the previous batch.
-
 * Added the :doc:`GERG-2004 and GERG-2008 </coolprop/GERG>` wide-range equations of state for natural gases as two new *strict* backend families (``GERG2004::...``, ``GERG2008::...``).  Strict means the backends admit only the 18 / 21 components each model publishes, carry only that model's own pure-fluid EOS, ideal-gas coefficients, binary reducing parameters and departure functions, use GERG's ``R = 8.314472 J/mol/K`` rather than the CODATA value, and throw rather than answer from a different model — transport properties, superancillaries, and mutable binary interaction parameters are all deliberately unavailable.  Validated against `teqp <https://github.com/usnistgov/teqp>`_ at relative tolerances of 1e-12 on the Helmholtz energies and 1e-10 on pressure, isochoric heat capacity and speed of sound.  See the :doc:`GERG documentation </coolprop/GERG>` for the component tables, the enforced range of validity, the reference-state convention (``h = s = 0`` for the **ideal gas** at 298.15 K / 101325 Pa, which differs from every other CoolProp backend), and the known limitations.  GERG publishes no acentric factor, which CoolProp's VLE and density guess machinery needs; rather than borrow one from a different equation of state, the backends **derive** it from GERG's own equation as :math:`\omega = -1 - \log_{10}(p_{sat}(0.7 T_c)/p_c)` with a converged saturation solve.  Mixture saturation, phase envelopes, VLE flashes and ``DmolarP`` therefore all work.  One limitation deserves calling out here: for **pure** GERG fluids the pressure-plus-caloric input pairs (``HmolarP``, ``PSmolar``, ``PUmolar``) do not work **at all** — through ``PropsSI`` they return ``inf`` plus an error string rather than raising.  That has two separate causes, neither of them the acentric factor: GERG publishes no triple point either, so the flash's temperature bracket falls back to the model's ``Tmin`` instead of the saturation temperature; and the bracket's upper end (1.5x ``Tmax``) is outside the range the backend enforces.  Use ``PT``, ``DmolarT`` or ``DmolarP`` inputs for pure GERG fluids, or ``HEOS`` when you need a caloric input pair.
 * Added wasm32 Python wheels for the Pyodide runtime. These wheels are compatible with Pyodide 0.28.x and later. See the :ref:`Python wrapper docs <python_wasm_demo>` for an example of using these wheels in a browser environment.
 
 New features:
 
-* Transport-property correlations can be written as expressions in the fluid JSON (``"type": "expression"``), each block declaring the ``state_variables`` it reads (`#3185 <https://github.com/CoolProp/CoolProp/pull/3185>`_, `#3333 <https://github.com/CoolProp/CoolProp/pull/3333>`_).
 * R-1132a: Akasaka, Low and Lemmon, *Int. J. Thermophys.* **47**:128 (2026) (`#3248 <https://github.com/CoolProp/CoolProp/pull/3248>`_).
 * Lead-bismuth eutectic (``INCOMP::LBE``), 400-1100 K (`#3193 <https://github.com/CoolProp/CoolProp/pull/3193>`_).
 * ``HFORMATION``: standard ideal-gas enthalpy of formation at 298.15 K, from ATcT for HEOS (`#3309 <https://github.com/CoolProp/CoolProp/pull/3309>`_) and from ``HEATFRMdll`` for REFPROP (`#3349 <https://github.com/CoolProp/CoolProp/pull/3349>`_).
@@ -288,32 +260,6 @@ Bug fixes:
   density rather than the previous iterate, so bit-exact baselines move in the last
   digits.
 
-* **R1233zd(E) viscosity works again, with refit constants.**  v8.0.0 replaced
-  this fluid's equation of state with the Akasaka & Lemmon (JPCRD 2022)
-  international standard but did not carry over its ``TRANSPORT`` block, so
-  ``PropsSI("V", ...)`` returned ``inf`` where v7.2.0 had answered
-  (`#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`_).  The
-  ``rhosr-CS`` correlation is restored.
-
-  It does **not** reproduce v7.2.0, deliberately: saturated liquid viscosity is
-  29-38% lower (3.99e-4 rather than 6.37e-4 Pa-s at 0 degC, against 3.71e-4 from
-  REFPROP 10).  The published ``C = 1.2474`` was fitted to a 2012 dataset that
-  later measurements superseded and ran 40-75% high in the liquid
-  (`#1826 <https://github.com/CoolProp/CoolProp/issues/1826>`_, open since 2019).
-  ``rhosr_critical`` is now recomputed from the shipped EOS - it is
-  :math:`\rho_c R (\tau \alpha^r_\tau - \alpha^r)` at the critical point, not a
-  fitted parameter - and ``C = 0.8089`` is fitted on top of it to the 61 liquid
-  data points of `Miyara et al. (2018)
-  <https://doi.org/10.1016/j.ijrefrig.2018.05.021>`_, giving AAD 2.6% against a
-  stated 3.0% experimental uncertainty.  Rerun with ``python
-  dev/scripts/fit_R1233zdE_viscosity.py``.
-
-  One limitation remains, noted in the fluid file: saturated *vapor* is
-  ~10% high whatever ``C`` is (the dilute-gas term uses Chung-estimated
-  Lennard-Jones parameters, which ``C`` cannot correct).  Thermal
-  conductivity, unavailable in v7.2.0, is added in this release (Perkins et al. 2017,
-  see Highlights).
-
 * PR/SRK entropy values were too steep in temperature (1.5x to 3x) since 7.2.0; enthalpy and the entropy derivatives were correct (`#3287 <https://github.com/CoolProp/CoolProp/issues/3287>`_, `#3288 <https://github.com/CoolProp/CoolProp/pull/3288>`_).
 * Reducing densities of nitrogen, ethylene, orthohydrogen and n-undecane corrected to the published constants, with their superancillaries refit.  Molar saturation densities move by 1e-5 to 3e-5 (nitrogen about 1e-7).  The molar masses of ethylene (28.05376 to 28.05316 g/mol) and orthohydrogen (2.01594 to 2.01588 g/mol) also change to the published values, so for those two the mass densities are essentially unchanged and the per-kg properties move by 2e-5 to 3e-5 (`#3326 <https://github.com/CoolProp/CoolProp/pull/3326>`_, `#3337 <https://github.com/CoolProp/CoolProp/pull/3337>`_).
 * ``INCOMP::PCL`` viscosity was 100x too high (`#3384 <https://github.com/CoolProp/CoolProp/issues/3384>`_); ice-slurry conductivity and viscosity data recovered (`#3303 <https://github.com/CoolProp/CoolProp/issues/3303>`_); ``INCOMP::MITSW`` gets a freezing curve from IAPWS-08; incompressible error messages name the fluid and property (`#3386 <https://github.com/CoolProp/CoolProp/pull/3386>`_).
@@ -332,7 +278,6 @@ Bug fixes:
 * Python plots: saturation lines of pure fluids reach the critical point instead of stopping short with NaN when the last flash fails within 1 K (QT lines) or 100 Pa (PQ lines) of it (`#3409 <https://github.com/CoolProp/CoolProp/pull/3409>`_).
 * Python source builds no longer fail after building the same checkout with a different Python version (`#3305 <https://github.com/CoolProp/CoolProp/issues/3305>`_, `#3306 <https://github.com/CoolProp/CoolProp/pull/3306>`_).
 * GUI: About-dialog and Sponsor links open the system browser (`#3230 <https://github.com/CoolProp/CoolProp/issues/3230>`_, `#3231 <https://github.com/CoolProp/CoolProp/pull/3231>`_).
-* Removed three ECS viscosity entries (ethylbenzene, R1234yf, R1234ze(E)) whose sources cannot be checked; none is the default in this release, though the ethylbenzene one was the default in 8.0.0 (`#3428 <https://github.com/CoolProp/CoolProp/pull/3428>`_).
 
 Packaging and documentation:
 
