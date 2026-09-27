@@ -53,6 +53,10 @@ Highlights:
   * Ammonia: Monogenidou et al. (2018), replacing Tufeu et al. (1984).
   * n-Undecane: Assael et al. (2017).
   * Tetrahydrofuran: Sotiriadou et al. (2024).
+  * Xenon: Velliadou et al. (2021).
+  * Nitrogen: Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004); nitrogen
+    viscosity also moves to Huber et al. (2024). R14, whose ECS model uses nitrogen as
+    its reference fluid, changes with it.
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
