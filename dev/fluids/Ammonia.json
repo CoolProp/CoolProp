@@ -4378,62 +4378,139 @@
     }
   },
   "TRANSPORT": {
-    "conductivity": {
-      "BibTeX": "Tufeu-BBPC-1984",
-      "critical": {
-        "hardcoded": "Ammonia"
+    "conductivity": [
+      {
+        "BibTeX": "Monogenidou-JPCRD-2018-ammonia-conductivity",
+        "dilute": {
+          "type": "expression",
+          "note": "Eq. (6) of Monogenidou, Assael & Huber, J. Phys. Chem. Ref. Data 47:043101 (2018), converted from mW/(m K) to W/(m K). Tc = 405.56 K is the paper's own value (from the Gao et al. EOS). The signs in Eq. (6) are set in a Symbol font that plain-text extraction of the accepted manuscript drops; they were read from the glyph codes, and they agree with AMMONIA.FLD in REFPROP 10.0 and 10.1 and with the paper's check value (35.969501 mW/(m K) at 390 K).",
+          "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {
+            "Tc": 405.56
+          },
+          "arrays": {
+            "a": [
+              86.9294,
+              -170.5502,
+              608.0287,
+              -100.9764,
+              85.1986
+            ],
+            "b": [
+              4.68994,
+              9.21307,
+              -1.53637,
+              1.0
+            ]
+          }
+        },
+        "residual": {
+          "type": "expression",
+          "note": "Eq. (7) and Table 2 of Monogenidou et al. (2018). Tc = 405.56 K and rhoc = 233.25 kg/m^3 are the paper's own reducing values. Table 2 labels B1,i and B2,i as mW/(m K), but the coefficients are in W/(m K): only W/(m K) reproduces the paper's check value for the residual contribution (218.750277 mW/(m K) at 390 K and 415 kg/m^3), and AMMONIA.FLD (REFPROP 10.0 and 10.1) carries the same numbers with a reducing conductivity of 1 W/(m K). No unit conversion is therefore applied.",
+          "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+          "state_variables": [
+            "T",
+            "Dmass"
+          ],
+          "constants": {
+            "Tc": 405.56,
+            "rhoc": 233.25
+          },
+          "arrays": {
+            "B1": [
+              0.103432,
+              -0.112597,
+              0.233301,
+              -0.112536,
+              0.0141129
+            ],
+            "B2": [
+              -0.0283976,
+              0.048252,
+              -0.0644124,
+              0.00529376,
+              0.00891203
+            ],
+            "d": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "critical": {
+          "type": "simplified_Olchowy_Sengers",
+          "note": "Section 2.3 of Monogenidou et al. (2018): R_D = 1.02, gamma = 1.239, Gamma = 0.053, xi0 = 0.140e-9 m, qD^-1 = 4.0e-10 m, T_ref = 1.5 Tc = 608.34 K. Identical to the TK3 block of AMMONIA.FLD in REFPROP 10.0 and 10.1. The paper's equations with these values on REFPROP's Gao et al. EOS give 9.409967 mW/(m K) at 390 K and 415 kg/m^3, against the paper's check value of 9.409965.",
+          "GAMMA": 0.053,
+          "R0": 1.02,
+          "gamma": 1.239,
+          "qD": 2500000000.0,
+          "zeta0": 1.4e-10,
+          "T_ref": 608.34
+        }
       },
-      "dilute": {
-        "A": [
-          0.03589,
-          -0.000175,
-          4.551e-07,
-          1.685e-10,
-          -4.828e-13
-        ],
-        "B": [
-          1.0
-        ],
-        "T_reducing": 1,
-        "T_reducing_units": "K",
-        "m": [
-          0
-        ],
-        "n": [
-          0,
-          1,
-          2,
-          3,
-          4
-        ],
-        "type": "ratio_of_polynomials"
-      },
-      "residual": {
-        "B": [
-          0.03808645,
-          0.06647986,
-          -0.0300295,
-          0.00998779
-        ],
-        "T_reducing": 1,
-        "T_reducing_units": "K",
-        "d": [
-          1,
-          2,
-          3,
-          4
-        ],
-        "rhomass_reducing": 235,
-        "rhomass_reducing_units": "kg/m^3",
-        "t": [
-          0,
-          0,
-          0,
-          0
-        ],
-        "type": "polynomial"
+      {
+        "BibTeX": "Tufeu-BBPC-1984",
+        "critical": {
+          "hardcoded": "Ammonia"
+        },
+        "dilute": {
+          "A": [
+            0.03589,
+            -0.000175,
+            4.551e-07,
+            1.685e-10,
+            -4.828e-13
+          ],
+          "B": [
+            1.0
+          ],
+          "T_reducing": 1,
+          "T_reducing_units": "K",
+          "m": [
+            0
+          ],
+          "n": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "type": "ratio_of_polynomials"
+        },
+        "residual": {
+          "B": [
+            0.03808645,
+            0.06647986,
+            -0.0300295,
+            0.00998779
+          ],
+          "T_reducing": 1,
+          "T_reducing_units": "K",
+          "d": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "rhomass_reducing": 235,
+          "rhomass_reducing_units": "kg/m^3",
+          "t": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "type": "polynomial"
+        }
       }
-    },
+    ],
     "viscosity": [
       {
         "BibTeX": "Monogenidou-JPCRD-2018-ammonia",
