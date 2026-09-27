@@ -15,12 +15,9 @@ namespace expression {
 /// Thermodynamic quantities a formula may reference are keyed by the existing
 /// CoolProp::parameters enum -- one bucket, no DSL-private enum.  Whatever a
 /// program asks for, the host fills by calling AbstractState::keyed_output() with
-/// that key.  Some keys are free (T, rhomolar) and some cost an EOS call (p); the
+/// that key.  Some keys are free (T, Dmolar) and some cost an EOS call (P); the
 /// evaluator does not care, and Program itself stays EOS-free -- it only reports
 /// which keys it needs and reads back the values the host supplies.
-///
-/// The DSL spellings that resolve to a thermodynamic input, paired with the
-/// CoolProp::parameters key each binds to, in name-resolution order.
 ///
 /// Resolve `name` as a state variable a correlation may declare.
 ///

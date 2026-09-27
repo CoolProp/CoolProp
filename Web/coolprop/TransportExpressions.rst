@@ -28,13 +28,22 @@ JSON location                              Contribution
 =========================================  =========================================
 
 Each block returns its own contribution in base SI units, and CoolProp adds the
-contributions together with the critical enhancement, which is not available as an
-expression.  In particular the ``initial_density`` block returns a viscosity, not the
+contributions together (for conductivity, with the critical enhancement, which is not
+available as an expression).  In particular the ``initial_density`` block returns a viscosity, not the
 Rainwater-Friend coefficient :math:`B_\eta`; if a correlation is written in terms of
 :math:`B_\eta`, the block has to multiply by the dilute viscosity and the density
 itself.  Expression blocks can sit alongside the built-in correlation types; the
 xenon conductivity, for example, uses expressions for the dilute and residual terms and
 the built-in ``simplified_Olchowy_Sengers`` type for the critical enhancement.
+
+When ``viscosity`` or ``conductivity`` is a list of models, only the first is loaded, so
+an expression block in a later entry is never compiled and its errors are never
+reported.  Try such a block from Python (see `Trying a block from Python`_) before
+relying on it.
+
+A block also runs when the fluid is a mixture component, evaluated for that component
+at the mixture's temperature and density, and when the fluid is the reference fluid of
+another fluid's extended-corresponding-states model.
 
 Block structure
 ===============
@@ -66,7 +75,8 @@ This is the residual thermal conductivity of xenon, as shipped.
 ``arrays``
     Named coefficient vectors, which can only be read inside a ``sum``.
 ``note``, ``BibTeX``
-    Ignored by the compiler, like any other key.  The formula has no comment syntax,
+    Ignored, like any other key apart from ``type`` (and ``hardcoded``, which the
+    loader checks before ``type``).  The formula has no comment syntax,
     so ``note`` is where to record the source, unit conversions, and any departure
     from the equation as printed.
 
@@ -75,7 +85,10 @@ Formula syntax
 
 A formula is zero or more ``let`` statements followed by one final expression, whose
 value is the block's result.  Statements are separated by newlines (``\n`` inside the
-JSON string) or by semicolons.
+JSON string) or by semicolons.  A newline always ends a statement, even inside
+parentheses, so one statement cannot be wrapped over several lines; use ``let`` to break
+a long formula up instead.  Column numbers in error messages count from the start of
+the whole formula, not from the start of the line.
 
 .. code-block:: none
 
@@ -84,7 +97,7 @@ JSON string) or by semicolons.
 
 **Arithmetic.**  ``+ - * / ^`` and parentheses.  ``^`` binds tightest and is
 right-associative, so ``2^3^2`` is 512, and unary minus binds looser than ``^``, so
-``-2^2`` is -4.  Numbers are decimal literals with an optional exponent (``8.4e3``).
+``-2^2`` is -4.  Numbers are decimal literals with an optional exponent (``8.4e3``, ``.5``).
 
 **Functions.**  ``exp``, ``ln``, ``log10``, ``sqrt``, ``abs``, ``sinh``, ``cosh``,
 ``tanh``, ``sin``, ``cos``, ``atan``, each of one argument, and ``pow(x, y)``.
@@ -96,14 +109,18 @@ formula reproduces a hard-coded C++ correlation bit for bit.
 body, ``a[i]`` is the ``i``-th element of array ``a``, and bare ``i`` is the index
 itself, counted from 0.  The number of terms is the length of the arrays subscripted
 in the body, which must all be the same length.  Arrays can be subscripted only by
-the index of the enclosing sum, and sums cannot be nested.  The index can have any
-name.
+the index of the enclosing sum, and sums cannot be nested.  The body has to subscript at
+least one non-empty array.  The index can have any name, but inside the body it hides
+any ``let``, state variable or constant of the same name, so use one the formula does
+not otherwise need.
 
 **Names.**  Identifiers start with a letter or underscore and are case-sensitive.
 A name is resolved first as a ``let``, then as a declared state variable, then as a
 constant.  A ``let`` may not reuse the name of a declared state variable.  It may
 reuse the name of a constant, which then hides that constant from the rest of the
-formula, so it is best avoided.
+formula, so it is best avoided.  A ``let`` can rebind an earlier ``let``
+(``let x = 1; let x = x + 1``).  ``let`` and ``sum`` are reserved words; function
+names are recognized only when called, so a constant may be named ``exp``.
 
 State variables
 ===============
@@ -198,8 +215,8 @@ can be checked against its paper without rebuilding CoolProp or editing a fluid 
     print(expr.evaluate(AS) * 1e3)      # 11.0620..., the paper's check value is 11.0621 mW/(m K)
 
 ``required_inputs()`` lists the state variables in the order the formula first reads
-them.  Compilation errors raise ``ValueError`` with the same message the fluid loader
-gives.  ``evaluate()`` raises if a state variable reads back as non-finite, which
+them.  Compilation errors raise ``ValueError`` with the same diagnostic the fluid loader
+reports when it loads the fluid.  ``evaluate()`` raises if a state variable reads back as non-finite, which
 usually means the ``AbstractState`` was never updated.  The C++ equivalent is
 ``CoolProp::expression::ExpressionBlock`` in
 ``include/CoolProp/expression/ExpressionBlock.h``.
