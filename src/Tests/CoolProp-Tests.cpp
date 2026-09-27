@@ -8,11 +8,14 @@
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Cubics/UNIFACLibrary.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "../Backends/Tabular/TabularBackends.h"
 #include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include <atomic>
+#include <chrono>
+#include <filesystem>
 #include <map>
 #include <set>
 #include <sstream>
@@ -8926,6 +8929,79 @@ TEST_CASE("Configuration accessors are safe under concurrent calls (COO-13)", "[
         t.join();
     }
     CHECK(mismatches.load() == 0);
+}
+
+TEST_CASE("Concurrent first use of one tabular dataset builds it once (COO-39)", "[BICUBIC][threads]") {
+    // Several threads construct BICUBIC&HEOS for the same fluid and grid at
+    // once, against a fresh table directory, so every thread misses on disk
+    // and races to build.  The per-dataset build_mutex must let one thread
+    // build/pack/write while the rest wait and then reuse the result.  A small
+    // grid keeps the single real build to well under a second.
+    // Unique directory => unique in-memory cache key, so the dataset is cold
+    // even if another test already built Nitrogen tables in this process.
+    const std::string dir =
+      (std::filesystem::temp_directory_path() / ("CoolProp-COO39-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())))
+        .string()
+      + "/";
+    // Restore the table directory and remove the temp dir even if a CHECK or
+    // an exception unwinds the test early.
+    struct TableDirGuard
+    {
+        std::string prev, dir;
+        TableDirGuard(std::string p, std::string d) : prev(std::move(p)), dir(std::move(d)) {}
+        TableDirGuard(const TableDirGuard&) = delete;
+        TableDirGuard& operator=(const TableDirGuard&) = delete;
+        TableDirGuard(TableDirGuard&&) = delete;
+        TableDirGuard& operator=(TableDirGuard&&) = delete;
+        ~TableDirGuard() {
+            CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    } guard(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY), dir);
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+    // Threads rebuilding the same deterministic tables would give identical
+    // densities, so count the builds directly.
+    const int builds_before = CoolProp::TabularDataSet::build_count.load();
+    const std::string fluid = R"(Nitrogen?{"grid":{"Nx":30,"Ny":30}})";
+    const double p = 1e6, T = 300.0;
+
+    constexpr int N_THREADS = 6;
+    std::vector<double> rho(N_THREADS, -1.0);
+    std::atomic<int> errors{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back([&, t]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            try {
+                std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("BICUBIC&HEOS", fluid));
+                AS->update(CoolProp::PT_INPUTS, p, T);
+                rho[t] = AS->rhomolar();
+            } catch (...) {
+                errors.fetch_add(1, std::memory_order_relaxed);
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& th : threads) {
+        th.join();
+    }
+
+    // Reference from the (now warm) shared dataset
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("BICUBIC&HEOS", fluid));
+    ref->update(CoolProp::PT_INPUTS, p, T);
+    const double rho_ref = ref->rhomolar();
+
+    CHECK(errors.load() == 0);
+    CHECK(CoolProp::TabularDataSet::build_count.load() - builds_before == 1);
+    for (int t = 0; t < N_THREADS; ++t) {
+        CAPTURE(t);
+        CHECK(rho[t] == rho_ref);
+    }
 }
 
 TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][1950]") {

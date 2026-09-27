@@ -1529,7 +1529,10 @@ void CoolProp::TabularDataSet::load_tables(const std::string& path_to_tables, sh
     }
 };
 
+std::atomic<int> CoolProp::TabularDataSet::build_count{0};
+
 void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>& AS) {
+    build_count.fetch_add(1, std::memory_order_relaxed);
     // Pure or pseudo-pure fluid
     if (AS->get_mole_fractions().size() == 1) {
         pure_saturation.build(AS);
@@ -1545,7 +1548,8 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>&
     }
     single_phase_logph.build(AS);
     single_phase_logpT.build(AS);
-    tables_loaded = true;
+    // tables_loaded is published by TabularBackend::check_tables() once the
+    // tables are also packed and written, not here.
 }
 
 /// Return the set of tabular datasets and whether tables were already loaded
@@ -1557,6 +1561,11 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
     // of evicting each other.  The on-disk directory stays resolution-agnostic;
     // deserialize() rejects a mis-sized file and triggers a rebuild.
     const std::string key = path + "@" + std::to_string(Nx) + "x" + std::to_string(Ny);
+    // Concurrent first loads would otherwise race on the std::map insert and on
+    // the new entry's tables_loaded flag.  The lock also covers the disk load so
+    // a second thread never observes a half-loaded entry; load_tables() only
+    // touches this dataset and the caller's AbstractState, never the library.
+    std::scoped_lock lock(data_mutex);
     // Try to find tabular set if it is already loaded
     auto it = data.find(key);
     if (it != data.end()) {
@@ -1576,8 +1585,7 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
         return {&(it->second), it->second.tables_loaded};
     }
     // Not in the map -- build a fresh entry at the requested resolution
-    TabularDataSet set;
-    data.insert(std::pair<std::string, TabularDataSet>(key, set));
+    // TabularDataSet holds a mutex, so construct it in place
     TabularDataSet& dataset = data[key];
     dataset.set_grid(Nx, Ny);
     bool loaded = false;
@@ -1593,6 +1601,9 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
 }
 
 void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
+    // Every backend sharing this dataset calls this after check_tables(); the
+    // lock makes the first caller fill coeffs and the rest wait, then skip.
+    std::scoped_lock lock(build_mutex);
     if (!coeffs.empty()) {
         return;
     }
