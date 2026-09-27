@@ -3464,6 +3464,17 @@ TEST_CASE("Check vapor pressures calculated using PC-SAFT", "[pcsaft_vapor_press
 TEST_CASE("Check PC-SAFT interaction parameter functions", "[pcsaft_binary_interaction]") {
     std::string CAS_water = get_fluid_param_string("WATER", "CAS");
     std::string CAS_aacid = "64-19-7";
+    // The binary-pair map is process-wide, and the bubble-pressure test sets this
+    // same pair, so under --order rand it may already be present; allow the
+    // overwrite for this call only and restore the flag even if it throws (COO-62).
+    struct RestoreOverwrite
+    {
+        bool before = get_config_bool(OVERWRITE_BINARY_INTERACTION);
+        ~RestoreOverwrite() {
+            set_config_bool(OVERWRITE_BINARY_INTERACTION, before);
+        }
+    } restore;
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, true);
     set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.127);
     CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.127);
 }
@@ -8631,7 +8642,12 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
         // Guards against a kJ/J slip anywhere in the pipeline: no molecule in
         // the library has |dHf| above 2000 kJ/mol.
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        std::size_t checked = 0;
+        // Count distinct ATcT species, not fluids: tests elsewhere register clones
+        // of shipped fluids (e.g. the N2/Ar clones in the Expression tests) that
+        // carry the donor's STANDARD_STATE block, and under --order rand they may
+        // already be in fluids_list here.  A clone keeps the donor's ATcT id, so
+        // it adds nothing; the 76 shipped entries have 76 distinct ids (COO-62).
+        std::set<std::string> atct_ids;
         for (auto& fluid : fluids) {
             // Every name in fluids_list must construct.  This used to swallow a
             // ValueError and continue, because add_one appended the name before
@@ -8654,10 +8670,16 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
             }
             CAPTURE(fluid);
             CHECK(std::abs(value) < 2e6);
-            ++checked;
+            const auto doc = nlohmann::json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            const auto& id = doc.at("INFO").at("STANDARD_STATE").at("hmolar_formation").at("id");
+            // Every ingested value has a string id; a missing one would let
+            // distinct species collapse onto one entry and hide a coverage loss.
+            REQUIRE(id.is_string());
+            atct_ids.insert(id.get<std::string>());
         }
+        const std::size_t checked = atct_ids.size();
         // Exact, not a floor.  dev/atct/expected_coverage.json pins 76 matched
-        // fluids, so a regression that drops some of them must fail here
+        // species, so a regression that drops some of them must fail here
         // rather than pass under a loose lower bound.  If a future ATcT
         // version legitimately changes coverage, this number moves with the
         // ledger in the same commit.
