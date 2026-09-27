@@ -6317,6 +6317,135 @@ TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality]
     }
 }
 
+TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality (COO-7)", "[quality][nonfinite][cubic][PCSAFT][IF97]") {
+    // The HEOS/IF97/PCSAFT doors were closed earlier; these are the ones that
+    // were left: the cubic backends' own update switch (no check at all -- SRK
+    // Propane at Q = 5 returned rho = 102.18 without a word), the PQ/QT arms of
+    // HEOS update_with_guesses, and the IF97/PCSAFT guard ordering.  Match on the
+    // message: a bare CHECK_THROWS would also be satisfied by some unrelated
+    // failure further down a flash and keep passing if the guard were removed.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("cubic backends, update()") {
+        for (const char* backend : {"SRK", "PR"}) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            for (double q : {5.0, -0.5, 1.0 + 1e-9, qnan, std::numeric_limits<double>::infinity()}) {
+                CAPTURE(backend, q);
+                CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+            }
+            // The boundary qualities are still legal.
+            for (double q : {0.0, 0.5, 1.0}) {
+                CAPTURE(backend, q);
+                CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+                CHECK(AS->Q() == q);
+                CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 1e6, q));
+                CHECK(AS->Q() == q);
+            }
+        }
+    }
+
+    SECTION("HEOS update_with_guesses PQ/QT arms") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 1e6;
+        for (double q : {qnan, 5.0, -0.5}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::PQ_INPUTS, 1e6, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QT_INPUTS, q, 300.0, guesses), between_0_and_1);
+        }
+        // The DQ/HQ/QS arms used to write _Q (and rho/h/s) before the guard, so
+        // a rejected quality stayed readable through Q().  Start from a
+        // single-phase state and check the bad value never lands.
+        for (auto pair : {CoolProp::DmolarQ_INPUTS, CoolProp::HmolarQ_INPUTS, CoolProp::QSmolar_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+                if (pair == CoolProp::QSmolar_INPUTS) {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, q, 100.0, guesses), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, 100.0, q, guesses), between_0_and_1);
+                }
+                CHECK(AS->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(AS->Q() == 5.0);
+                CHECK_FALSE(std::isnan(AS->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 rejects the quality before mutating the object") {
+        // Same ordering bug as PCSAFT: the PQ/QT arms wrote _p/_Q/_T before
+        // the guard, so Q() read back the rejected value.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(IF->update(pair, q, 400.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(IF->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(IF->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(IF->Q() == 5.0);
+                CHECK_FALSE(std::isnan(IF->Q()));
+            }
+        }
+    }
+
+    SECTION("PCSAFT rejects the quality before mutating the object") {
+        // The guard used to run after _Q, SatL/SatV and _phase = twophase were
+        // written, so a rejected QT/PQ left Q() reading the bad value and phase()
+        // reading two-phase on an object that never reached a two-phase state.
+        // (A fresh object rather than a prior PT update: PCSAFT METHANE PT flashes
+        // need a VLE-pressure estimate that is not the point here.)
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+            REQUIRE(PC->phase() != CoolProp::iphase_twophase);
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(PC->update(pair, q, 150.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(PC->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(PC->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(PC->Q() == 5.0);
+                CHECK_FALSE(std::isnan(PC->Q()));
+            }
+        }
+    }
+}
+
+TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)", "[REFPROP][refprop][quality][nonfinite]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // REFPROP catches Q = 5 itself, but a NaN quality came back as a plausible
+    // saturated state with an EMPTY error string:
+    //     PropsSI("T","P",5e5,"Q",nan,"REFPROP::PROPANE") -> 274.87...
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    for (double q : {qnan, 5.0, -0.5}) {
+        CAPTURE(q);
+        CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmassQ_INPUTS, 50.0, q), between_0_and_1);
+    }
+    // PropsSI surfaces it as a non-finite return rather than a plausible number.
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("T", "P", 5e5, "Q", qnan, "REFPROP::PROPANE")));
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("P", "T", 300, "Q", qnan, "REFPROP::PROPANE")));
+    // Boundary qualities still flash.
+    for (double q : {0.0, 1.0}) {
+        CAPTURE(q);
+        CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+        CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 5e5, q));
+    }
+}
+
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
     // reaches the flash routines by other doors, and HQ_flash's own gate,
@@ -6359,6 +6488,127 @@ TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][no
         CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 1.0, 300.0));
         CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 0.0, 300.0));
     }
+}
+
+namespace {
+// Never instantiated: exists only to expose the protected static helper.
+struct QualityCheckProbe : CoolProp::AbstractState
+{
+    using CoolProp::AbstractState::check_input_quality;
+};
+}  // namespace
+
+TEST_CASE("check_input_quality guards exactly the quality slot of every input pair", "[quality]") {
+    // The helper finds the Q slot with split_input_pair.  Derive the expected slot
+    // independently, from the human-readable description ("Pressure in Pa, Molar
+    // quality"), so a wrong entry in split_input_pair cannot vouch for itself.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto q_msg = Catch::Matchers::ContainsSubstring("Input vapor quality [Q] must be between 0 and 1");
+    const auto qmass_msg = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    const auto unknown_msg = Catch::Matchers::ContainsSubstring("Unknown input pair");
+    const double ok_other = 300.0;  // any finite value; the non-Q slot is never range-checked
+
+    // input_pairs has no sentinel, so rather than stop at a hard-coded last
+    // enumerator, probe well past it.  Every described value must form one
+    // contiguous run 1..last (INPUT_PAIR_INVALID = 0 is the only undescribed value
+    // below it), split_input_pair must know exactly the described values, and the
+    // exact counts below pin the size: appending a registered pair changes n_pairs
+    // and fails here.  A pair appended but NOT registered cannot be enumerated, but
+    // it cannot slip past the check either: check_input_quality fails closed on any
+    // value split_input_pair does not know (asserted for every such value below).
+    // UPDATE THESE COUNTS when an input pair is added or removed.
+    constexpr int expected_pairs = 43;
+    constexpr int expected_q_pairs = 16;  // 8 molar-Q + 8 Qmass
+    constexpr int probe_limit = 255;
+
+    auto is_described = [](CoolProp::input_pairs pair) {
+        try {
+            CoolProp::get_input_pair_long_desc(pair);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+    auto is_splittable = [](CoolProp::input_pairs pair) {
+        CoolProp::parameters p1, p2;
+        try {
+            CoolProp::split_input_pair(pair, p1, p2);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+
+    int n_pairs = 0, n_q_pairs = 0, last_described = -1;
+    std::vector<int> skipped;
+    for (int i = 0; i <= probe_limit; ++i) {
+        const auto pair = static_cast<CoolProp::input_pairs>(i);
+        CAPTURE(i);
+        CHECK(is_splittable(pair) == is_described(pair));
+        if (!is_described(pair)) {
+            skipped.push_back(i);
+            // Fail closed: an unknown pair is refused, even with a harmless value.
+            CHECK_THROWS_WITH(QualityCheckProbe::check_input_quality(pair, 0.5, 0.5), unknown_msg);
+            continue;
+        }
+        last_described = i;
+        ++n_pairs;
+        const std::string desc = CoolProp::get_input_pair_long_desc(pair);
+        CAPTURE(desc);
+
+        const auto comma = desc.find(',');
+        REQUIRE(comma != std::string::npos);
+        const std::string part1 = desc.substr(0, comma), part2 = desc.substr(comma + 1);
+        const bool q1 = part1.find("quality") != std::string::npos;
+        const bool q2 = part2.find("quality") != std::string::npos;
+        REQUIRE_FALSE((q1 && q2));
+
+        auto check = [&](double v1, double v2) { QualityCheckProbe::check_input_quality(pair, v1, v2); };
+
+        if (!q1 && !q2) {
+            // No quality in this pair: nothing may throw, whatever the values.
+            CHECK_FALSE(CoolProp::is_Qmass_pair(pair));
+            for (double bad : {5.0, -0.5, qnan}) {
+                CHECK_NOTHROW(check(bad, bad));
+            }
+            continue;
+        }
+        ++n_q_pairs;
+        const bool mass_basis = (q1 ? part1 : part2).find("Mass-basis") != std::string::npos;
+        CHECK(mass_basis == CoolProp::is_Qmass_pair(pair));
+
+        for (double good : {0.0, 1.0}) {
+            CHECK_NOTHROW(q1 ? check(good, ok_other) : check(ok_other, good));
+        }
+        for (double bad : {5.0, -0.5, qnan}) {
+            CAPTURE(bad);
+            if (mass_basis) {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), qmass_msg);
+            } else {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), q_msg);
+            }
+            // A bad value in the OTHER slot must not be mistaken for a quality.
+            CHECK_NOTHROW(q1 ? check(0.5, bad) : check(bad, 0.5));
+        }
+    }
+    CHECK(n_pairs == expected_pairs);
+    CHECK(n_q_pairs == expected_q_pairs);
+    // Contiguous: the described values are exactly 1..last_described, so the only
+    // value skipped at or below it is INPUT_PAIR_INVALID.
+    CHECK(last_described == expected_pairs);
+    CHECK(last_described == static_cast<int>(CoolProp::DmolarUmolar_INPUTS));
+    std::vector<int> skipped_below;
+    for (int v : skipped) {
+        if (v <= last_described) skipped_below.push_back(v);
+    }
+    CHECK(skipped_below == std::vector<int>{static_cast<int>(CoolProp::INPUT_PAIR_INVALID)});
+
+    // And through a real update path: HEOS calls check_input_quality first, so an
+    // unknown pair is refused there before any state is touched.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS_WITH(AS->update(CoolProp::INPUT_PAIR_INVALID, 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), Catch::Matchers::ContainsSubstring("[250]"));
 }
 
 TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {

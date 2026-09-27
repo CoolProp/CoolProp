@@ -1840,6 +1840,10 @@ double SVDSBTLBackend::evaluate_property_(PointEvaluation& pt, CoolProp::paramet
 }
 
 void SVDSBTLBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Before the lazy surface build and clear(), so a bad quality neither pays
+    // for a surface nor wipes the current state.
+    check_input_quality(input_pair, value1, value2);
+
     // Lazily build the DmassT surface on first density-input query (it is
     // deliberately kept out of the constructor's eager loop — see there).
     // ensure_surface_ is idempotent, so this is a cheap no-op afterwards.
