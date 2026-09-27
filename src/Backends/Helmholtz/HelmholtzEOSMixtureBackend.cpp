@@ -2933,8 +2933,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPr
             key += "|" + c.name;
         std::lock_guard<std::mutex> lk(cheb_cache_mtx);
         auto it = cheb_cache.find(key);
+        // Only multiparameter-Helmholtz models: the cubic backends (SRK, PR, VTPR) derive from this
+        // class but their components carry no multiparameter EOS, so c.EOS() below would dereference
+        // an empty vector -- a segfault, not an exception the catch could absorb.
+        const std::string be = backend_name();
+        const bool supported = be == get_backend_string(HEOS_BACKEND_MIX) || be == get_backend_string(HEOS_BACKEND_PURE)
+                               || be == get_backend_string(GERG2008_BACKEND) || be == get_backend_string(GERG2004_BACKEND);
         if (it != cheb_cache.end())
             cheb_density = it->second;
+        else if (!supported)
+            cheb_density = cheb_cache[key] = nullptr;
         else {
             try {
                 auto e = std::make_shared<ChebDensityEntry>();
