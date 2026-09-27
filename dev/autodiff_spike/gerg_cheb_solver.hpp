@@ -106,6 +106,14 @@ struct Term
         f = base * a;
         df = base * iD * (a * a + D * du + D * D * d2u);
     }
+    // phi = delta^d e^{u(delta)}: this term's delta-part of alphar (chi is delta d(phi)/d(delta))
+    double phi_pw(double D, const double* pw) const {
+        double u = 0;
+        if (has_cl) u -= c * ((li >= 0) ? pw[li] : std::pow(D, l));
+        if (has_e1) u -= e1 * (D - eps1);
+        if (has_e2) u -= e2 * (D - eps2) * (D - eps2);
+        return ((di >= 0) ? pw[di] : std::pow(D, d)) * std::exp(u);
+    }
     // n tau^t exp(u_tau)
     double kappa(double tau, double ltau) const {
         double u = t * ltau;
@@ -392,6 +400,17 @@ struct Solver
         }
         f = D * ad;
         df = ad + D * add;
+    }
+    static double na_alpha(const NAComp& c, double tau, double D) {  // alpha_NA = sum n Delta^b delta psi
+        const double dm = (std::abs(D - 1) < 10 * DBL_EPSILON) ? 10 * DBL_EPSILON : D - 1, d2 = dm * dm;
+        const double tm = (std::abs(tau - 1) < 10 * DBL_EPSILON) ? 1 + 10 * DBL_EPSILON : tau;
+        double a = 0;
+        for (const auto& el : c.na->elements) {
+            const double theta = (1 - tm) + el.A * std::pow(d2, 1 / (2 * el.beta));
+            const double Delta = theta * theta + el.B * std::pow(d2, el.a);
+            a += el.n * std::pow(Delta, el.b) * D * std::exp(-el.C * d2 - el.D * (tm - 1) * (tm - 1));
+        }
+        return a;
     }
     static void na_z_coolprop(const NAComp& c, double tau, double D, double& f, double& df) {  // reference
         CoolProp::HelmholtzDerivatives d;
@@ -766,6 +785,80 @@ struct Solver
             resid = std::abs(G) / (std::abs(dG) * D + 1e-300);  // backward error: relative change in delta that zeroes G
         }
         return D;
+    }
+
+    // alphar(delta) at this (T, x), from the same group weights (true equation)
+    double alphar_true(const State& S, double D) const {
+        double pw[25];
+        pw[0] = 1;
+        for (int k = 1; k < 25; ++k)
+            pw[k] = pw[k - 1] * D;
+        double a = 0;
+        for (std::size_t g = 0; g < reps.size(); ++g)
+            a += S.W[g] * reps[g].phi_pw(D, pw);
+        for (int ci : S.na_on)
+            a += S.x[nacomps[ci].i] * na_alpha(nacomps[ci], S.tau, D);
+        return a;
+    }
+    // Root selection ("spinodal branches", Exp. 11): the vapor branch is delta below the first local
+    // max of F = delta Z, the liquid branch delta above the last local min of F; roots in between
+    // (EOS wiggles inside the dome, the deep alphar well near delta = 1 at low T) are excluded.
+    // Of the (at most one) vapor-branch and liquid-branch roots with dF/d(delta) > 0, return the one
+    // of lower g/RT = ln(delta) + alphar + t/delta.  Agrees with REFPROP's GERG flash in 99.97 % of
+    // single-phase multi-root states (the one exception is a REFPROP CO2/H2O flash inconsistency).
+    // Returns an index into r, or -1 if no candidate.
+    int select(const State& S, double p, Root* r, int n) const {
+        if (n <= 0) return -1;
+        if (n == 1) return 0;
+        const double t = p * S.t_scale;
+        double dmax1 = 1e300, dminL = -1;  // first local max and last local min of F
+        {
+            std::vector<std::pair<double, int>> ex;
+            for (int pc = 0; pc < P; ++pc) {
+                const VecG d = chebder(S.G[pc], NG);
+                double sa = 0;
+                for (double v : d)
+                    sa += std::abs(v);
+                if (std::abs(d[0]) > l1tail(d, NG - 1) + 1e-13 * sa) continue;  // no extremum on this piece
+                RootOut ro[MAXROOTS];
+                const int nr = bern_roots(d, 1e-13 * sa, ro);
+                for (int k = 0; k < nr; ++k) {
+                    const double D = edges[pc] + (edges[pc + 1] - edges[pc]) * (ro[k].u + 1) / 2, h = 1e-7 * D;
+                    double G, dl, dr, sc;
+                    true_G(S, D - h, 0, G, dl, sc);
+                    true_G(S, D + h, 0, G, dr, sc);
+                    if (dl > 0 && dr < 0) ex.push_back({D, +1});
+                    if (dl < 0 && dr > 0) ex.push_back({D, -1});
+                }
+            }
+            std::sort(ex.begin(), ex.end());
+            for (auto& e : ex)
+                if (e.second > 0) {
+                    dmax1 = e.first;
+                    break;
+                }
+            for (auto it = ex.rbegin(); it != ex.rend(); ++it)
+                if (it->second < 0) {
+                    dminL = it->first;
+                    break;
+                }
+        }
+        int vap = -1, liq = -1;
+        for (int k = 0; k < n; ++k) {
+            const double D = r[k].rho / S.rhor;
+            double G, dG, sc;
+            true_G(S, D, t, G, dG, sc);
+            if (dG <= 0) continue;  // mechanically unstable
+            if (D < dmax1) vap = k;
+            if (D > dminL && liq < 0) liq = k;
+        }
+        if (vap < 0) return liq;
+        if (liq < 0 || liq == vap) return vap;
+        auto g = [&](int k) {
+            const double D = r[k].rho / S.rhor;
+            return std::log(D) + alphar_true(S, D) + t / D;
+        };
+        return g(vap) <= g(liq) ? vap : liq;
     }
 
     // term-by-term evaluation (independent of the grouping), for spot checks

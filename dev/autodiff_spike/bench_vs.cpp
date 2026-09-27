@@ -166,7 +166,18 @@ int main(int argc, char** argv) {
               sink = sink + n;
           },
           NS);
-        std::printf("   ours: all roots, no polish %.2f us; + polish one root %.2f us\n", t_nopol, t_pol1);
+        const double t_sel = time_us(
+          [&](int i) {  // the full pipeline: all roots (table accuracy) -> select the stable root -> polish it
+              sv.assemble(Ts[i], mx.x, S);
+              Solver::Root r[MAXROOTS];
+              const int n = sv.roots(S, ps[i], r, Solver::Polish::None);
+              const int k = sv.select(S, ps[i], r, n);
+              if (k >= 0) sv.polish(S, ps[i], r[k]);
+              sink = sink + k;
+          },
+          NS);
+        std::printf("   ours: all roots, no polish %.2f us; + polish one root %.2f us; all roots + select + polish selected %.2f us\n", t_nopol,
+                    t_pol1, t_sel);
         auto in_set = [&](int i, double rho, double tol) {
             for (double v : roots[i])
                 if (std::abs(v - rho) <= tol * rho) return true;

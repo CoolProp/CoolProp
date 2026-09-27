@@ -1,0 +1,16 @@
+   ours: all roots, no polish 3.54 us; + polish one root 4.77 us; all roots + select + polish selected 7.97 us
+C1/C2 50/50            HEOS       1.98      10 |      5.92        |      5.60    982     4018 |      22.03     597     9403         0
+   ours: all roots, no polish 3.98 us; + polish one root 5.49 us; all roots + select + polish selected 8.87 us
+C1/C2/C3 50/30/20      HEOS       1.91      10 |      6.80        |      8.22    956     4044 |      32.90     581     9419         0
+   ours: all roots, no polish 14.99 us; + polish one root 17.26 us; all roots + select + polish selected 19.47 us
+Amarillo (10)          HEOS       1.34      11 |     18.14        |     33.81    422     4578 |     137.25     276     8016      1708
+   ours: all roots, no polish 2.69 us; + polish one root 3.46 us; all roots + select + polish selected 5.17 us
+C1/H2S 50/50           HEOS       1.79       8 |      4.12        |      3.37    937     4063 |      17.07     564     9436         0
+   ours: all roots, no polish 2.38 us; + polish one root 4.27 us; all roots + select + polish selected 4.28 us
+humid air, x_w=0.02    HEOS       1.00       3 |      4.28        |     13.10      0     5000 |      25.78       0    10000         0
+   ours: all roots, no polish 3.12 us; + polish one root 3.62 us; all roots + select + polish selected 5.57 us
+C1/C2 50/50            GERG2008   1.93      13 |      4.13        |      4.63    982     4018 |        nan       0        0         0
+   ours: all roots, no polish 3.49 us; + polish one root 4.34 us; all roots + select + polish selected 5.20 us
+Amarillo (10)          GERG2008   1.38       9 |      4.61        |     29.22    422     4578 |        nan       0        0         0
+   ours: all roots, no polish 1.55 us; + polish one root 2.23 us; all roots + select + polish selected 2.25 us
+humid air, x_w=0.02    GERG2008   1.00       3 |      2.25        |      6.06      0     5000 |        nan       0        0         0

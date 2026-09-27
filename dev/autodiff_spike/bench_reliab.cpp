@@ -206,6 +206,7 @@ int main(int argc, char** argv) {
                 n_interior += mech[k] && k != ilo && k != ihi;
             int istable = ilo;
             if (ilo >= 0 && ihi != ilo && gk[ihi] < gk[ilo]) istable = ihi;
+            if (!std::getenv("RELIAB_OLD_LABEL")) istable = sv.select(S, p, r, n);  // spinodal-branch policy (Exp. 11)
             int nres = 0;
             for (int k = 0; k < n; ++k)
                 nres += !artifact[k];

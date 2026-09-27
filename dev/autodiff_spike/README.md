@@ -718,3 +718,106 @@ Setup:
   here. Choosing the physical root therefore needs a policy beyond "minimum Gibbs energy", for
   example excluding roots inside the dome's excursion band before comparing Gibbs energies. That
   policy is not designed here.
+
+---
+
+# Experiments 10–11 (overnight): the five follow-ups
+
+All numbers below come from a quiet machine (load average ≈ 2–3), single thread, 5000 states per
+mixture, the same states for every solver. Raw outputs are in `figs/bench_vs_final.txt`,
+`figs/validate_1e7_final.txt` and `figs/reliab_5000_select.txt`.
+
+## #3 Polish only what you use
+
+- **API.** `roots(S, p, out, Polish::None | Polish::All)` plus `polish(S, p, root)`. Each root
+  keeps its certified bracket, so it can be polished later.
+- **Cheaper true-equation evaluation.** GERG's d and l exponents are integers, so δᵏ comes from a
+  power table: one `exp` per δ-group. Certified roots skip the extra bracket-sign evaluation,
+  because the margin already certifies it.
+- **Cost:** polishing one root adds 0.6–1.9 µs.
+
+## #2 The spurious spinodal cases
+
+All 20 were **flagged** depth-cap leaves where the *tables* change sign within their error margin
+but the true equation does not. Uncertified roots are now kept only if the **true** G changes sign
+across their bracket. After that: 0 spurious and 0 unflagged misses in 219 000 cases (GERG
+suites), and 226 000 cases over all 8 suites in the final 10⁷-call run.
+
+## #4 Non-analytic add-in speed
+
+- **Evaluation:** closed-form δ-derivatives with one shared `log((δ−1)²)` and reuse across terms
+  that share (a, β, A, B). 57–97 ns per evaluation, against 263–422 ns for CoolProp's `all()`,
+  matching it to 1e-14.
+- **Fitting:** each piece tries degree 8 first. The fit error is **measured** at six points
+  between the nodes. The tail estimate alone missed the slowly decaying CO₂ terms (C = 10) by
+  about 100× on wide pieces, which broke the certificate: unflagged misses and spurious roots in
+  the new `natgas_ref` suite.
+- **Result:** Amarillo on the reference EOS, all roots polished, went from 30 to 18 µs.
+
+## #1 Root-selection policy (`bench_policy.cpp`, `Solver::select`)
+
+The arbiter is REFPROP `TPFLSH` in GERG-2008 mode (the same model, with a full stability
+analysis), over 3326 single-phase states with more than one root:
+
+| policy | agrees with REFPROP's flash |
+|---|---|
+| P0: min Gibbs among all mechanically stable roots | 25.7 % |
+| P1: min Gibbs among the outermost mechanically stable roots | 42.8 % |
+| P2: P1, excluding \|αʳ\| > 100 | 84.8 % |
+| **P3: spinodal branches** | **99.97 %** |
+
+**P3.** The vapor branch is δ below the first local maximum of F = δZ(δ). The liquid branch is δ
+above the last local minimum. Roots in between are excluded, whatever their ∂p/∂ρ or αʳ; that is
+where the EOS wiggles and the deep αʳ well near δ ≈ 1 at low T live. P3 then takes the lower g/RT
+= ln δ + αʳ + t/δ of the (at most one) vapor-branch and liquid-branch roots. It needs no
+thresholds.
+
+**The single disagreement.** For CO₂/H₂O 50/50 at 262 K and 30 kPa, REFPROP's flash reports a
+single-phase liquid while the vapor-branch root has *lower* Gibbs energy, which makes the REFPROP
+answer internally inconsistent.
+
+**Implementation.** `Solver::select(S, p, roots, n)` computes the extrema of F from the tables
+(Bernstein on dG/dδ), classifies each extremum on the true F′, and uses αʳ from the same group
+weights. It reproduces P3 exactly.
+
+**Reliability, rescored with this label** (Experiment 9 rerun):
+
+- **CoolProp:** when it answers, it returns the stable root in 99.5–100 % of multi-root states.
+  The exception is CO₂/H₂O on the reference EOS, at 12.7 %. It still gives no answer in 14–32 %
+  of states.
+- **REFPROP:** its two `TPRHO` calls between them contain the stable root in 100 % of multi-root
+  states (GERG mode), but the caller must choose between them.
+- **Ours:** 0 failures, all roots, and `select()`.
+
+## #5 Speed (quiet machine)
+
+"Ours: select" is the full pipeline: all roots from the tables, `select()`, then polish the
+selected root. CoolProp's column is `solver_rho_Tp`, which returns one root and fails on the given
+fraction of states.
+
+| mixture | model | ours: all roots, all polished | **ours: select + polish** | CoolProp (fails) | REFPROP 2× `TPRHO` |
+|---|---|---|---|---|---|
+| C1/C2 | reference | 5.9 µs | 8.0 µs | 5.6 µs (20 %) | 22 µs |
+| C1/C2/C3 | reference | 6.8 µs | 8.9 µs | 8.2 µs (19 %) | 33 µs |
+| Amarillo (10) | reference | 18.1 µs | 19.5 µs | 33.8 µs (8 %) | 137 µs |
+| C1/H₂S | reference | 4.1 µs | 5.2 µs | 3.4 µs (19 %) | 17 µs |
+| humid air | reference | 4.3 µs | 4.3 µs | 13.1 µs (0 %) | 26 µs |
+| C1/C2 | GERG-2008 | 4.1 µs | 5.6 µs | 4.6 µs (20 %) | — |
+| Amarillo (10) | GERG-2008 | 4.6 µs | 5.2 µs | 29.2 µs (8 %) | — |
+| humid air | GERG-2008 | 2.3 µs | 2.3 µs | 6.1 µs (0 %) | — |
+
+`select()` costs 1.5–3.5 µs, and only when there is more than one root. It is mostly the extrema
+search, and it is the obvious next optimization. The extrema of F do not depend on p, so they
+could be computed once per (T, x) and reused across pressures.
+
+## Final validation: 10⁷ calls, all 8 suites
+
+GERG binaries, multi, natgas, asym and humidair, plus reference-EOS humidair_ref, natgas_ref and
+wetair_ref:
+
+- **Every-call checks:** 0 parity failures; maximum backward error in δ 1.4e-12.
+- **Dense scans:** 4000, with 0 missed and 0 spurious roots.
+- **CoolProp:** its `solver_rho_Tp` root was in our set 3623 of 3623 times, and its p(ρ) at our
+  roots is within 2.6e-13 as a density error.
+- **Spinodal stress:** 226 000 cases, with 0 spurious and 0 unflagged misses.
+- **Throughput:** 207 000 calls/s on 8 threads.

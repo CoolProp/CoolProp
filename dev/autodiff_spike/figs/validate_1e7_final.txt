@@ -1,0 +1,34 @@
+degree 16, table tol 1e-06, delta_max 4, 1e+07 calls, 8 threads, seed 30
+295 component sets built in 1.5 s; tables 14.9 MB total; max pieces 49
+
+wall 48 s, 206802 calls/s
+
+suite           calls  roots/c >1root  parity uncert  uncert brk_bad   moved  max_res  us/call  scans scan_miss   missed spurious    cp_in  cp_notin     cp_p
+                                    %   fails  flags   roots                                            (pairs)                                       max rel
+asym          1250000    2.391   44.9       0      0       0       0       0  7.4e-14     8.91    500         0        0        0      420         0  1.4e-14
+binaries      1250000    2.370   44.9       0      7       3       0      37  1.4e-13     7.98    500         0        0        0      401         0  3.3e-15
+humidair      1250000    1.003    0.1       0      0       0       0       0  3.5e-14     8.77    500         0        0        0      496         0  1.0e-15
+humidair_ref     1250000    1.001    0.1       0      0       0       0       0  4.4e-14    28.32    500         0        0        0      498         0  1.5e-15
+multi         1250000    2.172   37.3       0      0       0       0       0  9.9e-14    10.45    500         0        0        0      433         0  9.4e-15
+natgas        1250000    1.526   15.6       0      0       0       0       0  2.7e-14    12.84    500         0        0        0      480         0  4.0e-15
+natgas_ref     1250000    1.592   17.9       0      0       0       0       0  2.3e-14    65.78    500         0        0        0      477         0  2.2e-14
+wetair_ref     1250000    2.278   40.5       0      0       0       0       0  1.4e-12   111.09    500         0        0        0      418         0  2.6e-13
+ALL          10000000    1.792   25.2       0      7       3       0      37  1.4e-12    31.77   4000         0        0        0     3623         0  2.6e-13
+non-analytic add-in active in suite humidair_ref: 211304 of 1250000 calls (16.90 %)
+non-analytic add-in active in suite natgas_ref: 668595 of 1250000 calls (53.49 %)
+non-analytic add-in active in suite wetair_ref: 778567 of 1250000 calls (62.29 %)
+
+roots beyond delta_max (G(4) < 0): 74 calls; CoolProp solver_rho_Tp tried 4000, converged in range 3623; polish 1.69 its/root; subdivision nodes 36.4/call
+CoolProp p(rho) at our roots: 6748 compared (max density-equivalent error 2.6e-13), 332 skipped as ill-conditioned (Z uncertain > 1e-8 in double)
+
+spinodal stress test (20000 (T,x) samples): p = p_spinodal (1 +- eps); root count within the local window vs a 4000-point scan
+     eps     cases     agree   missed  spurious  uncertain  missed&unflagged below EOS res.
+    1e-2     13586     13586        0         0          0                 0              0
+    1e-3     26074     26073        1         0         12                 0              0
+    1e-4     26712     26712        0         0         46                 0              0
+    1e-5     26724     26717        7         0        140                 0              0
+    1e-6     26726     26704       22         0        392                 0              0
+    1e-7     26726     26599      127         0        855                 0              0
+    1e-8     26726     26302      424         0       1794                 0              0
+    1e-9     26702     25767      935         0       3395                 0             24
+   1e-10     26488     24801     1687         0       5698                 0            238

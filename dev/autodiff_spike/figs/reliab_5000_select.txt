@@ -1,0 +1,45 @@
+5000 states per mixture: T uniform in [Tlo, Thi], p log-uniform in [10 kPa, 30 MPa]
+'stable' = returned root is the lowest-Gibbs mechanically stable root, over states with >1 root
+
+mixture              model     multi | ours   | CoolProp solver_rho_Tp   | REFPROP TPRHO kph=2      | REFPROP TPRHO kph=1      | REFPROP match
+                                   % | fail   |   fail% notroot  stable% |   fail% notroot  stable% |   fail% notroot  stable% |
+C1/C2 50/50          HEOS       41.4 |      0 |   24.58       0    100.0 |    9.96       0     82.7 |    4.60       0     59.6 | max dev 5.0e-05
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 833 EOS excursions (|alphar| > 100), 540 interior mechanically-stable branches
+   multi-root states 2072: stable root identified in 2072, >=2 mechanically stable roots in 1612; REFPROP (either kph) returned the stable root in 100.0 %
+C1/C2/C3 50/30/20    HEOS       38.8 |      0 |   23.20       0    100.0 |   10.64       1     81.5 |    4.08       0     61.9 | max dev 1.5e-04
+   roots excluded from the stable choice: 2 numerical (Z unresolvable in double), 819 EOS excursions (|alphar| > 100), 499 interior mechanically-stable branches
+   multi-root states 1940: stable root identified in 1940, >=2 mechanically stable roots in 1449; REFPROP (either kph) returned the stable root in 100.0 %
+Amarillo (10)        HEOS       23.0 |      0 |   14.00       0    100.0 |    3.60     777    100.0 |    4.18    1480      0.0 | max dev 3.6e-01
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 338 EOS excursions (|alphar| > 100), 491 interior mechanically-stable branches
+   multi-root states 1148: stable root identified in 1148, >=2 mechanically stable roots in 1093; REFPROP (either kph) returned the stable root in 52.9 %
+C1/H2S 50/50         HEOS       31.2 |      0 |   23.68       0     99.6 |    8.38       0     86.3 |    5.48       0     42.1 | max dev 2.7e-05
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 282 EOS excursions (|alphar| > 100), 886 interior mechanically-stable branches
+   multi-root states 1561: stable root identified in 1561, >=2 mechanically stable roots in 1435; REFPROP (either kph) returned the stable root in 100.0 %
+C1/nC7 70/30         HEOS       28.4 |      0 |   19.14       0    100.0 |    9.54    2323     92.9 |    5.28    3311      0.0 | max dev 2.2e-02
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 107 EOS excursions (|alphar| > 100), 843 interior mechanically-stable branches
+   multi-root states 1418: stable root identified in 1418, >=2 mechanically stable roots in 1369; REFPROP (either kph) returned the stable root in 40.5 %
+CO2/H2O 50/50        HEOS       39.4 |      0 |   31.84       0     12.7 |   11.34       0     86.9 |    2.82       0     40.1 | max dev 1.9e-05
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 1602 EOS excursions (|alphar| > 100), 73 interior mechanically-stable branches
+   multi-root states 1969: stable root identified in 1969, >=2 mechanically stable roots in 1413; REFPROP (either kph) returned the stable root in 99.8 %
+humid air x_w=0.02   HEOS        0.0 |      0 |    0.00       0      0.0 |    0.00       0      0.0 |    0.00       0      0.0 | max dev 1.2e-06
+   multi-root states 0: stable root identified in 0, >=2 mechanically stable roots in 0; REFPROP (either kph) returned the stable root in 0.0 %
+C1/C2 50/50          GERG2008   37.3 |      0 |   24.58       0    100.0 |    9.30       0     79.2 |    3.02       0     57.4 | max dev 6.8e-13
+   roots excluded from the stable choice: 9 numerical (Z unresolvable in double), 1089 EOS excursions (|alphar| > 100), 525 interior mechanically-stable branches
+   multi-root states 1865: stable root identified in 1865, >=2 mechanically stable roots in 1328; REFPROP (either kph) returned the stable root in 100.0 %
+C1/C2/C3 50/30/20    GERG2008   35.5 |      0 |   23.18       0    100.0 |    9.84       0     77.6 |    2.66       0     60.5 | max dev 7.4e-13
+   roots excluded from the stable choice: 28 numerical (Z unresolvable in double), 1046 EOS excursions (|alphar| > 100), 465 interior mechanically-stable branches
+   multi-root states 1774: stable root identified in 1774, >=2 mechanically stable roots in 1217; REFPROP (either kph) returned the stable root in 100.0 %
+Amarillo (10)        GERG2008   20.5 |      0 |   14.00       0    100.0 |    3.74       0     92.0 |    3.40       0     42.3 | max dev 7.2e-14
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 391 EOS excursions (|alphar| > 100), 413 interior mechanically-stable branches
+   multi-root states 1026: stable root identified in 1026, >=2 mechanically stable roots in 856; REFPROP (either kph) returned the stable root in 100.0 %
+C1/H2S 50/50         GERG2008   31.3 |      0 |   23.70       0     99.6 |    8.48       0     86.7 |    5.58       0     43.1 | max dev 2.1e-14
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 661 EOS excursions (|alphar| > 100), 562 interior mechanically-stable branches
+   multi-root states 1565: stable root identified in 1565, >=2 mechanically stable roots in 1296; REFPROP (either kph) returned the stable root in 100.0 %
+C1/nC7 70/30         GERG2008   28.2 |      0 |   19.16       0    100.0 |    9.84       0     87.2 |    5.58       0     45.1 | max dev 3.7e-14
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 488 EOS excursions (|alphar| > 100), 542 interior mechanically-stable branches
+   multi-root states 1411: stable root identified in 1411, >=2 mechanically stable roots in 1193; REFPROP (either kph) returned the stable root in 100.0 %
+CO2/H2O 50/50        GERG2008   32.1 |      0 |   31.46       0     99.5 |    8.32       0     81.5 |    6.14       0     38.9 | max dev 3.8e-14
+   roots excluded from the stable choice: 0 numerical (Z unresolvable in double), 556 EOS excursions (|alphar| > 100), 695 interior mechanically-stable branches
+   multi-root states 1604: stable root identified in 1604, >=2 mechanically stable roots in 1392; REFPROP (either kph) returned the stable root in 100.0 %
+humid air x_w=0.02   GERG2008    0.0 |      0 |    0.00       0      0.0 |    0.00       0      0.0 |    0.00       0      0.0 | max dev 2.3e-15
+   multi-root states 0: stable root identified in 0, >=2 mechanically stable roots in 0; REFPROP (either kph) returned the stable root in 0.0 %
