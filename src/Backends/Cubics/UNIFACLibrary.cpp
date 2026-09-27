@@ -13,7 +13,7 @@ void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nl
         interaction_parameters.clear();
         components.clear();
     }
-    // Callers are expected to validate against the UNIFAC schema before calling populate; the cpjson::get_* helpers below still throw CoolProp::ValueError on missing/mistyped fields as a safety net.
+    // No schema is applied to UNIFAC data (VTPRBackend::LoadLibrary reads it unvalidated), so the cpjson::get_* helpers and the checks below are the only guard; they throw CoolProp::ValueError on missing/mistyped fields.
     for (const auto& el : group_data) {
         Group g;
         g.sgi = cpjson::get_integer(el, "sgi");
