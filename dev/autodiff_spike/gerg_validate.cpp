@@ -126,7 +126,7 @@ struct Rng
 void sample_x(CompSet& cs, Rng& r, std::vector<double>& x) {
     const std::size_t N = cs.fluids.size();
     x.assign(N, 0.0);
-    if (cs.suite == "natgas") {
+    if (cs.suite == "natgas" || cs.suite == "natgas_ref") {
         x = cs.x0;
         if (r.u() < 0.5)
             for (auto& v : x)
@@ -207,7 +207,7 @@ struct Opts
     int threads = 8, spin = 0;
     uint64_t seed = 1;
     long scan_every = 20000, cp_every = 200000;
-    std::string log = "gerg_validate_mismatch.log", suites = "binaries,multi,natgas,asym,humidair,humidair_ref";
+    std::string log = "gerg_validate_mismatch.log", suites = "binaries,multi,natgas,asym,humidair,humidair_ref,natgas_ref";
 };
 
 void run_call(CompSet& cs, Rng& r, const Opts& o, Stats& st, Solver::State& S, std::vector<double>& x, long callid) {
@@ -394,6 +394,7 @@ void spin_case(CompSet& cs, Rng& r, SpinStats& ss, Solver::State& S, std::vector
                     continue;
                 }
                 const double w = std::max(20 * std::sqrt(2 * std::abs(t - Fs) / std::abs(F2)), 1e-9 * D);
+                if (D + w > sv.delta_max || D - w <= 0) continue;  // window must lie inside the solver's domain
                 // reference: local scan of the true G
                 int nref = 0;
                 double g0;
@@ -485,6 +486,10 @@ int main(int argc, char** argv) {
     add("natgas", "HighN2", {NG10.begin(), NG10.begin() + 7}, {0.81441, 0.13465, 0.00985, 0.033, 0.00605, 0.001, 0.00104});
     add("natgas", "NaturalGasSample", NG10, {0.95123, 0.00089, 0.02555, 0.01835, 0.00238, 0.0004, 0.00016, 0.00014, 0.00011, 0.00079});
     add("natgas", "Air", {"Nitrogen", "Argon", "Oxygen"}, {0.7812, 0.0092, 0.2096});
+    // natural gases on the reference EOS (CO2: Span-Wagner non-analytic terms)
+    add("natgas_ref", "Amarillo (HEOS)", NG10, {0.906724, 0.031284, 0.004676, 0.045279, 0.00828, 0.001037, 0.001563, 0.000321, 0.000443, 0.000393},
+        "HEOS");
+    add("natgas_ref", "HighCO2 (HEOS)", {NG10.begin(), NG10.begin() + 7}, {0.81212, 0.05702, 0.07585, 0.04303, 0.00895, 0.00151, 0.00152}, "HEOS");
     for (auto pr : std::vector<std::pair<std::string, std::string>>{{"Methane", "HydrogenSulfide"},
                                                                     {"Methane", "n-Heptane"},
                                                                     {"Methane", "n-Octane"},

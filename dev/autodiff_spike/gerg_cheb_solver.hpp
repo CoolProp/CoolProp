@@ -39,7 +39,7 @@ using VecQ = std::array<double, NQ + 1>;
 using VecG = std::array<double, NG + 1>;
 
 // instrumentation (per thread)
-inline thread_local long g_na_active = 0, g_dropped = 0;
+inline thread_local long g_na_active = 0, g_dropped = 0, g_na_deg8 = 0;
 inline thread_local long g_nodes = 0, g_calls = 0, g_pieces_open = 0, g_ref_its = 0, g_ref_calls = 0, g_uncertain = 0, g_pol_its = 0, g_pol_calls = 0,
                          g_pol_uncert = 0;
 
@@ -155,6 +155,19 @@ inline void collect(const CoolProp::ResidualHelmholtzGeneralizedExponential& g, 
 }
 
 // ------------------------------------------------------------------ Chebyshev utilities
+template <int M, class F>
+std::array<double, M + 1> chebfit_n(F f, double lo, double hi) {
+    std::array<double, M + 1> fv{}, c{};
+    for (int j = 0; j <= M; ++j)
+        fv[j] = f(lo + (hi - lo) * (std::cos(PI * (j + 0.5) / (M + 1)) + 1) / 2);
+    for (int k = 0; k <= M; ++k) {
+        double s = 0;
+        for (int j = 0; j <= M; ++j)
+            s += fv[j] * std::cos(PI * k * (j + 0.5) / (M + 1));
+        c[k] = s * (k == 0 ? 1.0 : 2.0) / (M + 1);
+    }
+    return c;
+}
 template <class F>
 VecQ chebfit(F f, double lo, double hi) {
     VecQ fv{}, c{};
@@ -346,18 +359,31 @@ struct Solver
         double ad = 0, add = 0;
         const double dm = (std::abs(D - 1) < 10 * DBL_EPSILON) ? 10 * DBL_EPSILON : D - 1, d2 = dm * dm;  // as CoolProp
         const double tm = (std::abs(tau - 1) < 10 * DBL_EPSILON) ? 1 + 10 * DBL_EPSILON : tau;
+        const double L = std::log(d2);  // all ((d-1)^2)^s as exp(s L)
+        // IAPWS-95 and Span-Wagner share a = 3.5, beta = 0.3 (and often A, B) across their terms: reuse
+        double la = NAN, lbeta = NAN, lA = NAN, lB = NAN, pw = 0, pa = 0, theta = 0, Delta = 0, dDelta = 0, d2Delta = 0, lnDelta = 0;
         for (const auto& el : c.na->elements) {
             const double ib = 1 / (2 * el.beta);
-            const double pw = std::pow(d2, ib - 1);          // ((d-1)^2)^(1/(2 beta) - 1)
-            const double theta = (1 - tm) + el.A * pw * d2;  // (1 - tau) + A ((d-1)^2)^(1/(2beta))
-            const double pa = std::pow(d2, el.a - 1);        // ((d-1)^2)^(a-1)
-            const double Delta = theta * theta + el.B * pa * d2;
-            const double dDelta = dm * (el.A * theta * (2 / el.beta) * pw + 2 * el.B * el.a * pa);
-            const double d2Delta = dDelta / dm
-                                   + d2
-                                       * (4 * el.B * el.a * (el.a - 1) * std::pow(d2, el.a - 2) + 2 * el.A * el.A / (el.beta * el.beta) * pw * pw
-                                          + el.A * theta * 4 / el.beta * (ib - 1) * std::pow(d2, ib - 2));
-            const double Db = std::pow(Delta, el.b), dDb = el.b * Db / Delta * dDelta,
+            const bool same_ab = el.a == la && el.beta == lbeta;
+            if (!same_ab) {
+                pw = std::exp((ib - 1) * L);    // ((d-1)^2)^(1/(2 beta) - 1)
+                pa = std::exp((el.a - 1) * L);  // ((d-1)^2)^(a-1)
+            }
+            if (!same_ab || el.A != lA || el.B != lB) {
+                theta = (1 - tm) + el.A * pw * d2;
+                Delta = theta * theta + el.B * pa * d2;
+                dDelta = dm * (el.A * theta * (2 / el.beta) * pw + 2 * el.B * el.a * pa);
+                d2Delta = dDelta / dm
+                          + d2
+                              * (4 * el.B * el.a * (el.a - 1) * pa / d2 + 2 * el.A * el.A / (el.beta * el.beta) * pw * pw
+                                 + el.A * theta * 4 / el.beta * (ib - 1) * pw / d2);
+                lnDelta = std::log(Delta);
+            }
+            la = el.a;
+            lbeta = el.beta;
+            lA = el.A;
+            lB = el.B;
+            const double Db = std::exp(el.b * lnDelta), dDb = el.b * Db / Delta * dDelta,
                          d2Db = el.b * (Db / Delta * d2Delta + (el.b - 1) * Db / (Delta * Delta) * dDelta * dDelta);
             const double psi = std::exp(-el.C * d2 - el.D * (tm - 1) * (tm - 1)), dpsi = -2 * el.C * dm * psi,
                          d2psi = (2 * el.C * d2 - 1) * 2 * el.C * psi;
@@ -553,20 +579,41 @@ struct Solver
                         continue;
                     }
                 }
-                const VecQ cf = chebfit(
-                  [&](double D) {
-                      double f, df;
-                      na_z(c, tau, D, f, df);
-                      return xi * f;
-                  },
-                  edges[p], edges[p + 1]);
+                auto fna = [&](double D) {
+                    double f, df;
+                    na_z(c, tau, D, f, df);
+                    return xi * f;
+                };
+                VecQ cf{};
+                {  // degree 8 first; degree NQ only if its tail is not negligible against the table tolerance
+                    const auto c8 = chebfit_n<8>(fna, edges[p], edges[p + 1]);
+                    const double tail8 = std::abs(c8[8]) + std::abs(c8[7]);
+                    if (tail8 < 1e-3 * table_tol) {
+                        for (int m = 0; m <= 8; ++m)
+                            cf[m] = c8[m];
+                        ++g_na_deg8;
+                    } else
+                        cf = chebfit(fna, edges[p], edges[p + 1]);
+                }
                 double s1 = 0;
                 for (int m = 0; m <= NQ; ++m) {
                     q[m] += cf[m];
                     s1 += std::abs(cf[m]);
                 }
                 scale += s1;
-                fiterr += 5 * (std::abs(cf[NQ]) + std::abs(cf[NQ - 1]));  // tail estimate, conservative factor
+                // Fit-error bound: MEASURED at points between the fitting nodes, not a tail estimate alone -- the
+                // slowly decaying CO2 terms (C = 10) on wide pieces beat the tail estimate by ~100x (Exp. 10).
+                double meas = 0;
+                {
+                    VecG cg{};
+                    for (int m = 0; m <= NQ; ++m)
+                        cg[m] = cf[m];
+                    for (double u : {-0.97, -0.62, -0.21, 0.21, 0.62, 0.97}) {
+                        const double D = edges[p] + (edges[p + 1] - edges[p]) * (u + 1) / 2;
+                        meas = std::max(meas, std::abs(clenshaw_n(cg, u, NQ) - fna(D)));
+                    }
+                }
+                fiterr += std::max(10 * meas, 5 * (std::abs(cf[NQ]) + std::abs(cf[NQ - 1])));
             }
             S.G[p] = times_x(q, edges[p], edges[p + 1]);
             // bound on |G_tables - G_true| on the piece: 2 x fit error bound + roundoff, times delta <= hi
