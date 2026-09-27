@@ -1,3 +1,4 @@
+#include <map>
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
@@ -2080,7 +2081,27 @@ static bool fugacity_coefficients_finite(HelmholtzEOSMixtureBackend& phase) {
 // solver the warm root is kept as before: the legacy global solver's replacement root lets
 // spurious splits converge (supercritical humid air at 20-30 MPa), and in the stability test
 // rejecting these roots changes verdicts that the legacy single-phase fallback depends on.
+// SPIKE (TPD speed): per-flash counters, read by the benchmark driver
+long spike_counts[16] = {0};  // 0 trial solves, 1 warm accepted, 2 global, 3 kernel-direct, 4 SS steps(stab), 5 tpd iters, 6 split SS, 7 split gibbs iters
+static bool spike_env(const char* k) {
+    static std::map<std::string, bool> m;
+    auto it = m.find(k);
+    if (it != m.end()) return it->second;
+    return m[k] = std::getenv(k) != nullptr;
+}
 static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm, bool strict = false) {
+    ++spike_counts[0];
+    if (spike_env("SPIKE_KDIRECT")) {  // SPIKE: kernel root directly, no warm Newton
+        const CoolPropDbl rc = phase.solver_rho_Tp_cheb(T, p);
+        if (rc > 0) {
+            phase.update_DmolarT_direct(rc, T);
+            if (fugacity_coefficients_finite(phase)) {
+                ++spike_counts[3];
+                rho_warm = rc;
+                return rc;
+            }
+        }
+    }
     if (rho_warm > 0) {
         CoolPropDbl r = -1;
         bool warm_ok = false;
@@ -2110,12 +2131,14 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             warm_ok = false;  // warm solve threw -> fall back to the global solver below
         }
         if (warm_ok) {
+            ++spike_counts[1];
             rho_warm = r;
             return r;
         }
     }
     // Cold start, branch jump, or warm-solve failure: re-confirm with the global,
     // lowest-Gibbs solver so a metastable root is never silently accepted.
+    ++spike_counts[2];
     CoolPropDbl rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
     phase.update_DmolarT_direct(rg, T);
     rho_warm = rg;
@@ -2190,12 +2213,14 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         const double cntol = 1e-7;
         bool ss_decided = false;
         bool trial_aborted = false;  // Y went non-finite: this trial is non-conclusive
+        bool ss_stable = false;      // SPIKE: SS reached a stationary point with tm >= 0, or the trivial-solution proximity test fired
 
         for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
             std::array<double, 2> esq_pair = {0, 0};
             std::vector<CoolPropDbl> err(N);
 
             for (int kk = 0; kk < 2 && !ss_decided; ++kk) {
+                ++spike_counts[4];
                 // Y comes from the Wilson guess, the previous SS step, or a GDEM step
                 if (!trial_moles_finite(Y)) {
                     trial_aborted = ss_decided = true;
@@ -2257,7 +2282,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 
                 // Converged to a stationary point
                 if (gmax < cntol) {
-                    ss_decided = true;
+                    ss_decided = ss_stable = true;
                     break;
                 }
 
@@ -2270,7 +2295,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 }
                 if (distance_sq < 0) distance_sq = -distance_sq;
                 if (std::sqrt(distance_sq) < 0.1 && curvature > 0 && tm / curvature > 0.8) {
-                    ss_decided = true;
+                    ss_decided = ss_stable = true;
                     break;
                 }
 
@@ -2299,6 +2324,10 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // minimization in alpha variables. See [Michelsen1982a] Eq. 25-27.
         if (trial_aborted) {
             any_uncertain = true;
+            continue;
+        }
+        if (ss_stable && spike_env("SPIKE_SSSKIP")) {  // SPIKE: trust the SS verdict, skip the Newton minimizer
+            ++spike_counts[15];
             continue;
         }
         bool trial_unstable = false;
@@ -2343,6 +2372,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolPropDbl>& Y, const std::vector<CoolPropDbl>& ln_f_z, CoolPropDbl the_T,
                                                                CoolPropDbl the_p, bool& is_unstable) {
 
+    ++spike_counts[9];
+    if (spike_env("SPIKE_ITER")) std::fprintf(stderr, "TPD call T=%g p=%g\n", (double)the_T, (double)the_p);
     const std::size_t N = Y.size();
     const double cntol = 1e-7;
     const int max_iter = 20;
@@ -2358,6 +2389,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
     CoolPropDbl rho_warm = -1;  // warm-start density root, tracked across iterations/inner steps
 
     for (int iter = 0; iter < max_iter; ++iter) {
+        ++spike_counts[5];
         // Update Y from alpha
         for (std::size_t i = 0; i < N; ++i) {
             Y[i] = (0.5 * alpha[i]) * (0.5 * alpha[i]);
@@ -2377,6 +2409,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
         try {
             solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm);
         } catch (...) {
+            ++spike_counts[14];
             return false;  // Density solve failed
         }
 
@@ -2401,18 +2434,37 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
             obj_old += Y[i] * (scaled_grad[i] - 1.0);
         }
 
+        if (spike_env("SPIKE_ITER")) {
+            double dz = 0; for (std::size_t i = 0; i < N; ++i) dz = std::max(dz, std::abs(y_norm[i] - z[i]));
+            std::fprintf(stderr, "  it=%d sumY=%.12g max|y-z|=%.3g tm=%.3g maxgrad=%.3g trust=%.3g shift=%.3g\n", iter, (double)sumY, dz, obj_old, max_gradient, trust_radius, diagonal_shift);
+        }
         // Converged?
         if (max_gradient < cntol) {
             is_unstable = (obj_old < -cntol);
+            ++spike_counts[10];
             return true;
         }
 
         // Build Hessian
+        // SPIKE_HESS: PR #3357's Hessian -- n*dln(phi_i)/dn_j = D(i,j) - sum_k y_k D(i,k), D = dln(phi_i)/dx_j (XN_INDEPENDENT)
+        const bool spike_hess = spike_env("SPIKE_HESS");
+        Eigen::MatrixXd D;
+        if (spike_hess) {
+            D.resize(N, N);
+            for (std::size_t i = 0; i < N; ++i)
+                for (std::size_t j = 0; j < N; ++j)
+                    D(i, j) = MixtureDerivatives::dln_fugacity_coefficient_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, XN_INDEPENDENT);
+        }
         Eigen::MatrixXd H(N, N);
         for (std::size_t i = 0; i < N; ++i) {
             double ahi = half_alpha[i] / sumY;
+            double sum_yD = 0;
+            if (spike_hess)
+                for (std::size_t k = 0; k < N; ++k)
+                    sum_yD += y_norm[k] * D(i, k);
             for (std::size_t j = 0; j <= i; ++j) {
-                double dln_phi_dnj = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, XN_INDEPENDENT);
+                double dln_phi_dnj = spike_hess ? D(i, j) - sum_yD
+                                                : MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), i, j, XN_INDEPENDENT);
                 double term = ahi * half_alpha[j] * dln_phi_dnj;
                 H(i, j) = term;
                 H(j, i) = term;
@@ -2491,6 +2543,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
             // Quick exit if already found unstable
             if (obj_new < -cntol) {
                 is_unstable = true;
+                ++spike_counts[11];
                 return true;
             }
 
@@ -2526,9 +2579,11 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
 
         if (!step_accepted) {
             // Could not find an acceptable step
+            ++spike_counts[12];
             return false;
         }
     }
+    ++spike_counts[13]; if (spike_env("SPIKE_DUMP")) { std::fprintf(stderr, "MAXIT T=%g p=%g obj?", (double)the_T, (double)the_p); for (std::size_t i=0;i<N;++i) std::fprintf(stderr," y%zu=%.4g/z=%.4g", i, (double)(Y[i]), (double)z[i]); std::fprintf(stderr,"\n"); }
     return false;  // Reached max iterations without convergence -> non-conclusive (caller decides)
 }
 
@@ -2841,6 +2896,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         std::vector<CoolPropDbl> err(N);
 
         for (int kk = 0; kk < 2 && !ss_converged; ++kk) {
+            ++spike_counts[6];
             solve_rachford_rice();
             if (!evaluate_phases()) {
                 throw SolutionError("PT flash lost a phase density solve during successive substitution");
@@ -2922,6 +2978,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         double trust_radius = (restart == 0) ? 1.0 : 0.2;
 
         for (int gibbs_iter = 0; gibbs_iter < max_gibbs_iter && !converged; ++gibbs_iter) {
+            ++spike_counts[7];
             const CoolPropDbl L_frac = 1.0 - beta;
             const CoolPropDbl V_frac = beta;
 

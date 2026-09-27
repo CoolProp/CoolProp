@@ -3805,6 +3805,7 @@ void HelmholtzEOSMixtureBackend::calc_reducing_state() {
 }
 void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
                                                              const CoolPropDbl& delta) {
+    extern long spike_counts[16]; ++spike_counts[8];  // SPIKE
     deriv_counter.fetch_add(1, std::memory_order_relaxed);
     bool cache_values = true;
     HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), tau, delta, cache_values);
