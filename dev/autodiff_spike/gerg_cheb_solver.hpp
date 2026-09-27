@@ -15,6 +15,8 @@
 #include <memory>
 #include <vector>
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#include "Configuration.h"
+#include <stdexcept>
 #include "cheb2bern.hpp"
 
 #ifndef NQ_DEG
@@ -37,6 +39,7 @@ using VecQ = std::array<double, NQ + 1>;
 using VecG = std::array<double, NG + 1>;
 
 // instrumentation (per thread)
+inline thread_local long g_na_active = 0;
 inline thread_local long g_nodes = 0, g_calls = 0, g_pieces_open = 0, g_ref_its = 0, g_ref_calls = 0, g_uncertain = 0, g_pol_its = 0, g_pol_calls = 0,
                          g_pol_uncert = 0;
 
@@ -292,11 +295,60 @@ struct Solver
     shared_ptr<CoolProp::ReducingFunction> Red;
     double R = 0, delta_max = 0, tau_max = 0;
     int N = 0, P = 0;
+    // Non-analytic (critical-region) terms, e.g. IAPWS-95 water and Span-Wagner CO2.  Not separable
+    // in (tau, delta): added per (T, x) by fitting at the Chebyshev nodes when active.
+    struct NAComp
+    {
+        int i;
+        const CoolProp::ResidualHelmholtzNonAnalytic* na;
+        double Dmin;  // smallest D: the terms carry exp(-D (tau-1)^2)
+        double Cmin;  // smallest C: ... and exp(-C (delta-1)^2)
+        double nsum;  // sum |n|
+    };
+    double table_tol = 1e-6;
+    std::vector<NAComp> nacomps;
+    std::vector<double> Ri;  // component gas constants (mole-fraction average unless normalized)
+    bool R_normalized = true;
+    // delta d(alpha_NA)/d(delta) and its delta-derivative for one component.  Closed-form first and
+    // second delta-derivatives of alpha = n Delta^b delta psi (IAPWS-95 Table 5 form), instead of
+    // CoolProp's all(), which computes everything to 4th order.  Checked against all() in Exp. 7.
+    static void na_z(const NAComp& c, double tau, double D, double& f, double& df) {
+        double ad = 0, add = 0;
+        const double dm = (std::abs(D - 1) < 10 * DBL_EPSILON) ? 10 * DBL_EPSILON : D - 1, d2 = dm * dm;  // as CoolProp
+        const double tm = (std::abs(tau - 1) < 10 * DBL_EPSILON) ? 1 + 10 * DBL_EPSILON : tau;
+        for (const auto& el : c.na->elements) {
+            const double ib = 1 / (2 * el.beta);
+            const double pw = std::pow(d2, ib - 1);          // ((d-1)^2)^(1/(2 beta) - 1)
+            const double theta = (1 - tm) + el.A * pw * d2;  // (1 - tau) + A ((d-1)^2)^(1/(2beta))
+            const double pa = std::pow(d2, el.a - 1);        // ((d-1)^2)^(a-1)
+            const double Delta = theta * theta + el.B * pa * d2;
+            const double dDelta = dm * (el.A * theta * (2 / el.beta) * pw + 2 * el.B * el.a * pa);
+            const double d2Delta = dDelta / dm
+                                   + d2
+                                       * (4 * el.B * el.a * (el.a - 1) * std::pow(d2, el.a - 2) + 2 * el.A * el.A / (el.beta * el.beta) * pw * pw
+                                          + el.A * theta * 4 / el.beta * (ib - 1) * std::pow(d2, ib - 2));
+            const double Db = std::pow(Delta, el.b), dDb = el.b * Db / Delta * dDelta,
+                         d2Db = el.b * (Db / Delta * d2Delta + (el.b - 1) * Db / (Delta * Delta) * dDelta * dDelta);
+            const double psi = std::exp(-el.C * d2 - el.D * (tm - 1) * (tm - 1)), dpsi = -2 * el.C * dm * psi,
+                         d2psi = (2 * el.C * d2 - 1) * 2 * el.C * psi;
+            ad += el.n * (Db * (psi + D * dpsi) + dDb * D * psi);
+            add += el.n * (Db * (2 * dpsi + D * d2psi) + 2 * dDb * (psi + D * dpsi) + d2Db * D * psi);
+        }
+        f = D * ad;
+        df = ad + D * add;
+    }
+    static void na_z_coolprop(const NAComp& c, double tau, double D, double& f, double& df) {  // reference
+        CoolProp::HelmholtzDerivatives d;
+        const_cast<CoolProp::ResidualHelmholtzNonAnalytic*>(c.na)->all(tau, D, d);  // reads only its own members
+        f = D * d.dalphar_ddelta;
+        df = d.dalphar_ddelta + D * d.d2alphar_ddelta2;
+    }
 
     // Tier 1: component set.  tau_max bounds Tr(x)/T over the intended use.
     void build(CoolProp::HelmholtzEOSMixtureBackend* HEOS, double dmax, double taumax, double tol) {
         delta_max = dmax;
         tau_max = taumax;
+        table_tol = tol;
         Red = HEOS->Reducing;
         R = HEOS->gas_constant();
         auto& comps = HEOS->get_components();
@@ -305,6 +357,29 @@ struct Solver
         F = Ex.F;
         for (int i = 0; i < N; ++i)
             collect(comps[i].EOS().alphar.GenExp, i, -1, terms);
+        R_normalized = CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS);
+        for (int i = 0; i < N; ++i) {
+            auto& ar = comps[i].EOS().alphar;
+            Ri.push_back(comps[i].gas_constant());
+            if (ar.NonAnalytic.N > 0) {
+                double Dmin = 1e300, Cmin = 1e300, nsum = 0;
+                for (const auto& el : ar.NonAnalytic.elements) {
+                    Dmin = std::min(Dmin, el.D);
+                    Cmin = std::min(Cmin, el.C);
+                    nsum += std::abs(el.n);
+                }
+                nacomps.push_back({i, &ar.NonAnalytic, Dmin, Cmin, nsum});
+            }
+            // every residual contribution must be GenExp or NonAnalytic, else refuse
+            for (double tau : {0.7, 1.3})
+                for (double D : {0.3, 1.7}) {
+                    CoolProp::HelmholtzDerivatives full = ar.all(tau, D, false), ge, na;
+                    ar.GenExp.all(tau, D, ge);
+                    const_cast<CoolProp::ResidualHelmholtzNonAnalytic&>(ar.NonAnalytic).all(tau, D, na);
+                    if (std::abs(full.alphar - ge.alphar - na.alphar) > 1e-12 * (1 + std::abs(full.alphar)))
+                        throw std::runtime_error("component " + std::to_string(i) + " has residual terms other than GenExp/NonAnalytic");
+                }
+        }
         for (int i = 0; i < N; ++i)
             for (int j = i + 1; j < N; ++j)
                 if (Ex.F[i][j] != 0 && Ex.DepartureFunctionMatrix[i][j]) collect(Ex.DepartureFunctionMatrix[i][j]->phi, i, j, terms);
@@ -356,6 +431,14 @@ struct Solver
             }
         }
         std::sort(done.begin(), done.end());
+        if (!nacomps.empty())  // non-analytic at delta = 1: make it a piece edge
+            for (std::size_t k = 0; k < done.size(); ++k)
+                if (done[k].first < 1.0 && done[k].second > 1.0) {
+                    const auto pr = done[k];
+                    done[k] = {pr.first, 1.0};
+                    done.insert(done.begin() + k + 1, {1.0, pr.second});
+                    break;
+                }
         edges = {0.0};
         for (auto& pr : done)
             edges.push_back(pr.second);
@@ -392,7 +475,9 @@ struct Solver
         std::vector<VecG> G;
         std::vector<double> margin;
         std::vector<double> W;
-        double T = 0, rhor = 0, t_scale = 0;
+        std::vector<double> x;
+        std::vector<int> na_on;  // indices into nacomps active at this (T, x)
+        double T = 0, tau = 0, rhor = 0, t_scale = 0;
     };
     void assemble(double T, const std::vector<double>& x, State& S) const {
         const double Tr = Red->Tr(x), rhor = Red->rhormolar(x), tau = Tr / T, lt = std::log(tau);
@@ -403,6 +488,12 @@ struct Solver
             const double X = tm.j < 0 ? x[tm.i] : x[tm.i] * x[tm.j] * F[tm.i][tm.j];
             S.W[group[k]] += X * tm.kappa(tau, lt);
         }
+        S.x = x;
+        S.tau = tau;
+        S.na_on.clear();
+        for (std::size_t ci = 0; ci < nacomps.size(); ++ci)
+            if (x[nacomps[ci].i] > 0 && nacomps[ci].Dmin * (tau - 1) * (tau - 1) < 50) S.na_on.push_back(static_cast<int>(ci));
+        if (!S.na_on.empty()) ++g_na_active;
         S.G.resize(P);
         S.margin.resize(P);
         for (int p = 0; p < P; ++p) {
@@ -419,13 +510,47 @@ struct Solver
                 scale += std::abs(w) * cn[g];
                 fiterr += std::abs(w) * ct[g];
             }
+            for (int ci : S.na_on) {  // non-analytic add-in: fit at the nodes of this piece
+                const NAComp& c = nacomps[ci];
+                const double xi = x[c.i];
+                {  // skip where negligible: psi_max times a generous polynomial factor, into the margin instead
+                    const double lo = edges[p], hi = edges[p + 1];
+                    const double dmin = (lo <= 1 && hi >= 1) ? 0.0 : std::min(std::abs(lo - 1), std::abs(hi - 1));
+                    const double psimax = std::exp(-c.Cmin * dmin * dmin - c.Dmin * (tau - 1) * (tau - 1));
+                    const double bound = 1e3 * xi * c.nsum * psimax * hi * (1 + hi) * (1 + 2 * c.Cmin * (1 + hi));
+                    if (bound < 1e-3 * table_tol) {
+                        fiterr += bound;
+                        continue;
+                    }
+                }
+                const VecQ cf = chebfit(
+                  [&](double D) {
+                      double f, df;
+                      na_z(c, tau, D, f, df);
+                      return xi * f;
+                  },
+                  edges[p], edges[p + 1]);
+                double s1 = 0;
+                for (int m = 0; m <= NQ; ++m) {
+                    q[m] += cf[m];
+                    s1 += std::abs(cf[m]);
+                }
+                scale += s1;
+                fiterr += 5 * (std::abs(cf[NQ]) + std::abs(cf[NQ - 1]));  // tail estimate, conservative factor
+            }
             S.G[p] = times_x(q, edges[p], edges[p + 1]);
-            // bound on |G_tables - G_true| on the piece: 2 x tail estimate (fit) + roundoff, times delta <= hi
+            // bound on |G_tables - G_true| on the piece: 2 x fit error bound + roundoff, times delta <= hi
             S.margin[p] = edges[p + 1] * (2 * fiterr + 1e-14 * scale);
+        }
+        double Rmix = R;
+        if (!R_normalized) {
+            Rmix = 0;
+            for (int i = 0; i < N; ++i)
+                Rmix += x[i] * Ri[i];
         }
         S.T = T;
         S.rhor = rhor;
-        S.t_scale = 1.0 / (rhor * R * T);
+        S.t_scale = 1.0 / (rhor * Rmix * T);
     }
 
     // true equation from the grouped terms (exact regrouping of the model)
@@ -443,6 +568,14 @@ struct Solver
             Z += S.W[g] * f;
             dZ += S.W[g] * df;
             a += std::abs(S.W[g] * f);
+        }
+        for (int ci : S.na_on) {
+            double f, df;
+            na_z(nacomps[ci], S.tau, D, f, df);
+            const double xi = S.x[nacomps[ci].i];
+            Z += xi * f;
+            dZ += xi * df;
+            a += std::abs(xi * f);
         }
         G = D * Z - t;
         dG = Z + D * dZ;
@@ -498,7 +631,7 @@ struct Solver
         for (int it = 0; it < 20; ++it) {
             ++g_pol_its;
             true_G(S, D, t, G, dG, sc);
-            resid = std::abs(G) / sc;
+            resid = std::abs(G) / (std::abs(dG) * D + 1e-300);  // backward error: relative change in delta that zeroes G
             if (G == 0) break;
             if ((G < 0) == (sa < 0))
                 a = D;
@@ -514,11 +647,11 @@ struct Solver
             D = Dn;
         }
         true_G(S, D, t, G, dG, sc);
-        resid = std::abs(G) / sc;
+        resid = std::abs(G) / (std::abs(dG) * D + 1e-300);      // backward error: relative change in delta that zeroes G
         if (!bracket_ok && !(std::abs(D - D0) <= 1e-3 * D0)) {  // unbracketed Newton wandered: keep the table root
             D = D0;
             true_G(S, D, t, G, dG, sc);
-            resid = std::abs(G) / sc;
+            resid = std::abs(G) / (std::abs(dG) * D + 1e-300);  // backward error: relative change in delta that zeroes G
         }
         return D;
     }

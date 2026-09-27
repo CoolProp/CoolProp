@@ -37,7 +37,7 @@ const std::vector<std::string> GERG21 = {"Methane",   "Nitrogen",   "CarbonDioxi
 
 struct CompSet
 {
-    std::string suite, name;
+    std::string suite, name, backend = "GERG2008";
     std::vector<std::string> fluids;
     std::vector<double> x0;  // nominal composition (natgas, humidair)
     std::unique_ptr<CoolProp::AbstractState> AS, AScp;
@@ -61,7 +61,7 @@ struct Stats
     double scan_maxrel = 0;
     long cp_tries = 0, cp_converged = 0, cp_in_set = 0, cp_not_in_set = 0, cp_pchecks = 0, cp_illcond = 0;
     double cp_pmax = 0;
-    long nodes = 0, pol_its = 0, pol_calls = 0;
+    long nodes = 0, pol_its = 0, pol_calls = 0, na_active = 0;
     void add(const Stats& o) {
         calls += o.calls;
         roots += o.roots;
@@ -89,6 +89,7 @@ struct Stats
         cp_illcond += o.cp_illcond;
         cp_pmax = std::max(cp_pmax, o.cp_pmax);
         nodes += o.nodes;
+        na_active += o.na_active;
         pol_its += o.pol_its;
         pol_calls += o.pol_calls;
     }
@@ -130,8 +131,8 @@ void sample_x(CompSet& cs, Rng& r, std::vector<double>& x) {
         if (r.u() < 0.5)
             for (auto& v : x)
                 v *= std::exp(0.5 * r.normal());
-    } else if (cs.suite == "humidair") {
-        const double xw = r.logu(1e-5, 0.3);
+    } else if (cs.suite.rfind("humidair", 0) == 0 || cs.suite == "wetair_ref") {
+        const double xw = cs.suite == "wetair_ref" ? r.logu(0.3, 0.99) : r.logu(1e-5, 0.3);
         for (std::size_t i = 0; i + 1 < N; ++i)
             x[i] = cs.x0[i] * (1 - xw);
         x[N - 1] = xw;
@@ -206,7 +207,7 @@ struct Opts
     int threads = 8, spin = 0;
     uint64_t seed = 1;
     long scan_every = 20000, cp_every = 200000;
-    std::string log = "gerg_validate_mismatch.log", suites = "binaries,multi,natgas,asym,humidair";
+    std::string log = "gerg_validate_mismatch.log", suites = "binaries,multi,natgas,asym,humidair,humidair_ref";
 };
 
 void run_call(CompSet& cs, Rng& r, const Opts& o, Stats& st, Solver::State& S, std::vector<double>& x, long callid) {
@@ -214,12 +215,14 @@ void run_call(CompSet& cs, Rng& r, const Opts& o, Stats& st, Solver::State& S, s
     sample_x(cs, r, x);
     const double T = r.logu(cs.Tmin, cs.Tmax), p = r.logu(1e2, 1e8);
     Solver::Root roots[64];
+    const long na0 = g_na_active;
     const long nodes0 = g_nodes, unc0 = g_uncertain, pit0 = g_pol_its, pc0 = g_pol_calls;
     const auto t0 = std::chrono::steady_clock::now();
     sv.assemble(T, x, S);
     const int n = sv.roots(S, p, roots);
     st.ns += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - t0).count();
     st.nodes += g_nodes - nodes0;
+    st.na_active += g_na_active - na0;
     st.pol_its += g_pol_its - pit0;
     st.pol_calls += g_pol_calls - pc0;
     ++st.calls;
@@ -326,11 +329,14 @@ void run_call(CompSet& cs, Rng& r, const Opts& o, Stats& st, Solver::State& S, s
                 }
                 A->specify_phase(CoolProp::iphase_gas);
                 A->update(CoolProp::DmolarT_INPUTS, roots[k].rho, T);
-                const double dp = std::abs(A->p() - p) / p;
+                // compare as a density error: |p_CP(rho) - p| / (rho dp/drho).  A pressure difference alone is
+                // amplified by rho (dp/drho) / p, which reaches ~1e7 for liquids at low pressure.
+                const double dp =
+                  std::abs(A->p() - p) / (roots[k].rho * std::abs(A->first_partial_deriv(CoolProp::iP, CoolProp::iDmolar, CoolProp::iT)));
                 st.cp_pmax = std::max(st.cp_pmax, dp);
                 if (dp > 1e-9)
-                    logmsg("CP_PRESSURE %s %s T=%.17g p=%.17g rho=%.12g cp_p=%.12g rel=%.2e n=%d x0=%.17g\n", cs.suite.c_str(), cs.name.c_str(), T, p,
-                           roots[k].rho, A->p(), dp, n, x[0]);
+                    logmsg("CP_PRESSURE %s %s T=%.17g p=%.17g rho=%.12g cp_p=%.12g drho_rel=%.2e n=%d x0=%.17g\n", cs.suite.c_str(), cs.name.c_str(),
+                           T, p, roots[k].rho, A->p(), dp, n, x[0]);
                 ++st.cp_pchecks;
             } catch (...) {
             }
@@ -444,13 +450,15 @@ int main(int argc, char** argv) {
 
     // ---- component sets
     std::vector<std::unique_ptr<CompSet>> sets;
-    auto add = [&](const std::string& suite, const std::string& name, std::vector<std::string> fl, std::vector<double> x0 = {}) {
-        if (o.suites.find(suite) == std::string::npos) return;
+    auto add = [&](const std::string& suite, const std::string& name, std::vector<std::string> fl, std::vector<double> x0 = {},
+                   const std::string& backend = "GERG2008") {
+        if (("," + o.suites + ",").find("," + suite + ",") == std::string::npos) return;
         auto cs = std::make_unique<CompSet>();
         cs->suite = suite;
         cs->name = name;
         cs->fluids = std::move(fl);
         cs->x0 = std::move(x0);
+        cs->backend = backend;
         sets.push_back(std::move(cs));
     };
     for (std::size_t i = 0; i < GERG21.size(); ++i)
@@ -491,13 +499,18 @@ int main(int argc, char** argv) {
                                                                     {"CarbonDioxide", "n-Decane"}})
         add("asym", pr.first + "/" + pr.second, {pr.first, pr.second});
     add("humidair", "humid air", {"Nitrogen", "Oxygen", "Argon", "CarbonDioxide", "Water"}, {0.7810, 0.2095, 0.0092, 0.0003, 0.0});
+    // same, with the reference EOS (IAPWS-95 water and Span-Wagner CO2 carry non-analytic terms)
+    add("humidair_ref", "humid air (HEOS)", {"Nitrogen", "Oxygen", "Argon", "CarbonDioxide", "Water"}, {0.7810, 0.2095, 0.0092, 0.0003, 0.0}, "HEOS");
+    // water-rich (x_w 0.3..0.99), reference EOS: exercises the IAPWS-95 non-analytic add-in (mixture tau near 1)
+    add("wetair_ref", "water-rich air (HEOS)", {"Nitrogen", "Oxygen", "Argon", "CarbonDioxide", "Water"}, {0.7810, 0.2095, 0.0092, 0.0003, 0.0},
+        "HEOS");
 
     const auto tb = std::chrono::steady_clock::now();
     std::size_t tables_bytes = 0;
     int maxP = 0;
     for (auto& cs : sets) {
-        cs->AS.reset(CoolProp::AbstractState::factory("GERG2008", join(cs->fluids)));
-        cs->AScp.reset(CoolProp::AbstractState::factory("GERG2008", join(cs->fluids)));
+        cs->AS.reset(CoolProp::AbstractState::factory(cs->backend, join(cs->fluids)));
+        cs->AScp.reset(CoolProp::AbstractState::factory(cs->backend, join(cs->fluids)));
         auto* H = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(cs->AS.get());
         double Tcmax = 0;
         for (const auto& c : H->get_components())
@@ -588,8 +601,17 @@ int main(int argc, char** argv) {
                 double(all.roots) / all.calls, 100.0 * all.multi_root_calls / all.calls, all.parity_fail, all.uncertain, all.uncertified,
                 all.bracket_bad, all.polish_moved, all.max_resid, all.ns / all.calls / 1000, all.scans, all.scan_missed_real, all.solver_missed,
                 all.solver_spurious, all.cp_in_set, all.cp_not_in_set, all.cp_pmax);
+    for (auto& su : suites) {
+        Stats s;
+        for (auto& m : tstats)
+            if (m.count(su)) s.add(m.at(su));
+        if (s.na_active)
+            std::printf("non-analytic add-in active in suite %s: %ld of %ld calls (%.2f %%)\n", su.c_str(), s.na_active, s.calls,
+                        100.0 * s.na_active / s.calls);
+    }
     std::printf("\nroots beyond delta_max (G(4) < 0): %ld calls; CoolProp solver_rho_Tp tried %ld, converged in range %ld; polish %.2f its/root; "
-                "subdivision nodes %.1f/call\nCoolProp pressure at our roots: %ld compared (max rel %.1e), %ld skipped as ill-conditioned (Z "
+                "subdivision nodes %.1f/call\nCoolProp p(rho) at our roots: %ld compared (max density-equivalent error %.1e), %ld skipped as "
+                "ill-conditioned (Z "
                 "uncertain > 1e-8 in double)\n",
                 all.beyond, all.cp_tries, all.cp_converged, double(all.pol_its) / std::max(1L, all.pol_calls), double(all.nodes) / all.calls,
                 all.cp_pchecks, all.cp_pmax, all.cp_illcond);
