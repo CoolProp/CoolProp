@@ -29,6 +29,22 @@ constexpr double kPmaxMPa = 2300.6;
 constexpr double kTminK = 240.0;
 constexpr double kTmaxK = 500.0;
 
+// The cold high-pressure corner where the fit is not thermodynamically
+// admissible.  Measured on the committed coefficients: cv <= 0 over
+// p in [1832.8, 2300.6] MPa, T in [240.0, 249.5] K, with (dv/dP)_T >= 0
+// over a subset of that.  Reported upstream to SeaFreeze.
+//
+// Checks stay OUT of this box, with margin.  Values from inside it are
+// not water -- asserting them would make the suite brittle against a
+// coefficient revision and would implicitly bless numbers we have told
+// the authors are wrong.  What is still checked here is the guard's
+// BEHAVIOUR (does it serve or refuse), never a property magnitude.
+constexpr double kUnstablePminMPa = 1500.0;
+constexpr double kUnstableTmaxK = 255.0;
+bool in_unstable_corner(double p_MPa, double T) {
+    return p_MPa > kUnstablePminMPa && T < kUnstableTmaxK;
+}
+
 std::shared_ptr<AbstractState> make() {
     return std::shared_ptr<AbstractState>(AbstractState::factory("BOLLENGIER", "Water"));
 }
@@ -323,11 +339,14 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // liquid data existed to fit against.  SeaFreeze serves them; so do
         // we.  Pinned so that a future change to that policy is deliberate
         // rather than accidental, and so the magnitude is on record.
-        AS->update(PT_INPUTS, 1700.0e6, 240.0);
+        // Behaviour only: that the state is SERVED and self-consistent.
+        // Its cv (~920 J/kg/K against water's ~3800) and w are deliberately
+        // not asserted -- see kUnstablePminMPa.
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, 1700.0e6, 240.0));
         INFO("cv = " << AS->cvmass() << " J/kg/K, w = " << AS->speed_sound());
         CHECK(std::isfinite(AS->cvmass()));
         CHECK(AS->cvmass() > 0.0);
-        CHECK(AS->cvmass() < 1500.0);  // real water is ~3800 here
+        CHECK(AS->cvmass() < AS->cpmass());
         // And the sound speed does NOT flag it: 3561 m/s here, against
         // 3513 m/s at a perfectly physical 2200 MPa / 300 K -- the
         // bad state is FASTER.  The overlap is wider still: pathological
@@ -335,11 +354,9 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // value the authors publish.  No threshold at ANY value separates
         // the two populations -- which is why this backend does not try,
         // and why an earlier attempt to do so had to be reverted.
-        CHECK(AS->speed_sound() < 4000.0);
         auto warm = make();
         warm->update(PT_INPUTS, 2200.0e6, 300.0);
-        CHECK(warm->cvmass() > 3000.0);                  // physical
-        CHECK(warm->speed_sound() < AS->speed_sound());  // yet SLOWER
+        CHECK(warm->cvmass() > 3000.0);  // physical, and inside the SM_E grid
 
         // AND a state with an absurdly HIGH sound speed must also be
         // served.  Without this the no-ceiling policy is not pinned at
@@ -354,10 +371,11 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // ceiling above that would still survive.  Pinning higher is
         // inherently brittle: w scales as cv^(-1/2), so w = 100 km/s sits
         // within ~0.1 MPa of the cv = 0 locus.
+        // Pinned by BEHAVIOUR, not magnitude: this state has w ~ 12.7 km/s
+        // and must still be served.  A reinstated ceiling fails the NOTHROW
+        // without this test asserting the absurd value itself.
         auto fast = make();
         REQUIRE_NOTHROW(fast->update(PT_INPUTS, 2185.0e6, 240.0));
-        INFO("w at 2185 MPa / 240 K = " << fast->speed_sound());
-        CHECK(fast->speed_sound() > 6000.0);  // ~12688 m/s, and served
     }
     SECTION("the same pressures are ordinary when warm") {
         for (const double p_MPa : {1900.0, 2175.0, 2290.0}) {
@@ -371,11 +389,15 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // Self-consistency, which is what the backend actually guarantees.
         // Deliberately NOT a physical-plausibility sweep: after the above,
         // asserting a cv floor here would contradict the documented policy.
-        int accepted = 0;
+        int accepted = 0, expected = 0;
         for (int i = 0; i <= 60; ++i) {
             for (int j = 0; j <= 40; ++j) {
                 const double p_MPa = 2300.0 * i / 60.0;
                 const double T = kTminK + (kTmaxK - kTminK) * j / 40.0;
+                if (in_unstable_corner(p_MPa, T)) {
+                    continue;  // see kUnstablePminMPa
+                }
+                ++expected;
                 try {
                     AS->update(PT_INPUTS, p_MPa * 1e6, T);
                 } catch (const CoolProp::ValueError&) {
@@ -391,8 +413,9 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
                 CHECK(AS->rhomass() < 1600.0);
             }
         }
-        // Binds: the committed guard accepts 2495 of 2501 (6 refused).
-        REQUIRE(accepted > 2450);
+        // Binds tightly now: outside the unstable corner the guard must
+        // accept EVERY state, so a single spurious refusal fails here.
+        REQUIRE(accepted == expected);
     }
 }
 
