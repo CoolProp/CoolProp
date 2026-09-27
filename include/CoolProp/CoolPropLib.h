@@ -266,7 +266,7 @@ EXPORT_CODE long CONVENTION redirect_stdout(const char* file);
 
 /// Get the debug level
 /// @returns level The level of the verbosity for the debugging output (0-10) 0: no debgging output
-EXPORT_CODE int CONVENTION get_debug_level();
+EXPORT_CODE int CONVENTION get_debug_level(void);  // NOLINT(modernize-redundant-void-arg) -- (void) is the C prototype; () is not
 /// Set the debug level
 /// @param level The level of the verbosity for the debugging output (0-10) 0: no debgging output
 EXPORT_CODE void CONVENTION set_debug_level(int level);
