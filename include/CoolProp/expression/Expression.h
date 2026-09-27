@@ -24,17 +24,15 @@ namespace expression {
 ///
 /// Resolve `name` as a state variable a correlation may declare.
 ///
-/// The DSL does NOT maintain its own list of thermodynamic quantities.  A name is
-/// resolved by CoolProp::is_valid_parameter(), so the DSL's vocabulary IS CoolProp's
-/// vocabulary -- every quantity keyed_output() can produce is reachable, and adding
-/// a new one never requires touching this library.  The spellings are CoolProp's
-/// canonical ones (`P`, `Dmolar`, `Dmass`); the DSL invents no aliases of its own,
-/// because an invented lowercase `p` is precisely what once collided with the
-/// exponent array every viscosity paper calls p_i.
+/// A name is accepted only if it is on the short allowlist in Expression.cpp
+/// (allowedStateVariables()), and is then resolved by CoolProp::is_valid_parameter().
+/// The spellings are CoolProp's canonical ones (`P`, `Dmolar`, `Dmass`); the DSL
+/// invents no aliases of its own, because an invented lowercase `p` is precisely
+/// what once collided with the exponent array every viscosity paper calls p_i.
 ///
 /// Returns true and sets `key` when `name` is resolvable and permitted.  Otherwise
-/// returns false and sets `reason` to a message fit for a compile error.  Two
-/// classes are refused even though CoolProp resolves them:
+/// returns false and sets `reason` to a message fit for a compile error.  Among the
+/// quantities CoolProp resolves but the allowlist deliberately leaves out:
 ///
 ///  * transport outputs (`V`, `L`, `Prandtl`, ...) -- keyed_output() for these
 ///    re-enters the very correlation being defined;
