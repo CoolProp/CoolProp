@@ -612,3 +612,67 @@ No spurious roots appeared at any ε. The table tolerance sets where near-tangen
 unresolvable (about ε ~ 0.1·tol), and **every such miss is flagged**: there are 0 unflagged
 misses at every tolerance. With 1e-12 tables at ε = 1e-10, 2 cases were excluded because the
 equation itself cannot resolve that ε in double.
+
+## Results: 10⁹ calls (GERG-2008 suites)
+
+Seed 20260926, 8 threads, 4345 s wall (230 000 calls/s at load average 50–70). This binary
+predates the backward-error residual metric and the density-equivalent CoolProp check, so
+`max_res` and `cp_p` below use the older scaled-residual and pressure metrics.
+
+| suite | calls | roots/call | >1 root | parity fails | uncertain flags | dense scans: missed / spurious | CoolProp root in our set |
+|---|---|---|---|---|---|---|---|
+| asym | 2×10⁸ | 2.39 | 45 % | 0 | 33 | 0 / 0 (2000) | 1736 / 1736 |
+| binaries | 2×10⁸ | 2.37 | 45 % | 0 | 393 | 0 / 0 (2000) | 1691 / 1691 |
+| humidair | 2×10⁸ | 1.00 | 0.1 % | 0 | 0 | 0 / 0 (2000) | 1977 / 1977 |
+| multi | 2×10⁸ | 2.17 | 37 % | 0 | 8 | 0 / 0 (2000) | 1730 / 1730 |
+| natgas | 2×10⁸ | 1.53 | 16 % | 0 | 0 | 0 / 0 (2000) | 1904 / 1904 |
+
+- **Uncertain flags:** 434 in 10⁹ calls (1 in 2.3 million).
+- **Polish and brackets:** 0 invalid brackets; 1.60 Newton steps per root; maximum scaled residual 4.1e-12.
+- **CoolProp:** `solver_rho_Tp` converged in range in 9 038 of 10 000 tries, and its root was
+  always in our set.
+
+**Spinodal stress test** (50 000 (T, x) samples, about 72 000 cases per ε):
+
+| ε | missed | spurious | uncertain | missed & unflagged |
+|---|---|---|---|---|
+| ≥1e-5 | 0 | 0 | ≤368 | 0 |
+| 1e-6 | 3 | 1 | 1112 | 0 |
+| 1e-7 | 251 | 2 | 2286 | 0 |
+| 1e-8 | 1130 | 3 | 3998 | 0 |
+| 1e-9 | 2638 | 5 | 6650 | 0 |
+| 1e-10 | 4307 | 9 | 11028 | 0 |
+
+There are still 0 unflagged misses across 647 000 cases. **New at this scale: 20 spurious cases**
+(more roots in the window than the 4000-point scan finds), all at ε ≤ 1e-6. The log hit its
+line cap before recording them, so whether they are flagged uncertain is not yet established.
+That is an open item: rerun the spinodal test alone with SPIN logging.
+
+## Experiment 8: speed vs CoolProp and REFPROP (`bench_vs.cpp`)
+
+2000 states per mixture, single thread, the same states for all three. T is uniform in the given
+range and p is log-uniform in 10 kPa – 30 MPa. **Load average about 73 during this run**, so
+ratios mean more than absolute µs. The same code measured 11 µs per call for reference-EOS humid
+air in a quieter run, against 57 µs here.
+
+| mixture | model | ours: all roots, polished | CoolProp `solver_rho_Tp` (1 root) | REFPROP 2× `TPRHO` |
+|---|---|---|---|---|
+| Amarillo (10) | GERG-2008 | 9.3 µs | 154 µs (8 % throw) | — |
+| Amarillo (10) | reference | 88 µs | 231 µs (8 % throw) | 809 µs |
+| humid air | GERG-2008 | 4.5 µs | 8.7 µs | — |
+| humid air | reference | 57 µs | 69 µs | 148 µs |
+| C1/C2 | reference | 32 µs | 27 µs (19 % throw) | 115 µs |
+| C1/C2/C3 | reference | 74 µs | 40 µs (19 % throw) | 163 µs |
+| C1/H₂S | reference | 30 µs | 4.5 µs (19 % throw) | 79 µs |
+| C1/C2 | GERG-2008 | 32 µs | 13 µs (19 % throw) | — |
+
+- **Agreement with CoolProp:** every density CoolProp returned is one of our roots.
+- **Agreement with REFPROP:** its densities match ours to about 3e-6 (median). That is its
+  per-fluid gas constants against CoolProp's CODATA value. For Amarillo, 693 of its roots
+  differ by up to 3.5e-3 because of different binary parameters. REFPROP's `TPRHO` also returned
+  an error on 5–6 % of calls.
+- **Where we win:** multicomponent mixtures. Our cost scales with the number of *distinct*
+  δ-functions, CoolProp's with Newton iterations times the full model.
+- **Where we lose:** binaries. There we pay for polishing every root (about 1.9 per state) and a
+  fixed per-(T, x) overhead of one `exp` per term. Tables built down to 0.3 T_c add pieces a
+  practical T range does not need.
