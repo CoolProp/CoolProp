@@ -4845,7 +4845,8 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
     shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
 
-    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    // RP, not AS: dynamic_cast of the HEOS state yields nullptr
+    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(RP.get());
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
 
     AS->specify_phase(iphase_gas);

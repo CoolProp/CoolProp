@@ -275,6 +275,7 @@ Performance:
 Bug fixes:
 
 * ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
+* ``REFPROP`` backend: all REFPROP calls are serialized process-wide and each instance reloads its own fluids, so separate instances may be used from separate threads (each instance by one thread at a time).
 
 * **Low-density entropy flashes returned wrong densities.**  ``SmolarT`` resolved
   absolute density on a bracket spanning up to 18 decades, so at ``rho = 1e-8``
