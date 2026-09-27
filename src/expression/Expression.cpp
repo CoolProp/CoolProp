@@ -5,9 +5,13 @@
 #include "CoolProp/detail/strings.h"
 #include <array>
 #include <cctype>
+#include <cerrno>
+#include <charconv>
+#include <clocale>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <system_error>
 #include <functional>
 #include <algorithm>
 #include <map>
@@ -15,6 +19,14 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#if !(defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L) && !defined(_WIN32)
+#    if defined(__APPLE__) || defined(__FreeBSD__)
+#        include <xlocale.h>  // strtod_l, newlocale
+#    else
+#        include <locale.h>  // NOLINT(modernize-deprecated-headers) -- newlocale is POSIX, not in <clocale>
+#    endif
+#endif
 
 namespace CoolProp {
 namespace expression {
@@ -411,6 +423,77 @@ class Parser
 
 // ---------------------------------------------------------------------------
 
+// Length of the decimal literal starting at s[i], or 0 if there is none:
+//     digits [ '.' digits ] [ (e|E) [+|-] digits ]   with >= 1 mantissa digit.
+// An exponent marker not followed by a digit is not consumed ("2e" is the number
+// 2 then the identifier e), matching what strtod did.  Scanning the extent here,
+// rather than letting the converter decide it, keeps the accepted syntax the same
+// on every platform whichever converter parse_decimal_literal() uses.
+std::size_t scan_decimal_literal(const std::string& s, std::size_t i) {
+    const std::size_t n = s.size(), i0 = i;
+    auto is_digit = [&](std::size_t k) { return k < n && std::isdigit(static_cast<unsigned char>(s[k])) != 0; };
+    std::size_t mantissa_digits = 0;
+    while (is_digit(i)) {
+        ++i;
+        ++mantissa_digits;
+    }
+    if (i < n && s[i] == '.') {
+        ++i;
+        while (is_digit(i)) {
+            ++i;
+            ++mantissa_digits;
+        }
+    }
+    if (mantissa_digits == 0) return 0;
+    if (i < n && (s[i] == 'e' || s[i] == 'E')) {
+        std::size_t k = i + 1;
+        if (k < n && (s[k] == '+' || s[k] == '-')) ++k;
+        if (is_digit(k)) {
+            while (is_digit(k))
+                ++k;
+            i = k;
+        }
+    }
+    return i - i0;
+}
+
+// Convert a literal already delimited by scan_decimal_literal().  Independent of
+// the process's C locale: a host that calls setlocale(LC_NUMERIC, "de_DE") would
+// otherwise make strtod stop at the '.', and fluid files would fail to load.
+double parse_decimal_literal(const char* first, const char* last, std::size_t column) {
+    double v = 0.0;
+    bool out_of_range = false;
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
+    const std::from_chars_result r = std::from_chars(first, last, v, std::chars_format::general);
+    out_of_range = (r.ec == std::errc::result_out_of_range);
+    const bool ok = (r.ec == std::errc() || out_of_range) && r.ptr == last;
+#else
+    // libc++ (macOS) ships no floating-point from_chars flag; use strtod with an
+    // explicit "C" locale.  The copy gives strtod its NUL terminator at `last`.
+#    if defined(_WIN32)
+    static const _locale_t c_locale = _create_locale(LC_NUMERIC, "C");
+#    else
+    static const locale_t c_locale = newlocale(LC_NUMERIC_MASK, "C", static_cast<locale_t>(nullptr));
+#    endif
+    if (c_locale == nullptr) throw ValueError("unable to create the \"C\" locale for parsing numbers");
+    const std::string lexeme(first, last);
+    char* end = nullptr;
+    errno = 0;
+#    if defined(_WIN32)
+    v = _strtod_l(lexeme.c_str(), &end, c_locale);
+#    else
+    v = strtod_l(lexeme.c_str(), &end, c_locale);
+#    endif
+    out_of_range = (errno == ERANGE);
+    const bool ok = (end == lexeme.c_str() + lexeme.size());
+#endif
+    if (!ok) throw ValueError(format("malformed number at col %d", static_cast<int>(column)));
+    if (out_of_range) {
+        throw ValueError(format("number '%s' at col %d is out of range for a double", std::string(first, last).c_str(), static_cast<int>(column)));
+    }
+    return v;
+}
+
 std::vector<Token> lex(const std::string& s) {
     std::vector<Token> out;
     std::size_t i = 0, n = s.size();
@@ -427,13 +510,11 @@ std::vector<Token> lex(const std::string& s) {
             continue;
         }
         if (std::isdigit(static_cast<unsigned char>(c)) != 0 || c == '.') {
-            const char* start = s.c_str() + i;
-            char* end = nullptr;
-            double v = std::strtod(start, &end);
-            if (end == start) throw ValueError(format("malformed number at col %d", (int)col(i)));
-            Token tk{TokenType::Number, v, "", col(i)};
-            i += static_cast<std::size_t>(end - start);
-            out.push_back(tk);
+            const std::size_t len = scan_decimal_literal(s, i);
+            if (len == 0) throw ValueError(format("malformed number at col %d", (int)col(i)));
+            const double v = parse_decimal_literal(s.data() + i, s.data() + i + len, col(i));
+            out.push_back({TokenType::Number, v, "", col(i)});
+            i += len;
             continue;
         }
         if (std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_') {
