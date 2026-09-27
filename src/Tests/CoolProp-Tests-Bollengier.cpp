@@ -14,6 +14,7 @@
 #    include <catch2/catch_all.hpp>
 
 #    include <cmath>
+#    include <limits>
 #    include <memory>
 #    include <vector>
 
