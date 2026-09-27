@@ -484,7 +484,9 @@ double parse_decimal_literal(const char* first, const char* last, std::size_t co
 #    else
     v = strtod_l(lexeme.c_str(), &end, c_locale);
 #    endif
-    out_of_range = (errno == ERANGE);
+    // strtod also sets ERANGE for a subnormal result; from_chars does not, and a
+    // subnormal is a representable double, so only a 0 or +-inf result counts.
+    out_of_range = (errno == ERANGE) && (v == 0.0 || std::isinf(v));
     const bool ok = (end == lexeme.c_str() + lexeme.size());
 #endif
     if (!ok) throw ValueError(format("malformed number at col %d", static_cast<int>(column)));
