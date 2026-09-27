@@ -1,0 +1,19 @@
+--- a/src/Backends/Helmholtz/VLERoutines.cpp	2026-09-27 15:53:37
++++ b/src/Backends/Helmholtz/VLERoutines.cpp	2026-09-27 15:53:38
+@@ -2261,7 +2261,15 @@
+         // the same trivial minimum.  Previously the minimizer ran regardless: ~3 Newton
+         // iterations (each an N x N Hessian of composition derivatives) and ~5 trial-density
+         // solves per trial, most of the cost of a PT flash.
+-        if (ss_stable) continue;
++        if (ss_stable) {
++            if (std::getenv("SSSKIP_AUDIT")) {  // AUDIT (not for merge): what would the old path have concluded?
++                std::vector<CoolPropDbl> Yc = Y;
++                bool u = false;
++                const bool ok = minimize_tpd(Yc, ln_f_z, the_T, the_p, u);
++                std::fprintf(stderr, "AUDIT %s trial=%zu T=%.10g p=%.10g\n", !ok ? "NONCONCLUSIVE" : (u ? "UNSTABLE" : "stable"), t, (double)the_T, (double)the_p);
++            }
++            if (!std::getenv("SSSKIP_OFF")) continue;  // AUDIT: SSSKIP_OFF reproduces pre-#3427 behaviour
++        }
+         bool trial_unstable = false;
+         bool trial_ok = minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable);
+         if (!trial_ok) any_uncertain = true;  // could not conclude this trial -> not a clean "stable"
