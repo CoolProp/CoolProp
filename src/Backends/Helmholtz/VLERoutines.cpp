@@ -2918,6 +2918,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 // (see solve_trial_rho_warm): inf - inf.  An infinite lnK alone is survivable (Rachford-Rice
                 // clamps it); a NaN one would make the K-factors, and every composition after them, NaN.
                 if (std::isnan(lnK_new)) {
+                    // Report it as non-convergence: PT_flash_mixtures then falls back to the single-phase
+                    // solve (as it did when the NaN used to run on into the convergence gate) instead of
+                    // failing the flash -- this is almost always a stability false positive.
+                    IO.nonconvergence = true;
                     throw SolutionError(format("PT flash: non-finite K-factor during successive substitution at T = %g K, p = %g Pa",
                                                static_cast<double>(IO.T), static_cast<double>(IO.p)));
                 }
