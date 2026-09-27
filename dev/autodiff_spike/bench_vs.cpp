@@ -150,6 +150,23 @@ int main(int argc, char** argv) {
               sink = sink + sv.roots(S, ps[i], r);
           },
           NS);
+        const double t_nopol = time_us(
+          [&](int i) {
+              sv.assemble(Ts[i], mx.x, S);
+              Solver::Root r[MAXROOTS];
+              sink = sink + sv.roots(S, ps[i], r, Solver::Polish::None);
+          },
+          NS);
+        const double t_pol1 = time_us(
+          [&](int i) {  // all roots from the tables, then polish one (here: the first) as a selected root would be
+              sv.assemble(Ts[i], mx.x, S);
+              Solver::Root r[MAXROOTS];
+              const int n = sv.roots(S, ps[i], r, Solver::Polish::None);
+              if (n > 0) sv.polish(S, ps[i], r[0]);
+              sink = sink + n;
+          },
+          NS);
+        std::printf("   ours: all roots, no polish %.2f us; + polish one root %.2f us\n", t_nopol, t_pol1);
         auto in_set = [&](int i, double rho, double tol) {
             for (double v : roots[i])
                 if (std::abs(v - rho) <= tol * rho) return true;

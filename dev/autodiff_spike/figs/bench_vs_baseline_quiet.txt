@@ -1,0 +1,11 @@
+5000 states per mixture: T uniform in [Tlo, Thi], p log-uniform in [10 kPa, 30 MPa]; single thread; times are per state
+
+mixture                model     roots  pieces |   ours_us        |     CP_us   fail    CP_in |  RP_us(2x)    fail    RP_in  RP_notin
+C1/C2 50/50            HEOS       1.98      10 |     10.41        |      5.60    982     4018 |      21.98     597     9403         0
+C1/C2/C3 50/30/20      HEOS       1.91      10 |     11.80        |      8.35    956     4044 |      32.47     581     9419         0
+Amarillo (10)          HEOS       1.34      11 |     13.39        |     36.03    422     4358 |     127.16     276     8016      1708
+C1/H2S 50/50           HEOS       1.79       8 |      7.29        |      3.48    937     4063 |      17.44     564     9436         0
+humid air, x_w=0.02    HEOS       1.00       3 |      8.03        |     13.79      0     5000 |      25.27       0    10000         0
+C1/C2 50/50            GERG2008   1.93      13 |      6.19        |      4.68    982     4018 |        nan       0        0         0
+Amarillo (10)          GERG2008   1.38       9 |      6.69        |     30.04    422     4578 |        nan       0        0         0
+humid air, x_w=0.02    GERG2008   1.00       3 |      3.49        |      8.69      0     5000 |        nan       0        0         0

@@ -584,14 +584,22 @@ struct Solver
 
     struct Root
     {
-        double rho;       // polished
+        double rho;       // polished if polished == true, else the table root
         double rho_cheb;  // from the tables
-        double resid;     // |G_true(root)| / scale
+        double resid;     // backward error in delta after polish (0 if not polished)
         bool certified;   // bracket certified by the subdivision
         bool bracket_ok;  // polish stayed inside a sign-checked bracket
+        bool polished;
+        double Da, Db, sa;  // bracket in delta and the table sign at Da, kept for a later polish()
     };
-    // Tier 3: per p.  Returns the number of roots in (0, delta_max].
-    int roots(const State& S, double p, Root* out, bool polish = true) const {
+    enum class Polish
+    {
+        None,
+        All
+    };
+    // Tier 3: per p.  Returns the number of roots in (0, delta_max].  With Polish::None the roots are
+    // the table roots (accuracy ~ table tolerance); polish(S, p, root) refines a chosen one later.
+    int roots(const State& S, double p, Root* out, Polish mode = Polish::All) const {
         const double t = p * S.t_scale;
         ++g_calls;
         int n = 0;
@@ -607,16 +615,25 @@ struct Solver
             for (int k = 0; k < nr; ++k) {
                 const double D = lo + w * (ro[k].u + 1) / 2;
                 if (n > 0 && std::abs(D * S.rhor - out[n - 1].rho_cheb) < 1e-10 * out[n - 1].rho_cheb) continue;
-                Root r{D * S.rhor, D * S.rhor, 0, ro[k].certified, false};
-                if (polish) {
-                    const double Da = lo + w * (ro[k].ua + 1) / 2, Db = lo + w * (ro[k].ub + 1) / 2;
-                    const double sa = clenshaw_n(g, ro[k].ua);  // sign of G at Da (certified if ro.certified)
-                    r.rho = S.rhor * polish_root(S, t, D, Da, Db, sa, r.resid, r.bracket_ok);
-                }
-                out[n++] = r;
+                Root r{D * S.rhor,
+                       D * S.rhor,
+                       0,
+                       ro[k].certified,
+                       false,
+                       false,
+                       lo + w * (ro[k].ua + 1) / 2,
+                       lo + w * (ro[k].ub + 1) / 2,
+                       clenshaw_n(g, ro[k].ua)};
+                if (mode == Polish::All) polish(S, p, r);
+                if (n < MAXROOTS) out[n++] = r;
             }
         }
         return n;
+    }
+    void polish(const State& S, double p, Root& r) const {
+        if (r.polished) return;
+        r.rho = S.rhor * polish_root(S, p * S.t_scale, r.rho_cheb / S.rhor, r.Da, r.Db, r.sa, r.resid, r.bracket_ok);
+        r.polished = true;
     }
     // Bracketed Newton on the true equation: the bracket shrinks with every true-G sign, a step
     // leaving it becomes a bisection.  bracket_ok = the true G has the expected sign at Da.
