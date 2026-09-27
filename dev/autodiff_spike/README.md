@@ -499,3 +499,116 @@ pressure. Near a spinodal the Newton basin shrinks (radius ~ |G′/G″|), so a 
 converge onto the partner root. The 1e-3 guard does not catch that. The fix is a polish that is
 bracketed: the subdivision's bracket ends have certified signs for the *true* G wherever
 |G_cheb| > ε there.
+
+---
+
+# Experiment 7: large-scale validation (`gerg_validate.cpp`, `gerg_cheb_solver.hpp`)
+
+The solver now lives in a header, `gerg_cheb_solver.hpp`. `gerg_cheb.cpp` keeps its own copy of
+the earlier Experiment 6 code as a record. Changes from Experiment 6:
+
+- **Certificate tied to the true equation.** Each piece's margin is 2·Σ_g |W_g|·E_g,p plus
+  roundoff, where E_g,p is the fit error *measured* at build time on 64 points. The Chebyshev tail
+  estimate alone underestimated it.
+- **Bracketed polish.** Newton runs on the true equation inside the subdivision bracket. The
+  bracket ends' signs are checked against the true G.
+- **Uncertain flag.** A subinterval that is still ambiguous at depth 16, or still has ≥2 sign
+  changes at depth 48, is reported as uncertain instead of being dropped silently.
+
+```bash
+c++ -std=c++20 -O3 -DNDEBUG -mcpu=native -DNQ_DEG=16 <CoolProp CXX_INCLUDES> -I. gerg_validate.cpp \
+    -Wl,-force_load,build_rel/libCoolProp.a -o gerg_validate
+./gerg_validate calls=1e9 threads=8 scan_every=100000 cp_every=100000 spin=50000 log=mismatch.log
+```
+
+## Suites
+
+The suites are sampled equally. T is log-uniform in [max(60 K, 0.3·T_c,max), 700 K] and p is
+log-uniform in [100 Pa, 100 MPa].
+
+| suite | component sets | composition |
+|---|---|---|
+| binaries | all 210 GERG-2008 pairs | 60 % uniform, 40 % log-uniform within 1e-6 of either pure end |
+| multi | 60 random 3–10-component subsets + all 21 | uniform on the simplex, or sparse Dirichlet(0.2) |
+| natgas | Amarillo, Ekofisk, Gulf Coast, High-CO₂, High-N₂, NaturalGasSample, Air | exact, or log-normally perturbed (σ = 0.5) |
+| asym | C1/H₂S, C1/nC7–nC10, C2/H₂O, CO₂/H₂O, N₂/H₂O, C1/H₂O, H₂/nC10, He/nC10, CO₂/nC10 | as binaries |
+| humidair | N₂, O₂, Ar, CO₂, H₂O | water mole fraction log-uniform in 1e-5 – 0.3 |
+
+## Checks
+
+- **Every call:**
+  - root-count parity. G(0) = −t < 0, so the number of roots in (0, 4] is odd if and only if
+    G_true(4) > 0;
+  - the true-equation residual of every polished root;
+  - polish movement;
+  - bracket validity and uncertain flags.
+- **Dense scan,** subsampled. 21 000 points (log-spaced below δ = 0.01) of the true equation,
+  then bisection. A root of ours that the scan lacks is adjudicated by a local sign test, which
+  separates close pairs inside one scan cell from spurious roots.
+- **CoolProp,** subsampled:
+  - its root from `solver_rho_Tp` must be in our set;
+  - its own `p(ρ, T)` at each of our roots must match.
+
+  Roots where the equation itself is ill-conditioned in double are skipped. That means an
+  estimated relative uncertainty of Z above 1e-8, from ε·Σ|term|·(1 + |ln|weight||).
+- **Spinodal stress test.** Extrema of F = δZ come from the tables and are refined on the true F′.
+  Then p = p_spinodal·(1 ± ε) for ε = 1e-2 … 1e-10. Our root count inside a window of 20× the
+  predicted pair separation is compared with a 4000-point scan of the true equation.
+
+## What the harness found (all fixed)
+
+1. **NaN at δ = 0 in the bracket-sign check.** This affected 36 % of roots, mostly gas roots in
+   the first piece. The fix uses the exact limit, G(0) = −t.
+2. **A converged Newton step was treated as leaving the bracket.** The iterate is itself a
+   bracket end, so it was bisected away. That left residuals near 1e-7 and scan mismatches.
+3. **Pairs not separated at the depth cap were dropped silently.** They were flagged only if a
+   coefficient was ambiguous. These were the "missed & unflagged" spinodal cases.
+4. **Unbounded recursion on ambiguous intervals** after the depth cap was raised, which overflowed
+   the root buffer (found with ASan). Ambiguous intervals now stop at depth 16; unambiguous
+   multi-root intervals go to 48.
+5. **Absolute error budget (not a bug, a design test).** Budgeting the table fit error in
+   absolute units of Z, instead of relative to the local term size, cost 274 MB of tables and
+   367 µs per call. It is not viable, and the relative budget plus the measured fit-error margin
+   is what certifies.
+
+## GERG-2008 itself is ill-conditioned at low reduced temperature
+
+At T ≈ 0.3 T_c (for example 99.9 % ethane at 93.7 K, τ ≈ 3.26), terms with t up to about 30
+carry weights of about 1e14. At intermediate density the terms reach about 1e12 and cancel down
+to Z ~ 1e-3. Two double-precision evaluations of the *same* terms, ours and CoolProp's, then
+differ by O(1) in Z; they agree to 8e-16 at 300 K and 2.7e-7 at 150 K. Roots in that band are
+roundoff artifacts for *any* solver. The gas and dense-liquid roots in the same states agree with
+CoolProp to about 1e-12. The harness counts such roots separately, as ill-conditioned.
+
+## Results: 2 × 10⁶ calls
+
+Degree 16, 1e-6 tables, 8 threads, load average ≈ 17 from other sessions.
+
+| suite | roots / call | >1 root | parity fails | uncertain | dense scans: missed / spurious | CoolProp root in our set | CoolProp p at our roots | µs / call |
+|---|---|---|---|---|---|---|---|---|
+| asym | 2.39 | 45 % | 0 | 0 | 0 / 0 (200) | 680 / 680 | ≤1.7e-7 | 24 |
+| binaries | 2.37 | 45 % | 0 | 2 | 0 / 0 (200) | 642 / 642 | ≤5.2e-7 | 19 |
+| humidair | 1.00 | 0.1 % | 0 | 0 | 0 / 0 (200) | 795 / 795 | ≤1.4e-15 | 20 |
+| multi | 2.17 | 37 % | 0 | 0 | 0 / 0 (200) | 687 / 687 | ≤3.8e-7 | 25 |
+| natgas | 1.52 | 16 % | 0 | 0 | 0 / 0 (200) | 762 / 762 | ≤1.6e-7 | 29 |
+
+Across all suites:
+- **Throughput:** 199 000 calls/s on 8 threads.
+- **Polish:** 1.60 Newton steps per root, maximum residual 1.2e-12.
+- **CoolProp pressure:** compared at 7 545 roots; 253 more were skipped as ill-conditioned. The
+  remaining ≤5e-7 differences are compressibility amplification: ρ(∂p/∂ρ)/p ≫ 1 in stiff liquids.
+
+## Spinodal stress test (3000 (T, x) samples, about 4400 cases per ε)
+
+| ε | 1e-6 tables: missed | uncertain flags | missed & unflagged | 1e-9 tables: missed | 1e-12 tables: missed |
+|---|---|---|---|---|---|
+| 1e-2 … 1e-6 | 0 | ≤66 | 0 | 0 | 0 |
+| 1e-7 | 15 | 142 | 0 | 2 | 0 |
+| 1e-8 | 70 | 232 | 0 | 18 | 0 |
+| 1e-9 | 165 | 388 | 0 | 63 | 7 |
+| 1e-10 | 245 | 629 | 0 | 133 | 35 |
+
+No spurious roots appeared at any ε. The table tolerance sets where near-tangent pairs become
+unresolvable (about ε ~ 0.1·tol), and **every such miss is flagged**: there are 0 unflagged
+misses at every tolerance. With 1e-12 tables at ε = 1e-10, 2 cases were excluded because the
+equation itself cannot resolve that ε in double.
