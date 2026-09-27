@@ -1,0 +1,13 @@
+2000 states per mixture: T uniform in [Tlo, Thi], p log-uniform in [10 kPa, 30 MPa]; single thread.
+Times: mean (median) per state in us; states classified by TPFLSH's verdict.
+
+C1/C2 50/50          single-phase | n  1801 | CoolProp PT flash   2329.2 ( 1600.1) us, fails   0.0 %, same bulk density  99.3 % | TPFLSH    279.2 (   55.8) us
+C1/C2 50/50          two-phase    | n   199 | CoolProp PT flash   1861.8 (  782.0) us, fails   0.0 %, same bulk density  95.0 % | TPFLSH    621.8 (  136.5) us
+C1/C2/C3 50/30/20    single-phase | n  1658 | CoolProp PT flash   4939.4 ( 2856.6) us, fails   0.0 %, same bulk density  98.7 % | TPFLSH    510.2 (   96.5) us
+C1/C2/C3 50/30/20    two-phase    | n   342 | CoolProp PT flash   2775.2 ( 1266.1) us, fails   0.0 %, same bulk density  98.8 % | TPFLSH    466.6 (  232.3) us
+Amarillo (10)        single-phase | n  1605 | CoolProp PT flash  22075.2 (12965.8) us, fails   0.0 %, same bulk density  99.3 % | TPFLSH   2030.6 (  943.8) us
+Amarillo (10)        two-phase    | n   394 | CoolProp PT flash  27471.7 (21179.7) us, fails   0.3 %, same bulk density  98.5 % | TPFLSH   8207.0 ( 2821.0) us
+C1/H2S 50/50         single-phase | n  1602 | CoolProp PT flash   1491.6 ( 1081.3) us, fails   0.0 %, same bulk density  98.9 % | TPFLSH    196.1 (   50.8) us
+C1/H2S 50/50         two-phase    | n   364 | CoolProp PT flash   3417.9 ( 1472.4) us, fails   0.0 %, same bulk density  91.8 % | TPFLSH   5055.6 ( 2417.0) us
+humid air x_w=0.02   single-phase | n  1496 | CoolProp PT flash   2134.2 ( 1932.2) us, fails   3.8 %, same bulk density  83.3 % | TPFLSH   1340.3 (  217.5) us
+humid air x_w=0.02   two-phase    | n   504 | CoolProp PT flash   1889.5 ( 1754.6) us, fails   1.0 %, same bulk density  44.6 % | TPFLSH   8082.2 ( 1397.9) us

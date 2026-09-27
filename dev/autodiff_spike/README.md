@@ -860,3 +860,47 @@ are exactly what that test needs.
 
 **Two-phase states.** REFPROP performs the full flash; we return a homogeneous root. The times are
 shown only for completeness and are not a comparison.
+
+---
+
+# Experiment 13: the like-for-like pair is CoolProp's PT flash vs REFPROP `TPFLSH` (`bench_tpflash.cpp`)
+
+Both run GERG-2008 (REFPROP with `FLAGS("GERG", 1)`) on 2000 states per mixture, classified by
+TPFLSH's verdict. Times are median µs per state.
+
+| mixture | phase | CoolProp PT flash (`update(PT_INPUTS)`) | TPFLSH | same bulk density |
+|---|---|---|---|---|
+| C1/C2 | single | 1600 | 56 | 99.3 % |
+| C1/C2 | two | 782 | 137 | 95.0 % |
+| C1/C2/C3 | single | 2857 | 97 | 98.7 % |
+| Amarillo (10) | single | 12966 | 944 | 99.3 % |
+| Amarillo (10) | two | 21180 | 2821 | 98.5 % |
+| C1/H₂S | single | 1081 | 51 | 98.9 % |
+| humid air | single | 1932 | 218 | 83.3 % (CoolProp fails 3.8 %) |
+| humid air | two | 1755 | 1398 | 44.6 % |
+
+Today CoolProp's TP flash is about 10–30× slower than TPFLSH on single-phase states. It disagrees
+on 1–17 %, and on 55 % of two-phase humid air. Which side is right in those cases is not established
+here.
+
+## Where CoolProp's flash time goes
+
+Profiled with macOS `sample`: inclusive samples of the outermost density-solving calls
+(`solve_trial_rho_warm` / `solver_rho_Tp_global`, `solver_rho_Tp`), with nothing counted twice.
+
+| mixture | density solving | trial-phase densities in the TPD stability test | `solver_rho_Tp` |
+|---|---|---|---|
+| C1/C2 | **94.6 %** | 50.2 % | 44.4 % |
+| Amarillo (10) | **61.4 %** | 27.3 % | 33.0 % |
+
+The trial-phase solves go through `solver_rho_Tp_global`: **126 µs per call (C1/C2) and 765 µs
+(Amarillo)**. The Chebyshev solver finds all roots at the same (T, p, x) in 3–5 µs, which is 25–170×
+faster per call.
+
+## Amdahl estimate (not measured)
+
+- **C1/C2:** 1 / (0.054 + 0.946/30) ≈ 11×. The median flash would go from 1.6 ms to about 0.15 ms,
+  within 3× of TPFLSH.
+- **Amarillo:** the other 39 % dominates (fugacity and composition derivatives, the TPD minimizer
+  over 10 components). That gives about 2.5×, from 13 ms to about 5 ms, still 5× slower than
+  TPFLSH. Beating TPFLSH there also needs the non-density part of the flash to get faster.
