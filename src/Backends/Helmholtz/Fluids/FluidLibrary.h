@@ -852,6 +852,9 @@ class JSONFluidLibrary
             } else if (!target.compare("HeavyWater")) {
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER;
                 return;
+            } else if (!target.compare("HeavyWater-IAPWS-2020")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER_IAPWS2020;
+                return;
             } else if (!target.compare("Helium")) {
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM;
                 return;
@@ -1068,6 +1071,9 @@ class JSONFluidLibrary
                 return;
             } else if (!target.compare("HeavyWater")) {
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER;
+                return;
+            } else if (!target.compare("HeavyWater-IAPWS-2021")) {
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER_IAPWS2021;
                 return;
             } else if (!target.compare("Methane")) {
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE;
