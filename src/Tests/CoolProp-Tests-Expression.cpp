@@ -110,21 +110,24 @@ TEST_CASE("DSL scientific-notation evaluates; pow two-arg; trig", "[expression]"
 // when the host has no such locale installed; callers SKIP in that case.
 class NumericLocaleGuard
 {
+    static std::string current() {
+        const char* cur = std::setlocale(LC_NUMERIC, nullptr);
+        return (cur != nullptr) ? cur : "C";
+    }
+    // Declaration order matters: saved_ is captured before active_ switches.
     std::string saved_;
-    bool active_ = false;
+    bool active_;
 
    public:
-    explicit NumericLocaleGuard(const char* name) {
-        const char* cur = std::setlocale(LC_NUMERIC, nullptr);
-        saved_ = (cur != nullptr) ? cur : "C";
-        active_ = std::setlocale(LC_NUMERIC, name) != nullptr;
-    }
+    explicit NumericLocaleGuard(const char* name) : saved_(current()), active_(std::setlocale(LC_NUMERIC, name) != nullptr) {}
     ~NumericLocaleGuard() {
-        std::setlocale(LC_NUMERIC, saved_.c_str());
+        (void)std::setlocale(LC_NUMERIC, saved_.c_str());
     }
     NumericLocaleGuard(const NumericLocaleGuard&) = delete;
     NumericLocaleGuard& operator=(const NumericLocaleGuard&) = delete;
-    bool active() const {
+    NumericLocaleGuard(NumericLocaleGuard&&) = delete;
+    NumericLocaleGuard& operator=(NumericLocaleGuard&&) = delete;
+    [[nodiscard]] bool active() const {
         return active_;
     }
 };
