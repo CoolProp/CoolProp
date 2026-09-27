@@ -904,3 +904,59 @@ faster per call.
 - **Amarillo:** the other 39 % dominates (fugacity and composition derivatives, the TPD minimizer
   over 10 components). That gives about 2.5×, from 13 ms to about 5 ms, still 5× slower than
   TPFLSH. Beating TPFLSH there also needs the non-density part of the flash to get faster.
+
+---
+
+# Experiment 14: the Chebyshev solver inside CoolProp's PT flash (branch `claude/cheb-density-ptflash`)
+
+The kernel is enabled with **`COOLPROP_CHEB_DENSITY=1`**. When the variable is unset, behavior is
+unchanged.
+
+- **`HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(T, p)`.** It runs all roots, `select()`, then
+  polishes the selected root. A `gergcheb::Solver` is built lazily once per (backend, component set)
+  and shared between instances, including the flash's `SatL`/`SatV`. It returns −1, so the existing
+  solver takes over, when:
+  - the model has unsupported residual terms;
+  - T is below the tables' range (0.3 T_c,max);
+  - a root may lie beyond δ = 4;
+  - the subdivision raised an "uncertain" flag;
+  - the inputs are non-finite.
+- **Hooks:**
+  - `solver_rho_Tp_global`, which the TPD stability test and `solve_trial_rho_warm` use for
+    trial-phase and feed densities, whose contract is "the stable root";
+  - the single-phase density choice in `PT_flash_mixtures`.
+
+## Two bugs found by the benchmark (fixed)
+
+- **Exponential recursion on (near-)flat pieces.** Each call to `bern_roots` now has a node budget
+  of 2000 per piece; when it runs out, the remaining intervals become flagged depth-cap leaves.
+- **NaN trial compositions.** The Michelsen TPD minimizer passes these into the density solver in
+  some state sequences. NaN makes every Bernstein coefficient "ambiguous", which cost about 2 s per
+  flash. Non-finite inputs are now rejected up front. The NaN compositions are a separate,
+  pre-existing issue in the stability code: the old solver failed fast on them, which hid it.
+
+## Results
+
+CoolProp PT flash vs REFPROP `TPFLSH`, GERG-2008 on both sides, 2000 states per mixture. Times are
+mean (median) µs; raw output is in `figs/bench_tpflash_cheb.txt`.
+
+| mixture | phase | CoolProp, existing | **CoolProp + Chebyshev** | TPFLSH | same density as REFPROP (existing → Chebyshev) |
+|---|---|---|---|---|---|
+| C1/C2 | single | 2355 (1619) | **843 (655)** | 279 (56) | 99.3 → 100 % |
+| C1/C2 | two | 1876 (790) | **438 (432)** | 621 (137) | 95.0 → 95.0 % |
+| C1/C2/C3 | single | 5032 (2908) | **1562 (1318)** | 515 (97) | 98.7 → 100 % |
+| Amarillo (10) | single | 22032 (12961) | **11456 (7481)** | 2014 (922) | 99.3 → 99.6 % |
+| Amarillo (10) | two | 27469 (21179) | **17308 (14561)** | 8161 (2799) | 98.5 → 98.5 % |
+| C1/H₂S | single | 1506 (1094) | **440 (403)** | 195 (51) | 98.9 → 98.9 % |
+| humid air | single | 2100 (1911), 3.8 % fail | **1349 (910)**, 0 % fail | 1324 (216) | 83.3 → 82.9 % |
+| humid air | two | 1868 (1736), 1.0 % fail | **414 (402)**, 0 % fail | 7984 (1384) | **44.6 → 97.6 %** |
+
+- **Speed:** 1.6–4.3× faster, on means and medians alike.
+- **Robustness:** CoolProp's humid-air failures go to 0, and two-phase humid air goes from 45 % to
+  98 % agreement with REFPROP. The stability test gets the right trial-phase roots.
+
+**CoolProp is still about 6–12× slower than TPFLSH at the median on single-phase states.** Density
+solving is no longer where the time goes. A re-profile (C1/C2) puts the Chebyshev solver at about
+10 % and the existing warm-start / SRK solves at about 25 %. The rest is the Michelsen TPD minimizer
+itself: full-derivative EOS evaluations for fugacities, reducing-function composition derivatives,
+and C++ exception unwinding. Closing the remaining gap is flash-algorithm work, not density work.

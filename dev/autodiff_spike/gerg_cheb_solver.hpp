@@ -255,7 +255,9 @@ inline double refine_cheb(const VecG& c, double a, double b, double fa) {
             b = x;
         double xn = x - f / df;
         if (!(xn > a && xn < b)) xn = 0.5 * (a + b);
-        const double tolx = 4 * DBL_EPSILON * std::max(1.0, std::abs(x));
+        // 1e-12 in the piece variable: the tables are only good to ~1e-8 anyway; the true-equation
+        // polish (when requested) takes it the rest of the way
+        const double tolx = 1e-12 * std::max(1.0, std::abs(x));
         if (std::abs(xn - x) <= tolx || b - a <= tolx) return xn;
         x = xn;
     }
@@ -274,6 +276,8 @@ struct RootOut
 constexpr int MAXDEPTH_AMB = 16;  // ambiguous signs (|G| within tolerance): subdividing cannot resolve it; bound the work
 constexpr int MAXDEPTH = 48;      // unambiguous but >= 2 sign changes: a close pair, separate it down to ~ulp
 constexpr int MAXROOTS = 64;
+constexpr long NODE_BUDGET = 2000;  // per piece: bounds the work on (near-)flat pieces
+inline thread_local long g_budget = 0;
 inline void bern_rec(const VecG& b, const VecG& ctop, double ua, double ub, double tol, int depth, RootOut* out, int& nr) {
     ++g_nodes;
     bool amb = false, anypos = false, anyneg = false;
@@ -296,7 +300,7 @@ inline void bern_rec(const VecG& b, const VecG& ctop, double ua, double ub, doub
         out[nr++] = {refine_cheb(ctop, ua, ub, clenshaw_n(ctop, ua)), ua, ub, true};
         return;
     }
-    if ((amb && depth >= MAXDEPTH_AMB) || depth >= MAXDEPTH) {  // unresolved: ambiguous signs, or a pair not yet separated
+    if ((amb && depth >= MAXDEPTH_AMB) || depth >= MAXDEPTH || --g_budget <= 0) {  // unresolved: ambiguous, unseparated, or out of budget
         ++g_uncertain;
         const double fa = clenshaw_n(ctop, ua), fb = clenshaw_n(ctop, ub);
         if ((fa < 0) != (fb < 0) && nr < MAXROOTS) out[nr++] = {refine_cheb(ctop, ua, ub, fa), ua, ub, false};
@@ -328,6 +332,7 @@ inline int bern_roots(const VecG& c, double margin, RootOut* out) {
         err = std::max(err, 2.3e-16 * (NG + 2) * sa);
     }
     int nr = 0;
+    g_budget = NODE_BUDGET;
     bern_rec(b, c, -1, 1, margin + err, 0, out, nr);
     return nr;
 }

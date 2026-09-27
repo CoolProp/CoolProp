@@ -15,6 +15,8 @@
 
 namespace CoolProp {
 
+struct ChebDensityEntry;  // Chebyshev all-roots density solver (dev/autodiff_spike), defined in the .cpp
+
 class FlashRoutines;
 
 class ResidualHelmholtz;
@@ -146,6 +148,15 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     }
     shared_ptr<ReducingFunction> Reducing;
     shared_ptr<ResidualHelmholtz> residual_helmholtz;
+    /// Chebyshev all-roots density solver for this component set (spike: enabled with the environment
+    /// variable COOLPROP_CHEB_DENSITY=1).  Shared between backend instances with the same components;
+    /// null when unavailable (unsupported residual terms).  Resolved lazily.
+    shared_ptr<const ChebDensityEntry> cheb_density;
+    bool cheb_density_resolved = false;
+    /// Stable density root at (T, p) for the current composition from the Chebyshev solver (all roots
+    /// -> spinodal-branch selection -> Newton polish on the EOS), or -1 when it cannot answer here
+    /// (disabled, unsupported model, T below its table range, or a root possibly beyond delta = 4).
+    CoolPropDbl solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p);
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;
     SsatSimpleState ssat_max;

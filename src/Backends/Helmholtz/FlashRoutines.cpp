@@ -117,6 +117,16 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             const CoolPropDbl T_saved = HEOS.T();
             const CoolPropDbl p_saved = HEOS.p();
 
+            {  // Chebyshev all-roots solver (COOLPROP_CHEB_DENSITY=1): stable root directly
+                const CoolPropDbl rc = HEOS.solver_rho_Tp_cheb(T_saved, p_saved);
+                if (rc > 0) {
+                    HEOS.update_DmolarT_direct(rc, T_saved);
+                    HEOS._Q = -1;
+                    HEOS._phase = (rc < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                    return;
+                }
+            }
+
             // Solve SRK cubic for both gas and liquid roots to decide which
             // HEOS branch(es) to solve.  When both roots are valid, solve
             // both HEOS densities and pick the phase with lower Gibbs energy.

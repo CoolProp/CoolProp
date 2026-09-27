@@ -41,6 +41,11 @@
 #include "MixtureParameters.h"
 #include "CoolProp/expression/ExpressionCorrelation.h"
 #include <atomic>
+#include <map>
+#include <mutex>
+#include <numeric>
+#include <random>
+#include "autodiff_spike/gerg_cheb_solver.hpp"
 #include <cstdlib>
 
 // Instrumentation only: counts the number of EOS derivative-cache evaluations
@@ -48,6 +53,24 @@
 static std::atomic<int> deriv_counter{0};
 
 namespace CoolProp {
+
+// ---------------------------------------------------------------- Chebyshev density solver (spike)
+struct ChebDensityEntry
+{
+    gergcheb::Solver sv;
+    double Tmin = 0;  // tables are valid for T >= Tmin
+};
+namespace {
+std::mutex cheb_cache_mtx;
+std::map<std::string, shared_ptr<const ChebDensityEntry>> cheb_cache;  // by backend + component names
+bool cheb_enabled() {
+    static const bool on = [] {
+        const char* v = std::getenv("COOLPROP_CHEB_DENSITY");
+        return v != nullptr && std::atoi(v) > 0;
+    }();
+    return on;
+}
+}  // namespace
 
 class HEOSGenerator : public AbstractStateGenerator
 {
@@ -104,6 +127,8 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     _phase = iphase_unknown;
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
+    cheb_density.reset();
+    cheb_density_resolved = false;
 
     // Drop the cached ECS transport reference fluids: they are tied to the
     // OLD component's reference-fluid name, so a post-construction component
@@ -2899,7 +2924,85 @@ CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     }
     return b;
 }
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
+    if (!cheb_enabled()) return -1;
+    if (!cheb_density_resolved) {
+        cheb_density_resolved = true;
+        std::string key = backend_name();
+        for (const auto& c : components)
+            key += "|" + c.name;
+        std::lock_guard<std::mutex> lk(cheb_cache_mtx);
+        auto it = cheb_cache.find(key);
+        if (it != cheb_cache.end())
+            cheb_density = it->second;
+        else {
+            try {
+                auto e = std::make_shared<ChebDensityEntry>();
+                double Tcmax = 0;
+                for (const auto& c : components)
+                    Tcmax = std::max(Tcmax, static_cast<double>(c.EOS().reduce.T));
+                e->Tmin = std::max(60.0, 0.3 * Tcmax);
+                // bound Tr(x) over compositions: pure corners + random compositions
+                const std::size_t N = components.size();
+                double Trmax = 0;
+                std::vector<CoolPropDbl> xx(N);
+                for (std::size_t i = 0; i < N; ++i) {
+                    std::fill(xx.begin(), xx.end(), 0.0);
+                    xx[i] = 1;
+                    Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                }
+                std::mt19937_64 g(12345);
+                for (int s = 0; s < 500; ++s) {
+                    double sum = 0;
+                    for (auto& v : xx)
+                        sum += (v = std::exponential_distribution<double>(1.0)(g));
+                    for (auto& v : xx)
+                        v /= sum;
+                    Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                }
+                e->sv.build(this, 4.0, 1.02 * Trmax / e->Tmin, 1e-6);
+                cheb_density = e;
+            } catch (...) {
+                cheb_density = nullptr;  // unsupported model: use the existing solvers
+            }
+            cheb_cache[key] = cheb_density;
+        }
+    }
+    if (!cheb_density || !(T >= cheb_density->Tmin) || !(p > 0) || !std::isfinite(p)) return -1;
+    for (const CoolPropDbl v : get_mole_fractions())
+        if (!std::isfinite(v)) return -1;  // e.g. NaN trial compositions from the TPD minimizer: leave them to the existing solver
+    const gergcheb::Solver& sv = cheb_density->sv;
+    thread_local gergcheb::Solver::State S;
+    thread_local std::vector<double> x;
+    const std::vector<CoolPropDbl>& mf = get_mole_fractions();
+    x.assign(mf.begin(), mf.end());
+    sv.assemble(T, x, S);
+    gergcheb::Solver::Root r[gergcheb::MAXROOTS];
+    const long unc0 = gergcheb::g_uncertain;
+    const int n = sv.roots(S, p, r, gergcheb::Solver::Polish::None);
+    if (gergcheb::g_uncertain != unc0) {  // the subdivision could not certify every root: defer to the existing solver
+        if (std::getenv("COOLPROP_CHEB_DEBUG")) {
+            std::fprintf(stderr, "cheb uncertain: T=%.6g p=%.6g x=[", T, p);
+            for (double v : x)
+                std::fprintf(stderr, " %.6g", v);
+            std::fprintf(stderr, " ] sum=%.6g tau=%.4g\n", std::accumulate(x.begin(), x.end(), 0.0), S.tau);
+        }
+        return -1;
+    }
+    double Ge, dGe, sce;
+    sv.true_G(S, sv.delta_max, p * S.t_scale, Ge, dGe, sce);
+    if (!(Ge > 0)) return -1;  // a root may lie beyond delta_max: let the existing solver handle it
+    const int k = sv.select(S, p, r, n);
+    if (k < 0) return -1;
+    sv.polish(S, p, r[k]);
+    return r[k].rho;
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
+    {
+        const CoolPropDbl rc = solver_rho_Tp_cheb(T, p);
+        if (rc > 0) return rc;
+    }
     // Find the densities along the isotherm where dpdrho|T = 0 (if you can)
     CoolPropDbl light = -1, heavy = -1;
     StationaryPointReturnFlag retval = solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);

@@ -1,0 +1,22 @@
+=== COOLPROP_CHEB_DENSITY=0
+C1/C2 50/50          single-phase | n  1801 | CoolProp PT flash   2354.8 ( 1619.0) us, fails   0.0 %, same bulk density  99.3 % | TPFLSH    278.7 (   55.5) us
+C1/C2 50/50          two-phase    | n   199 | CoolProp PT flash   1875.9 (  790.2) us, fails   0.0 %, same bulk density  95.0 % | TPFLSH    621.3 (  136.6) us
+C1/C2/C3 50/30/20    single-phase | n  1658 | CoolProp PT flash   5031.8 ( 2908.1) us, fails   0.0 %, same bulk density  98.7 % | TPFLSH    514.8 (   96.8) us
+C1/C2/C3 50/30/20    two-phase    | n   342 | CoolProp PT flash   2820.5 ( 1297.7) us, fails   0.0 %, same bulk density  98.8 % | TPFLSH    469.5 (  233.9) us
+Amarillo (10)        single-phase | n  1605 | CoolProp PT flash  22031.8 (12961.2) us, fails   0.0 %, same bulk density  99.3 % | TPFLSH   2013.6 (  921.8) us
+Amarillo (10)        two-phase    | n   394 | CoolProp PT flash  27468.7 (21179.3) us, fails   0.3 %, same bulk density  98.5 % | TPFLSH   8161.1 ( 2798.6) us
+C1/H2S 50/50         single-phase | n  1602 | CoolProp PT flash   1505.9 ( 1094.2) us, fails   0.0 %, same bulk density  98.9 % | TPFLSH    195.3 (   50.5) us
+C1/H2S 50/50         two-phase    | n   364 | CoolProp PT flash   3429.8 ( 1484.0) us, fails   0.0 %, same bulk density  91.8 % | TPFLSH   5037.4 ( 2421.4) us
+humid air x_w=0.02   single-phase | n  1496 | CoolProp PT flash   2100.1 ( 1911.4) us, fails   3.8 %, same bulk density  83.3 % | TPFLSH   1324.3 (  215.8) us
+humid air x_w=0.02   two-phase    | n   504 | CoolProp PT flash   1868.0 ( 1735.9) us, fails   1.0 %, same bulk density  44.6 % | TPFLSH   7984.1 ( 1384.2) us
+=== COOLPROP_CHEB_DENSITY=1
+C1/C2 50/50          single-phase | n  1801 | CoolProp PT flash    843.2 (  655.1) us, fails   0.0 %, same bulk density 100.0 % | TPFLSH    282.7 (   56.5) us
+C1/C2 50/50          two-phase    | n   199 | CoolProp PT flash    437.9 (  432.3) us, fails   0.0 %, same bulk density  95.0 % | TPFLSH    629.1 (  138.4) us
+C1/C2/C3 50/30/20    single-phase | n  1658 | CoolProp PT flash   1561.8 ( 1318.4) us, fails   0.0 %, same bulk density 100.0 % | TPFLSH    514.1 (   96.9) us
+C1/C2/C3 50/30/20    two-phase    | n   342 | CoolProp PT flash    657.0 (  500.2) us, fails   0.0 %, same bulk density  98.8 % | TPFLSH    468.7 (  233.3) us
+Amarillo (10)        single-phase | n  1605 | CoolProp PT flash  11456.2 ( 7481.2) us, fails   0.0 %, same bulk density  99.6 % | TPFLSH   2010.2 (  916.6) us
+Amarillo (10)        two-phase    | n   394 | CoolProp PT flash  17308.1 (14560.6) us, fails   0.3 %, same bulk density  98.5 % | TPFLSH   8161.1 ( 2806.5) us
+C1/H2S 50/50         single-phase | n  1602 | CoolProp PT flash    439.7 (  403.4) us, fails   0.0 %, same bulk density  98.9 % | TPFLSH    195.4 (   50.5) us
+C1/H2S 50/50         two-phase    | n   364 | CoolProp PT flash    627.3 (  385.5) us, fails   0.0 %, same bulk density  91.8 % | TPFLSH   5037.8 ( 2415.8) us
+humid air x_w=0.02   single-phase | n  1496 | CoolProp PT flash   1349.0 (  910.4) us, fails   0.0 %, same bulk density  82.9 % | TPFLSH   1323.9 (  215.3) us
+humid air x_w=0.02   two-phase    | n   504 | CoolProp PT flash    414.3 (  401.8) us, fails   0.0 %, same bulk density  97.6 % | TPFLSH   7982.3 ( 1379.9) us
