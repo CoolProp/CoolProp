@@ -39,7 +39,7 @@ using VecQ = std::array<double, NQ + 1>;
 using VecG = std::array<double, NG + 1>;
 
 // instrumentation (per thread)
-inline thread_local long g_na_active = 0;
+inline thread_local long g_na_active = 0, g_dropped = 0;
 inline thread_local long g_nodes = 0, g_calls = 0, g_pieces_open = 0, g_ref_its = 0, g_ref_calls = 0, g_uncertain = 0, g_pol_its = 0, g_pol_calls = 0,
                          g_pol_uncert = 0;
 
@@ -50,6 +50,7 @@ struct Term
     double n, d, t;
     bool has_cl, has_om, has_e1, has_e2, has_b1, has_b2;
     double c, l, om, m, e1, eps1, e2, eps2, b1, g1, b2, g2;
+    int di = -1, li = -1;  // d and l as small non-negative integers (powers from a table), else -1
     // chi = delta d/d(delta) [delta^d e^{u(delta)}] = delta^d e^u (d + delta u')
     double chi(double D) const {
         double f, df;
@@ -77,6 +78,33 @@ struct Term
         const double base = std::pow(D, d) * std::exp(u), a = d + D * du;
         f = base * a;
         df = base / D * (a * a + D * du + D * D * d2u);
+    }
+    // chi and chi' with delta^k taken from pw[k] = delta^k (k <= 24) when the exponents are integers
+    void chi_d_pw(double D, const double* pw, double& f, double& df) const {
+        if (di < 0 || (has_cl && li < 0)) {
+            chi_d(D, f, df);
+            return;
+        }
+        double u = 0, du = 0, d2u = 0;
+        const double iD = 1 / D;
+        if (has_cl) {
+            const double dl = pw[li];
+            u -= c * dl;
+            du -= c * l * dl * iD;
+            d2u -= c * l * (l - 1) * dl * iD * iD;
+        }
+        if (has_e1) {
+            u -= e1 * (D - eps1);
+            du -= e1;
+        }
+        if (has_e2) {
+            u -= e2 * (D - eps2) * (D - eps2);
+            du -= 2 * e2 * (D - eps2);
+            d2u -= 2 * e2;
+        }
+        const double base = pw[di] * std::exp(u), a = d + D * du;
+        f = base * a;
+        df = base * iD * (a * a + D * du + D * D * d2u);
     }
     // n tau^t exp(u_tau)
     double kappa(double tau, double ltau) const {
@@ -120,6 +148,8 @@ inline void collect(const CoolProp::ResidualHelmholtzGeneralizedExponential& g, 
         T.has_b2 = g.beta2_in_u && finite_(el.beta2);
         T.b2 = el.beta2;
         T.g2 = el.gamma2;
+        if (T.d >= 0 && T.d <= 24 && T.d == std::floor(T.d)) T.di = static_cast<int>(T.d);
+        if (T.has_cl && T.l >= 0 && T.l <= 24 && T.l == std::floor(T.l)) T.li = static_cast<int>(T.l);
         out.push_back(T);
     }
 }
@@ -562,9 +592,13 @@ struct Solver
             return;
         }
         double Z = 1, dZ = 0, a = 0;
+        double pw[25];
+        pw[0] = 1;
+        for (int k = 1; k < 25; ++k)
+            pw[k] = pw[k - 1] * D;
         for (std::size_t g = 0; g < reps.size(); ++g) {
             double f, df;
-            reps[g].chi_d(D, f, df);
+            reps[g].chi_d_pw(D, pw, f, df);
             Z += S.W[g] * f;
             dZ += S.W[g] * df;
             a += std::abs(S.W[g] * f);
@@ -624,6 +658,15 @@ struct Solver
                        lo + w * (ro[k].ua + 1) / 2,
                        lo + w * (ro[k].ub + 1) / 2,
                        clenshaw_n(g, ro[k].ua)};
+                if (!r.certified) {  // not certified: keep it only if the TRUE G changes sign across its bracket
+                    double Ga, Gb, dG, sc;
+                    true_G(S, r.Da, t, Ga, dG, sc);
+                    true_G(S, r.Db, t, Gb, dG, sc);
+                    if ((Ga < 0) == (Gb < 0)) {
+                        ++g_dropped;
+                        continue;
+                    }
+                }
                 if (mode == Polish::All) polish(S, p, r);
                 if (n < MAXROOTS) out[n++] = r;
             }
@@ -632,17 +675,22 @@ struct Solver
     }
     void polish(const State& S, double p, Root& r) const {
         if (r.polished) return;
-        r.rho = S.rhor * polish_root(S, p * S.t_scale, r.rho_cheb / S.rhor, r.Da, r.Db, r.sa, r.resid, r.bracket_ok);
+        r.rho = S.rhor * polish_root(S, p * S.t_scale, r.rho_cheb / S.rhor, r.Da, r.Db, r.sa, r.resid, r.bracket_ok, r.certified);
         r.polished = true;
     }
     // Bracketed Newton on the true equation: the bracket shrinks with every true-G sign, a step
     // leaving it becomes a bisection.  bracket_ok = the true G has the expected sign at Da.
-    double polish_root(const State& S, double t, double D, double Da, double Db, double sa, double& resid, bool& bracket_ok) const {
+    double polish_root(const State& S, double t, double D, double Da, double Db, double sa, double& resid, bool& bracket_ok,
+                       bool certified = false) const {
         ++g_pol_calls;
         const double D0 = D;
         double G, dG, sc;
-        true_G(S, Da, t, G, dG, sc);
-        bracket_ok = (G < 0) == (sa < 0);
+        if (certified)  // the subdivision's margin bounds |G_table - G_true|, so the sign at Da is already known
+            bracket_ok = true;
+        else {
+            true_G(S, Da, t, G, dG, sc);
+            bracket_ok = (G < 0) == (sa < 0);
+        }
         if (!bracket_ok) ++g_pol_uncert;
         double a = Da, b = Db;
         for (int it = 0; it < 20; ++it) {
