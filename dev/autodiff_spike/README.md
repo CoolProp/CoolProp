@@ -821,3 +821,42 @@ wetair_ref:
   roots is within 2.6e-13 as a density error.
 - **Spinodal stress:** 226 000 cases, with 0 spurious and 0 unflagged misses.
 - **Throughput:** 207 000 calls/s on 8 threads.
+
+---
+
+# Experiment 12: ours vs REFPROP `TPFLSH` (`bench_flash.cpp`)
+
+"Ours" is the full pipeline: all roots, `select()`, then polish the selected root. REFPROP runs in
+GERG mode for the GERG rows (the same model; agreement checked to 1e-7) and in default mode for the
+reference rows (agreement to 1e-3, because the model data differ slightly). States are split by
+TPFLSH's own verdict. Per-state times are the min over 3 passes, shown as mean (median) in µs, on a
+quiet machine.
+
+| mixture | model | single-phase n | ours | TPFLSH | same density | two-phase n | ours | TPFLSH |
+|---|---|---|---|---|---|---|---|---|
+| C1/C2 | GERG | 4491 | 5.1 (2.7) | 302 (55) | 100 % | 509 | 11.1 (12.1) | 609 (137) |
+| C1/C2/C3 | GERG | 4157 | 5.2 (3.1) | 520 (95) | 100 % | 843 | 12.1 (13.3) | 686 (230) |
+| Amarillo (10) | GERG | 4011 | 4.7 (3.9) | 1878 (904) | 100 % | 984 | 9.1 (5.4) | 8690 (2781) |
+| C1/H₂S | GERG | 4031 | 3.5 (2.1) | 226 (50) | 100 % | 889 | 8.4 (9.8) | 4802 (2335) |
+| humid air | GERG | 3761 | 2.5 (2.1) | 1366 (215) | 100 % | 1239 | 2.6 (2.2) | 8049 (1382) |
+| C1/C2 | reference | 4491 | 7.5 (3.9) | 311 (57) | 100 % | 509 | 15.7 (16.9) | 627 (142) |
+| C1/C2/C3 | reference | 4157 | 7.7 (4.7) | 737 (135) | 100 % | 843 | 17.2 (18.4) | 969 (331) |
+| Amarillo (10) | reference | 4006 | 16.4 (9.8) | 2265 (1146) | 99.8 % | 985 | 37.9 (39.8) | 9332 (3355) |
+| C1/H₂S | reference | 4058 | 4.5 (2.8) | 265 (62) | 99.9 % | 871 | 10.7 (12.2) | 5965 (3072) |
+| humid air | reference | 3727 | 4.8 (4.3) | 1990 (326) | 100 % | 1273 | 4.8 (4.4) | 12525 (1036) |
+
+REFPROP's TPFLSH failed on 5–80 states per mixture; those states are excluded.
+
+**Single-phase states are the like-for-like comparison.** Both return the density, and they agree
+(to 1e-7 under GERG). Ours is **about 20–230× faster at the median** and more on the mean, because
+TPFLSH's tail is long.
+
+**What TPFLSH does that we do not.** It *proves* the state is single-phase with a stability test
+(tangent-plane analysis), and it computes h, s, c_v, c_p and w. Our `select()` picks the physically
+right homogeneous root, but it cannot tell that the mixture would rather split into two phases of
+different composition. So "same answer, much faster" holds *given* that the state is single-phase.
+A drop-in replacement for TPFLSH still needs a stability test, and all roots at trial compositions
+are exactly what that test needs.
+
+**Two-phase states.** REFPROP performs the full flash; we return a homogeneous root. The times are
+shown only for completeness and are not a comparison.
