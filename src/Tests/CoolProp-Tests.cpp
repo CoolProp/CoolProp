@@ -6364,7 +6364,7 @@ TEST_CASE("alpha0 terms reject coefficient vectors of mismatched length", "[alph
 }
 
 // Twu and Mathias-Copeman alpha functions read c[0..2] unchecked in
-// CubicBackend (and Twu in the HEOS "-SRK"/"-PengRobinson" path).  For the
+// CubicBackend and in the HEOS "-SRK"/"-PengRobinson" path.  For the
 // cubic library the guard is the cubic fluid schema (minItems = maxItems = 3),
 // which every add is validated against; this pins it so relaxing the schema
 // fails here.  VTPR's UNIFAC components have no schema and are checked in
@@ -6483,8 +6483,13 @@ TEST_CASE("Departure functions reject mismatched lengths and an out-of-range Npo
     SECTION("GERG-2008") {
         CHECK_NOTHROW(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 2));
         CHECK_NOTHROW(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 4));
+        // Matched on the class name: the add_* checks inside would also catch a
+        // tail mismatch, but only this check runs before the Npower slicing.
         CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v3, v4, v4, v4, 2),
-                          Catch::Matchers::ContainsSubstring("must all have the same length"));
+                          Catch::Matchers::ContainsSubstring("GERG2008DepartureFunction: coefficient vectors must all have the same length"));
+        // A vector shorter than Npower: slicing it at Npower ran past its end
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v3, v4, v4, v4, v4, v4, 4),
+                          Catch::Matchers::ContainsSubstring("GERG2008DepartureFunction: coefficient vectors must all have the same length"));
         CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 5), Catch::Matchers::ContainsSubstring("exceeds"));
         // A negative Npower from JSON arrives as a huge size_t
         CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, static_cast<std::size_t>(-1)),
@@ -6492,8 +6497,12 @@ TEST_CASE("Departure functions reject mismatched lengths and an out-of-range Npo
     }
     SECTION("Gaussian+Exponential") {
         CHECK_NOTHROW(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v4, v4, v4, v4, v4, 2));
-        CHECK_THROWS_WITH(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v3, v4, v4, v4, v4, v4, 2),
-                          Catch::Matchers::ContainsSubstring("must all have the same length"));
+        CHECK_THROWS_WITH(
+          CoolProp::GaussianExponentialDepartureFunction(v4, v4, v3, v4, v4, v4, v4, v4, 2),
+          Catch::Matchers::ContainsSubstring("GaussianExponentialDepartureFunction: coefficient vectors must all have the same length"));
+        CHECK_THROWS_WITH(
+          CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v3, v4, v4, v4, v4, 4),
+          Catch::Matchers::ContainsSubstring("GaussianExponentialDepartureFunction: coefficient vectors must all have the same length"));
         CHECK_THROWS_WITH(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v4, v4, v4, v4, v4, 5),
                           Catch::Matchers::ContainsSubstring("exceeds"));
     }
@@ -6504,9 +6513,9 @@ TEST_CASE("Departure functions reject mismatched lengths and an out-of-range Npo
     }
 }
 
-// GERG2004Cosh/Sinh keep a single Tc, so joining a second term with a
+// GERG2004Cosh/Sinh (and CP0PolyT) keep a single Tc, so joining a second term with a
 // different Tcrit used to evaluate it at the wrong reducing temperature (COO-61).
-TEST_CASE("GERG2004 Cosh/Sinh terms with different Tcrit cannot be joined", "[alpha0]") {
+TEST_CASE("alpha0 terms with a shared reducing temperature cannot join terms with a different one", "[alpha0]") {
     using nlohmann::json;
     for (const std::string kind : {"Cosh", "Sinh"}) {
         CAPTURE(kind);
@@ -6517,6 +6526,16 @@ TEST_CASE("GERG2004 Cosh/Sinh terms with different Tcrit cannot be joined", "[al
         CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term(500.0), term(510.0)})),
                           Catch::Matchers::ContainsSubstring("different Tcrit"));
     }
+    // CP0PolyT holds one tau0 = Tc/T0 likewise; a second Aly-Lee term (whose
+    // constant goes into CP0PolyT) with a different Tc or T0 must not join.
+    auto alylee = [](double Tc, double T0) {
+        return json{{"type", "IdealGasHelmholtzCP0AlyLee"}, {"c", {4.0, 0.0, 0.0, 0.0, 0.0}}, {"Tc", Tc}, {"T0", T0}};
+    };
+    CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({alylee(500.0, 298.15), alylee(500.0, 298.15)})));
+    CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({alylee(500.0, 298.15), alylee(510.0, 298.15)})),
+                      Catch::Matchers::ContainsSubstring("different Tc/T0"));
+    CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({alylee(500.0, 298.15), alylee(500.0, 300.0)})),
+                      Catch::Matchers::ContainsSubstring("different Tc/T0"));
 }
 
 // The HEOS "<fluid>-SRK" path applied a cubic-library Twu alpha but silently

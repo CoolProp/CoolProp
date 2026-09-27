@@ -1209,8 +1209,13 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
         check_coefficient_lengths("IdealHelmholtzCP0PolyT", {c.size(), t.size()});
     }
 
-    void extend(const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& t) {
+    /// Tc and T0 must match the first term's: all entries share one tau0 = Tc/T0
+    void extend(const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& t, double Tc, double T0) {
         check_coefficient_lengths("IdealHelmholtzCP0PolyT", {c.size(), t.size()});
+        if (Tc != this->Tc || T0 != this->T0) {
+            throw ValueError(format("IdealHelmholtzCP0PolyT: cannot join terms with different Tc/T0 (%g/%g and %g/%g)", static_cast<double>(this->Tc),
+                                    static_cast<double>(this->T0), Tc, T0));
+        }
         this->c.insert(this->c.end(), c.begin(), c.end());
         this->t.insert(this->t.end(), t.begin(), t.end());
         N += c.size();

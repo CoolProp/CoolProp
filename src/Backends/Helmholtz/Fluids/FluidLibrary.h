@@ -265,7 +265,7 @@ class JSONFluidLibrary
                 if (std::abs(constants[0]) > 1e-14) {
                     std::vector<CoolPropDbl> c(1, constants[0]), t(1, 0);
                     if (alpha0.CP0PolyT.is_enabled() == true) {
-                        alpha0.CP0PolyT.extend(c, t);
+                        alpha0.CP0PolyT.extend(c, t, Tc, T0);
                     } else {
                         alpha0.CP0PolyT = IdealHelmholtzCP0PolyT(c, t, Tc, T0);
                     }
