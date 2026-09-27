@@ -135,16 +135,16 @@ class NumericLocaleGuard
 
 // CI installs de_DE.UTF-8 and sets COOLPROP_REQUIRE_LOCALE_TESTS=1, so a missing
 // locale there is a failure, not a silent SKIP that would let a regression through.
-#    define COOLPROP_LOCALE_OR_SKIP(guard)                                                          \
-        do {                                                                                        \
-            if (!(guard).active()) {                                                                \
-                if (std::getenv("COOLPROP_REQUIRE_LOCALE_TESTS") != nullptr) {                      \
-                    FAIL("de_DE.UTF-8 locale required (COOLPROP_REQUIRE_LOCALE_TESTS) but absent"); \
-                }                                                                                   \
-                SKIP("de_DE.UTF-8 locale not installed");                                           \
-            }                                                                                       \
-            REQUIRE(std::localeconv()->decimal_point[0] == ',');                                    \
-        } while (false)
+// Catch2's SKIP/FAIL/REQUIRE throw, so they end the calling test from here too.
+static void require_decimal_comma_locale(const NumericLocaleGuard& guard) {
+    if (!guard.active()) {
+        if (std::getenv("COOLPROP_REQUIRE_LOCALE_TESTS") != nullptr) {
+            FAIL("de_DE.UTF-8 locale required (COOLPROP_REQUIRE_LOCALE_TESTS) but absent");
+        }
+        SKIP("de_DE.UTF-8 locale not installed");
+    }
+    REQUIRE(std::localeconv()->decimal_point[0] == ',');
+}
 
 // A host program (Python, EES, Mathcad, ...) that calls setlocale() with a
 // decimal-comma locale must not change how fluid files are read.
@@ -154,7 +154,7 @@ TEST_CASE("DSL number literals do not depend on the C locale", "[expression][loc
     {
         NumericLocaleGuard guard("de_DE.UTF-8");
         // Also confirms the locale really uses a decimal comma, so the test can fail.
-        COOLPROP_LOCALE_OR_SKIP(guard);
+        require_decimal_comma_locale(guard);
         v8400 = compile("8.4e3", {}, {}).evaluate({});
         vhalf = compile(".5", {}, {}).evaluate({});
         vsum = compile("1.25 + 2.5E-1", {}, {}).evaluate({});
@@ -219,7 +219,7 @@ TEST_CASE("fluid with expression blocks loads identically under a decimal-comma 
     const double l_ref = CoolProp::PropsSI("L", "T", 300.0, "Dmass", 1500.0, "Novec649");
     {
         NumericLocaleGuard guard("de_DE.UTF-8");
-        COOLPROP_LOCALE_OR_SKIP(guard);
+        require_decimal_comma_locale(guard);
         REQUIRE(CoolProp::add_fluids_as_JSON("HEOS", doc));
     }
     CHECK(CoolProp::PropsSI("V", "T", 300.0, "Dmass", 1500.0, "NOVEC649_LOCALE_DE") == v_ref);
