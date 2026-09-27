@@ -4485,6 +4485,83 @@
           ]
         }
       }
+    },
+    "conductivity": {
+      "BibTeX": "Tsolakidou-JPCRD-2017-R161",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (14) of Tsolakidou, Assael, Huber & Perkins, J. Phys. Chem. Ref. Data 46(2):023103 (2017), converted from mW/(m K) to W/(m K). Tc = 375.25 K is the paper's own value.",
+        "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 375.25
+        },
+        "arrays": {
+          "a": [
+            7.96804,
+            -12.5874,
+            -26.3743,
+            16.9894,
+            127.545,
+            -32.548
+          ],
+          "b": [
+            5.406,
+            -18.8331,
+            24.868,
+            -9.14139,
+            1.0
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (15) and Table 6 of Tsolakidou et al. (2017), converted from mW/(m K) to W/(m K). Tc = 375.25 K and rhoc = 302.001 kg/m^3 are the paper's own reducing values.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-3*sum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 375.25,
+          "rhoc": 302.001
+        },
+        "arrays": {
+          "B1": [
+            -8.41553,
+            -39.7744,
+            106.179,
+            -53.2351,
+            8.23094
+          ],
+          "B2": [
+            7.41456,
+            44.0586,
+            -81.9833,
+            37.6052,
+            -4.90293
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Section 3.3 of Tsolakidou et al. (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.055, xi0 = 0.183e-9 m, T_ref = 1.5 Tc (the paper prints this rounded to 562.88 K). qD^-1 = 3.104e-10 m, as printed in the published article (J. Phys. Chem. Ref. Data 46:023103, Sec. 3.3). The freely available accepted manuscript (NIST pub_id=922654 and PMC5544035) instead prints 5.30e-10 m; do not transcribe from it. With the Qi et al. (2016) EOS and the paper's own viscosity, 3.104e-10 reproduces both Table 11 check values that carry an enhancement: 375 K / 229 kg/m^3 (81.296 vs 81.297 mW/(m K); 5.30e-10 gives 73.41) and 250 K / 1 kg/m^3 (9.8838 vs 9.884; 5.30e-10 gives 9.8805). R161.FLD in REFPROP 10.0 and 10.1 also carries 0.3104e-9.",
+        "GAMMA": 0.055,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 3221649484.536082,
+        "zeta0": 1.83e-10,
+        "T_ref": 562.875
+      }
     }
   }
 }
