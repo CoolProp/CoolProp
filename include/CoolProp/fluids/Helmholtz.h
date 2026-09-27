@@ -6,6 +6,8 @@
 #include <array>
 #include <cassert>
 #include <cstring>  // for std::memset, used below -- libstdc++ does not pull it in transitively
+#include <initializer_list>
+#include <string>
 #include <vector>
 #include "CoolProp/detail/tools.h"  // for CoolPropDbl
 //#include "Eigen/Core"
@@ -916,6 +918,20 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
 // #############################################################################
 // #############################################################################
 
+/// Throw ValueError unless the coefficient vectors of an ideal-gas term all have
+/// the same length; the terms index them in lockstep up to the first one's size.
+inline void check_alpha0_lengths(const char* term, std::initializer_list<std::size_t> sizes) {
+    for (std::size_t size : sizes) {
+        if (size != *sizes.begin()) {
+            std::string got;
+            for (std::size_t s : sizes) {
+                got += (got.empty() ? "" : ", ") + std::to_string(s);
+            }
+            throw ValueError(format("%s: coefficient vectors must all have the same length; got [%s]", term, got.c_str()));
+        }
+    }
+}
+
 /// The leading term in the EOS used to set the desired reference state
 /**
 \f[
@@ -1043,7 +1059,9 @@ class IdealHelmholtzPower : public BaseHelmholtzTerm
    public:
     IdealHelmholtzPower() : N(0), enabled(false) {};
     // Constructor
-    IdealHelmholtzPower(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& t) : n(n), t(t), N(n.size()), enabled(true) {};
+    IdealHelmholtzPower(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& t) : n(n), t(t), N(n.size()), enabled(true) {
+        check_alpha0_lengths("IdealHelmholtzPower", {n.size(), t.size()});
+    };
 
     bool is_enabled() const {
         return enabled;
@@ -1111,11 +1129,14 @@ class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm
     // Constructor with std::vector instances
     IdealHelmholtzPlanckEinsteinGeneralized(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta,
                                             const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& d)
-      : n(n), theta(theta), c(c), d(d), N(n.size()), enabled(true) {}
+      : n(n), theta(theta), c(c), d(d), N(n.size()), enabled(true) {
+        check_alpha0_lengths("IdealHelmholtzPlanckEinsteinGeneralized", {n.size(), theta.size(), c.size(), d.size()});
+    }
 
     // Extend the vectors to allow for multiple instances feeding values to this function
     void extend(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, const std::vector<CoolPropDbl>& c,
                 const std::vector<CoolPropDbl>& d) {
+        check_alpha0_lengths("IdealHelmholtzPlanckEinsteinGeneralized", {n.size(), theta.size(), c.size(), d.size()});
         this->n.insert(this->n.end(), n.begin(), n.end());
         this->theta.insert(this->theta.end(), theta.begin(), theta.end());
         this->c.insert(this->c.end(), c.begin(), c.end());
@@ -1174,10 +1195,11 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
     /// Constructor with std::vectors
     IdealHelmholtzCP0PolyT(const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& t, double Tc, double T0)
       : c(c), t(t), Tc(Tc), T0(T0), tau0(Tc / T0), N(c.size()), enabled(true) {
-        assert(c.size() == t.size());
+        check_alpha0_lengths("IdealHelmholtzCP0PolyT", {c.size(), t.size()});
     }
 
     void extend(const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& t) {
+        check_alpha0_lengths("IdealHelmholtzCP0PolyT", {c.size(), t.size()});
         this->c.insert(this->c.end(), c.begin(), c.end());
         this->t.insert(this->t.end(), t.begin(), t.end());
         N += c.size();
@@ -1209,13 +1231,14 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
     /// Constructor with std::vectors
     IdealHelmholtzGERG2004Sinh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
       : n(n), theta(theta), Tc(Tc), _Tr(_HUGE), N(n.size()), enabled(true) {
-        assert(n.size() == theta.size());
+        check_alpha0_lengths("IdealHelmholtzGERG2004Sinh", {n.size(), theta.size()});
     }
 
-    void extend(const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& t) {
+    void extend(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta) {
+        check_alpha0_lengths("IdealHelmholtzGERG2004Sinh", {n.size(), theta.size()});
         this->n.insert(this->n.end(), n.begin(), n.end());
         this->theta.insert(this->theta.end(), theta.begin(), theta.end());
-        N += c.size();
+        N += n.size();
     }
     void set_Tred(CoolPropDbl Tr) {
         this->_Tr = Tr;
@@ -1245,10 +1268,11 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
     /// Constructor with std::vectors
     IdealHelmholtzGERG2004Cosh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
       : n(n), theta(theta), Tc(Tc), _Tr(_HUGE), N(n.size()), enabled(true) {
-        assert(n.size() == theta.size());
+        check_alpha0_lengths("IdealHelmholtzGERG2004Cosh", {n.size(), theta.size()});
     }
 
     void extend(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta) {
+        check_alpha0_lengths("IdealHelmholtzGERG2004Cosh", {n.size(), theta.size()});
         this->n.insert(this->n.end(), n.begin(), n.end());
         this->theta.insert(this->theta.end(), theta.begin(), theta.end());
         N += n.size();
