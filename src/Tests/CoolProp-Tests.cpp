@@ -6317,13 +6317,14 @@ TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality]
     }
 }
 
-TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality (COO-7)", "[quality][nonfinite][cubic][PCSAFT][IF97]") {
+TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality (COO-7)", "[quality][nonfinite][cubic][PCSAFT][INCOMP][IF97]") {
     // The HEOS/IF97/PCSAFT doors were closed earlier; these are the ones that
     // were left: the cubic backends' own update switch (no check at all -- SRK
     // Propane at Q = 5 returned rho = 102.18 without a word), the PQ/QT arms of
-    // HEOS update_with_guesses, and the IF97/PCSAFT guard ordering.  Match on the
-    // message: a bare CHECK_THROWS would also be satisfied by some unrelated
-    // failure further down a flash and keep passing if the guard were removed.
+    // HEOS update_with_guesses, the PCSAFT guard ordering, and the NaN-blind
+    // (x < 0 || x > 1) guards in INCOMP.  Match on the message: a bare
+    // CHECK_THROWS would also be satisfied by some unrelated failure further
+    // down a flash and keep passing if the guard were removed.
     const double qnan = std::numeric_limits<double>::quiet_NaN();
     const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
 
@@ -6417,6 +6418,33 @@ TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality
                 CHECK_FALSE(std::isnan(PC->Q()));
             }
         }
+    }
+
+    SECTION("INCOMP solution rejects a NaN mass fraction") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        CHECK_THROWS_WITH(
+          [&] {
+              AS->set_mass_fractions(std::vector<CoolPropDbl>{qnan});
+              AS->update(CoolProp::PT_INPUTS, 1e5, 280.0);
+          }(),
+          Catch::Matchers::ContainsSubstring("Mass fractions must be set to a vector with one entry between 0 and 1"));
+        // IncompressibleFluid::checkX has its own NaN-safe composition guard.
+        CoolProp::IncompressibleFluid bounded;
+        bounded.setxmin(0.2);
+        bounded.setxmax(0.6);
+        CHECK(bounded.checkX(0.4));
+        CHECK_THROWS_WITH(bounded.checkX(qnan), Catch::Matchers::ContainsSubstring("is not between 0.2 and 0.6"));
+        // Inverted composition bounds are refused rather than read as the
+        // swapped range (is_in_closed_range orders its bounds).
+        CoolProp::IncompressibleFluid inverted;
+        inverted.setxmin(0.6);
+        inverted.setxmax(0.2);
+        CHECK_THROWS_WITH(inverted.checkX(0.4), Catch::Matchers::ContainsSubstring("exceeds the maximum concentration"));
+        // A legal fraction still works on a fresh object.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        AS2->set_mass_fractions(std::vector<CoolPropDbl>{0.3});
+        CHECK_NOTHROW(AS2->update(CoolProp::PT_INPUTS, 1e5, 280.0));
+        CHECK(std::isfinite(AS2->rhomass()));
     }
 }
 

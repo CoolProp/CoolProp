@@ -1123,9 +1123,8 @@ SVDSBTLBackend::PointEvaluation SVDSBTLBackend::resolve_point_(CoolProp::input_p
             Q = value1;
             T_sat = value2;
         }
-        if (Q < 0.0 || Q > 1.0) {
-            throw ValueError("SVDSBTL backend: two-phase Q must be in [0, 1]");
-        }
+        // update() has already checked, but fast_evaluate reaches here directly.
+        check_input_quality_value(Q);  // rejects NaN too
         // Try SA-or-surrogate fast path first; only fall through to
         // source.update PQ/QT when neither sat provider is available.
         // sat_T_from_p_ / sat_eval_ return NaN when both are missing.
