@@ -13,8 +13,8 @@ set(app_name ${project_name})
 # 8.0.0b1 (a beta pre-release), "dev" -> 8.0.0.dev0, "" -> 8.0.0 (final).
 # Keep a numeric version for CMake's project/package version machinery.
 set(COOLPROP_VERSION_MAJOR 8)
-set(COOLPROP_VERSION_MINOR 0)
-set(COOLPROP_VERSION_PATCH 1)
+set(COOLPROP_VERSION_MINOR 1)
+set(COOLPROP_VERSION_PATCH 0)
 set(COOLPROP_VERSION_REVISION dev)
 set(COOLPROP_VERSION_NUMERIC
     "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}"
