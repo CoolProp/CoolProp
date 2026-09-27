@@ -289,6 +289,11 @@ class JSONFluidLibrary
             } else if (!type.compare("IdealGasHelmholtzCP0AlyLee")) {
 
                 std::vector<CoolPropDbl> constants = cpjson::get_long_double_array(contribution.at("c"));
+                // The Aly-Lee form has exactly five constants A..E, indexed directly below
+                if (constants.size() != 5) {
+                    throw ValueError(
+                      format("IdealGasHelmholtzCP0AlyLee requires exactly 5 constants in \"c\"; got %d", static_cast<int>(constants.size())));
+                }
                 CoolPropDbl Tc = cpjson::get_double(contribution, "Tc");
                 CoolPropDbl T0 = cpjson::get_double(contribution, "T0");
 

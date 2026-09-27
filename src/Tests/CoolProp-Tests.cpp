@@ -6588,6 +6588,49 @@ TEST_CASE("An empty TRANSPORT.viscosity list throws rather than invoking UB", "[
     }
 }
 
+// The IdealGasHelmholtzCP0AlyLee branch of parse_alpha0 indexes c[0]..c[4]
+// directly, so a short "c" was an out-of-bounds read.  Anything other than
+// exactly five constants must throw ValueError (COO-58).
+TEST_CASE("Aly-Lee alpha0 term rejects a constant list that is not length 5", "[alpha0],[add_one]") {
+    using nlohmann::json;
+    auto alylee = [](const json& c) {
+        json term = {{"type", "IdealGasHelmholtzCP0AlyLee"}, {"c", c}, {"Tc", 500.0}, {"T0", 298.15}};
+        return json::array({term});
+    };
+
+    SECTION("wrong lengths throw") {
+        for (const json& c : {json::array(), json{1.0, 2.0, 3.0, 4.0}, json{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}}) {
+            CAPTURE(c.dump());
+            CHECK_THROWS_AS(CoolProp::JSONFluidLibrary::parse_alpha0(alylee(c)), CoolProp::ValueError);
+            CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(alylee(c)),
+                              Catch::Matchers::ContainsSubstring("requires exactly 5 constants"));
+        }
+    }
+
+    SECTION("five constants are accepted") {
+        CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(alylee(json{4.0, 10.0, 800.0, 5.0, 2000.0})));
+    }
+
+    SECTION("every shipped Aly-Lee term still parses") {
+        // Guards against the check being tighter than the shipped data.
+        int n_terms = 0;
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            json doc = json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            for (const auto& eos : doc.at("EOS")) {
+                for (const auto& term : eos.at("alpha0")) {
+                    if (term.at("type") == "IdealGasHelmholtzCP0AlyLee") {
+                        CAPTURE(fluid);
+                        ++n_terms;
+                        CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term})));
+                    }
+                }
+            }
+        }
+        // 12 in the shipped library; > 0 so the loop cannot pass vacuously.
+        CHECK(n_terms > 0);
+    }
+}
+
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
     // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
     // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa
