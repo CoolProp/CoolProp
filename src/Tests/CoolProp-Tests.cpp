@@ -6426,6 +6426,170 @@ TEST_CASE("UNIFAC component alpha functions reject a coefficient list that is no
     }
 }
 
+// Residual terms index their coefficient vectors in lockstep, like the alpha0
+// terms (COO-60); the parser only had asserts, compiled out in Release (COO-61).
+TEST_CASE("alphar terms reject coefficient vectors of mismatched length", "[alphar]") {
+    using nlohmann::json;
+    auto parse = [](const json& terms) { return CoolProp::JSONFluidLibrary::parse_alphar(terms); };
+    const json two = {1.0, 2.0}, one = {1.0};
+
+    SECTION("each term type throws on a mismatch and accepts matching lengths") {
+        // For each type: every key at length 2, then each key in turn shortened to 1.
+        const std::vector<std::pair<std::string, std::vector<std::string>>> types = {
+          {"ResidualHelmholtzPower", {"n", "d", "t", "l"}},
+          {"ResidualHelmholtzExponential", {"n", "d", "t", "g", "l"}},
+          {"ResidualHelmholtzGaussian", {"n", "d", "t", "eta", "epsilon", "beta", "gamma"}},
+          {"ResidualHelmholtzLemmon2005", {"n", "d", "t", "l", "m"}},
+          {"ResidualHelmholtzDoubleExponential", {"n", "d", "t", "gd", "ld", "gt", "lt"}},
+          {"ResidualHelmholtzGaoB", {"n", "t", "d", "eta", "beta", "gamma", "epsilon", "b"}},
+          {"ResidualHelmholtzNonAnalytic", {"n", "a", "b", "beta", "A", "B", "C", "D"}},
+        };
+        for (const auto& [type, keys] : types) {
+            CAPTURE(type);
+            json term = {{"type", type}};
+            for (const auto& k : keys) {
+                term[k] = two;
+            }
+            CHECK_NOTHROW(parse(json::array({term})));
+            for (const auto& k : keys) {
+                CAPTURE(k);
+                json bad = term;
+                bad[k] = one;
+                CHECK_THROWS_AS(parse(json::array({bad})), CoolProp::ValueError);
+                CHECK_THROWS_WITH(parse(json::array({bad})), Catch::Matchers::ContainsSubstring("must all have the same length"));
+            }
+        }
+    }
+
+    SECTION("every shipped fluid's alphar still parses") {
+        int n_fluids = 0;
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            json doc = json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            for (const auto& eos : doc.at("EOS")) {
+                CAPTURE(fluid);
+                CHECK_NOTHROW(parse(eos.at("alphar")));
+            }
+            ++n_fluids;
+        }
+        CHECK(n_fluids > 100);
+    }
+}
+
+// The GERG-2008 and Gaussian+Exponential departure functions slice every
+// vector at Npower before any term sees it, so a short vector or an Npower past
+// the end was undefined behaviour at construction (COO-61).
+TEST_CASE("Departure functions reject mismatched lengths and an out-of-range Npower", "[mixture],[departure]") {
+    const std::vector<double> v4 = {1, 2, 3, 4}, v3 = {1, 2, 3};
+    SECTION("GERG-2008") {
+        CHECK_NOTHROW(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 2));
+        CHECK_NOTHROW(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 4));
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v3, v4, v4, v4, 2),
+                          Catch::Matchers::ContainsSubstring("must all have the same length"));
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 5), Catch::Matchers::ContainsSubstring("exceeds"));
+        // A negative Npower from JSON arrives as a huge size_t
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, static_cast<std::size_t>(-1)),
+                          Catch::Matchers::ContainsSubstring("exceeds"));
+    }
+    SECTION("Gaussian+Exponential") {
+        CHECK_NOTHROW(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v4, v4, v4, v4, v4, 2));
+        CHECK_THROWS_WITH(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v3, v4, v4, v4, v4, v4, 2),
+                          Catch::Matchers::ContainsSubstring("must all have the same length"));
+        CHECK_THROWS_WITH(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v4, v4, v4, v4, v4, 5),
+                          Catch::Matchers::ContainsSubstring("exceeds"));
+    }
+    SECTION("Exponential") {
+        CHECK_NOTHROW(CoolProp::ExponentialDepartureFunction(v4, v4, v4, v4));
+        CHECK_THROWS_WITH(CoolProp::ExponentialDepartureFunction(v4, v4, v4, v3),
+                          Catch::Matchers::ContainsSubstring("must all have the same length"));
+    }
+}
+
+// GERG2004Cosh/Sinh keep a single Tc, so joining a second term with a
+// different Tcrit used to evaluate it at the wrong reducing temperature (COO-61).
+TEST_CASE("GERG2004 Cosh/Sinh terms with different Tcrit cannot be joined", "[alpha0]") {
+    using nlohmann::json;
+    for (const std::string kind : {"Cosh", "Sinh"}) {
+        CAPTURE(kind);
+        auto term = [&](double Tcrit) {
+            return json{{"type", "IdealGasHelmholtzGERG2004" + kind}, {"n", {1.0}}, {"theta", {0.5}}, {"Tcrit", Tcrit}};
+        };
+        CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term(500.0), term(500.0)})));
+        CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term(500.0), term(510.0)})),
+                          Catch::Matchers::ContainsSubstring("different Tcrit"));
+    }
+}
+
+// The HEOS "<fluid>-SRK" path applied a cubic-library Twu alpha but silently
+// dropped Mathias-Copeman, falling back to the default alpha (COO-61).
+TEST_CASE("HEOS -SRK matches the cubic backend for a cubic-library fluid, incl. Mathias-Copeman alpha", "[cubic],[alpha0]") {
+    using nlohmann::json;
+    auto fluid = [](const std::string& name, const std::string& CAS, const json& alpha) {
+        json f = {{"name", name},
+                  {"CAS", CAS},
+                  {"Tc", 400.0},
+                  {"Tc_units", "K"},
+                  {"pc", 4e6},
+                  {"pc_units", "Pa"},
+                  {"acentric", 0.2},
+                  {"molemass", 0.05},
+                  {"molemass_units", "kg/mol"},
+                  {"aliases", json::array()}};
+        if (!alpha.is_null()) {
+            f["alpha"] = alpha;
+        }
+        return json::array({f}).dump();
+    };
+    // Names are unique to this test; re-adding on a repeated run is a silent no-op.
+    CoolProp::add_fluids_as_JSON("SRK", fluid("CatchSRKMCAlpha", "999-98-04", {{"type", "Mathias-Copeman"}, {"c", {0.9, -0.3, 0.4}}}));
+    CoolProp::add_fluids_as_JSON("SRK", fluid("CatchSRKDefaultAlpha", "999-98-05", json()));
+
+    const double T = 300.0, rho = 2000.0;  // mol/m^3; below Tc so the MC alpha differs from default
+    auto p = [&](const std::string& backend, const std::string& name) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, name));
+        // Impose the phase: a fluid built from the cubic library has no saturation
+        // ancillaries for the phase check, and p(T, rho) comes straight from the EOS.
+        AS->specify_phase(CoolProp::iphase_gas);
+        AS->update(CoolProp::DmolarT_INPUTS, rho, T);
+        return AS->p();
+    };
+    const double p_cubic = p("SRK", "CatchSRKMCAlpha");
+    const double p_heos = p("HEOS", "CatchSRKMCAlpha-SRK");
+    const double p_default = p("SRK", "CatchSRKDefaultAlpha");
+    // The MC alpha must actually matter here, or the next check proves nothing
+    REQUIRE(std::abs(p_cubic - p_default) > 1e-3 * std::abs(p_default));
+    CHECK(p_heos == Catch::Approx(p_cubic).epsilon(1e-10));
+    // This path also never set EquationOfState::R_u (default 0), so p was 0
+    // for any cubic-library-only fluid, whatever its alpha function.
+    CHECK(p("HEOS", "CatchSRKDefaultAlpha-SRK") == Catch::Approx(p_default).epsilon(1e-10));
+}
+
+// populate() used to leave partial entries behind when it threw part-way, so
+// a retry (m_populated still false) appended duplicates (COO-61).
+TEST_CASE("UNIFAC populate leaves the library unchanged when it throws", "[VTPR]") {
+    using nlohmann::json;
+    auto comp = [](const std::string& name, const json& c) {
+        return json{{"inchikey", "X"},
+                    {"registry_number", "999-98-06"},
+                    {"name", name},
+                    {"Tc", 400.0},
+                    {"pc", 4e6},
+                    {"acentric", 0.2},
+                    {"molemass", 0.05},
+                    {"groups", json::array()},
+                    {"alpha", {{"type", "Twu"}, {"c", c}}}};
+    };
+    UNIFACLibrary::UNIFACParameterLibrary lib;
+    std::string groups = "[]", interactions = "[]";
+    std::string first = json::array({comp("CatchUNIFACKept", {0.1, 0.9, 1.5})}).dump();
+    REQUIRE_NOTHROW(lib.populate(groups, interactions, first));
+    // Second load: a valid component, then an invalid one that throws.
+    std::string second = json::array({comp("CatchUNIFACRolledBack", {0.1, 0.9, 1.5}), comp("CatchUNIFACBad", {0.1})}).dump();
+    CHECK_THROWS_AS(lib.populate(groups, interactions, second), CoolProp::ValueError);
+    CHECK_NOTHROW(lib.get_component("name", "CatchUNIFACKept"));
+    // The valid entry from the failed load must not have been kept
+    CHECK_THROWS(lib.get_component("name", "CatchUNIFACRolledBack"));
+}
+
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
     // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
     // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa

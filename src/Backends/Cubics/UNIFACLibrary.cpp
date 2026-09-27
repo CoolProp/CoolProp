@@ -8,6 +8,22 @@ void UNIFACParameterLibrary::jsonize(std::string& s, nlohmann::json& d) {
     d = cpjson::parse(s);
 }
 void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& comp_data) {
+    // All-or-nothing: a throw part-way through must not leave partial entries
+    // behind, or the next load (m_populated is still false) appends duplicates.
+    std::vector<Group> groups_before = groups;
+    std::vector<InteractionParameters> interaction_parameters_before = interaction_parameters;
+    std::vector<Component> components_before = components;
+    try {
+        populate_unchecked(group_data, interaction_data, comp_data);
+    } catch (...) {
+        groups.swap(groups_before);
+        interaction_parameters.swap(interaction_parameters_before);
+        components.swap(components_before);
+        throw;
+    }
+}
+void UNIFACParameterLibrary::populate_unchecked(const nlohmann::json& group_data, const nlohmann::json& interaction_data,
+                                                const nlohmann::json& comp_data) {
     if (CoolProp::get_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY)) {
         groups.clear();
         interaction_parameters.clear();
