@@ -329,7 +329,7 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         CHECK(AS->cvmass() > 0.0);
         CHECK(AS->cvmass() < 1500.0);  // real water is ~3800 here
         // And the sound speed does NOT flag it: 3561 m/s here, against
-        // 3513 m/s at a perfectly physical 2200 MPa / 300 K.  The two
+        // 3513 m/s at a perfectly physical 2200 MPa / 300 K -- the
         // bad state is FASTER.  The overlap is wider still: pathological
         // states run down to 2497 m/s, over 1000 m/s below the fastest
         // value the authors publish.  No threshold at ANY value separates
@@ -345,7 +345,7 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
         // served.  Without this the no-ceiling policy is not pinned at
         // all: reinstating the reverted `_w > 6000` guard passed every
         // other assertion in this file, because nothing asserted that a
-        // FAST state survives -- only that a served state was slow.  Any
+        // FAST state survives -- only that a served state was slow.  The
         // gap began at ~4081 m/s (a pre-existing test happens to update at
         // 2000 MPa / 250 K, where w = 4081, so lower ceilings died by
         // accident); anything above that could be reintroduced silently.

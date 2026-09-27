@@ -19,8 +19,9 @@ namespace CoolProp {
 ///
 /// WHY THIS EXISTS.  CoolProp's IAPWS-95 refuses the entire region below the
 /// melting line: 250 K/200 MPa, 300 K/2000 MPa and similar all throw.  This
-/// backend covers P up to 2300.5999999999995 MPa (the fitted bound; the
-/// paper rounds it to 2300.6, which this refuses -- see domain()) and
+/// backend covers P up to 2300.5999999999995 MPa -- the fitted bound.
+/// (2300.6 is this code's rounding of it, and is REFUSED; the paper says
+/// "2300 MPa".  See domain().)  And
 /// T in [240, 500] K, which includes
 /// that region, and is more accurate than IAPWS-95 above ~100 MPa.
 ///
@@ -289,8 +290,9 @@ class BollengierBackend : public AbstractState
         // states; any cut at or below it refuses published ones.
         //
         // A very high cut would truncate the worst tail, but that is not
-        // separation: at 20 km/s only the cv < 100 sliver goes, leaving tens
-        // of thousands of cv < 2000 states served.  And it is not the
+        // separation: a 20 km/s cut removes 289 states of which fewer than
+        // half have cv < 100 (the rest run up to cv = 613), and leaves
+        // 36744 of 36775 cv < 2000 states served.  And it is not the
         // argument for omitting a ceiling anyway.  The argument is that the
         // reference implementation makes no such claim: SeaFreeze serves
         // this region deliberately, and inventing a criterion it does not
@@ -299,15 +301,29 @@ class BollengierBackend : public AbstractState
         // WHAT THIS MEANS FOR CALLERS -- read this before using the cold
         // high-pressure corner.
         //
-        // How far the advertised rectangle reaches beyond the measurements,
-        // from the paper's own Supplementary Material B (901 sound-speed
-        // points, its primary constraint): those span 0.10-701.09 MPa and
-        // 252.28-353.76 K.  So the advertised domain is extrapolation in
-        // BOTH directions -- the 240 K edge lies 12 K below the coldest
-        // datum, and above ~700 MPa there are no sound-speed data at any
-        // temperature.  (An earlier version of this comment named a
-        // specific pressure where extrapolation "starts".  No such
-        // threshold exists; the number was not derivable from anything.)
+        // How far the advertised rectangle reaches beyond the measurements.
+        // WaterEOS.mat carries the fitted data alongside the coefficients,
+        // in /H2O/{SS,rho,Cp}/data -- 2781 points, which the extraction
+        // script does not read but which answer this directly:
+        //
+        //   199-240 K   150 pts   max p    399 MPa
+        //   240-260 K   280 pts   max p    399 MPa
+        //   260-280 K   618 pts   max p    611 MPa
+        //   280-293 K   257 pts   max p    695 MPa
+        //   293-320 K   617 pts   max p   1720 MPa
+        //   320-500 K   714 pts   max p   4832 MPa
+        //
+        // So the constraint is a JOINT one, not a bound on either axis:
+        // below 293 K no datum of any kind exists above 695 MPa.  The
+        // region refused below (p >~ 1834 MPa, T <~ 249 K) sits about 2.6x
+        // deeper in pressure than any measurement at that temperature.
+        //
+        // (Two earlier versions of this comment were wrong.  One named a
+        // pressure where extrapolation "starts" -- no such threshold
+        // exists.  The other read the coverage off Supplementary Material B
+        // and concluded the domain was extrapolation in both directions
+        // separately; SM_B is only the authors' own 901 runs, and the full
+        // set reaches 8595 MPa in sound speed and 199.6 K in density.)
         //
         // The authors decline to publish in the cold high-pressure corner
         // at all: Supplementary Material E omits 250 K above 900 MPa in
