@@ -676,3 +676,45 @@ air in a quieter run, against 57 µs here.
 - **Where we lose:** binaries. There we pay for polishing every root (about 1.9 per state) and a
   fixed per-(T, x) overhead of one `exp` per term. Tables built down to 0.3 T_c add pieces a
   practical T range does not need.
+
+---
+
+# Experiment 9: reliability vs CoolProp and REFPROP (`bench_reliab.cpp`, `plot_reliab.py`)
+
+Setup:
+- **States:** 5000 per mixture. T is uniform in a range reaching well into the two-phase region;
+  p is log-uniform in 10 kPa – 30 MPa.
+- **Mixtures:** C1/C2, C1/C2/C3, Amarillo, C1/H₂S, C1/nC7, CO₂/H₂O and humid air, each under two
+  models:
+  - reference EOS: CoolProp HEOS vs REFPROP default;
+  - GERG-2008: CoolProp GERG2008 vs REFPROP with `FLAGS("GERG", 1)`.
+- **Failure maps:** `figs/reliab_map_{HEOS,GERG2008}.png`.
+
+## Results
+
+| | ours | CoolProp `solver_rho_Tp` | REFPROP `TPRHO` |
+|---|---|---|---|
+| no result | **0 %** (all mixtures) | **14–32 %**. The whole low-pressure / low-T region, wherever a vapor root coexists with others (see the maps) | kph=2: 2–11 %, kph=1: 3–6 %. Many are *correct* refusals, e.g. `kph = 2` when no vapor-like root exists |
+| result not a root of the same model | 0 | 0 | GERG mode: 0, within 7e-13. Reference EOS: model differences (R, HMX.BNC); Amarillo and C1/nC7 up to 0.36 and 2 % |
+| every root, and how many | yes (parity on 10⁹ calls, dense scans) | no | no |
+
+- **REFPROP in GERG-2008 mode agrees with our roots to 1e-13 – 1e-15.** That is REFPROP's own
+  GERG implementation reproducing the Chebyshev solver's roots: the strongest independent
+  correctness check in this spike.
+- **Stable-root selection is only indicative.** The stable root was taken as the lower-Gibbs of
+  the outermost mechanically stable roots, excluding |αʳ| > 100 excursions. On that label, in
+  multi-root states:
+  - REFPROP (either kph) returns it in 83–89 % (GERG mode) and 82–97 % (reference EOS, where the
+    models agree);
+  - CoolProp returns it in 3–79 %.
+
+  But the label itself misfires. Multiparameter equations (GERG-2008 and the reference EOS alike)
+  carry a **deep αʳ well at δ ≈ 1 at low T**, from terms with large τ exponents. It yields
+  mechanically stable roots with αʳ of about −10 … −6×10⁴ and absurd Gibbs energies, and it
+  explains the high-pressure clusters on the maps where every solver is marked "non-stable".
+  REFPROP's `kph = 2` often lands on those roots and rejects them with `ierr = 203`.
+- **What this means for a root-selection policy.** An all-roots solver *exposes* these branches:
+  up to 5 roots, with interior mechanically stable branches in about 30 % of multi-root states
+  here. Choosing the physical root therefore needs a policy beyond "minimum Gibbs energy", for
+  example excluding roots inside the dome's excursion band before comparing Gibbs energies. That
+  policy is not designed here.
