@@ -1949,15 +1949,11 @@ TEST_CASE("GERG refuses set_reference_stateS instead of silently ignoring it", "
     CHECK_THROWS_AS(CoolProp::set_reference_stateS("GERG2008?::Methane", "NBP"), CoolProp::NotImplementedError);
     // ...and a composed tabular string, whose SECOND half is the GERG family.
     CHECK_THROWS_AS(CoolProp::set_reference_stateS("BICUBIC&GERG2008::Methane", "NBP"), CoolProp::NotImplementedError);
-    // Non-GERG backends must NOT start throwing: a guard that over-matches
-    // would break set_reference_stateS for everyone else.  Note these two are
-    // currently silent no-ops for a SEPARATE pre-existing reason (they match
-    // no arm of the dispatch chain at all -- bd CoolProp-mh1q); the assertion
-    // here is only that the GERG guard does not claim them.  If mh1q is fixed
-    // so unrecognised prefixes throw, update these two lines rather than the
-    // GERG guard.
-    CHECK_NOTHROW(CoolProp::set_reference_stateS("SRK::Propane", "NBP"));
-    CHECK_NOTHROW(CoolProp::set_reference_stateS("BICUBIC&HEOS::Methane", "NBP"));
+    // The GERG guard must not over-match: other unsupported backends are
+    // refused by the generic final arm (a ValueError, not the GERG-specific
+    // NotImplementedError), which is what distinguishes the two here.
+    CHECK_THROWS_AS(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), CoolProp::ValueError);
+    CHECK_THROWS_AS(CoolProp::set_reference_stateS("BICUBIC&HEOS::Methane", "NBP"), CoolProp::ValueError);
 
     // ...and the throw is scoped to GERG: HEOS is untouched.  RESET is the
     // restore idiom, chosen because it zeroes the offset rather than setting
