@@ -3475,6 +3475,11 @@ TEST_CASE("Check PC-SAFT interaction parameter functions", "[pcsaft_binary_inter
         }
     } restore;
     set_config_bool(OVERWRITE_BINARY_INTERACTION, true);
+    // Write a sentinel first: if the pair already exists, re-writing -0.127
+    // would pass even if the overwrite silently did nothing.
+    set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.2);
+    CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.2);
+    // ...then the value the other PC-SAFT water/acetic-acid tests rely on.
     set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.127);
     CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.127);
 }
@@ -8671,6 +8676,11 @@ TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmhol
             CAPTURE(fluid);
             CHECK(std::abs(value) < 2e6);
             const auto doc = nlohmann::json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            // Fluids registered by tests use synthetic 999-* CAS numbers; skip
+            // them so a fixture with a new id cannot offset a lost shipped one.
+            if (doc.at("INFO").at("CAS").get<std::string>().rfind("999-", 0) == 0) {
+                continue;
+            }
             const auto& id = doc.at("INFO").at("STANDARD_STATE").at("hmolar_formation").at("id");
             // Every ingested value has a string id; a missing one would let
             // distinct species collapse onto one entry and hide a coverage loss.
