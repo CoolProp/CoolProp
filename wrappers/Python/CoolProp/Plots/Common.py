@@ -1405,6 +1405,12 @@ class IsoLine(Base2DObject):
             xcrit = np.nan
             ycrit = np.nan
 
+        # Only a pure fluid's saturation curve is known to end at its critical
+        # point.  For a mixture (a zeotrope) the dew and bubble curves need not
+        # pass near the critical point in (x, y), so substituting it would draw
+        # a spurious segment; leave those failures as NaN.
+        rescue_near_critical = len(self.state.fluid_names()) == 1
+
         X = np.empty_like(one)
         Y = np.empty_like(one)
 
@@ -1419,8 +1425,9 @@ class IsoLine(Base2DObject):
                 X[index] = self.state.keyed_output(self._x_index)
                 Y[index] = self.state.keyed_output(self._y_index)
             except Exception as e:
-                if (pair == CoolProp.QT_INPUTS and abs(two[index] - Tcrit) < 1e0) or \
-                   (pair == CoolProp.PQ_INPUTS and abs(one[index] - Pcrit) < 1e2):
+                if rescue_near_critical and (
+                   (pair == CoolProp.QT_INPUTS and abs(two[index] - Tcrit) < 1e0) or
+                   (pair == CoolProp.PQ_INPUTS and abs(one[index] - Pcrit) < 1e2)):
                     X[index] = xcrit
                     Y[index] = ycrit
                     warnings.warn(

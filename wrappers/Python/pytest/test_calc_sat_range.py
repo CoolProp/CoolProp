@@ -79,3 +79,23 @@ def test_failure_near_critical_pressure_is_replaced_by_critical_point(Common):
     assert np.isfinite(iso.x[0])
     assert iso.x[1] == iso.critical_state.keyed_output(CoolProp.iHmass)
     assert iso.y[1] == iso.critical_state.keyed_output(CoolProp.iP)
+
+
+class _MixtureNamedState(_FailingState):
+    """Same proxy, but reports two components, as a mixture state would"""
+
+    def fluid_names(self):
+        return ["Propane", "Ethane"]
+
+
+def test_mixture_failure_near_critical_is_left_as_nan(Common):
+    # A zeotrope's dew/bubble curves need not pass near its critical point,
+    # so the rescue is for pure fluids only: a mixture's failure stays NaN.
+    iso, Tc, _ = _isoline(Common, 0.0)
+    Trange = np.array([Tc - 20.0, Tc - 0.5])
+    iso._state = _MixtureNamedState(iso.state, lambda pair, one, two: two > Tc - 6.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        iso.calc_sat_range(Trange=Trange)
+    assert np.isfinite(iso.x[0])
+    assert np.isnan(iso.x[1]) and np.isnan(iso.y[1])
