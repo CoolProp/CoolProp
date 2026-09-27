@@ -4131,6 +4131,76 @@
     }
   },
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Perkins-JCED-2017-R1233zdE",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (5) and Table 1 of Perkins, Huber & Assael, J. Chem. Eng. Data 62:2659 (2017), in W/(m K). Tc = 439.6 K is the paper's own value (Mondejar et al. 2015 EOS), not the Tc of the Akasaka & Lemmon (2022) EOS that CoolProp now uses.",
+        "formula": "let Tr = T/Tc\nsum(i: A[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 439.6
+        },
+        "arrays": {
+          "A": [
+            -0.0140033,
+            0.037816,
+            -0.00245832
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (6) and Table 1 of Perkins et al. (2017), in W/(m K). Tc = 439.6 K and rhoc = 480.219 kg/m^3 are the paper's own reducing values (REFPROP: 3.68 mol/L). Eq. (6) as printed sums i = 1..5, but Table 1 lists i = 1..6 and REFPROP 10.0/10.1 carry all six; the i = 6 terms are required to reproduce Table 2 (300 K / 1308.8 kg/m^3: 0.091399 with six terms, 0.696 without).",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 439.6,
+          "rhoc": 480.219
+        },
+        "arrays": {
+          "B1": [
+            0.00862816,
+            -0.0208988,
+            0.0511968,
+            -0.0349076,
+            0.00975727,
+            -0.000926484
+          ],
+          "B2": [
+            0.000914709,
+            -0.00407914,
+            0.00845668,
+            -0.0108985,
+            0.00538262,
+            -0.000806009
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Eqs. (7)-(10) of Perkins et al. (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.059, xi0 = 0.213e-9 m, qD^-1 = 0.5980e-9 m (fitted), T_ref = 1.5 Tc = 659.4 K with the paper's Tc = 439.6 K. Paper, REFPROP 10.0 and REFPROP 10.1 agree on every constant. The correlation was fitted with the Mondejar et al. (2015) EOS and an ECS viscosity; CoolProp uses the Akasaka & Lemmon (2022) EOS and its own viscosity model, and this block takes Tc, pc and rhoc from the EOS, so the enhancement differs from the paper's near the critical point. At Table 2's 445 K / 168.52 kg/m^3 the paper gives 0.026141 W/(m K); the paper's equations on REFPROP 10.0's Mondejar EOS with the paper's viscosity (19.053 uPa s) give 0.0261406, on the Akasaka & Lemmon EOS 0.026048, and CoolProp 0.026049. The Table 2 points at 300 K, where the enhancement is small, agree with the paper to 1e-4 on either EOS.",
+        "GAMMA": 0.059,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 1672240802.6755853,
+        "zeta0": 2.13e-10,
+        "T_ref": 659.4
+      }
+    },
     "viscosity": {
       "BibTeX": "Bell-PURDUE-2016-ETA",
       "C": 0.8089,

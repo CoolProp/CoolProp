@@ -16,6 +16,7 @@
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #   ./dev/ci/preflight.sh --skip=install-headers        # subset
 #   ./dev/ci/preflight.sh --skip=incomp-sanity          # subset
+#   ./dev/ci/preflight.sh --jobs=4       # cap parallelism (default: all cores)
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -25,7 +26,9 @@
 #                          compile_commands.json isn't around)
 #   - semgrep          : uvx semgrep with p/cpp + p/security-audit rulesets
 #   - Catch2 tests     : ./build_catch/CatchTestRunner with tag scope
-#                        auto-selected from the changed paths
+#                        auto-selected from the changed paths, sharded
+#                        across --jobs cores by dev/ci/run-catch-sharded.sh;
+#                        BENCHMARK bodies run once, as in CI
 #
 # Exit codes: 0 = all checks passed (or were skipped intentionally),
 # non-zero = at least one check failed.  When invoked as a pre-push hook
@@ -38,6 +41,8 @@ set -euo pipefail
 
 BASE_REF="origin/master"
 SKIP_CHECKS=""
+JOBS=""
+JOBS_GIVEN=0
 for arg in "$@"; do
     case "$arg" in
         --base=*) BASE_REF="${arg#*=}" ;;
@@ -45,6 +50,7 @@ for arg in "$@"; do
         # earlier one, so `--skip=a --skip=b` silently skipped only b and ran a.
         # Both forms now work -- CSV in one flag, or the flag repeated.
         --skip=*) SKIP_CHECKS="${SKIP_CHECKS:+$SKIP_CHECKS,}${arg#*=}" ;;
+        --jobs=*) JOBS="${arg#*=}"; JOBS_GIVEN=1 ;;
         --help|-h)
             # Print the header comment block, stopping at the first
             # non-comment line. A hardcoded end line silently truncated this
@@ -53,7 +59,7 @@ for arg in "$@"; do
             exit 0
             ;;
         *)
-            echo "preflight: unknown arg '$arg' (use --base=<ref> or --skip=<csv>)" >&2
+            echo "preflight: unknown arg '$arg' (use --base=<ref>, --skip=<csv> or --jobs=<n>)" >&2
             exit 2
             ;;
     esac
@@ -62,6 +68,40 @@ done
 skip_check() {
     [[ ",$SKIP_CHECKS," == *",$1,"* ]]
 }
+
+# Parallelism for the builds, the sharded test run and clang-tidy.
+# The all-cores default applies only when --jobs is absent; an explicit
+# `--jobs=` falls through to the validation below and is rejected.
+if [ "$JOBS_GIVEN" = 0 ]; then
+    JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+fi
+# Leading zeros are rejected, not stripped: bash arithmetic reads 010 as
+# octal 8 and 08 as an error, while xargs -P reads them as decimal.
+case "$JOBS" in '' | *[!0-9]* | 0*)
+    echo "preflight: --jobs must be a positive integer without leading zeros, got '$JOBS'" >&2
+    exit 2
+    ;;
+esac
+
+# Share CPM dependency downloads across worktrees.  cmake/dependencies.cmake
+# already defaults the cache to <worktree>/.cpm_cache, so build dirs WITHIN a
+# worktree share it -- but every new worktree still re-clones all of the
+# dependencies on its first configure, which was most of the 19 s that
+# configure took.  CPM stores the value as a cache variable per build dir, so
+# this only affects build dirs configured from here on; existing ones keep
+# what they have.  CPM takes a file lock per package, so concurrent worktrees
+# can share one cache.  `-` rather than `:-`: an explicitly empty
+# CPM_SOURCE_CACHE is an opt-out and is respected.
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE-$HOME/.cache/CPM}"
+
+# Ninja when available: it is what CI uses, and it schedules the build better
+# than Unix Makefiles.  Only applied when preflight configures a build dir
+# itself (the dir does not exist yet), so it can never clash with the
+# generator an existing CMakeCache.txt records.
+CMAKE_GEN_ARGS=()
+if command -v ninja >/dev/null 2>&1; then
+    CMAKE_GEN_ARGS=(-G Ninja)
+fi
 
 # ---------- locate repo + cd to root ---------------------------------
 
@@ -162,9 +202,11 @@ step "build CatchTestRunner"
 if skip_check build; then
     skip "build" "--skip=build"
 elif [ ! -d build_catch ]; then
-    # Auto-configure on first run.  Same flags as CI.
-    cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON >/dev/null 2>&1 || {
-        fail "build (cmake configure failed; run cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON manually)"
+    # Auto-configure on first run.  Release is not optional: CoolProp sets no
+    # default CMAKE_BUILD_TYPE, so without it the runner is built unoptimized
+    # and every test stage after this is several times slower.
+    cmake -B build_catch -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 || {
+        fail "build (cmake configure failed; rm -rf build_catch, then run cmake -B build_catch -S . ${CMAKE_GEN_ARGS[*]-} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release manually)"
     }
 fi
 if ! skip_check build && [ -d build_catch ]; then
@@ -174,7 +216,7 @@ if ! skip_check build && [ -d build_catch ]; then
     # <pipeline>` was false and the gate reported the build as PASSING.
     # Grepping the last 5 lines was independently unreliable -- a link
     # error, an OOM kill or a cmake usage error need not print "error:".
-    if cmake --build build_catch --target CatchTestRunner -j8 >/tmp/preflight-build.log 2>&1; then
+    if cmake --build build_catch --target CatchTestRunner -j"$JOBS" >/tmp/preflight-build.log 2>&1; then
         ok "build CatchTestRunner"
     else
         tail -20 /tmp/preflight-build.log
@@ -204,12 +246,12 @@ else
     # through --skip=json-symbols (handled above), not through swallowed errors.
     SHARED_OK=1
     if [ ! -d build_shared ]; then
-        if ! cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
+        if ! cmake -B build_shared -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
             fail "json-symbols (shared configure failed; see /tmp/preflight-shared-build.log)"
             SHARED_OK=0
         fi
     fi
-    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j8 >/tmp/preflight-shared-build.log 2>&1; then
+    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j"$JOBS" >/tmp/preflight-shared-build.log 2>&1; then
         fail "json-symbols (shared build failed; see /tmp/preflight-shared-build.log)"
         SHARED_OK=0
     fi
@@ -368,7 +410,7 @@ else
     # distinct from a filter that legitimately matches nothing (exit 0, no
     # lines).  No `2>/dev/null` and no `|| echo 0`: swallowing either the
     # stderr or the status is what lets a gate fail open.
-    test_log="$(mktemp "${TMPDIR:-/tmp}/preflight-tests.XXXXXX")"
+    test_logdir="$(mktemp -d "${TMPDIR:-/tmp}/preflight-tests.XXXXXX")"
     if ! listed_tests=$(./build_catch/CatchTestRunner "$TAG_FILTER" \
                             --list-tests --verbosity quiet); then
         fail "tests (could not list cases for filter '$TAG_FILTER' -- is the runner intact?)"
@@ -376,21 +418,35 @@ else
         matched=$(printf '%s\n' "$listed_tests" | awk 'NF { c++ } END { print c + 0 }')
         if [ "$matched" -eq 0 ]; then
             fail "tests (filter '$TAG_FILTER' matched 0 test cases -- filter is stale, not a pass)"
-        # tee to the log but NOT to the terminal: streaming all ~410 cases here
+        # Sharded across $JOBS cores (see dev/ci/run-catch-sharded.sh for the
+        # load-balancing and fail-closed argument).  The runner's own summary
+        # goes to the log dir, not the terminal: streaming ~560 cases here
         # would bury the cppcheck/clang-tidy/semgrep results and the summary
-        # below it.  `>/dev/null` does not cost the exit status -- under
-        # pipefail the pipeline still reports the runner's non-zero status, not
-        # tee's (verified).  On failure the tail is echoed so there is context
-        # without having to open the log.
-        elif ./build_catch/CatchTestRunner "$TAG_FILTER" \
-                 --warn UnmatchedTestSpec 2>&1 | tee "$test_log" >/dev/null; then
-            ok "tests ($TAG_FILTER, $matched cases listed)"
+        # below it.  Beyond its exit status, the sharded runner checks that
+        # the cases that ran add up to $matched, so a shard that crashed or
+        # silently ran nothing fails rather than shrinking the gate.
+        #
+        # BENCHMARK flags: the same one-sample settings CI uses.  Catch2's
+        # defaults take 100 samples plus analysis, which made
+        # [superanc],[caching] alone 25.9 s.  --skip-benchmarks would be
+        # faster still but is NOT safe: a BENCHMARK body that throws fails its
+        # test case, and some bodies are the only place a code path runs
+        # ("Performance regression for TS; on/off" [2438] is the only
+        # update(SmolarT_INPUTS) call in its case; the #2773 update_with_guesses
+        # paths in [caching] run only inside BENCHMARK).  Running each body
+        # once costs ~1 s over skipping them once the run is sharded.
+        elif mkdir "$test_logdir/shards" \
+             && ./dev/ci/run-catch-sharded.sh ./build_catch/CatchTestRunner "$TAG_FILTER" "$matched" "$JOBS" "$test_logdir/shards" \
+                 --warn UnmatchedTestSpec \
+                 --benchmark-samples 1 --benchmark-no-analysis --benchmark-warmup-time 0 \
+                 >"$test_logdir/summary.txt" 2>&1; then
+            ok "tests ($TAG_FILTER, $matched cases, sharded over $JOBS jobs)"
         else
-            # `|| true` guards the DISPLAY only: without it a tail failure
+            # `|| true` guards the DISPLAY only: without it a failed cat
             # would abort the script under `set -e` before `fail` records the
             # result.  It cannot mask the gate -- `fail` runs unconditionally.
-            tail -15 "$test_log" || true
-            fail "tests ($TAG_FILTER; full log: $test_log)"
+            cat "$test_logdir/summary.txt" || true
+            fail "tests ($TAG_FILTER; per-shard logs: $test_logdir/shards)"
         fi
     fi
 fi
@@ -474,7 +530,26 @@ else
     if [ -z "$CPP_ONLY" ]; then
         skip "clang-tidy" "no .cpp files in diff (headers covered transitively)"
     else
-        COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh $CPP_ONLY >/tmp/preflight-clang-tidy.log 2>&1 || true
+        # One clang-tidy per file, $JOBS at a time.  It was one process over
+        # every file, which analyses them serially at ~47 s each (parsing is
+        # only ~5 s of that; the rest is the ~200 enabled checks), so a
+        # five-file diff sat in this step for four minutes on one core.
+        # Each file logs to its own zero-padded file and the logs are joined
+        # in order afterwards, so parallel writers never interleave lines and
+        # the combined log reads exactly as the serial one did.  The `|| true`
+        # per file is the pre-existing contract of this step (the verdict
+        # comes from the grep below, not from clang-tidy's exit status).
+        CT_LOGDIR="$(mktemp -d "${TMPDIR:-/tmp}/preflight-clang-tidy.XXXXXX")"
+        ct_i=0
+        while IFS= read -r ct_f; do
+            [ -n "$ct_f" ] || continue
+            printf '%04d\0%s\0' "$ct_i" "$ct_f"
+            ct_i=$((ct_i + 1))
+        done <<< "$CPP_ONLY" \
+            | xargs -0 -n 2 -P "$JOBS" bash -c \
+                'COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh "$2" >"$0/$1.log" 2>&1 || true' \
+                "$CT_LOGDIR"
+        cat "$CT_LOGDIR"/*.log >/tmp/preflight-clang-tidy.log
         if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
             skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
