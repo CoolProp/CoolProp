@@ -42,8 +42,10 @@ reported.  Try such a block from Python (see `Trying a block from Python`_) befo
 relying on it.
 
 A block also runs when the fluid is a mixture component, evaluated for that component
-at the mixture's temperature and density, and when the fluid is the reference fluid of
-another fluid's extended-corresponding-states model.
+at the mixture's temperature and molar density (so ``Dmass`` there is the molar density
+times the component's molar mass).  It also runs when the fluid is the reference fluid
+of another fluid's extended-corresponding-states model, at the conformal state rather
+than the state that was asked for, and only for the residual (background) blocks.
 
 Block structure
 ===============
@@ -75,8 +77,8 @@ This is the residual thermal conductivity of xenon, as shipped.
 ``arrays``
     Named coefficient vectors, which can only be read inside a ``sum``.
 ``note``, ``BibTeX``
-    Ignored, like any other key apart from ``type`` (and ``hardcoded``, which the
-    loader checks before ``type``).  The formula has no comment syntax,
+    Ignored, like any other key apart from ``type`` (and, everywhere except
+    ``initial_density``, ``hardcoded``, which the loader checks before ``type``).  The formula has no comment syntax,
     so ``note`` is where to record the source, unit conversions, and any departure
     from the equation as printed.
 
@@ -216,7 +218,7 @@ can be checked against its paper without rebuilding CoolProp or editing a fluid 
 
 ``required_inputs()`` lists the state variables in the order the formula first reads
 them.  Compilation errors raise ``ValueError`` with the same diagnostic the fluid loader
-reports when it loads the fluid.  ``evaluate()`` raises if a state variable reads back as non-finite, which
+reports, less the fluid name the loader adds.  ``evaluate()`` raises if a state variable reads back as non-finite, which
 usually means the ``AbstractState`` was never updated.  The C++ equivalent is
 ``CoolProp::expression::ExpressionBlock`` in
 ``include/CoolProp/expression/ExpressionBlock.h``.
