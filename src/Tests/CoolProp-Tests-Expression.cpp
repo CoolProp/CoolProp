@@ -192,7 +192,7 @@ TEST_CASE("DSL number-literal syntax", "[expression][locale]") {
     CHECK_THROWS_WITH(compile(".", {}, {}), ContainsSubstring("malformed number"));
     CHECK_THROWS_WITH(compile(".e5", {}, {}), ContainsSubstring("malformed number"));
     // Subnormals are inside the double range and load on every platform.
-    CHECK(compile("1e-310", {}, {}).evaluate({}) > 0.0);
+    CHECK(compile("1e-310", {}, {}).evaluate({}) == 1e-310);
     // Literals outside the double range are refused, not turned into inf/0.
     CHECK_THROWS_WITH(compile("1e400", {}, {}), ContainsSubstring("out of range"));
     CHECK_THROWS_WITH(compile("1e-400", {}, {}), ContainsSubstring("out of range"));
