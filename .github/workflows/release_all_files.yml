@@ -268,8 +268,332 @@ jobs:
         retention-days: 1
 
 
+  # A relocatable binary tarball of the FHS install, for any Linux where no
+  # package manager is in the loop: unpack it anywhere and point a consumer at
+  # it.  GH #3388 step 3 covers sources and step 4 covers .deb/.rpm; this fills
+  # the gap between them.
+  #
+  # deploy_files needs this job, so a failure here blocks the whole publish --
+  # docs and every other binary included -- and that is deliberate rather than
+  # overlooked.  continue-on-error would let a broken tarball, or none at all,
+  # reach the download page quietly, which is the failure mode GH #3388 is
+  # about.  The cost is real though: this is a full Release compile, so it
+  # carries more failure surface (runner memory, a new image, a toolchain
+  # change) than the checkout-and-zip job beside it.
+  #
+  # It is deliberately NOT the distribution build.  That one (packaging_offline
+  # and OBS) resolves Eigen and fmt with find_package and bakes prefix=/usr into
+  # coolprop.pc, which is correct for a .deb and useless in a tarball somebody
+  # unpacks under $HOME.  Two choices here are what the word "relocatable"
+  # actually rests on:
+  #
+  #   COOLPROP_VENDOR_THIRD_PARTY=ON installs the Eigen and fmt headers inside
+  #   the tree and names them in the .pc Cflags, so the tarball carries
+  #   everything the public C++ headers include and resolves no external .pc.
+  #
+  #   CMAKE_INSTALL_LIBDIR=lib defeats Debian multiarch, so the .pc lands at
+  #   <prefix>/lib/pkgconfig/coolprop.pc -- exactly two components below the
+  #   prefix, which is what "pkg-config --define-prefix" assumes when it
+  #   recomputes the prefix from the file's own location.  With a multiarch
+  #   libdir it is three and --define-prefix silently yields <root>/lib/include.
+  #
+  # Built from the published source tarball rather than from a fresh checkout,
+  # so the binaries and the sources on the same SourceForge page are provably
+  # the same tree, and REQUIRE_VENDORED_DEPS=ON means the configure resolves
+  # every dependency from externals/cpm/ rather than reaching for the network.
+  #
+  # Worth knowing before pointing anyone at it: the runner's glibc sets the
+  # oldest distribution this can run on.  It is a convenience build for current
+  # systems, not a manylinux-style portable artifact.
+  prepare_linux_tarball:
+    needs: [set_vars, prepare_sources]
+    name: Build the relocatable Linux tarball
+    runs-on: ubuntu-latest
+    # Nothing here writes through the Actions token; download-artifact uses the
+    # runtime token rather than GITHUB_TOKEN, so read is enough.  Stated rather
+    # than inherited, so the repository default cannot widen it later.
+    permissions:
+      contents: read
+    steps:
+
+    # CMakeLists.txt asks for find_package(Python 3.9 REQUIRED), and pinning it
+    # the way packaging_offline.yml does keeps this job from depending on
+    # whatever python3 the runner image happens to ship.
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.x'
+
+    - name: Download the source tarball
+      uses: actions/download-artifact@v8
+      with:
+        name: binaries-source
+        path: dist
+
+    - name: Unpack the tarball
+      run: |
+        set -euo pipefail
+        mkdir -p "${RUNNER_TEMP}/src"
+        tar -x -f dist/source/coolprop-*.tar.gz -C "${RUNNER_TEMP}/src"
+
+        # Exactly one top-level directory is expected; anything else means the
+        # tarball layout changed and every step below would silently guess.
+        mapfile -t roots < <(find "${RUNNER_TEMP}/src" -mindepth 1 -maxdepth 1 -type d)
+        if [ "${#roots[@]}" -ne 1 ]; then
+          echo "::error::expected one directory in the source tarball, found ${#roots[@]}"
+          printf '%s\n' "${roots[@]}" >&2
+          exit 1
+        fi
+
+        # The version comes out of that directory name rather than being parsed
+        # a second time from the CMake, so the binary tarball cannot end up
+        # labelled differently from the source tarball it was built from.
+        #
+        # The shape mirrors what make-release-tarball.sh builds the name from:
+        # major.minor.patch, then COOLPROP_VERSION_REVISION, which that script
+        # constrains to letters and digits and which is "dev" between releases
+        # and empty on a release tag.  So BOTH 8.1.0 and 8.0.1dev are valid and
+        # the snapshot form is the normal one -- a numbers-only pattern here
+        # rejects every run that is not on a release tag, and since deploy_files
+        # needs this job, that would publish nothing at all.
+        version="$(basename "${roots[0]}")"
+        version="${version#coolprop-}"
+        if ! [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9]*$ ]]; then
+          echo "::error::could not read a version from '$(basename "${roots[0]}")'"
+          exit 1
+        fi
+
+        {
+          echo "COOLPROP_SRC=${roots[0]}"
+          echo "COOLPROP_VERSION=${version}"
+          echo "COOLPROP_PKG_NAME=coolprop-${version}-linux-$(uname -m)"
+        } >> "${GITHUB_ENV}"
+
+    - name: Build and install into a staging prefix
+      run: |
+        set -euo pipefail
+        # DESTDIR staging with the prefix set to the tarball's own top-level
+        # directory name, so the packed tree is a self-contained prefix rather
+        # than a usr/ fragment that only makes sense unpacked at /.
+        cmake -S "${COOLPROP_SRC}" -B "${RUNNER_TEMP}/build" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX="/${COOLPROP_PKG_NAME}" \
+          -DCMAKE_INSTALL_LIBDIR=lib \
+          -DCOOLPROP_SHARED_LIBRARY=ON \
+          -DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON \
+          -DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF \
+          -DCOOLPROP_INSTALL_FLAT_HEADERS=OFF \
+          -DCOOLPROP_VENDOR_THIRD_PARTY=ON \
+          -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
+          -DCOOLPROP_NO_EXAMPLES=ON
+        cmake --build "${RUNNER_TEMP}/build" -j "$(nproc)"
+        DESTDIR="${RUNNER_TEMP}/stage" cmake --install "${RUNNER_TEMP}/build"
+
+    - name: Check the staged tree before packing it
+      run: |
+        set -euo pipefail
+        root="${RUNNER_TEMP}/stage/${COOLPROP_PKG_NAME}"
+        pc="${root}/lib/pkgconfig/coolprop.pc"
+
+        # The .pc has to be at this exact depth or --define-prefix, which the
+        # README tells users to pass, computes the wrong prefix.  Checking the
+        # file exists where it is expected is what makes CMAKE_INSTALL_LIBDIR=lib
+        # above a decision rather than a hopeful default.
+        if [ ! -f "${pc}" ]; then
+          echo "::error::no coolprop.pc at lib/pkgconfig; --define-prefix would not work"
+          find "${root}" -name 'coolprop.pc' >&2
+          exit 1
+        fi
+
+        # Assert the prefix that was actually baked in, before the relocation
+        # test below overrides it.  Without this, a .pc generated with a wrong
+        # prefix would still sail through, because the override replaces
+        # exactly the value under test.
+        if ! grep -qxF "prefix=/${COOLPROP_PKG_NAME}" "${pc}"; then
+          echo "::error::coolprop.pc has an unexpected baked-in prefix"
+          grep '^prefix=' "${pc}" >&2
+          exit 1
+        fi
+
+        # --define-prefix is GLOBAL: it redefines prefix in every .pc that gets
+        # resolved, not just this one.  That is harmless only while coolprop.pc
+        # requires nothing, which is what vendoring gives us.  If somebody turns
+        # vendoring off here, "Requires.private: eigen3 fmt" appears, the flag
+        # would relocate the system Eigen to a path that does not exist, and the
+        # tarball would stop being self-contained anyway.  Fail here rather than
+        # shipping it.
+        if grep -Eq '^Requires(\.private)?:[[:space:]]*[^[:space:]]' "${pc}"; then
+          echo "::error::coolprop.pc requires external packages, so this tree is not self-contained"
+          grep -E '^(Requires|Requires\.private|Cflags):' "${pc}" >&2
+          exit 1
+        fi
+
+        # The vendored headers are the other half of self-contained: the public
+        # C++ headers include <Eigen/Dense>, so a tree without them compiles
+        # nothing.  Named headers rather than the directories, because a
+        # directory test passes for an empty one and a partial install(DIRECTORY)
+        # is exactly the shape that would create it.
+        for header in third_party/eigen/Eigen/Dense third_party/fmt/fmt/format.h; do
+          if [ ! -f "${root}/include/CoolProp/${header}" ]; then
+            echo "::error::vendored header CoolProp/${header} missing from the staged tree"
+            exit 1
+          fi
+        done
+
+    - name: Pack the tarball
+      run: |
+        set -euo pipefail
+        mkdir -p binaries/linux
+        # --sort and the ownership flags keep the archive metadata stable:
+        # members in a fixed order, and no uid/gid from the runner.  This is
+        # deliberately NOT the full reproducibility make-release-tarball.sh
+        # gives the source tarball, which also pins --mtime: the compiled
+        # library is not bit-reproducible, so two runs of the same commit do
+        # not give an identical file and pinning timestamps would only make it
+        # look as though they did.
+        tar --sort=name --owner=0 --group=0 --numeric-owner \
+          -czf "binaries/linux/${COOLPROP_PKG_NAME}.tar.gz" \
+          -C "${RUNNER_TEMP}/stage" "${COOLPROP_PKG_NAME}"
+        ls -l "binaries/linux/${COOLPROP_PKG_NAME}.tar.gz"
+
+    - name: Check the packed tarball really is relocatable
+      run: |
+        set -euo pipefail
+        # Unpack the PACKED file, at a different depth from where it was built,
+        # and build against that.  Testing the staging tree in place would pass
+        # for a tree that is not relocatable at all, which is the only property
+        # this artifact claims over the shared_library/ folders.
+        work="${RUNNER_TEMP}/relocated/a/b/c"
+        mkdir -p "${work}"
+        tar -x -f "binaries/linux/${COOLPROP_PKG_NAME}.tar.gz" -C "${work}"
+        root="${work}/${COOLPROP_PKG_NAME}"
+
+        echo "== via pkg-config --define-prefix =="
+        export PKG_CONFIG_PATH="${root}/lib/pkgconfig"
+        cflags="$(pkg-config --define-prefix --cflags coolprop)"
+        libs="$(pkg-config --define-prefix --libs coolprop)"
+        echo "cflags: ${cflags}"
+        echo "libs:   ${libs}"
+
+        # The flags must name the unpacked location.  pkg-config happily emits
+        # the stale build-time prefix if --define-prefix did not take, and the
+        # compile below would then still succeed via whatever else is on the
+        # include path, so check the strings rather than trusting the exit code.
+        #
+        # Checked separately, not as one joined string: an absolute
+        # CMAKE_INSTALL_LIBDIR makes CoolPropLibrary.cmake write an absolute
+        # libdir into the .pc, and then --define-prefix relocates includedir
+        # alone.  Joined, the cflags half would carry the check and -L would
+        # point at a path that does not exist -- which links against a system
+        # libCoolProp and reports success if the machine happens to have one.
+        for flags in "${cflags}" "${libs}"; do
+          case "${flags}" in
+            *"${root}"*) ;;
+            *) echo "::error::pkg-config did not relocate to ${root}: ${flags}"; exit 1 ;;
+          esac
+        done
+
+        # cpp_api.cpp includes numerics/PolyMath.h precisely to pull the
+        # transitive Eigen include in, so it fails when Cflags is incomplete.
+        # shellcheck disable=SC2086
+        c++ -std=c++17 "${COOLPROP_SRC}/dev/ci/cmake-consumer/cpp_api.cpp" \
+          ${cflags} ${libs} -o "${work}/consumer_pc"
+        LD_LIBRARY_PATH="${root}/lib" "${work}/consumer_pc"
+
+        echo "== via find_package(CoolProp) =="
+        cat > "${work}/main.c" <<'EOF'
+        #include <CoolProp/CoolPropLib.h>
+        #include <stdio.h>
+
+        int main(void) {
+            /* Normal boiling point of water, expected near 373.12 K. */
+            double T_sat_K = PropsSI("T", "P", 101325.0, "Q", 0.0, "Water");
+            printf("T_sat_K = %.4f\n", T_sat_K);
+            if (!(T_sat_K > 372.0 && T_sat_K < 374.0)) {
+                fprintf(stderr, "unexpected saturation temperature\n");
+                return 1;
+            }
+            return 0;
+        }
+        EOF
+        cat > "${work}/CMakeLists.txt" <<'EOF'
+        cmake_minimum_required(VERSION 3.14)
+        project(coolprop_relocated_consumer C)
+        find_package(CoolProp REQUIRED)
+        add_executable(consumer main.c)
+        target_link_libraries(consumer PRIVATE CoolProp::CoolProp)
+        EOF
+        cmake -S "${work}" -B "${work}/build" \
+          -DCMAKE_PREFIX_PATH="${root}" \
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build "${work}/build"
+        LD_LIBRARY_PATH="${root}/lib" "${work}/build/consumer"
+
+    - name: Create the info file
+      run: |
+        set -euo pipefail
+        # This step needs the packing step above to have run (for the tarball it
+        # describes) and the unpack step (for the two variables).  mkdir only so
+        # the write cannot fail on ordering; the guard that actually enforces
+        # the dependency is the completeness check below.
+        mkdir -p binaries/linux
+        # Mirrors binaries/Python/README.txt: the download page is where people
+        # look, and both usable entry points need one flag they would not guess.
+        cat > binaries/linux/README.txt <<EOF
+        CoolProp ${COOLPROP_VERSION} for Linux, relocatable.
+
+        A complete install tree (lib/, include/, share/) with the Eigen and fmt
+        headers bundled.  Unpack it anywhere:
+
+          tar -xzf ${COOLPROP_PKG_NAME}.tar.gz -C /opt
+
+        With CMake:
+
+          cmake -DCMAKE_PREFIX_PATH=/opt/${COOLPROP_PKG_NAME} ...
+          find_package(CoolProp REQUIRED)
+          target_link_libraries(you PRIVATE CoolProp::CoolProp)
+
+        With pkg-config, --define-prefix is required because the prefix baked in
+        at build time is not where you unpacked it:
+
+          export PKG_CONFIG_PATH=/opt/${COOLPROP_PKG_NAME}/lib/pkgconfig
+          c++ you.cpp \$(pkg-config --define-prefix --cflags --libs coolprop)
+
+        Nothing here sets a runtime library path, so tell the loader where the
+        library is, either at link time or at run time:
+
+          c++ you.cpp ... -Wl,-rpath,/opt/${COOLPROP_PKG_NAME}/lib
+          export LD_LIBRARY_PATH=/opt/${COOLPROP_PKG_NAME}/lib
+
+        The library is built against this build machine's glibc, so it needs a
+        reasonably current distribution.  For an older one, or to have your
+        package manager handle it, build from source or use the distribution
+        packages: https://software.opensuse.org//download.html?project=home%3Ajowr&package=coolprop
+        EOF
+        cat binaries/linux/README.txt
+
+    # if-no-files-found on the upload below is satisfied by README.txt alone,
+    # so it cannot notice a missing tarball.  This is the check that can, and it
+    # matters because deploy_files rsyncs whatever lands here straight to the
+    # public download page: a README pointing at a tarball that is not there is
+    # worse than shipping no directory at all.
+    - name: Check the artifact is complete
+      run: |
+        set -euo pipefail
+        test -s "binaries/linux/${COOLPROP_PKG_NAME}.tar.gz"
+        test -s binaries/linux/README.txt
+        ls -l binaries/linux/
+
+    - name: Store artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: binaries-linux
+        path: binaries
+        retention-days: 1
+        if-no-files-found: error
+
+
   deploy_files:
-    needs: [set_vars, collect_binaries, prepare_sources]  # prepare_mathcad
+    needs: [set_vars, collect_binaries, prepare_sources, prepare_linux_tarball]  # prepare_mathcad
     name: Deploy collected files
     runs-on: ubuntu-latest
     steps:  

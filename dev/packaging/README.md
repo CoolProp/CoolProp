@@ -867,7 +867,25 @@ So:
    no vendored dependencies (so it cannot build in a chroot), unpacks as
    `source/` rather than `coolprop-<version>/`, carries no version in its name
    and is not reproducible.
-3. Still to wire up: pushing the tarball to OBS with `osc` from that same job,
+3. The `prepare_linux_tarball` job in the same workflow builds that source
+   tarball into a **relocatable binary tarball**, `binaries/linux/`, for users
+   on a distribution we do not package for and for anyone installing without a
+   package manager.  It is not the distribution build and deliberately differs
+   from it in two ways: `COOLPROP_VENDOR_THIRD_PARTY=ON` puts the Eigen and fmt
+   headers inside the tree, so nothing external has to be installed, and
+   `CMAKE_INSTALL_LIBDIR=lib` keeps `coolprop.pc` exactly two components below
+   the prefix, which is what `pkg-config --define-prefix` assumes when it
+   recomputes the prefix from the file's own location.  With a multiarch libdir
+   it is three components and `--define-prefix` quietly hands the compiler
+   `-I<root>/lib/include`, verified against pkgconf 1.8.1.  Both properties are
+   asserted before packing, and the job then unpacks the packed file somewhere
+   else entirely and builds a pkg-config and a `find_package` consumer against
+   it; testing the staging tree in place would pass for a tree that is not
+   relocatable at all, which is the only thing this artifact offers over the
+   existing `shared_library/` folders.  The runner's glibc sets the oldest
+   distribution it runs on, so it is a convenience build for current systems
+   rather than a manylinux-style portable artifact.
+4. Still to wire up: pushing the tarball to OBS with `osc` from that same job,
    and attaching it to the GitHub release.  Version numbers appear in four
    places that must agree, so have CI rewrite them rather than a human:
    `coolprop.spec` (`Version:`), `coolprop.dsc` (`Version:`, `Files:`),
@@ -876,7 +894,7 @@ So:
    `dpkg-source` rejects a changelog version that does not match the tarball,
    which is one of the things that would have stopped the 2014 scripts even if
    their version parser had worked.
-4. Never let a packaging check fail open.  `vendor-deps.sh` aborts if CPM
+5. Never let a packaging check fail open.  `vendor-deps.sh` aborts if CPM
    reports no packages at all rather than declaring an empty tree vendored, and
    `make-release-tarball.sh` asserts that each version component it parsed is a
    number instead of building `coolprop_..orig.tar.gz` the way the 2014 script
