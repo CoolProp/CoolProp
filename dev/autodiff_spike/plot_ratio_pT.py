@@ -7,6 +7,7 @@ publishes as two-phase are outlined dark, so the phase envelope shows.
 
     python3 plot_ratio_pT.py out.png ratio_on.csv [ratio_more.csv ...]
     python3 plot_ratio_pT.py out.png a.csv b.csv -- c.csv d.csv      # '--' starts a new row of panels
+    ... v:verdicts_a.csv v:verdicts_b.csv                             # overlay per-state verdicts (tools/verdict.cpp)
 """
 import csv
 import math
@@ -34,7 +35,26 @@ def load(files):
     return mixes
 
 
+# Verdict markers: CoolProp wrong / history-dependent in ink; TPFLSH wrong / out of scope smaller and lighter.
+VMARK = {
+    "cp_wrong": dict(marker="X", s=70, c=INK, edgecolors=SURFACE, linewidths=0.8, zorder=6, label="CoolProp wrong (verified in-model)"),
+    "cp_history": dict(marker="D", s=34, facecolors="none", edgecolors=INK, linewidths=1.1, zorder=6, label="CoolProp answer depends on call history"),
+    "rp_wrong": dict(marker="^", s=9, facecolors="none", edgecolors="#5c5b55", linewidths=0.45, zorder=5, label="TPFLSH wrong (non-equilibrium split / wrong root)"),
+    "rp_scope": dict(marker="v", s=7, facecolors="none", edgecolors="#8a4fb3", linewidths=0.35, alpha=0.75, zorder=5, label="TPFLSH misses a verified split (LLE, water condensation)"),
+}
+
+
+def load_verdicts(files):
+    v = {}
+    for fn in files:
+        for r in csv.DictReader(open(fn)):
+            v[(r["mixture"], r["i"])] = r["verdict"]
+    return v
+
+
 def main(out, args):
+    verdicts = load_verdicts([a[2:] for a in args if a.startswith("v:")])
+    args = [a for a in args if not a.startswith("v:")]
     # Rows: groups of files separated by '--'; without '--', 3 panels per row.
     groups, cur = [], []
     for a in args:
@@ -57,7 +77,8 @@ def main(out, args):
     grid = lcm(*[len(r) for r in rows]) if all(rows) else ncol
     nrow = len(rows)
     fig = plt.figure(figsize=(4.6 * ncol, 4.1 * nrow + 0.9))
-    gs = fig.add_gridspec(nrow, grid, hspace=0.5, wspace=0.9 if grid > ncol else 0.18, bottom=0.17 if nrow <= 2 else 0.1, top=0.86 if nrow <= 2 else 0.91)
+    extra = 0.035 if verdicts else 0.0  # room for the marker legend under the colorbar
+    gs = fig.add_gridspec(nrow, grid, hspace=0.5, wspace=0.9 if grid > ncol else 0.18, bottom=(0.17 if nrow <= 2 else 0.1) + extra, top=0.86 if nrow <= 2 else 0.91)
     placement = {}
     for r, names in enumerate(rows):
         w = grid // len(names)
@@ -78,7 +99,7 @@ def main(out, args):
             if fcp or frp or not (tcp > 0 and trp > 0):
                 continue
             Q = float(r["Q_cp"])
-            pts.append((float(r["T"]), float(r["p"]) / 1e6, math.log10(tcp / trp), 0 < Q < 1))
+            pts.append((float(r["T"]), float(r["p"]) / 1e6, math.log10(tcp / trp), 0 < Q < 1, verdicts.get((name, r["i"]))))
         # marker size shrinks with density so a 10k-state map still reads as points
         sc = math.sqrt(2000.0 / max(len(rows), 1))
         # single phase first, two-phase on top
@@ -88,6 +109,11 @@ def main(out, args):
                 continue
             ax.scatter([q[0] for q in sel], [q[1] for q in sel], c=[max(-LIM, min(LIM, q[2])) for q in sel], cmap=CMAP, norm=norm,
                        s=(11 if two else 9) * sc, linewidths=(0.6 if two else 0.25) * math.sqrt(sc), edgecolors=INK if two else "#b8b7b0", zorder=3 if two else 2)
+        for key, style in VMARK.items():
+            sel = [q for q in pts if q[4] == key]
+            if sel:
+                st = {k: v for k, v in style.items() if k != "label"}
+                ax.scatter([q[0] for q in sel], [q[1] for q in sel], **st)
         lr = sorted(q[2] for q in pts)
         med = 10 ** lr[len(lr) // 2]
         faster = sum(1 for v in lr if v < 0) / len(lr)
@@ -103,10 +129,10 @@ def main(out, args):
         if first_in_row:
             ax.set_ylabel("p / MPa", fontsize=9, color=INK)
         if bad_cp or bad_rp:
-            ax.text(0.98, 0.03, f"not plotted: REFPROP failed {bad_rp}, CoolProp failed {bad_cp}", transform=ax.transAxes, ha="right",
+            ax.text(0.98, 0.03, f"not plotted (error raised): TPFLSH ierr>0 {bad_rp}, CoolProp threw {bad_cp}", transform=ax.transAxes, ha="right",
                     fontsize=7, color=MUTED, bbox=dict(facecolor=SURFACE, edgecolor="none", pad=1.5))
     sm = plt.cm.ScalarMappable(norm=norm, cmap=CMAP)
-    cax = fig.add_axes([0.2, 0.06 if nrow <= 2 else 0.035, 0.6, 0.022 if nrow <= 2 else 0.012])
+    cax = fig.add_axes([0.2, (0.06 if nrow <= 2 else 0.035) + extra, 0.6, 0.022 if nrow <= 2 else 0.012])
     cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
     ticks = [-math.log10(30), -1, -math.log10(3), 0, math.log10(3), 1, math.log10(30)]
     cb.set_ticks(ticks)
@@ -114,6 +140,16 @@ def main(out, args):
     cb.ax.tick_params(labelsize=8, colors=INK)
     cb.outline.set_edgecolor("#d4d3cc")
     cb.set_label("CoolProp PT flash time / REFPROP 10 TPFLSH time", fontsize=9, color=INK)
+    if verdicts:
+        from matplotlib.lines import Line2D
+        handles = []
+        for key, st in VMARK.items():
+            face = st.get("c", st.get("facecolors"))
+            handles.append(Line2D([], [], linestyle="", marker=st["marker"], markersize=7 if key.startswith("cp") else 5.5,
+                                  markerfacecolor=face if face != "none" else "none", markeredgecolor=st["edgecolors"] if key != "cp_wrong" else INK,
+                                  markeredgewidth=1.0, label=st["label"]))
+        fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 0.0),
+                   labelcolor=INK)
     fig.suptitle(f"Updated CoolProp PT flash vs REFPROP 10 TPFLSH, per state ({nstates} states per mixture, min of 3 timings each{', mixtures run as parallel processes' if nstates > 2000 else ''})\n"
                  "CoolProp: master + #3427 SS-skip + Chebyshev density kernel.  Dark outline: CoolProp publishes a two-phase state.\n"
                  "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model).",
