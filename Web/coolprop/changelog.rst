@@ -57,6 +57,7 @@ Highlights:
   * Nitrogen: Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004); nitrogen
     viscosity also moves to Huber et al. (2024). R14, whose ECS model uses nitrogen as
     its reference fluid, changes with it.
+  * Heavy water: IAPWS R18-21 thermal conductivity and R17-20 viscosity (with its critical enhancement), replacing the 2007 formulations.
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
@@ -236,8 +237,8 @@ Highlights:
   silently doing nothing.**  ``set_reference_stateS`` dispatches on the backend
   prefix and had no final ``else``, so an unrecognised prefix returned having
   done nothing at all — not even validating the reference-state string.  The
-  GERG backends now raise ``NotImplementedError`` there.  (Other unrecognised
-  prefixes still no-op; that pre-existing behaviour is unchanged.)
+  GERG backends now raise ``NotImplementedError`` there; every other
+  unsupported backend now raises ``ValueError`` (see Bug fixes).
 
 * **vtable change in an internal header:**
   ``HelmholtzEOSMixtureBackend::set_mixture_parameters()`` is now ``virtual``,
@@ -273,6 +274,9 @@ Performance:
   (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
 
 Bug fixes:
+
+* ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
+* ``REFPROP`` backend: all REFPROP calls are serialized process-wide and each instance reloads its own fluids, so separate instances may be used from separate threads (each instance by one thread at a time).
 
 * **Low-density entropy flashes returned wrong densities.**  ``SmolarT`` resolved
   absolute density on a bracket spanning up to 18 decades, so at ``rho = 1e-8``

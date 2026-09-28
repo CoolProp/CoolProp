@@ -78,7 +78,7 @@ The IF97 backend can be accessed the same way as the other backends, by prefixin
 
 1. Generic Partial Derivatives are not yet supported.
 2. Mixtures are obviously not supported since this is a Water-only backend.
-3. Setting the reference state has no effect on IF97 properties (top-level ``set_reference_state(...)`` silently returns; the OO ``AbstractState::set_reference_stateS`` raises ``NotImplementedError``).  *The reference state is fixed such that the specific internal energy,* :math:`U` *, and the specific entropy,* :math:`S` *, of the saturated liquid at the triple point are identically zero.*
+3. Setting the reference state has no effect on IF97 properties (top-level ``set_reference_state(...)`` raises ``ValueError``; the OO ``AbstractState::set_reference_stateS`` raises ``NotImplementedError``).  *The reference state is fixed such that the specific internal energy,* :math:`U` *, and the specific entropy,* :math:`S` *, of the saturated liquid at the triple point are identically zero.*
 4. Solid properties are not supported in any of the ICE regions.
 5. The melting-sublimation curve is not used; rather, the property equations are limited uniformly at :math:`T_{min}=273.15K`.
 

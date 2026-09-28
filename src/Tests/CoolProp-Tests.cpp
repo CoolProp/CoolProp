@@ -8,11 +8,15 @@
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Cubics/UNIFACLibrary.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "../Backends/Tabular/TabularBackends.h"
 #include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "../Backends/Helmholtz/TransportRoutines.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include <atomic>
+#include <chrono>
+#include <filesystem>
 #include <map>
 #include <set>
 #include <sstream>
@@ -447,10 +451,14 @@ vel viscosity_validation_data[] = {
   vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-10, "V", 8.3705e-6, 1e-5),
   vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "V", 589.3956e-6, 1e-5),
 
-  // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 12.0604912273 * 55.2651e-6, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 1.6561616211 * 55.2651e-6, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 0.7651099154 * 55.2651e-6, 1e-5),
+  // Heavy Water, IAPWS R17-20 (2020), Table 4, near-critical points of the full formulation, Eq. (10),
+  // including mu2 (checked separately below, with the Table 3 points, which set mu2 = 1)
+  vel("HeavyWater", "T", 644.101, "Dmass", 145, "V", 26.640959e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 245, "V", 32.119967e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 295, "V", 36.828275e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 345, "V", 43.225017e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 395, "V", 47.193530e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 445, "V", 50.241640e-6, 1e-6),
 
   // Toluene, Avgeri, JPCRD, 2015
   vel("Toluene", "T", 300, "Dmass", 1e-10, "V", 7.023e-6, 1e-4),
@@ -894,10 +902,21 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)   (TRNS_TCX.FOR, TK3)
   vel("Xenon", "T", 300, "Dmass", 2725.0, "L", 63.673176997097902e-3, 1e-6),
 
-  // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 259.605241187 * 0.742128e-3, 1e-5),
+  // Heavy Water, IAPWS R18-21 (2021), Table 3 (lambda2 = 0).  Tolerance: 1e-6 or half a unit in the
+  // last printed digit, whichever is looser.
+  vel("HeavyWater", "T", 298.15, "Dmass", 1e-10, "L", 17.7498e-3, 2.9e-6),
+  vel("HeavyWater", "T", 298.15, "Dmass", 1104.5, "L", 599.557e-3, 1e-6),
+  vel("HeavyWater", "T", 298.15, "Dmass", 1200, "L", 690.421e-3, 1e-6),
+  vel("HeavyWater", "T", 825.00, "Dmass", 1e-10, "L", 76.4492e-3, 1e-6),
+  // Heavy Water, IAPWS R18-21 (2021), Table 4, T = 644.10 K, including lambda2 (checked separately below)
+  vel("HeavyWater", "T", 644.10, "Dmass", 1, "L", 52.4527e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 106, "L", 103.342e-3, 4.9e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 256, "L", 394.612e-3, 1.3e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 306, "L", 801.382e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 356, "L", 1278.423e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 406, "L", 670.833e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 456, "L", 423.603e-3, 1.2e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 750, "L", 454.846e-3, 1.1e-6),
 
   // Vassiliou, JPCRD, 2015
   vel("Cyclopentane", "T", 512, "Dmass", 1e-12, "L", 37.042e-3, 1e-5),
@@ -1002,11 +1021,103 @@ TEST_CASE("The first entry of a transport model list is the one loaded", "[condu
       // first, Lemmon & Jacobsen (2004) kept for both
       {"Nitrogen", "BibTeX-CONDUCTIVITY", "Sotiriadou-IJT-2025-nitrogen"},
       {"Nitrogen", "BibTeX-VISCOSITY", "Huber-IJT-2024-nitrogen"},
+      // HeavyWater: IAPWS R18-21 conductivity and IAPWS R17-20 viscosity first, the IAPWS 2007
+      // formulations kept for both
+      {"HeavyWater", "BibTeX-CONDUCTIVITY", "IAPWS-D2O-2021-ThermalConductivity"},
+      {"HeavyWater", "BibTeX-VISCOSITY", "IAPWS-D2O-2020-Viscosity"},
     };
     for (const auto& m : models) {
         CAPTURE(m.fluid);
         CAPTURE(m.parameter);
         CHECK(CoolProp::get_fluid_param_string(m.fluid, m.parameter) == m.bibtex);
+    }
+}
+
+// IAPWS R17-20, Table 4 also tabulates the correlation length xi and the enhancement factor mu2;
+// IAPWS R18-21, Table 4 tabulates lambda1 and lambda2 (lambda0(644.10 K) = 52.14966).  These are the
+// points that exercise the critical enhancements, so check each contribution, and that it is not trivial.
+TEST_CASE("HeavyWater IAPWS R17-20 / R18-21 critical enhancements match the release check points", "[viscosity],[conductivity],[transport]") {
+    HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, "HeavyWater"));
+    SECTION("viscosity: Table 3, simplified formulation with mu2 = 1 (Eq. 22)") {
+        struct Pt
+        {
+            double T, rho, mu_uPas;
+        };
+        // At 775 K and 400 kg/m^3 the full formulation's mu2 is 1.000129, so these points are
+        // compared with mu/mu2, not with the default (full) viscosity
+        const std::vector<Pt> pts = {{298.15, 1e-10, 10.035938}, {298.15, 1105, 1092.6424}, {298.15, 1130, 1088.3626}, {373.15, 1064, 326.63791},
+                                     {775.00, 1, 29.639474},     {775.00, 100, 31.930085},  {775.00, 400, 53.324172}};
+        for (const auto& p : pts) {
+            CAPTURE(p.T);
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, p.T);
+            const double mu_background =
+              TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(HEOS) / TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HEOS);
+            CAPTURE(mu_background * 1e6);
+            CHECK(std::abs(mu_background * 1e6 / p.mu_uPas - 1) < 1e-6);
+        }
+    }
+    SECTION("viscosity: xi and mu2") {
+        struct Pt
+        {
+            double rho, xi_nm, mu2;
+        };
+        // T = 644.101 K; xi to +/-1e-6 nm (release footnote), mu2 to 7 significant digits
+        const std::vector<Pt> pts = {{145, 0.358588, 1.000359},  {245, 1.612131, 1.014771}, {295, 5.034205, 1.050059},
+                                     {345, 15.100542, 1.106000}, {395, 9.678686, 1.080915}, {445, 2.903437, 1.030066}};
+        for (const auto& p : pts) {
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, 644.101);
+            const double xi_nm = TransportRoutines::correlation_length_heavywater_IAPWS2020(HEOS) * 1e9;
+            const double mu2 = TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HEOS);
+            CAPTURE(xi_nm);
+            CAPTURE(mu2);
+            CHECK(std::abs(xi_nm - p.xi_nm) < 1.5e-6);
+            CHECK(std::abs(mu2 - p.mu2) < 0.5e-6);
+            CHECK(mu2 > 1.0003);
+        }
+    }
+    SECTION("thermal conductivity: lambda1 and lambda2") {
+        struct Pt
+        {
+            double rho, lambda1, lambda2;  // lambda2 in mW/(m K)
+        };
+        const std::vector<Pt> pts = {{1, 1.0058076, 0.0001332},    {106, 1.7915649, 9.9127567},  {256, 3.3907043, 217.787846},
+                                     {306, 3.9639587, 594.662792}, {356, 4.5186821, 1042.77541}, {406, 5.0414590, 407.922272},
+                                     {456, 5.5295123, 135.240705}, {750, 8.5982461, 6.4500781}};
+        const double lambda0 = 52.14966;  // mW/(m K), printed to 7 significant digits
+        for (const auto& p : pts) {
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, 644.10);
+            const double lambda2 = TransportRoutines::conductivity_critical_heavywater_IAPWS2021(HEOS) * 1e3;
+            const double lambda = TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(HEOS) * 1e3;
+            const double lambda1 = (lambda - lambda2) / lambda0;
+            CAPTURE(lambda2);
+            CAPTURE(lambda1);
+            CHECK(lambda2 > 0);
+            // half a unit in the last printed digit, or 1e-6 relative, whichever is looser
+            CHECK(std::abs(lambda2 - p.lambda2) < std::max(1e-6 * p.lambda2, 0.5e-7));
+            CHECK(std::abs(lambda1 / p.lambda1 - 1) < 1e-6);
+        }
+    }
+}
+
+// The IAPWS 2007 heavy-water transport formulations (IAPWS R4-84(2007)) are no longer the default but
+// are kept as a backup model; evaluate the routines directly against their own check values
+// (reduced by T* = 643.847 K, rho* = 358 kg/m^3, mu* = 55.2651 uPa s, lambda* = 0.742128 mW/(m K)).
+TEST_CASE("HeavyWater IAPWS 2007 transport routines are kept", "[viscosity],[conductivity],[transport]") {
+    HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, "HeavyWater"));
+    struct Pt
+    {
+        double Tbar, rhobar, mubar, lambdabar;
+    };
+    const std::vector<Pt> pts = {
+      {0.5, 3.07, 12.0604912273, 835.786416818}, {0.9, 2.16, 1.6561616211, 627.777590127}, {1.2, 0.8, 0.7651099154, 259.605241187}};
+    for (const auto& p : pts) {
+        CAPTURE(p.Tbar);
+        HEOS.update(DmassT_INPUTS, p.rhobar * 358, p.Tbar * 643.847);
+        CHECK(std::abs(TransportRoutines::viscosity_heavywater_hardcoded(HEOS) / (p.mubar * 55.2651e-6) - 1) < 1e-5);
+        CHECK(std::abs(TransportRoutines::conductivity_hardcoded_heavywater(HEOS) / (p.lambdabar * 0.742128e-3) - 1) < 1e-5);
     }
 }
 
@@ -2942,6 +3053,48 @@ TEST_CASE("Test that reference states yield proper values using high-level inter
         }
     }
 }
+TEST_CASE("set_reference_stateS refuses backends it cannot apply to instead of silently doing nothing", "[reference_states]") {
+    // Before this was fixed, any backend prefix other than the literal
+    // "REFPROP", "HEOS" or none fell off the end of set_reference_stateS's
+    // dispatch chain and returned having done nothing -- not even validating
+    // the reference-state string.  GERG has its own NotImplementedError arm
+    // (see CoolProp-Tests-GERG.cpp); everything else gets a ValueError.
+    for (const char* fluid : {"SRK::Propane", "PR::Propane", "VTPR::Propane", "PCSAFT::Propane", "INCOMP::MEG-20%", "IF97::Water",
+                              "BICUBIC&HEOS::Methane", "TTSE&HEOS::Methane", "NOT_A_BACKEND::Methane"}) {
+        CAPTURE(fluid);
+        CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NBP"), CoolProp::ValueError);
+        // Refused regardless of whether the reference-state string is valid.
+        CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NOT_A_REFERENCE_STATE"), CoolProp::ValueError);
+    }
+    // The message names the offending backend.
+    CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("[SRK]"));
+    // ...and says "reference state", which the Mathcad wrapper relies on to
+    // classify it as a bad-parameter error rather than UNKNOWN.
+    CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("reference state"));
+    // The supported spellings are unaffected.  RESET is the restore idiom
+    // used elsewhere in this suite (h and s bit-identical afterwards).
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("HEOS::Propane", "RESET"));
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("Propane", "RESET"));
+}
+TEST_CASE("set_reference_stateS resolves every factory spelling of HEOS", "[reference_states]") {
+    // The backend is matched by family, so "HelmholtzEOSBackend" and
+    // "HEOS?<options>" apply the reference state exactly like "HEOS" does.
+    // The reference state is process-global and other tests change it, so
+    // don't rely on Propane's default: set NBP then IIR through each spelling.
+    // Each step moves a value the other state pins, so a spelling that
+    // silently did nothing fails whichever state it started from.
+    auto h_at = [](const char* in, double val) { return CoolProp::PropsSI("Hmass", in, val, "Q", 0, "Propane"); };
+    for (const char* fluid : {"HEOS::Propane", "HelmholtzEOSBackend::Propane", "HEOS?::Propane"}) {
+        CAPTURE(fluid);
+        CoolProp::set_reference_stateS(fluid, "NBP");  // h = 0 for the saturated liquid at 1 atm
+        CHECK(std::abs(h_at("P", 101325)) < 1e-3);
+        CHECK(std::abs(h_at("T", 273.15) - 200000) > 1000);
+        CoolProp::set_reference_stateS(fluid, "IIR");  // h = 200 kJ/kg for the saturated liquid at 0 degC
+        CHECK(h_at("T", 273.15) == Catch::Approx(200000).margin(1e-3));
+        CHECK(std::abs(h_at("P", 101325)) > 1000);
+    }
+    CoolProp::set_reference_stateS("Propane", "RESET");
+}
 TEST_CASE("Test that reference states yield proper values using low-level interface", "[reference_states]") {
     struct ref_entry
     {
@@ -4800,7 +4953,8 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
     shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
 
-    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    // RP, not AS: dynamic_cast of the HEOS state yields nullptr
+    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(RP.get());
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
 
     AS->specify_phase(iphase_gas);
@@ -6275,6 +6429,209 @@ TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality]
     }
 }
 
+TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality (COO-7)", "[quality][nonfinite][cubic][PCSAFT][INCOMP][IF97]") {
+    // The HEOS/IF97/PCSAFT doors were closed earlier; these are the ones that
+    // were left: the cubic backends' own update switch (no check at all -- SRK
+    // Propane at Q = 5 returned rho = 102.18 without a word), the PQ/QT arms of
+    // HEOS update_with_guesses, the PCSAFT guard ordering, and the NaN-blind
+    // (x < 0 || x > 1) guards in INCOMP.  Match on the message: a bare
+    // CHECK_THROWS would also be satisfied by some unrelated failure further
+    // down a flash and keep passing if the guard were removed.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("cubic backends, update()") {
+        for (const char* backend : {"SRK", "PR"}) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            for (double q : {5.0, -0.5, 1.0 + 1e-9, qnan, std::numeric_limits<double>::infinity()}) {
+                CAPTURE(backend, q);
+                CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+            }
+            // The boundary qualities are still legal.
+            for (double q : {0.0, 0.5, 1.0}) {
+                CAPTURE(backend, q);
+                CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+                CHECK(AS->Q() == q);
+                CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 1e6, q));
+                CHECK(AS->Q() == q);
+            }
+        }
+    }
+
+    SECTION("HEOS update_with_guesses PQ/QT arms") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 1e6;
+        for (double q : {qnan, 5.0, -0.5}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::PQ_INPUTS, 1e6, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QT_INPUTS, q, 300.0, guesses), between_0_and_1);
+        }
+        // The DQ/HQ/QS arms used to write _Q (and rho/h/s) before the guard, so
+        // a rejected quality stayed readable through Q().  Start from a
+        // single-phase state and check the bad value never lands.
+        for (auto pair : {CoolProp::DmolarQ_INPUTS, CoolProp::HmolarQ_INPUTS, CoolProp::QSmolar_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+                if (pair == CoolProp::QSmolar_INPUTS) {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, q, 100.0, guesses), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, 100.0, q, guesses), between_0_and_1);
+                }
+                CHECK(AS->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(AS->Q() == 5.0);
+                CHECK_FALSE(std::isnan(AS->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 rejects the quality before mutating the object") {
+        // Same ordering bug as PCSAFT: the PQ/QT arms wrote _p/_Q/_T before
+        // the guard, so Q() read back the rejected value.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(IF->update(pair, q, 400.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(IF->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(IF->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(IF->Q() == 5.0);
+                CHECK_FALSE(std::isnan(IF->Q()));
+            }
+        }
+    }
+
+    SECTION("PCSAFT rejects the quality before mutating the object") {
+        // The guard used to run after _Q, SatL/SatV and _phase = twophase were
+        // written, so a rejected QT/PQ left Q() reading the bad value and phase()
+        // reading two-phase on an object that never reached a two-phase state.
+        // (A fresh object rather than a prior PT update: PCSAFT METHANE PT flashes
+        // need a VLE-pressure estimate that is not the point here.)
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+            REQUIRE(PC->phase() != CoolProp::iphase_twophase);
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(PC->update(pair, q, 150.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(PC->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(PC->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(PC->Q() == 5.0);
+                CHECK_FALSE(std::isnan(PC->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 rejects non-finite inputs instead of inventing a state (COO-7, COO-40)") {
+        // Two holes.  (1) std::min(1, std::max(0, NaN)) is 0, so HmassP with
+        // h = NaN (and PSmass with s = NaN) landed in the Region-4 branch and
+        // reported Q = 0, phase = twophase.  (2) IF97's region selectors do not
+        // propagate NaN at all: HmassP / PSmass with p = NaN and HmassSmass with
+        // h or s = NaN returned T = 273.15 K and a gas / two-phase state.  Both
+        // are now refused by one finiteness check at update() entry (the
+        // lever-rule guard stays as a backstop).  A non-finite QUALITY keeps the
+        // shared "[Q] must be between 0 and 1" message, tested above.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        const auto not_valid = Catch::Matchers::ContainsSubstring("is not a valid number");
+        for (double bad : {qnan, std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()}) {
+            CAPTURE(bad);
+            CHECK_THROWS_AS(IF->update(CoolProp::HmassP_INPUTS, bad, 1e6), CoolProp::ValueError);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, bad, 1e6), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, 2e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, bad, 5000.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, 1e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassSmass_INPUTS, bad, 5000.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassSmass_INPUTS, 2e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PT_INPUTS, bad, 300.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PT_INPUTS, 1e5, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmolarP_INPUTS, bad, 1e6), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmolar_INPUTS, 1e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmolarSmolar_INPUTS, bad, 100.0), not_valid);
+            // The non-quality half of a Q pair is covered too.
+            CHECK_THROWS_WITH(IF->update(CoolProp::PQ_INPUTS, bad, 0.5), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::QT_INPUTS, 0.5, bad), not_valid);
+        }
+        // Normal single-phase states still work.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+        const double h1 = IF->hmass(), s1 = IF->smass();
+        CHECK_NOTHROW(IF->update(CoolProp::HmassP_INPUTS, h1, 1e5));
+        CHECK(IF->T() == Catch::Approx(300.0).margin(0.1));  // IF97 backward eqs are ~25 mK here
+        CHECK_NOTHROW(IF->update(CoolProp::HmassSmass_INPUTS, h1, s1));
+        CHECK(IF->p() == Catch::Approx(1e5).epsilon(1e-3));
+        // A genuine two-phase state is unaffected.
+        IF->update(CoolProp::PQ_INPUTS, 1e6, 0.4);
+        const double h = IF->hmass(), s = IF->smass();
+        CHECK_NOTHROW(IF->update(CoolProp::HmassP_INPUTS, h, 1e6));
+        CHECK(IF->Q() == Catch::Approx(0.4).epsilon(1e-6));
+        CHECK_NOTHROW(IF->update(CoolProp::PSmass_INPUTS, 1e6, s));
+        CHECK(IF->Q() == Catch::Approx(0.4).epsilon(1e-6));
+    }
+
+    SECTION("INCOMP solution rejects a NaN mass fraction") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        CHECK_THROWS_WITH(
+          [&] {
+              AS->set_mass_fractions(std::vector<CoolPropDbl>{qnan});
+              AS->update(CoolProp::PT_INPUTS, 1e5, 280.0);
+          }(),
+          Catch::Matchers::ContainsSubstring("Mass fractions must be set to a vector with one entry between 0 and 1"));
+        // IncompressibleFluid::checkX has its own NaN-safe composition guard.
+        CoolProp::IncompressibleFluid bounded;
+        bounded.setxmin(0.2);
+        bounded.setxmax(0.6);
+        CHECK(bounded.checkX(0.4));
+        CHECK_THROWS_WITH(bounded.checkX(qnan), Catch::Matchers::ContainsSubstring("is not between 0.2 and 0.6"));
+        // Inverted composition bounds are refused rather than read as the
+        // swapped range (is_in_closed_range orders its bounds).
+        CoolProp::IncompressibleFluid inverted;
+        inverted.setxmin(0.6);
+        inverted.setxmax(0.2);
+        CHECK_THROWS_WITH(inverted.checkX(0.4), Catch::Matchers::ContainsSubstring("exceeds the maximum concentration"));
+        // A legal fraction still works on a fresh object.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        AS2->set_mass_fractions(std::vector<CoolPropDbl>{0.3});
+        CHECK_NOTHROW(AS2->update(CoolProp::PT_INPUTS, 1e5, 280.0));
+        CHECK(std::isfinite(AS2->rhomass()));
+    }
+}
+
+TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)", "[REFPROP][refprop][quality][nonfinite]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // REFPROP catches Q = 5 itself, but a NaN quality came back as a plausible
+    // saturated state with an EMPTY error string:
+    //     PropsSI("T","P",5e5,"Q",nan,"REFPROP::PROPANE") -> 274.87...
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    for (double q : {qnan, 5.0, -0.5}) {
+        CAPTURE(q);
+        CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmassQ_INPUTS, 50.0, q), between_0_and_1);
+    }
+    // PropsSI surfaces it as a non-finite return rather than a plausible number.
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("T", "P", 5e5, "Q", qnan, "REFPROP::PROPANE")));
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("P", "T", 300, "Q", qnan, "REFPROP::PROPANE")));
+    // Boundary qualities still flash.
+    for (double q : {0.0, 1.0}) {
+        CAPTURE(q);
+        CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+        CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 5e5, q));
+    }
+}
+
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
     // reaches the flash routines by other doors, and HQ_flash's own gate,
@@ -6317,6 +6674,127 @@ TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][no
         CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 1.0, 300.0));
         CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 0.0, 300.0));
     }
+}
+
+namespace {
+// Never instantiated: exists only to expose the protected static helper.
+struct QualityCheckProbe : CoolProp::AbstractState
+{
+    using CoolProp::AbstractState::check_input_quality;
+};
+}  // namespace
+
+TEST_CASE("check_input_quality guards exactly the quality slot of every input pair", "[quality]") {
+    // The helper finds the Q slot with split_input_pair.  Derive the expected slot
+    // independently, from the human-readable description ("Pressure in Pa, Molar
+    // quality"), so a wrong entry in split_input_pair cannot vouch for itself.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto q_msg = Catch::Matchers::ContainsSubstring("Input vapor quality [Q] must be between 0 and 1");
+    const auto qmass_msg = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    const auto unknown_msg = Catch::Matchers::ContainsSubstring("Unknown input pair");
+    const double ok_other = 300.0;  // any finite value; the non-Q slot is never range-checked
+
+    // input_pairs has no sentinel, so rather than stop at a hard-coded last
+    // enumerator, probe well past it.  Every described value must form one
+    // contiguous run 1..last (INPUT_PAIR_INVALID = 0 is the only undescribed value
+    // below it), split_input_pair must know exactly the described values, and the
+    // exact counts below pin the size: appending a registered pair changes n_pairs
+    // and fails here.  A pair appended but NOT registered cannot be enumerated, but
+    // it cannot slip past the check either: check_input_quality fails closed on any
+    // value split_input_pair does not know (asserted for every such value below).
+    // UPDATE THESE COUNTS when an input pair is added or removed.
+    constexpr int expected_pairs = 43;
+    constexpr int expected_q_pairs = 16;  // 8 molar-Q + 8 Qmass
+    constexpr int probe_limit = 255;
+
+    auto is_described = [](CoolProp::input_pairs pair) {
+        try {
+            CoolProp::get_input_pair_long_desc(pair);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+    auto is_splittable = [](CoolProp::input_pairs pair) {
+        CoolProp::parameters p1, p2;
+        try {
+            CoolProp::split_input_pair(pair, p1, p2);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+
+    int n_pairs = 0, n_q_pairs = 0, last_described = -1;
+    std::vector<int> skipped;
+    for (int i = 0; i <= probe_limit; ++i) {
+        const auto pair = static_cast<CoolProp::input_pairs>(i);
+        CAPTURE(i);
+        CHECK(is_splittable(pair) == is_described(pair));
+        if (!is_described(pair)) {
+            skipped.push_back(i);
+            // Fail closed: an unknown pair is refused, even with a harmless value.
+            CHECK_THROWS_WITH(QualityCheckProbe::check_input_quality(pair, 0.5, 0.5), unknown_msg);
+            continue;
+        }
+        last_described = i;
+        ++n_pairs;
+        const std::string desc = CoolProp::get_input_pair_long_desc(pair);
+        CAPTURE(desc);
+
+        const auto comma = desc.find(',');
+        REQUIRE(comma != std::string::npos);
+        const std::string part1 = desc.substr(0, comma), part2 = desc.substr(comma + 1);
+        const bool q1 = part1.find("quality") != std::string::npos;
+        const bool q2 = part2.find("quality") != std::string::npos;
+        REQUIRE_FALSE((q1 && q2));
+
+        auto check = [&](double v1, double v2) { QualityCheckProbe::check_input_quality(pair, v1, v2); };
+
+        if (!q1 && !q2) {
+            // No quality in this pair: nothing may throw, whatever the values.
+            CHECK_FALSE(CoolProp::is_Qmass_pair(pair));
+            for (double bad : {5.0, -0.5, qnan}) {
+                CHECK_NOTHROW(check(bad, bad));
+            }
+            continue;
+        }
+        ++n_q_pairs;
+        const bool mass_basis = (q1 ? part1 : part2).find("Mass-basis") != std::string::npos;
+        CHECK(mass_basis == CoolProp::is_Qmass_pair(pair));
+
+        for (double good : {0.0, 1.0}) {
+            CHECK_NOTHROW(q1 ? check(good, ok_other) : check(ok_other, good));
+        }
+        for (double bad : {5.0, -0.5, qnan}) {
+            CAPTURE(bad);
+            if (mass_basis) {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), qmass_msg);
+            } else {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), q_msg);
+            }
+            // A bad value in the OTHER slot must not be mistaken for a quality.
+            CHECK_NOTHROW(q1 ? check(0.5, bad) : check(bad, 0.5));
+        }
+    }
+    CHECK(n_pairs == expected_pairs);
+    CHECK(n_q_pairs == expected_q_pairs);
+    // Contiguous: the described values are exactly 1..last_described, so the only
+    // value skipped at or below it is INPUT_PAIR_INVALID.
+    CHECK(last_described == expected_pairs);
+    CHECK(last_described == static_cast<int>(CoolProp::DmolarUmolar_INPUTS));
+    std::vector<int> skipped_below;
+    for (int v : skipped) {
+        if (v <= last_described) skipped_below.push_back(v);
+    }
+    CHECK(skipped_below == std::vector<int>{static_cast<int>(CoolProp::INPUT_PAIR_INVALID)});
+
+    // And through a real update path: HEOS calls check_input_quality first, so an
+    // unknown pair is refused there before any state is touched.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS_WITH(AS->update(CoolProp::INPUT_PAIR_INVALID, 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), Catch::Matchers::ContainsSubstring("[250]"));
 }
 
 TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {
@@ -8528,6 +9006,111 @@ TEST_CASE("TABULAR_NX/NY config keys exist and default to 200", "[Configuration]
     // are present and the documented default is honored.
     CHECK(CoolProp::get_config_int(TABULAR_NX) == 200);
     CHECK(CoolProp::get_config_int(TABULAR_NY) == 200);
+}
+
+TEST_CASE("Configuration accessors are safe under concurrent calls (COO-13)", "[Configuration][threads]") {
+    // The global Configuration is lazily created behind std::call_once.  In
+    // this test binary it is usually already initialized by an earlier test,
+    // so the cold-start race itself is only reliably exercised under TSAN;
+    // what this checks deterministically is that concurrent readers all see
+    // one consistent instance (same values as the main thread).
+    const bool expected_bool = CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS);
+    const int expected_int = CoolProp::get_config_int(TABULAR_NX);
+    constexpr int N_THREADS = 8;
+    std::atomic<int> mismatches{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back([&]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            for (int i = 0; i < 1000; ++i) {
+                if (CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS) != expected_bool || CoolProp::get_config_int(TABULAR_NX) != expected_int) {
+                    mismatches.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& t : threads) {
+        t.join();
+    }
+    CHECK(mismatches.load() == 0);
+}
+
+TEST_CASE("Concurrent first use of one tabular dataset builds it once (COO-39)", "[BICUBIC][threads]") {
+    // Several threads construct BICUBIC&HEOS for the same fluid and grid at
+    // once, against a fresh table directory, so every thread misses on disk
+    // and races to build.  The per-dataset build_mutex must let one thread
+    // build/pack/write while the rest wait and then reuse the result.  A small
+    // grid keeps the single real build to well under a second.
+    // Unique directory => unique in-memory cache key, so the dataset is cold
+    // even if another test already built Nitrogen tables in this process.
+    const std::string dir =
+      (std::filesystem::temp_directory_path() / ("CoolProp-COO39-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())))
+        .string()
+      + "/";
+    // Restore the table directory and remove the temp dir even if a CHECK or
+    // an exception unwinds the test early.
+    struct TableDirGuard
+    {
+        std::string prev, dir;
+        TableDirGuard(std::string p, std::string d) : prev(std::move(p)), dir(std::move(d)) {}
+        TableDirGuard(const TableDirGuard&) = delete;
+        TableDirGuard& operator=(const TableDirGuard&) = delete;
+        TableDirGuard(TableDirGuard&&) = delete;
+        TableDirGuard& operator=(TableDirGuard&&) = delete;
+        ~TableDirGuard() {
+            CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    } guard(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY), dir);
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+    // Threads rebuilding the same deterministic tables would give identical
+    // densities, so count the builds directly.
+    const int builds_before = CoolProp::TabularDataSet::build_count.load();
+    const std::string fluid = R"(Nitrogen?{"grid":{"Nx":30,"Ny":30}})";
+    const double p = 1e6, T = 300.0;
+
+    constexpr int N_THREADS = 6;
+    std::vector<double> rho(N_THREADS, -1.0);
+    std::atomic<int> errors{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back([&, t]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            try {
+                std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("BICUBIC&HEOS", fluid));
+                AS->update(CoolProp::PT_INPUTS, p, T);
+                rho[t] = AS->rhomolar();
+            } catch (...) {
+                errors.fetch_add(1, std::memory_order_relaxed);
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& th : threads) {
+        th.join();
+    }
+
+    // Reference from the (now warm) shared dataset
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("BICUBIC&HEOS", fluid));
+    ref->update(CoolProp::PT_INPUTS, p, T);
+    const double rho_ref = ref->rhomolar();
+
+    CHECK(errors.load() == 0);
+    CHECK(CoolProp::TabularDataSet::build_count.load() - builds_before == 1);
+    for (int t = 0; t < N_THREADS; ++t) {
+        CAPTURE(t);
+        CHECK(rho[t] == rho_ref);
+    }
 }
 
 TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][1950]") {
