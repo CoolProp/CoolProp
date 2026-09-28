@@ -6,8 +6,8 @@ Changelog for CoolProp
 
 Breaking Changes:
 
-* The deprecated ``coolprop()`` and ``coolpropsi()`` functions of the EES wrapper were removed. ``coolprop()`` worked in kPa and kJ and called the CoolProp v4 API, and it asserted the wrong unit system, so a model that satisfied its own error message was computing states a factor of 1000 away. ``coolpropsi()`` had not worked at all for years, because it called the external function with a string variable that was never assigned. An EES model calling ``coolprop()`` has to be changed to ``PropsSI``, with pressures in Pa and energies in J; its results change, because they were wrong before. ``CoolProp.LIB`` and ``COOLPROP_EES.dlf`` have to be installed from the same release: a mismatched pair now reports that rather than computing.
-* The ``COOLPROP_DEBIAN_PACKAGE`` CMake variable and the ``wrappers/DEB`` packaging harness were removed.  The harness had not worked since 2014: a ``cmake-format`` pass broke its version parser, so it produced an empty version string, its ``debian/changelog`` was frozen at 5.0-1 while the tree moved to 8.x, and its ``control`` file depended on a package named ``dl`` that does not exist.  It could not build an installable package, no CI job ran it, and CoolProp is in neither the Debian nor the Ubuntu archive.  Note that CMake does not warn about unknown ``-D`` variables, so a build still passing ``-DCOOLPROP_DEBIAN_PACKAGE=ON`` now configures without error and silently produces no shared library; use ``-DCOOLPROP_SHARED_LIBRARY=ON`` instead.  See `#3388 <https://github.com/CoolProp/CoolProp/issues/3388>`_ for what maintaining Linux packages for the main distributions would require.
+* The deprecated ``coolprop()`` and ``coolpropsi()`` functions of the EES wrapper were removed. ``coolprop()`` worked in kPa and kJ and called the CoolProp v4 API, and it asserted the wrong unit system, so a model that satisfied its own error message was computing states a factor of 1000 away. ``coolpropsi()`` had not worked at all for years, because it called the external function with a string variable that was never assigned. An EES model calling ``coolprop()`` has to be changed to ``PropsSI``, with pressures in Pa and energies in J; its results change, because they were wrong before. ``CoolProp.LIB`` and ``COOLPROP_EES.dlf`` have to be installed from the same release: a mismatched pair now reports that rather than computing (`#3382 <https://github.com/CoolProp/CoolProp/pull/3382>`_).
+* The ``COOLPROP_DEBIAN_PACKAGE`` CMake variable and the ``wrappers/DEB`` packaging harness were removed.  The harness had not worked since 2014: a ``cmake-format`` pass broke its version parser, so it produced an empty version string, its ``debian/changelog`` was frozen at 5.0-1 while the tree moved to 8.x, and its ``control`` file depended on a package named ``dl`` that does not exist.  It could not build an installable package, no CI job ran it, and CoolProp is in neither the Debian nor the Ubuntu archive.  Note that CMake does not warn about unknown ``-D`` variables, so a build still passing ``-DCOOLPROP_DEBIAN_PACKAGE=ON`` now configures without error and silently produces no shared library; use ``-DCOOLPROP_SHARED_LIBRARY=ON`` instead.  See `#3388 <https://github.com/CoolProp/CoolProp/issues/3388>`_ for what maintaining Linux packages for the main distributions would require (`#3389 <https://github.com/CoolProp/CoolProp/pull/3389>`_).
 * **``CoolProp::parameters`` enum renumbered.**  ``iHmolar_formation`` was inserted after ``idipole_moment`` (`#3309 <https://github.com/CoolProp/CoolProp/pull/3309>`_), so every later parameter's integer value changes.  Code that stores, caches or hard-codes the integer value of a parameter key, rather than looking it up by name, must be rebuilt or updated.  SVDSBTL disk caches are rebuilt once on first use.
 * **CMake library consumers and packagers:** the minimum supported CMake
   version is now 3.15.  The exported library targets model CoolProp's C++17,
@@ -31,6 +31,7 @@ Highlights:
   * Cyclohexane: conductivity Koutian et al. (2017), new.
   * Ethylbenzene: viscosity Meng et al. (2017), replacing an ECS model from an unpublished source, which is removed.
   * Ethylene: viscosity Sotiriadou et al. (2024) and conductivity Assael et al. (2016), both new.
+  * Heavy water: viscosity IAPWS R17-20 (Assael et al. 2021), with its critical enhancement, and conductivity IAPWS R18-21 (Huber et al. 2022), replacing the 2007 formulations.  These two are implemented in C++, not as fluid-file data (`#3415 <https://github.com/CoolProp/CoolProp/pull/3415>`_).
   * Krypton: viscosity Polychroniadou et al. (2022), new; an entropy-scaling correlation in the residual entropy and the second virial coefficient.
   * Methane: viscosity Sotiriadou et al. (2025), replacing Quiñones-Cisneros and Deiters (2006).
   * n-Undecane: viscosity and conductivity Assael et al. (2017), new.
@@ -79,6 +80,7 @@ New features:
 * Analytical two-phase derivatives of ``Q`` and ``Qmass`` in ``first_two_phase_deriv`` (`#3260 <https://github.com/CoolProp/CoolProp/issues/3260>`_, `#3263 <https://github.com/CoolProp/CoolProp/pull/3263>`_).
 * BICUBIC/TTSE grid size from the factory string, e.g. ``BICUBIC&HEOS?{"grid":{"Nx":40,"Ny":40}}`` (`#3266 <https://github.com/CoolProp/CoolProp/pull/3266>`_).
 * ``apply_simple_mixing_rule`` in the ``CoolPropLib.h`` C API (`#3329 <https://github.com/CoolProp/CoolProp/pull/3329>`_).
+* EES wrapper for 64-bit EES: ``COOLPROP_EES.dlf64`` and ``CoolProp.LIB64`` for the ``Userlib64`` folder, built, packaged in the Windows installer and released next to the 32-bit pair.  Before, a 64-bit EES configure was refused, so 64-bit EES had no wrapper at all (`#3382 <https://github.com/CoolProp/CoolProp/pull/3382>`_).
 * Mathcad wrapper: the low-level ``AbstractState`` API (`#3381 <https://github.com/CoolProp/CoolProp/pull/3381>`_) and C++17 fixes (`#3363 <https://github.com/CoolProp/CoolProp/pull/3363>`_).
 * ``C2H6`` alias for ethane (`#3348 <https://github.com/CoolProp/CoolProp/pull/3348>`_).
 * Thread safety: all REFPROP access is serialized behind one process-wide lock and each instance reloads its own fluids, so separate instances may be used from separate threads, tabular table builds happen once per dataset under concurrent first use, and configuration and lookup tables initialize under ``call_once`` (`#3422 <https://github.com/CoolProp/CoolProp/pull/3422>`_, `#3423 <https://github.com/CoolProp/CoolProp/pull/3423>`_, `#3424 <https://github.com/CoolProp/CoolProp/pull/3424>`_).
@@ -194,6 +196,10 @@ New features:
   behaviour is bit-for-bit unchanged.  Tracked as GitHub
   `#1677 <https://github.com/CoolProp/CoolProp/issues/1677>`_.
 
+* **EES: a failing CoolProp call now stops the EES calculation and shows CoolProp's message.**  EES passes the ``mode`` argument of an external function by reference and reads the call status back from it; the wrapper took it by value and never wrote it, so a failing call returned 0 and the solve carried on with that number.  A model that relied on the silent zero now stops with an error.  The Function Information dialog now shows the example call (`#3382 <https://github.com/CoolProp/CoolProp/pull/3382>`_).
+
+* **Incompressible density and heat capacity come from the new Chebyshev fits, and some values change.**  Where a fluid's Chebyshev entry is an exact conversion of the old polynomial, values are unchanged apart from the rounding below.  For 79 of the 126 fluids shipped in 8.0.0 at least one of the two properties is instead a new fit of the reference data, and its values move.  Of these 155 new fits, half move by less than 2e-4 relative everywhere in the fluid's valid range and 17 move by more than 1% somewhere in it; the largest shifts are about 22% for ``INCOMP::ZM`` heat capacity and 10% for ``INCOMP::LiqNa`` density.  Enthalpy and entropy are integrated from the heat capacity and include pressure terms from the density, so they move with both.  The shipped fluid data is also rounded to 7 significant digits, which moves any property by at most 1.2e-5 relative (`#3296 <https://github.com/CoolProp/CoolProp/pull/3296>`_, `#3297 <https://github.com/CoolProp/CoolProp/pull/3297>`_, `#3390 <https://github.com/CoolProp/CoolProp/pull/3390>`_).
+
 * **Cubic volume translation is per component.**  On a mixture, ``set_fluid_parameter_double(i, "c", value)`` (also ``"cm"`` and ``"c_m"``) now translates only component ``i``, and the getter reads component ``i``; use the write-only ``"c_all"`` for the previous fluid-wide behavior.  A translation with ``b - c <= 0`` is refused, as is a ``Tcrit``/``pcrit`` change that would produce one (`#3353 <https://github.com/CoolProp/CoolProp/pull/3353>`_).
 
 * **``set_reference_stateS`` now throws on the GERG backends instead of
@@ -237,7 +243,7 @@ Performance:
   (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
 
 * HEOS mixture density solve evaluates only the delta derivatives of alphar it needs, about 3x faster and bit-identical (`#3273 <https://github.com/CoolProp/CoolProp/pull/3273>`_).
-* SVDSBTL keeps built surfaces in a bounded process-wide LRU cache, so a repeat backend for the same surface skips the ~80 ms disk load (`#3244 <https://github.com/CoolProp/CoolProp/pull/3244>`_).
+* SVDSBTL keeps built surfaces in a bounded process-wide LRU cache, so a repeat backend for the same surface skips the ~80 ms disk load.  The cache is bounded by ``SVDSBTL_SURFACE_CACHE_MAX_ENTRIES`` and ``SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB`` (default 16 surfaces and 512 MB) (`#3244 <https://github.com/CoolProp/CoolProp/pull/3244>`_).
 * Python property plots trace isolines instead of flashing every point cold: 255 s to 10 s for the R513A case in discussion #3269 (`#3344 <https://github.com/CoolProp/CoolProp/pull/3344>`_).
 
 Bug fixes:
@@ -262,8 +268,8 @@ Bug fixes:
 
 * PR/SRK entropy values were too steep in temperature (1.5x to 3x) since 7.2.0; enthalpy and the entropy derivatives were correct (`#3287 <https://github.com/CoolProp/CoolProp/issues/3287>`_, `#3288 <https://github.com/CoolProp/CoolProp/pull/3288>`_).
 * Reducing densities of nitrogen, ethylene, orthohydrogen and n-undecane corrected to the published constants, with their superancillaries refit.  Molar saturation densities move by 1e-5 to 3e-5 (nitrogen about 1e-7).  The molar masses of ethylene (28.05376 to 28.05316 g/mol) and orthohydrogen (2.01594 to 2.01588 g/mol) also change to the published values, so for those two the mass densities are essentially unchanged and the per-kg properties move by 2e-5 to 3e-5 (`#3326 <https://github.com/CoolProp/CoolProp/pull/3326>`_, `#3337 <https://github.com/CoolProp/CoolProp/pull/3337>`_).
-* ``INCOMP::PCL`` viscosity was 100x too high (`#3384 <https://github.com/CoolProp/CoolProp/issues/3384>`_); ice-slurry conductivity and viscosity data recovered (`#3303 <https://github.com/CoolProp/CoolProp/issues/3303>`_); ``INCOMP::MITSW`` gets a freezing curve from IAPWS-08; incompressible error messages name the fluid and property (`#3386 <https://github.com/CoolProp/CoolProp/pull/3386>`_).
-* Incompressible ``drhodT`` at ``T == Tbase`` is evaluated exactly, and unfitted placeholder coefficients are no longer shipped (`#3294 <https://github.com/CoolProp/CoolProp/pull/3294>`_).
+* ``INCOMP::PCL`` viscosity was 100x too high (`#3384 <https://github.com/CoolProp/CoolProp/issues/3384>`_); ice-slurry conductivity and viscosity data recovered (`#3303 <https://github.com/CoolProp/CoolProp/issues/3303>`_); ``INCOMP::MITSW`` gets a freezing curve from IAPWS-08; incompressible error messages name the fluid and property; the composition limits in the documentation tables were rounded to two decimals, so for MAM2, VCA, VKC and VMG the documented limit was rejected by the backend, and ``ifraction_min`` / ``ifraction_max`` are now documented as the way to read the enforced limits (`#2567 <https://github.com/CoolProp/CoolProp/issues/2567>`_, `#3386 <https://github.com/CoolProp/CoolProp/pull/3386>`_).
+* Incompressible ``drhodT`` at ``T == Tbase`` is evaluated exactly instead of interpolated.  With the Chebyshev fits below this path is only reached by fluid files without a Chebyshev density, such as fluids registered at runtime.  Unfitted placeholder coefficients are no longer shipped: 16 fluids carried the optimizer's starting guess as if it were a fit, so for example ``INCOMP::LiBr`` returned a viscosity of 1 Pa s and a conductivity of 0 W/m/K.  Those properties now raise an error (`#3294 <https://github.com/CoolProp/CoolProp/pull/3294>`_).
 * Mixture PT flash: an imposed phase is honored after ``build_phase_envelope()`` (`#3243 <https://github.com/CoolProp/CoolProp/issues/3243>`_, `#3246 <https://github.com/CoolProp/CoolProp/pull/3246>`_); subcooled liquid no longer returns a spurious middle root (`#3283 <https://github.com/CoolProp/CoolProp/issues/3283>`_, `#3284 <https://github.com/CoolProp/CoolProp/pull/3284>`_); the near-dew two-phase split converges, and the ``XN_INDEPENDENT`` fugacity derivative is corrected (`#3356 <https://github.com/CoolProp/CoolProp/issues/3356>`_, `#3357 <https://github.com/CoolProp/CoolProp/pull/3357>`_).
 * ``fugacity_coefficient`` at ``Q = 0`` or ``Q = 1`` returns the saturated-phase value again instead of throwing, a regression in 8.0.0 (`#3258 <https://github.com/CoolProp/CoolProp/issues/3258>`_, `#3262 <https://github.com/CoolProp/CoolProp/pull/3262>`_).
 * Third-order ideal-gas Helmholtz derivatives for mixtures, which tabular mixture table builds need (`#3255 <https://github.com/CoolProp/CoolProp/pull/3255>`_).
@@ -283,6 +289,9 @@ Packaging and documentation:
 
 * The Python wheel ships ``THIRD_PARTY_NOTICES.md`` with the licenses of everything compiled into it (`#3396 <https://github.com/CoolProp/CoolProp/pull/3396>`_).
 * Nightly builds publish again; the C# builder workflow had been deleted, which broke every nightly deploy after 2026-07-06 (`#3315 <https://github.com/CoolProp/CoolProp/issues/3315>`_, `#3317 <https://github.com/CoolProp/CoolProp/pull/3317>`_); the Java artifact carries the wrapper classes (`#3319 <https://github.com/CoolProp/CoolProp/pull/3319>`_).
+* Links to CoolProp's website, documentation and download pages use HTTPS, and dead supporter links are fixed (`#3389 <https://github.com/CoolProp/CoolProp/pull/3389>`_).
+* The EES wrapper documentation covers both bitnesses, and ``CoolProp.htm`` lists the property keys in the SI units ``PropsSI`` actually uses, where it had kPa and kJ (`#3382 <https://github.com/CoolProp/CoolProp/pull/3382>`_).
+* The incompressible fitting pipeline in ``dev/incompressible_liquids`` needs only numpy and scipy, has a step-by-step README for adding a fluid, and its reference data is audited in ``DATA_AUDIT.md`` (`#3295 <https://github.com/CoolProp/CoolProp/pull/3295>`_).
 * Tabular-backend docs cover mixtures (`#3236 <https://github.com/CoolProp/CoolProp/issues/3236>`_, `#3239 <https://github.com/CoolProp/CoolProp/pull/3239>`_).
 
 Contributors to this release (everyone with a merged PR since 8.0.0):
@@ -428,6 +437,7 @@ Pull requests merged:
 * `#3412 <https://github.com/CoolProp/CoolProp/pull/3412>`_ : Make set_reference_stateS refuse unsupported backends instead of no-op
 * `#3413 <https://github.com/CoolProp/CoolProp/pull/3413>`_ : fix(alpha0): reject Aly-Lee constant lists that are not length 5 (COO-58)
 * `#3414 <https://github.com/CoolProp/CoolProp/pull/3414>`_ : fix(alpha0): check coefficient-vector lengths in ideal-gas terms (COO-60)
+* `#3415 <https://github.com/CoolProp/CoolProp/pull/3415>`_ : feat(HeavyWater): IAPWS R17-20 viscosity and R18-21 thermal conductivity
 * `#3416 <https://github.com/CoolProp/CoolProp/pull/3416>`_ : fix: residual/departure length checks, reducing-T joins, -SRK MC alpha and R_u, transactional UNIFAC populate (COO-61)
 * `#3417 <https://github.com/CoolProp/CoolProp/pull/3417>`_ : test: make [formation] and PC-SAFT binary-pair tests independent of --order rand (COO-62)
 * `#3419 <https://github.com/CoolProp/CoolProp/pull/3419>`_ : Validate input vapor quality in one AbstractState helper
@@ -437,6 +447,12 @@ Pull requests merged:
 * `#3423 <https://github.com/CoolProp/CoolProp/pull/3423>`_ : Make TabularDataLibrary and per-dataset table builds thread-safe
 * `#3424 <https://github.com/CoolProp/CoolProp/pull/3424>`_ : Serialize all REFPROP access behind one process-wide lock
 * `#3428 <https://github.com/CoolProp/CoolProp/pull/3428>`_ : chore(fluids): remove ECS viscosity entries that cannot be independently checked
+* `#3427 <https://github.com/CoolProp/CoolProp/pull/3427>`_ : perf(flash): skip the TPD Newton minimizer when successive substitution already decided a trial is stable
+* `#3431 <https://github.com/CoolProp/CoolProp/pull/3431>`_ : docs: document the transport-property expression language
+* `#3433 <https://github.com/CoolProp/CoolProp/pull/3433>`_ : fix(fluids): cite the published EOS for ammonia, helium, n-octane, D4 and dichloroethane
+* `#3434 <https://github.com/CoolProp/CoolProp/pull/3434>`_ : ci: check that the C-ABI headers compile as C99 (COO-106)
+* `#3435 <https://github.com/CoolProp/CoolProp/pull/3435>`_ : ci(deps)(deps): Bump dawidd6/action-download-artifact from 24 to 25
+* `#3436 <https://github.com/CoolProp/CoolProp/pull/3436>`_ : fix(superanc): restamp source_eos_hash after the citation-only EOS edit in #3433
 
 
 8.0.0
