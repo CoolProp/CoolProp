@@ -900,6 +900,9 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
                     critical = TransportRoutines::viscosity_heavywater_hardcoded(*this);
                     break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER_IAPWS2020:
+                    critical = TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(*this);
+                    break;
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
                     critical = TransportRoutines::viscosity_helium_hardcoded(*this);
                     break;
@@ -982,6 +985,9 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
                     break;
                 case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
                     initial_density = TransportRoutines::conductivity_hardcoded_heavywater(*this);
+                    break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER_IAPWS2021:
+                    initial_density = TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(*this);
                     break;
                 case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
                     initial_density = TransportRoutines::conductivity_hardcoded_R23(*this);

@@ -57,6 +57,7 @@ Highlights:
   * Nitrogen: Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004); nitrogen
     viscosity also moves to Huber et al. (2024). R14, whose ECS model uses nitrogen as
     its reference fluid, changes with it.
+  * Heavy water: IAPWS R18-21 thermal conductivity and R17-20 viscosity (with its critical enhancement), replacing the 2007 formulations.
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
