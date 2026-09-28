@@ -2321,6 +2321,39 @@ TEST_CASE("Mixture PT flash maps the near-dew/near-bubble split to the correct p
     REQUIRE(n_twophase >= min_twophase);
 }
 
+TEST_CASE("Michelsen stability does not miss a mid-dome split after a stable SS trial", "[michelsen][flash][mixture]") {
+    // 7-component natural gas at 211.77 K / 6 MPa is two-phase with vapour fraction ~0.81 (a smooth
+    // continuation of 0.73 at 210.5 K and 0.95 at 217 K).  The Michelsen stability test used to run the
+    // second-order TPD minimizer even on trials that successive substitution had already found stable;
+    // here that re-examination produced a verdict whose downstream handling ended in a single-phase
+    // answer.  Skipping the minimizer when SS has decided (as the stability code's own comment always
+    // said it should) resolves the split.
+    const std::string fluids = "Methane&Ethane&n-Propane&n-Butane&IsoButane&Nitrogen&CarbonDioxide";
+    const std::vector<double> z = {0.9188, 0.0532, 0.0193, 0.0010, 0.0012, 0.0064, 0.0001};
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    AS->set_mole_fractions(z);
+    REQUIRE_NOTHROW(AS->update(PT_INPUTS, 60e5, 211.77));
+    REQUIRE(AS->phase() == iphase_twophase);
+    const double Q = AS->Q();
+    CAPTURE(Q);
+    CHECK(Q > 0.7);
+    CHECK(Q < 0.9);
+    // Equal fugacities between the published phases.
+    const std::vector<double> xl = AS->mole_fractions_liquid_double();
+    const std::vector<double> xv = AS->mole_fractions_vapor_double();
+    auto L = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    auto V = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+    L->set_mole_fractions(xl);
+    V->set_mole_fractions(xv);
+    L->update(DmolarT_INPUTS, AS->saturated_liquid_keyed_output(iDmolar), 211.77);
+    V->update(DmolarT_INPUTS, AS->saturated_vapor_keyed_output(iDmolar), 211.77);
+    CHECK(L->rhomolar() > V->rhomolar());
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        CAPTURE(i);
+        CHECK(std::abs(std::log(V->fugacity(i) / L->fugacity(i))) < 1e-8);
+    }
+}
+
 TEST_CASE("Mixture PT flash near the dew line supports a zero-mole-fraction component (#3357)", "[michelsen][flash][mixture][saturation]") {
     // Zero-mole-fraction feed robustness (GH #3357, Ian Bell review).  Two hardening changes in this
     // PR are about feeds with an absent component: (a) the minority-phase Gibbs Newton FALLBACK now
