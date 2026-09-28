@@ -6,9 +6,11 @@ t_CoolProp / t_TPFLSH on a log diverging scale (blue: CoolProp faster, red: slow
 publishes as two-phase are outlined dark, so the phase envelope shows.
 
     python3 plot_ratio_pT.py out.png ratio_on.csv [ratio_more.csv ...]
+    python3 plot_ratio_pT.py out.png a.csv b.csv -- c.csv d.csv      # '--' starts a new row of panels
 """
 import csv
 import math
+from math import lcm
 import sys
 from collections import OrderedDict
 
@@ -32,18 +34,40 @@ def load(files):
     return mixes
 
 
-def main(out, files):
+def main(out, args):
+    # Rows: groups of files separated by '--'; without '--', 3 panels per row.
+    groups, cur = [], []
+    for a in args:
+        if a == "--":
+            groups.append(cur)
+            cur = []
+        else:
+            cur.append(a)
+    groups.append(cur)
+    files = [f for g in groups for f in g]
     mixes = load(files)
     n = len(mixes)
     nstates = max(len(v) for v in mixes.values())
-    ncol = 3
-    nrow = math.ceil(n / ncol)
-    fig, axes = plt.subplots(nrow, ncol, figsize=(4.6 * ncol, 4.1 * nrow + 0.9), squeeze=False)
-    fig.subplots_adjust(hspace=0.5, wspace=0.18, bottom=0.17, top=0.86)
+    if len(groups) == 1:  # default: 3 per row
+        names = list(mixes)
+        rows = [names[i:i + 3] for i in range(0, n, 3)]
+    else:
+        rows = [list(load(g)) for g in groups]
+    ncol = max(len(r) for r in rows)
+    grid = lcm(*[len(r) for r in rows]) if all(rows) else ncol
+    nrow = len(rows)
+    fig = plt.figure(figsize=(4.6 * ncol, 4.1 * nrow + 0.9))
+    gs = fig.add_gridspec(nrow, grid, hspace=0.5, wspace=0.9 if grid > ncol else 0.18, bottom=0.17 if nrow <= 2 else 0.1, top=0.86 if nrow <= 2 else 0.91)
+    placement = {}
+    for r, names in enumerate(rows):
+        w = grid // len(names)
+        for c, name in enumerate(names):
+            placement[name] = (r, c * w, (c + 1) * w, c == 0)
     fig.patch.set_facecolor(SURFACE)
     norm = Normalize(-LIM, LIM)
     for k, (name, rows) in enumerate(mixes.items()):
-        ax = axes[k // ncol][k % ncol]
+        r0, c0, c1, first_in_row = placement[name]
+        ax = fig.add_subplot(gs[r0, c0:c1])
         ax.set_facecolor(SURFACE)
         pts, bad_cp, bad_rp = [], 0, 0
         for r in rows:
@@ -76,15 +100,13 @@ def main(out, files):
             s.set_color("#d4d3cc")
         ax.tick_params(colors=MUTED, labelsize=8)
         ax.set_xlabel("T / K", fontsize=9, color=INK)
-        if k % ncol == 0:
+        if first_in_row:
             ax.set_ylabel("p / MPa", fontsize=9, color=INK)
         if bad_cp or bad_rp:
             ax.text(0.98, 0.03, f"not plotted: REFPROP failed {bad_rp}, CoolProp failed {bad_cp}", transform=ax.transAxes, ha="right",
                     fontsize=7, color=MUTED, bbox=dict(facecolor=SURFACE, edgecolor="none", pad=1.5))
-    for k in range(n, nrow * ncol):
-        axes[k // ncol][k % ncol].axis("off")
     sm = plt.cm.ScalarMappable(norm=norm, cmap=CMAP)
-    cax = fig.add_axes([0.2, 0.06, 0.6, 0.022])
+    cax = fig.add_axes([0.2, 0.06 if nrow <= 2 else 0.035, 0.6, 0.022 if nrow <= 2 else 0.012])
     cb = fig.colorbar(sm, cax=cax, orientation="horizontal")
     ticks = [-math.log10(30), -1, -math.log10(3), 0, math.log10(3), 1, math.log10(30)]
     cb.set_ticks(ticks)
@@ -95,7 +117,7 @@ def main(out, files):
     fig.suptitle(f"Updated CoolProp PT flash vs REFPROP 10 TPFLSH, per state ({nstates} states per mixture, min of 3 timings each{', mixtures run as parallel processes' if nstates > 2000 else ''})\n"
                  "CoolProp: master + #3427 SS-skip + Chebyshev density kernel.  Dark outline: CoolProp publishes a two-phase state.\n"
                  "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model).",
-                 fontsize=10, color=INK, x=0.06, ha="left", y=0.975)
+                 fontsize=10, color=INK, x=0.06, ha="left", y=0.975 if nrow <= 2 else 0.985)
     fig.savefig(out, dpi=140, bbox_inches="tight", facecolor=SURFACE)
     print("wrote", out)
 
