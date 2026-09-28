@@ -33,13 +33,11 @@ int main(int argc, char** argv) {
         F->set_mole_fractions(z);
         gergcheb::Solver::State S; sv.assemble(T, z, S); gergcheb::Solver::Root r[gergcheb::MAXROOTS];
         const int n = sv.roots(S, p, r, gergcheb::Solver::Polish::All);
-        double gs = 1e300, rs = NAN;
-        for (int k = 0; k < n; ++k) {
-            HF->update_DmolarT_direct(r[k].rho, T);
-            if (!(F->first_partial_deriv(iP, iDmolar, iT) > 0)) continue;
-            const double g = gRT(*HF);
-            if (g < gs) { gs = g; rs = r[k].rho; }
-        }
+        // reference single phase: the kernel's spinodal-branch selection (NOT min-g over all roots: the
+        // alpha^r-well roots near delta ~ 1 have spuriously low g)
+        const int ks = sv.select(S, p, r, n);
+        double rs = ks >= 0 ? r[ks].rho : NAN, gs = 1e300;
+        if (ks >= 0) { HF->update_DmolarT_direct(rs, T); gs = gRT(*HF); }
         if (Q > 0 && Q < 1) {
             auto& L = *H->SatL; auto& V = *H->SatV;
             const double g2 = (1 - Q) * gRT(L) + Q * gRT(V);
