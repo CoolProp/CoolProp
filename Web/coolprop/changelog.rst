@@ -38,6 +38,26 @@ Highlights:
   The critical enhancement is not included for any of them; the correlations are the
   background viscosity, which is what the comparisons above are against.
 
+* **Thermal conductivity from the reference correlations of Assael, Huber, Perkins and
+  co-workers.**  Where a model is replaced, the old one stays in the fluid file for
+  reference.  Check values that CoolProp does not reproduce, and why, are documented in
+  the fluid files and tests.
+
+  * R161: Tsolakidou et al. (2017).
+  * Ethylene and propylene: Assael et al. (2016). For propylene this replaces the Huber
+    et al. (2003) ECS model.
+  * Cyclohexane: Koutian et al. (2017).
+  * R245fa: Perkins et al. (2016), replacing the Huber et al. (2003) ECS model.
+  * Novec649: Perkins et al. (2018).
+  * R1233zd(E): Perkins et al. (2017).
+  * Ammonia: Monogenidou et al. (2018), replacing Tufeu et al. (1984).
+  * n-Undecane: Assael et al. (2017).
+  * Tetrahydrofuran: Sotiriadou et al. (2024).
+  * Xenon: Velliadou et al. (2021).
+  * Nitrogen: Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004); nitrogen
+    viscosity also moves to Huber et al. (2024). R14, whose ECS model uses nitrogen as
+    its reference fluid, changes with it.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation
@@ -216,8 +236,8 @@ Highlights:
   silently doing nothing.**  ``set_reference_stateS`` dispatches on the backend
   prefix and had no final ``else``, so an unrecognised prefix returned having
   done nothing at all — not even validating the reference-state string.  The
-  GERG backends now raise ``NotImplementedError`` there.  (Other unrecognised
-  prefixes still no-op; that pre-existing behaviour is unchanged.)
+  GERG backends now raise ``NotImplementedError`` there; every other
+  unsupported backend now raises ``ValueError`` (see Bug fixes).
 
 * **vtable change in an internal header:**
   ``HelmholtzEOSMixtureBackend::set_mixture_parameters()`` is now ``virtual``,
@@ -253,6 +273,9 @@ Performance:
   (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
 
 Bug fixes:
+
+* ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
+* ``REFPROP`` backend: all REFPROP calls are serialized process-wide and each instance reloads its own fluids, so separate instances may be used from separate threads (each instance by one thread at a time).
 
 * **Low-density entropy flashes returned wrong densities.**  ``SmolarT`` resolved
   absolute density on a bracket spanning up to 18 decades, so at ``rho = 1e-8``

@@ -10,6 +10,10 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 
+# Components compiled into the distributed library are listed, with their
+# license texts, in THIRD_PARTY_NOTICES.md (shipped in the Python wheel).
+# Update it when adding, removing, or re-pinning a non-test dependency.
+
 option(COOLPROP_VENDOR_THIRD_PARTY
        "Bundle Eigen and fmt headers with the installed CoolProp package" ON)
 

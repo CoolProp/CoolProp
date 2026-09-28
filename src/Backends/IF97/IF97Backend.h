@@ -7,6 +7,8 @@
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/Exceptions.h"
 #include <vector>
+#include <algorithm>
+#include <cmath>
 
 namespace CoolProp {
 
@@ -19,6 +21,14 @@ class IF97Backend : public AbstractState
     CachedElement _hmass, _rhomass, _smass,
       _reverse;  // Also need a way to flag using the IF97 reverse calcs for h(p,s) and s(p,h)
                  /// CachedElement  _hVmass, _hLmass, _sVmass, sLmass;
+
+    /// Clamp a lever-rule quality into [0,1] to absorb rounding at the dome
+    /// edges, but refuse a non-finite one: std::min(1, std::max(0, NaN)) is 0,
+    /// which silently reported a NaN quality as saturated liquid.
+    static double bounded_quality(double q) {
+        if (!std::isfinite(q)) throw ValueError("IF97: computed two-phase quality is not a finite number");
+        return std::min(1.0, std::max(0.0, q));
+    }
 
    public:
     /// The name of the backend being used
@@ -165,8 +175,22 @@ class IF97Backend : public AbstractState
     @param value2 Second input value
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override {
+        // Quality first, so a non-finite or out-of-range Q keeps the
+        // "[Q] must be between 0 and 1" diagnostic every backend uses.
+        check_input_quality(input_pair, value1, value2);
 
         double H, S, hLmass, hVmass, sLmass, sVmass;
+
+        // Reject non-finite inputs up front, for every pair.  IF97's region
+        // selectors do not propagate NaN: HmassP / PSmass with p = NaN and
+        // HmassSmass with h or s = NaN previously returned T = 273.15 K and a
+        // gas / two-phase state without complaint.  Same exception type and
+        // "is not a valid number" wording as HEOS's post-update checks.  Any
+        // quality has already passed check_input_quality, so it is finite.
+        if (!std::isfinite(value1) || !std::isfinite(value2)) {
+            throw ValueError(format("IF97: input [%s] is not a valid number: value1 = %g, value2 = %g", get_input_pair_short_desc(input_pair).c_str(),
+                                    value1, value2));
+        }
 
         clear();  //clear the few cached values we are using
 
@@ -199,16 +223,12 @@ class IF97Backend : public AbstractState
             case PQ_INPUTS:
                 _p = value1;
                 _Q = value2;
-                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
-                    throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _T = IF97::Tsat97(_p);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
             case QT_INPUTS:
                 _Q = value1;
                 _T = value2;
-                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
-                    throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
@@ -228,7 +248,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bound between 0 and 1
+                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     set_phase();
@@ -250,7 +270,7 @@ class IF97Backend : public AbstractState
                     S = _smass;
                     sVmass = IF97::svap_p(_p);
                     sLmass = IF97::sliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (S - sLmass) / (sVmass - sLmass)));  //bound between 0 and 1
+                    _Q = bounded_quality((S - sLmass) / (sVmass - sLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     set_phase();
@@ -271,7 +291,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bount between 0 and 1
+                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bount between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     _Q = -1;

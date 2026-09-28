@@ -4434,37 +4434,105 @@
     }
   },
   "TRANSPORT": {
-    "conductivity": {
-      "BibTeX": "Huber-IECR-2003",
-      "f_int": {
-        "T_reducing": 1.0,
-        "T_reducing_units": "K",
-        "a": [
-          0.00164999,
-          -3.28868e-07
-        ],
-        "t": [
-          0,
-          1
-        ]
+    "conductivity": [
+      {
+        "BibTeX": "Perkins-JCED-2016-R245fa",
+        "dilute": {
+          "type": "expression",
+          "note": "Eq. (3) and Table 2 of Perkins, Huber & Assael, J. Chem. Eng. Data 61:3286 (2016); the coefficients are already in W/(m K). Tc = 427.01 K is the paper's own value. REFPROP 10.0/10.1 R245FA.FLD writes the same term in T rather than T/Tc (0.906916e-4 = 0.03872622/427.01).",
+          "formula": "let Tr = T/Tc\nsum(i: A[i]*Tr^i)",
+          "state_variables": [
+            "T"
+          ],
+          "constants": {
+            "Tc": 427.01
+          },
+          "arrays": {
+            "A": [
+              -0.0143644,
+              0.03872622
+            ]
+          }
+        },
+        "residual": {
+          "type": "expression",
+          "note": "Eq. (4) and Table 2 of Perkins et al. (2016), in W/(m K). Tc = 427.01 K and rhoc = 519.435768 kg/m^3 are the paper's own reducing values (REFPROP: 3.875 mol/L).",
+          "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+          "state_variables": [
+            "T",
+            "Dmass"
+          ],
+          "constants": {
+            "Tc": 427.01,
+            "rhoc": 519.435768
+          },
+          "arrays": {
+            "B1": [
+              -0.0120505,
+              0.0652392,
+              -0.0501653,
+              0.0176338,
+              -0.00219652
+            ],
+            "B2": [
+              0.00937193,
+              -0.0397844,
+              0.0355883,
+              -0.0141777,
+              0.00230154
+            ],
+            "d": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "critical": {
+          "type": "simplified_Olchowy_Sengers",
+          "note": "Eqs. (5)-(8) of Perkins et al. (2016): R_D = 1.02, gamma = 1.239, Gamma = 0.060, xi0 = 0.204e-9 m, qD^-1 = 0.626e-9 m (generalized value of Perkins et al. 2013, not fitted), T_ref = 1.5 Tc = 640.515 K (REFPROP rounds to 640.52). Paper, REFPROP 10.0 and REFPROP 10.1 agree on every constant. The correlation was developed with the Akasaka et al. (2015) EOS, which is the EOS CoolProp uses.",
+          "GAMMA": 0.06,
+          "R0": 1.02,
+          "gamma": 1.239,
+          "qD": 1597444089.456869,
+          "zeta0": 2.04e-10,
+          "T_ref": 640.515
+        }
       },
-      "psi": {
-        "a": [
-          1.1627,
-          -0.0473491
-        ],
-        "rhomolar_reducing": 3857.0,
-        "rhomolar_reducing_units": "mol/m^3",
-        "t": [
-          0,
-          1
-        ]
-      },
-      "q_D": 1999999999.9999998,
-      "q_D_units": "m",
-      "reference_fluid": "R134a",
-      "type": "ECS"
-    },
+      {
+        "BibTeX": "Huber-IECR-2003",
+        "f_int": {
+          "T_reducing": 1.0,
+          "T_reducing_units": "K",
+          "a": [
+            0.00164999,
+            -3.28868e-07
+          ],
+          "t": [
+            0,
+            1
+          ]
+        },
+        "psi": {
+          "a": [
+            1.1627,
+            -0.0473491
+          ],
+          "rhomolar_reducing": 3857.0,
+          "rhomolar_reducing_units": "mol/m^3",
+          "t": [
+            0,
+            1
+          ]
+        },
+        "q_D": 1999999999.9999998,
+        "q_D_units": "m",
+        "reference_fluid": "R134a",
+        "type": "ECS"
+      }
+    ],
     "viscosity": [
       {
         "BibTeX": "Perkins-JCED-2016-R245fa",

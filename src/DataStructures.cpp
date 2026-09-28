@@ -5,6 +5,7 @@
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/CoolProp.h"
 #include <memory>
+#include <mutex>
 
 namespace CoolProp {
 
@@ -161,11 +162,14 @@ class ParameterInformation
     }
 };
 
+// The lookup tables below are built lazily on first use.  std::call_once
+// makes that first use safe when several threads hit it at once (same
+// pattern as the Configuration and FluidLibrary singletons); a plain
+// `if (!p) p = make_unique` let two threads each build and assign one.
 std::unique_ptr<ParameterInformation> parameter_information_p;
+static std::once_flag parameter_information_flag;
 const ParameterInformation& get_parameter_information() {
-    if (!parameter_information_p) {
-        parameter_information_p = std::make_unique<ParameterInformation>();
-    }
+    std::call_once(parameter_information_flag, [] { parameter_information_p = std::make_unique<ParameterInformation>(); });
     return *parameter_information_p;
 }
 
@@ -392,10 +396,9 @@ class PhaseInformation
 };
 
 std::unique_ptr<PhaseInformation> phase_information_p;
+static std::once_flag phase_information_flag;
 const PhaseInformation& get_phase_information() {
-    if (!phase_information_p) {
-        phase_information_p = std::make_unique<PhaseInformation>();
-    }
+    std::call_once(phase_information_flag, [] { phase_information_p = std::make_unique<PhaseInformation>(); });
     return *phase_information_p;
 }
 
@@ -455,10 +458,9 @@ class SchemeInformation
 };
 
 std::unique_ptr<SchemeInformation> scheme_information_p;
+static std::once_flag scheme_information_flag;
 const SchemeInformation& get_scheme_information() {
-    if (!scheme_information_p) {
-        scheme_information_p = std::make_unique<SchemeInformation>();
-    }
+    std::call_once(scheme_information_flag, [] { scheme_information_p = std::make_unique<SchemeInformation>(); });
     return *scheme_information_p;
 }
 
@@ -576,10 +578,9 @@ class InputPairInformation
 };
 
 std::unique_ptr<InputPairInformation> input_pair_information_p;
+static std::once_flag input_pair_information_flag;
 const InputPairInformation& get_input_pair_information() {
-    if (!input_pair_information_p) {
-        input_pair_information_p = std::make_unique<InputPairInformation>();
-    }
+    std::call_once(input_pair_information_flag, [] { input_pair_information_p = std::make_unique<InputPairInformation>(); });
     return *input_pair_information_p;
 }
 
@@ -783,7 +784,7 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
             p2 = iUmolar;
             break;
         default:
-            throw ValueError(format("Invalid input pair"));
+            throw ValueError(format("Unknown input pair [%d]; add it to split_input_pair", static_cast<int>(pair)));
     }
 }
 
@@ -849,10 +850,9 @@ class BackendInformation
 };
 
 std::unique_ptr<BackendInformation> backend_information_p;
+static std::once_flag backend_information_flag;
 const BackendInformation& get_backend_information() {
-    if (!backend_information_p) {
-        backend_information_p = std::make_unique<BackendInformation>();
-    }
+    std::call_once(backend_information_flag, [] { backend_information_p = std::make_unique<BackendInformation>(); });
     return *backend_information_p;
 }
 

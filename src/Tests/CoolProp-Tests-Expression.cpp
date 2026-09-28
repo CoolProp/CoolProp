@@ -335,18 +335,23 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
 // Tolerances:
 //   * EVERY form matches to <1e-14 relative (the real completeness proof) at
 //     every grid point — asserted on all 8 forms.
-//   * Three forms (powers_of_Tr, collision_integral, polynomial_and_exponential)
-//     additionally match BIT-EXACTLY and are asserted with `got == expected`.
-//   * The other five (powers_of_T, modified_Batschinski_Hildebrand,
-//     ratio_of_polynomials, eta0_and_poly, residual polynomial) match to ~1-3
-//     ULP (observed max relative error ~2.4e-15) but NOT bit-for-bit.  The DSL
-//     and the routine perform the identical op sequence; the last-ULP
-//     divergence is FMA/`-ffp-contract`-class rounding (the optimized routine
-//     may fuse `a[i]*pow(...)`+accumulate; the DSL evaluator rounds each op
-//     separately).  This is a compiler codegen artifact, NOT an algebra
-//     difference, so we keep the 1e-14 assertion (which they pass with margin)
-//     rather than loosening it — and do NOT claim bit-exactness where it is
-//     not achieved.
+//   * No form is asserted BIT-EXACT.  The DSL and the routine perform the
+//     same op sequence modulo contraction, but the last-ULP result is
+//     compiler-codegen dependent: on FMA-capable targets (arm64; x86-64 only
+//     when FMA is enabled, e.g. -mfma or -march=x86-64-v3) the compiler may
+//     contract (clang default `-ffp-contract=on`, GCC `fast`) the routine's
+//     `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
+//     (virtual-dispatch tree walk) always rounds the multiply and the add
+//     separately.  Whether the routine fuses depends on contraction settings,
+//     target FMA support and code generation (scalar code can fuse; no
+//     unrolling needed) -- e.g. Apple clang 21 -O3 on arm64 emits a 4x-unrolled
+//     unfused main loop plus an `fmadd` remainder loop, so n-Pentane's 4-term
+//     powers_of_Tr happened to match bit-for-bit on one toolchain and differ
+//     by up to ~9 ULP (cancellation at T=120 K) on another.  Observed max
+//     relative error is ~2.4e-15, so the 1e-14 assertion has held with margin
+//     (an observation, not a proven bound: sum|terms|/|sum| is ~30 at
+//     n-Pentane T=120 K).  This is a codegen artifact, NOT an algebra
+//     difference.
 //
 // TEST-ONLY: no production code is touched.
 // ---------------------------------------------------------------------------
@@ -384,7 +389,7 @@ TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -412,7 +417,7 @@ TEST_CASE("golden: viscosity dilute powers_of_Tr", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
+            // not asserted bit-exact: FMA contraction in the routine is codegen-dependent
             ++checks;
         }
     }
@@ -451,7 +456,7 @@ TEST_CASE("golden: viscosity dilute collision_integral", "[expression][golden]")
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            CHECK(got == expected);  // bit-exact: ln/exp/sqrt/pow same order reproduces value exactly
+            // not asserted bit-exact: FMA contraction in the routine is codegen-dependent
             ++checks;
         }
     }
@@ -501,7 +506,7 @@ TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[ex
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -581,7 +586,7 @@ TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][gold
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -617,7 +622,7 @@ TEST_CASE("golden: conductivity dilute eta0_and_poly", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -650,7 +655,7 @@ TEST_CASE("golden: conductivity residual polynomial", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -688,7 +693,7 @@ TEST_CASE("golden: conductivity residual polynomial_and_exponential", "[expressi
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
+            // not asserted bit-exact: FMA contraction in the routine is codegen-dependent
             ++checks;
         }
     }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fail if forbidden internal headers are shipped in the installed tree.
 #
-# Three assertions:
+# Assertions (numbered in the body below):
 #
 #  1. detail/json.h must NOT ship.  That header #includes nlohmann/json.hpp
 #     and valijson; it is internal-only and is excluded by CMake's install
@@ -11,6 +11,11 @@
 #     install-side companion to the symbol-leak gate (check-json-symbols.sh):
 #     even if detail/json.h is correctly excluded, a newly added public header
 #     that transitively pulls nlohmann/valijson would be a regression.
+#
+#  3. Every installed CoolProp-owned header compiles standalone as C++.
+#
+#  4. Every installed header containing a literal extern "C" (at least
+#     CoolPropLib.h and detail/state_capi.h) also compiles standalone as C99.
 #
 # Generic positive control: at least ONE installed header matching
 # */detail/*.h (other than detail/json.h) must be present.  This proves the
@@ -251,4 +256,51 @@ if [ "$SC_FAIL" -ne 0 ]; then
     exit 1
 fi
 
-echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} canonical CoolProp-owned headers compile standalone; legacy copies match; vendored headers excluded (of ${NHEADERS} installed *.h) from ${BUILD_DIR}"
+# Assertion 4: every CoolProp-owned header that declares a C ABI (contains
+# `extern "C"`) must also compile as C.  Assertion 3 compiles as C++ only, so a
+# C++-only construct (a reference, a default argument, nullptr) slipping into
+# CoolPropLib.h would pass it and break every C consumer.  C99 is the floor, not
+# C89: CoolPropLib.h takes bool from <stdbool.h>.  -Wstrict-prototypes is named
+# explicitly because GCC leaves it out of -Wall/-Wextra, and an empty () is not a
+# prototype in C before C23.  The legacy shared_library/ and static_library/
+# copies of CoolPropLib.h are covered through the cmp above.
+CC_BIN="${CC:-cc}"
+if ! command -v "$CC_BIN" >/dev/null 2>&1; then
+    echo "FAIL: C compiler '$CC_BIN' not found -- cannot check that the C-ABI headers compile as C." >&2
+    exit 1
+fi
+# Detection is a literal `extern "C"` in a *.h file.  A future C-ABI header that
+# gets its linkage only through a macro (e.g. EXPORT_CODE from CoolPropLib.h)
+# would not be found, so the known C-ABI headers are also listed explicitly
+# below and must be found.  That list, not the grep exit code, is the real
+# guard: grep exits 2 on some errors, but BSD grep with --include reports a
+# nonexistent root as 1 ("no match"), which the list then catches.
+C_ABI_RC=0
+C_ABI_HEADERS="$(grep -rl --include='*.h' --exclude-dir=third_party 'extern "C"' "$INC_ROOT" | LC_ALL=C sort)" || C_ABI_RC=$?
+if [ "$C_ABI_RC" -gt 1 ]; then
+    echo "FAIL: searching $INC_ROOT for C-ABI headers failed (grep exit $C_ABI_RC)." >&2
+    exit 1
+fi
+for required in CoolProp/CoolPropLib.h CoolProp/detail/state_capi.h; do
+    if ! printf '%s\n' "$C_ABI_HEADERS" | grep -qxF "$INC_ROOT/$required"; then
+        echo "FAIL: C-ABI header $required was not found by the extern \"C\" search -- the C-mode check would not cover it." >&2
+        exit 1
+    fi
+done
+C_TOTAL=0
+C_FAIL=0
+while IFS= read -r hdr; do
+    rel="${hdr#"$INC_ROOT"/}"
+    C_TOTAL=$((C_TOTAL + 1))
+    if ! printf '#include "%s"\n' "$rel" | "$CC_BIN" -std=c99 -pedantic-errors -Wall -Wextra -Wstrict-prototypes -Werror \
+            -fsyntax-only -I"$INC_ROOT" -x c - >>"$SC_LOG" 2>&1; then
+        echo "FAIL: C-ABI header does not compile as C99: $rel" >&2
+        C_FAIL=$((C_FAIL + 1))
+    fi
+done <<<"$C_ABI_HEADERS"
+if [ "$C_FAIL" -ne 0 ]; then
+    echo "FAIL: $C_FAIL C-ABI header(s) do not compile as C99 with $CC_BIN (see $SC_LOG)." >&2
+    exit 1
+fi
+
+echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} canonical CoolProp-owned headers compile standalone; ${C_TOTAL} C-ABI header(s) compile as C99; legacy copies match; vendored headers excluded (of ${NHEADERS} installed *.h) from ${BUILD_DIR}"

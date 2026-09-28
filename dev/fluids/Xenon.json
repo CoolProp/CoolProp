@@ -3713,6 +3713,95 @@
           ]
         }
       }
+    },
+    "conductivity": {
+      "BibTeX": "Velliadou-IJT-2021-xenon-conductivity",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (2) and Table 2 of Velliadou, Assael, Antoniadis & Huber, Int. J. Thermophys. 42:51 (2021), the dilute-gas correlation of Xiao et al. (J. Phys. Chem. Ref. Data 49:013101, 2020), converted from mW/(m K) to W/(m K). Transcribed from the NIST accepted manuscript (pub_id=931647); the version of record is not freely available. The manuscript reproduces the paper's computer-check dilute-gas value at 300 K (5.4993 mW/(m K)). XENON.FLD in REFPROP 10.1 carries the same eleven coefficients but gives the last one (b11 = -1.09858e-5) the power 10 instead of 11; that changes the dilute value by less than 4e-7 between 170 K and 750 K but by 5.6e-5 at 100 K and by 89 % at 5000 K, the ends of Xiao's 100-5000 K range. This block follows the paper (power 11).",
+        "formula": "let L = ln(T/T_ref)\n1e-3*lambda_ref*exp(sum(i: b[i]*L^p[i]))",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "T_ref": 298.15,
+          "lambda_ref": 5.4666
+        },
+        "arrays": {
+          "b": [
+            0.96552,
+            -0.0512353,
+            -0.0670913,
+            0.0288938,
+            0.00925546,
+            -0.00972175,
+            0.00169364,
+            0.000996803,
+            -0.000610466,
+            0.000133327,
+            -1.09858e-05
+          ],
+          "p": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (3) and Table 3 of Velliadou et al. (2021). Tc = 289.733 K and rhoc = 8.4 mol/dm^3 (1102.8612 kg/m^3) are the paper's own reducing values, from the Lemmon & Span (2006) EOS. Eq. (3) multiplies the sum by 1000 to give mW/(m K), so the Table 3 coefficients, although labelled mW/(m K), are in W/(m K) and are used here unscaled; they reproduce the paper's check value for the residual contribution (11.0621 mW/(m K) at 300 K and 1200 kg/m^3). Identical to XENON.FLD in REFPROP 10.1.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmolar/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmolar"
+        ],
+        "constants": {
+          "Tc": 289.733,
+          "rhoc": 8400.0
+        },
+        "arrays": {
+          "B1": [
+            0.00694552,
+            0.00876111,
+            -0.01199,
+            0.00684476,
+            -0.00102229
+          ],
+          "B2": [
+            -7.32747e-05,
+            -0.00268366,
+            0.00563598,
+            -0.00314076,
+            0.000605394
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Section 2.3 of Velliadou et al. (2021): R_D = 1.02, gamma = 1.239, Gamma = 0.058, xi0 = 0.182e-9 m, qD^-1 = 0.479e-9 m, T_ref = 1.5 Tc, printed as 434.6 K (also the value in the TK3 block of XENON.FLD in REFPROP 10.1, which is otherwise identical). With the viscosity of Velliadou et al. (2021), which is CoolProp's, the paper's equations on the Lemmon & Span EOS give 6.2061 mW/(m K) for the enhancement at 300 K and 1200 kg/m^3, the paper's check value.",
+        "GAMMA": 0.058,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 2087682672.2338204,
+        "zeta0": 1.82e-10,
+        "T_ref": 434.6
+      }
     }
   }
 }
