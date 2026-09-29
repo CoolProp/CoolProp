@@ -2370,6 +2370,46 @@ TEST_CASE("Michelsen stability does not miss a mid-dome split after a stable SS 
     }
 }
 
+TEST_CASE("Mixture PT flash publishes a liquid-liquid split regardless of which solver stage finds it (COO-111)", "[michelsen][flash][mixture]") {
+    // N2/C1/C2/nC4/nC5 at 105.5 K / 12.5 MPa separates into an N2-rich and a hydrocarbon-rich liquid.  The split's
+    // successive substitution oscillates between two density branches of the incipient phase, so whether the main
+    // Newton path or the part-2 fallback ends up finding the split depends on 1e-10-level details of the input.  The
+    // main path published it (after relabelling liquid = denser phase) while the fallback rejected the identical split on
+    // a density-ordering guard, so the two inputs below -- 3e-11 apart in T -- used to give two-phase and single phase.
+    // Which stage handles each input is platform-dependent (it hinges on 1e-10-level floating-point details), so this is
+    // a best-effort exercise of the fallback path; the invariant tested is that both inputs publish the same split.
+    const std::string fluids = "Nitrogen&Methane&Ethane&n-Butane&n-Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const std::vector<std::pair<double, double>> Tp = {{105.49170559706157, 12481218.129358767}, {105.4917056, 12481218.13}};
+    std::vector<double> Qs;
+    for (const auto& s : Tp) {
+        auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("GERG2008", fluids));
+        AS->set_mole_fractions(z);
+        CAPTURE(s.first, s.second);
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.second, s.first));
+        REQUIRE(AS->phase() == iphase_twophase);
+        Qs.push_back(AS->Q());
+        // A genuine split: the denser phase is the N2-rich liquid, and the fugacities match.
+        const auto xl = AS->mole_fractions_liquid_double(), xv = AS->mole_fractions_vapor_double();
+        CHECK(AS->saturated_liquid_keyed_output(iDmolar) > AS->saturated_vapor_keyed_output(iDmolar));
+        CHECK(xl[0] > xv[0]);
+        auto L = std::shared_ptr<AbstractState>(AbstractState::factory("GERG2008", fluids));
+        auto V = std::shared_ptr<AbstractState>(AbstractState::factory("GERG2008", fluids));
+        L->set_mole_fractions(xl);
+        V->set_mole_fractions(xv);
+        L->specify_phase(iphase_liquid);
+        V->specify_phase(iphase_gas);
+        L->update(DmolarT_INPUTS, AS->saturated_liquid_keyed_output(iDmolar), s.first);
+        V->update(DmolarT_INPUTS, AS->saturated_vapor_keyed_output(iDmolar), s.first);
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i);
+            CHECK(std::abs(std::log(V->fugacity(i) / L->fugacity(i))) < 1e-6);
+        }
+    }
+    // Inputs 3e-11 apart must give the same answer.
+    CHECK(Qs[0] == Catch::Approx(Qs[1]).epsilon(1e-6));
+}
+
 TEST_CASE("Mixture PT flash near the dew line supports a zero-mole-fraction component (#3357)", "[michelsen][flash][mixture][saturation]") {
     // Zero-mole-fraction feed robustness (GH #3357, Ian Bell review).  Two hardening changes in this
     // PR are about feeds with an absent component: (a) the minority-phase Gibbs Newton FALLBACK now

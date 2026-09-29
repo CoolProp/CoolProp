@@ -3349,8 +3349,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // cold global lowest-Gibbs density roots (vs its LIQPH/VAPPH specified roots) to keep every
     // evaluation on the same stable density sheet; the eigenvalue-flip Hessian modification (vs its
     // modified-Cholesky factorization); a single global minority phase (vs its per-component setV
-    // reference-phase toggle); and CoolProp-specific guards (Wilson reseed, Gibbs-descent, VLE
-    // ordering) below.
+    // reference-phase toggle); and CoolProp-specific guards (Wilson reseed, Gibbs-descent) below.
+    // There is no density-ordering guard: an inverted or liquid-liquid split is relabelled after the
+    // fallback, as on the main path (COO-111).
     //
     // LOGIC: seed the incipient composition from the stability trial (or Wilson K-factors when that
     // trial is ~trivial), then iterate -- build the mole-number Gibbs gradient dG/da_i = lnf_i^min -
@@ -3369,7 +3370,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     //             Hessian is Eq.17; the modified-Cholesky descent + Gibbs-decrease-accepted line
     //             search (our eigenvalue-flip is a spectral variant) is the "Second order methods"
     //             section; the Gibbs-descent/"never return to the trivial solution" and phase-removal
-    //             rules motivate our genuine/Gibbs/VLE-ordering guards.
+    //             rules motivate our genuine/Gibbs-descent guards.
     //   [MHA1980b] Mehra, Heidemann & Aziz, "Computation of multiphase equilibria for compositional
     //             simulators", SPE 9232 (1980) -- origin of the yield-fraction/reference-phase choice
     //             adopted by M1982b Eq.14-15.
@@ -3765,19 +3766,23 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         // the fallback does not publish, rather than accepting on a vacuous G_fin < HUGE_VAL compare.
         const bool g_single_valid = ValidNumber(G_single) && G_single < HUGE_VAL;
         const bool fb_lower_gibbs = fb_eval_ok && g_single_valid && ValidNumber(G_fin) && G_fin < G_single - 1e-10;
-        // Vapour-liquid ordering: solve_michelsen is a VLE flash, so a genuine split must have the
-        // liquid denser than the vapour.  A split with rho_vap >= rho_liq is a mislabeled/spurious
-        // liquid-liquid split -- e.g. the poor-binary-parameter methanol-benzene LLE the EOS predicts (GH #3168);
-        // the flash finds it (lower Gibbs per the model) but it must not be published as VLE.
-        const bool fb_vle_order = IO.rhomolar_liq > IO.rhomolar_vap;
+        // No density-ordering requirement here.  A split with rho_vap >= rho_liq is either a genuine
+        // split with its labels transposed or a liquid-liquid split; the label normalisation below
+        // (liquid = denser phase) handles both, exactly as it does for the main Newton path.  An
+        // ordering guard used to reject such splits HERE only, so the same equal-fugacity,
+        // lower-Gibbs split was published when the main path found it and discarded (single-phase
+        // fallback) when this fallback did.  Which stage finds it depends on where the oscillating
+        // successive substitution stops, so the verdict flipped under 1e-10 input changes (COO-111:
+        // 13 % of the liquid-liquid region of N2/C1/C2/nC4/nC5).  Genuineness is decided by the
+        // equal-fugacity, spread, interior-beta and lower-Gibbs guards, as on every other path.
         // Interior-beta bound matched to the CALLER's collapse guard (PT_flash_mixtures uses 1e-10),
         // consistent with the near_converged_genuine relaxation below (Ian Bell review, GH #3357):
         // gate at 1e-8 here would restore (and typically throw) a genuine but extremely-near-dew split
         // whose vanishing incipient amount puts beta within 1e-8 of a bound -- exactly the split the
-        // caller would publish.  The spread / equal-fugacity / lower-Gibbs / VLE-ordering guards still
-        // reject a collapsed or metastable split; beta-collapse itself is delegated to the caller.
-        const bool fb_genuine = fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-10 && beta < 1.0 - 1e-10
-                                && fb_lower_gibbs && fb_vle_order;
+        // caller would publish.  The spread / equal-fugacity / lower-Gibbs guards still reject a
+        // collapsed or metastable split; beta-collapse itself is delegated to the caller.
+        const bool fb_genuine =
+          fb_eval_ok && ValidNumber(mg_fin) && mg_fin <= 1e-5 && fb_spread >= 1e-4 && beta > 1e-10 && beta < 1.0 - 1e-10 && fb_lower_gibbs;
         if (fb_genuine) {
             // eval_min left IO.x/IO.y/beta/rho on the accepted split; the always-run recompute block
             // below re-derives `converged` from the published residual, so no need to set it here.
@@ -3798,8 +3803,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // (GH #3357: near-dew natural-gas points otherwise publish Q = 1 - Q_true with x/y inverted).
     // The equal-fugacity split is symmetric in its labels, so this relabeling is exact and the
     // material balance z = (1 - beta) x + beta y is invariant under it.  Doing it here, before the
-    // recompute below, re-syncs SatL/SatV to the corrected assignment.  (The fallback's fb_vle_order
-    // guard already blocks an inverted split from that stage; this covers the stages without one.)
+    // recompute below, re-syncs SatL/SatV to the corrected assignment.  This covers every stage,
+    // including the part-2 fallback (which no longer rejects an inverted split; COO-111).
     if (ValidNumber(IO.rhomolar_liq) && ValidNumber(IO.rhomolar_vap) && IO.rhomolar_liq < IO.rhomolar_vap) {
         std::vector<CoolPropDbl> x_tmp = IO.x;
         IO.x = IO.y;
