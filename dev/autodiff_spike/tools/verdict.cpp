@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
         const bool fr2 = FR->phase() == CoolProp::iphase_twophase;
         if (fr2 != cp2 || (!cp2 && std::abs(FR->rhomolar() - rcp) > 1e-7 * rcp)) {
             ++cnt["cp_history"];
-            out << "\"" << name << "\"," << idx << ",cp_history,\"CoolProp answer depends on call history (fresh object: " << (fr2 ? "two-phase" : "single phase") << ")\"\n";
+            out << "\"" << name << "\"," << idx << ",cp_history,\"CoolProp re-flash from the CSV T, p differs - knife-edge input sensitivity, not call history (fresh object: " << (fr2 ? "two-phase" : "single phase") << ")\"\n";
             continue;
         }
         if (cp2) {
