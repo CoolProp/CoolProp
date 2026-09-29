@@ -6,20 +6,48 @@ on:
     branches: [ 'master', 'main']
     tags: [ 'v*' ]
 
+# The dispatch below authenticates with the GitHub App token, not GITHUB_TOKEN.
+permissions: {}
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v7
+    # Short-lived (1 h) installation token from the org-owned
+    # "coolprop-devdocs-trigger" GitHub App, which is installed on
+    # CoolProp/devdocs only with Contents: write (what repository_dispatch
+    # needs).  Replaces the personal DEVDOCS_RUN_PAT, whose silent expiry left
+    # devdocs stale for months (GH #3439).  DEVDOCS_APP_CLIENT_ID (org
+    # variable) and DEVDOCS_APP_PRIVATE_KEY (org secret) are both scoped to
+    # CoolProp/CoolProp.
+    - name: Mint devdocs app token
+      id: app-token
+      uses: actions/create-github-app-token@v3
+      with:
+        client-id: ${{ vars.DEVDOCS_APP_CLIENT_ID }}
+        private-key: ${{ secrets.DEVDOCS_APP_PRIVATE_KEY }}
+        owner: CoolProp
+        repositories: devdocs
+        permission-contents: write
 
     - name: Fire devdocs
       shell: bash
+      env:
+        DEVDOCS_TOKEN: ${{ steps.app-token.outputs.token }}
+      # repository_dispatch answers 204 on success.  Assert exactly that:
+      # curl --fail only catches >= 400, so a 3xx (renamed/transferred repo)
+      # would otherwise exit 0 and go stale silently again (GH #3439).
       run: |
-        curl -X POST https://api.github.com/repos/CoolProp/devdocs/dispatches \
-        -H "Accept: application/vnd.github+json" \
-        -H "Authorization: token ${{ secrets.DEVDOCS_RUN_PAT }}" \
-        -d '{"event_type":"triggered-by-CoolProp-main","client_payload":{"example":"data"}}'
-
-  
+        status=$(curl -sS -o response.txt -w '%{http_code}' -X POST \
+          https://api.github.com/repos/CoolProp/devdocs/dispatches \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $DEVDOCS_TOKEN" \
+          -d '{"event_type":"triggered-by-CoolProp-main","client_payload":{"example":"data"}}')
+        if [ "$status" != "204" ]; then
+          echo "::error::devdocs dispatch returned HTTP $status (expected 204)"
+          cat response.txt
+          exit 1
+        fi
+        echo "devdocs dispatch accepted (HTTP 204)"
