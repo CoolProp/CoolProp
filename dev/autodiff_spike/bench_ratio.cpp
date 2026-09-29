@@ -41,8 +41,8 @@ bool load_rp(const std::string& dir) {
 const std::map<std::string, std::string> RPNAME = {
   {"Methane", "METHANE"}, {"Ethane", "ETHANE"},       {"Propane", "PROPANE"},   {"HydrogenSulfide", "H2S"}, {"Nitrogen", "NITROGEN"},
   {"Oxygen", "OXYGEN"},   {"Argon", "ARGON"},         {"CarbonDioxide", "CO2"}, {"Water", "WATER"},         {"IsoButane", "ISOBUTAN"},
-  {"n-Butane", "BUTANE"}, {"Isopentane", "IPENTANE"}, {"n-Pentane", "PENTANE"}, {"n-Hexane", "HEXANE"},
-  {"R32", "R32"},         {"R1234yf", "R1234YF"}, {"Helium", "HELIUM"},       {"Hydrogen", "HYDROGEN"}};
+  {"n-Butane", "BUTANE"}, {"Isopentane", "IPENTANE"}, {"n-Pentane", "PENTANE"}, {"n-Hexane", "HEXANE"},     {"R32", "R32"},
+  {"R1234yf", "R1234YF"}, {"Helium", "HELIUM"},       {"Hydrogen", "HYDROGEN"}};
 bool setup_rp(const std::vector<std::string>& fluids, bool gerg) {
     char hf0[256] = {}, herr0[256] = {};
     std::strcpy(hf0, "GERG");
@@ -101,21 +101,31 @@ int main(int argc, char** argv) {
         double Tlo, Thi;
     };
     // R454B: R32/R1234yf 68.9/31.1 by mass = 0.8292/0.1708 by mole
-    const std::vector<Mix> mixes = {{"C1/C2 50/50", "GERG2008", {"Methane", "Ethane"}, {0.5, 0.5}, 150, 400},
-                                    {"C1/C2/C3 50/30/20", "GERG2008", {"Methane", "Ethane", "Propane"}, {0.5, 0.3, 0.2}, 150, 450},
-                                    {"Amarillo (10)", "GERG2008", NG10, AMA, 150, 400},
-                                    {"C1/H2S 50/50", "GERG2008", {"Methane", "HydrogenSulfide"}, {0.5, 0.5}, 180, 450},
-                                    {"humid air x_w=0.02", "GERG2008", AIRW, XAIRW, 250, 450},
-                                    {"R454B", "HEOS", {"R32", "R1234yf"}, {0.8292, 0.1708}, 200, 420},
-                                    // Hard cases from the mixture-calculation colleagues (2026-09-28).  The first is the COO-5 HSU_P
-                                    // mixture (bubble 90.7 K / dew 244.4 K at 0.3 MPa); the CCS mixture's published composition sums to
-                                    // 100.002 % and is normalized here.
-                                    {"N2/C1/C2/nC4/nC5", "GERG2008", {"Nitrogen", "Methane", "Ethane", "n-Butane", "n-Pentane"},
-                                     {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 100, 350},
-                                    {"CO2/H2 96.77/3.23", "GERG2008", {"CarbonDioxide", "Hydrogen"}, {0.9677, 0.0323}, 220, 400},
-                                    {"CO2/N2/O2/He", "GERG2008", {"CarbonDioxide", "Nitrogen", "Oxygen", "Helium"},
-                                     {0.9403 / 1.00002, 0.0582 / 1.00002, 0.00127 / 1.00002, 0.00025 / 1.00002}, 220, 400},
-                                    {"N2/O2/Ar (O2-enriched air)", "GERG2008", {"Nitrogen", "Oxygen", "Argon"}, {0.609067, 0.370414, 0.0205193}, 70, 300}};
+    const std::vector<Mix> mixes = {
+      {"C1/C2 50/50", "GERG2008", {"Methane", "Ethane"}, {0.5, 0.5}, 150, 400},
+      {"C1/C2/C3 50/30/20", "GERG2008", {"Methane", "Ethane", "Propane"}, {0.5, 0.3, 0.2}, 150, 450},
+      {"Amarillo (10)", "GERG2008", NG10, AMA, 150, 400},
+      {"C1/H2S 50/50", "GERG2008", {"Methane", "HydrogenSulfide"}, {0.5, 0.5}, 180, 450},
+      {"humid air x_w=0.02", "GERG2008", AIRW, XAIRW, 250, 450},
+      {"R454B", "HEOS", {"R32", "R1234yf"}, {0.8292, 0.1708}, 200, 420},
+      // Hard cases from the mixture-calculation colleagues (2026-09-28).  The first is the COO-5 HSU_P
+      // mixture (bubble 90.7 K / dew 244.4 K at 0.3 MPa); the CCS mixture's published composition sums to
+      // 100.002 % and is normalized here.
+      {"N2/C1/C2/nC4/nC5", "GERG2008", {"Nitrogen", "Methane", "Ethane", "n-Butane", "n-Pentane"}, {0.3797, 0.3225, 0.278, 0.0014, 0.0184}, 100, 350},
+      {"CO2/H2 96.77/3.23", "GERG2008", {"CarbonDioxide", "Hydrogen"}, {0.9677, 0.0323}, 220, 400},
+      {"CO2/N2/O2/He",
+       "GERG2008",
+       {"CarbonDioxide", "Nitrogen", "Oxygen", "Helium"},
+       {0.9403 / 1.00002, 0.0582 / 1.00002, 0.00127 / 1.00002, 0.00025 / 1.00002},
+       220,
+       400},
+      {"N2/O2/Ar (O2-enriched air)", "GERG2008", {"Nitrogen", "Oxygen", "Argon"}, {0.609067, 0.370414, 0.0205193}, 70, 300},
+      // CO2 + water (2026-09-29): CO2-rich CCS stream with water dropout, and an equimolar mix with a
+      // water-rich liquid alongside CO2-rich vapor / liquid (three-phase line below ~304 K).  Gernert &
+      // Span (EOS-CG 2016) on both sides: CoolProp HEOS and REFPROP's default model (HMX.BNC "KWG"),
+      // Span-Wagner CO2 + IAPWS-95 water; reducing and departure coefficients checked identical.
+      {"CO2/H2O 99/1 (Gernert)", "HEOS", {"CarbonDioxide", "Water"}, {0.99, 0.01}, 250, 450},
+      {"CO2/H2O 50/50 (Gernert)", "HEOS", {"CarbonDioxide", "Water"}, {0.5, 0.5}, 250, 450}};
     FILE* fo = std::fopen(out.c_str(), "w");
     std::fprintf(fo, "mixture,i,T,p,t_cp_us,t_rp_us,rho_cp,Q_cp,cp_fail,rho_rp,q_rp,ierr_rp\n");
     for (const auto& mx : mixes) {
@@ -159,8 +169,8 @@ int main(int argc, char** argv) {
                 sink = sink + D;
             }
         for (int i = 0; i < NS; ++i)
-            std::fprintf(fo, "\"%s\",%d,%.17g,%.17g,%.4f,%.4f,%.12g,%.8g,%d,%.12g,%.8g,%d\n", mx.name.c_str(), i, Ts[i], ps[i], t_cp[i], t_rp[i], rho_cp[i],
-                         Q_cp[i], cpfail[i], rho_rp[i], q_rp[i], ierr[i]);
+            std::fprintf(fo, "\"%s\",%d,%.17g,%.17g,%.4f,%.4f,%.12g,%.8g,%d,%.12g,%.8g,%d\n", mx.name.c_str(), i, Ts[i], ps[i], t_cp[i], t_rp[i],
+                         rho_cp[i], Q_cp[i], cpfail[i], rho_rp[i], q_rp[i], ierr[i]);
         std::printf("%-20s median CoolProp %8.1f us   TPFLSH %8.1f us\n", mx.name.c_str(), median(t_cp), median(t_rp));
         std::fflush(stdout);
     }

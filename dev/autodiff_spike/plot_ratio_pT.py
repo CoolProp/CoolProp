@@ -167,7 +167,7 @@ def main(out, args):
                    labelcolor=INK)
     fig.suptitle(f"CoolProp PT flash vs REFPROP 10 TPFLSH, per state ({nstates} states per mixture, min of 3 timings each{', mixtures run as parallel processes' if nstates > 2000 else ''})\n"
                  f"CoolProp build: {build}.  Dark outline: CoolProp publishes a two-phase state.\n"
-                 "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model; its disagreements are not judged).",
+                 "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model; its disagreements are not judged) and CO2/H2O (Gernert & Span EOS-CG on both sides).",
                  fontsize=10, color=INK, x=0.06, ha="left", y=0.975 if nrow <= 2 else 0.985)
     fig.savefig(out, dpi=140, bbox_inches="tight", facecolor=SURFACE)
     print("wrote", out)

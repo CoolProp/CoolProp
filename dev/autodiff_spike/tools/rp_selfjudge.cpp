@@ -25,9 +25,9 @@ std::map<std::string, std::string> RN = {{"Methane", "METHANE"},   {"Ethane", "E
                                          {"Nitrogen", "NITROGEN"}, {"Oxygen", "OXYGEN"},      {"Argon", "ARGON"},     {"CarbonDioxide", "CO2"},
                                          {"Water", "WATER"},       {"IsoButane", "ISOBUTAN"}, {"n-Butane", "BUTANE"}, {"Isopentane", "IPENTANE"},
                                          {"n-Pentane", "PENTANE"}, {"n-Hexane", "HEXANE"},    {"Helium", "HELIUM"},   {"Hydrogen", "HYDROGEN"}};
-void setup(const std::vector<std::string>& f) {
+void setup(const std::vector<std::string>& f, bool gerg) {
     char h0[256] = "GERG", e0[256] = {};
-    int j = 1, k = 0, ie = 0;
+    int j = gerg ? 1 : 0, k = 0, ie = 0;
     FL(h0, &j, &k, &ie, e0, 255, 255);
     std::string s;
     for (size_t i = 0; i < f.size(); ++i)
@@ -60,7 +60,9 @@ int main() {
       {"CO2/H2 96.77/3.23", {{"CarbonDioxide", "Hydrogen"}, {0.9677, 0.0323}}},
       {"CO2/N2/O2/He",
        {{"CarbonDioxide", "Nitrogen", "Oxygen", "Helium"}, {0.9403 / 1.00002, 0.0582 / 1.00002, 0.00127 / 1.00002, 0.00025 / 1.00002}}},
-      {"N2/O2/Ar (O2-enriched air)", {{"Nitrogen", "Oxygen", "Argon"}, {0.609067, 0.370414, 0.0205193}}}};
+      {"N2/O2/Ar (O2-enriched air)", {{"Nitrogen", "Oxygen", "Argon"}, {0.609067, 0.370414, 0.0205193}}},
+      {"CO2/H2O 99/1 (Gernert)", {{"CarbonDioxide", "Water"}, {0.99, 0.01}}},
+      {"CO2/H2O 50/50 (Gernert)", {{"CarbonDioxide", "Water"}, {0.5, 0.5}}}};
     std::ifstream in("rpwrong_states2.tsv");
     std::string line, cur;
     std::map<std::string, std::vector<int>> bins;  // per mixture: [dlnf<1e-8, <1e-6, <1e-5, <1e-3, >=1e-3, not reproduced single-phase]
@@ -73,7 +75,7 @@ int main() {
         std::string is;
         std::getline(ss, is, '\t');
         if (name != cur) {
-            setup(M[name].first);
+            setup(M[name].first, name.find("(Gernert)") == std::string::npos);
             cur = name;
             bins[name].assign(7, 0);
         }

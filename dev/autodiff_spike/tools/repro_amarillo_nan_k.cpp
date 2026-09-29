@@ -7,7 +7,11 @@ int main() {
     for (auto s : {std::pair<double, double>{176.9762835, 15145363.4}, {180.1382565, 8593226.381}}) {
         std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("GERG2008", fl));
         AS->set_mole_fractions(z);
-        try { AS->update(CoolProp::PT_INPUTS, s.second, s.first); std::printf("T=%.4f p=%.6g  rho=%.6g Q=%g phase=%d\n", s.first, s.second, AS->rhomolar(), AS->Q(), (int)AS->phase()); }
-        catch (std::exception& e) { std::printf("T=%.4f p=%.6g  THREW: %s\n", s.first, s.second, e.what()); }
+        try {
+            AS->update(CoolProp::PT_INPUTS, s.second, s.first);
+            std::printf("T=%.4f p=%.6g  rho=%.6g Q=%g phase=%d\n", s.first, s.second, AS->rhomolar(), AS->Q(), (int)AS->phase());
+        } catch (std::exception& e) {
+            std::printf("T=%.4f p=%.6g  THREW: %s\n", s.first, s.second, e.what());
+        }
     }
 }

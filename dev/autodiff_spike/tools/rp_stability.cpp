@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     char path[256] = "/Users/ianbell/REFPROP10/";
     SP(path, 255);
     char h0[256] = "GERG", e0[256] = {};
-    int j = 1, k = 0, ie = 0;
+    int j = (argc > 3 && std::string(argv[3]) == "default") ? 0 : 1, k = 0, ie = 0;
     FL(h0, &j, &k, &ie, e0, 255, 255);
     // argv: RPfile1|RPfile2|...  z1,z2,...
     std::string s = argv[1];

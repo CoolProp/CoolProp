@@ -21,7 +21,6 @@
 #include <cstdio>
 #include <vector>
 
-
 namespace {
 using SETPATH_t = void (*)(char*, long);
 using SETUP_t = void (*)(int*, char*, char*, char*, int*, char*, long, long, long, long);
@@ -87,21 +86,32 @@ double mean(const std::vector<double>& v) {
 }  // namespace
 int main() {
     load_rp("/Users/ianbell/REFPROP10/");
-    std::vector<std::string> NG10 = {"Methane","Nitrogen","CarbonDioxide","Ethane","Propane","IsoButane","n-Butane","Isopentane","n-Pentane","n-Hexane"};
+    std::vector<std::string> NG10 = {"Methane",   "Nitrogen", "CarbonDioxide", "Ethane",    "Propane",
+                                     "IsoButane", "n-Butane", "Isopentane",    "n-Pentane", "n-Hexane"};
     std::map<std::string, std::pair<std::vector<std::string>, std::vector<double>>> M = {
-      {"C1C2", {{"Methane","Ethane"},{0.5,0.5}}}, {"C1C2C3", {{"Methane","Ethane","Propane"},{0.5,0.3,0.2}}},
-      {"Amarillo", {NG10,{0.906724,0.031284,0.004676,0.045279,0.00828,0.001037,0.001563,0.000321,0.000443,0.000393}}},
-      {"C1H2S", {{"Methane","HydrogenSulfide"},{0.5,0.5}}},
-      {"humidair", {{"Nitrogen","Oxygen","Argon","CarbonDioxide","Water"},{0.7654,0.2053,0.0090,0.0003,0.02}}}};
-    char name[64]; int idx; double T, p, ro, qo, rn, qn;
+      {"C1C2", {{"Methane", "Ethane"}, {0.5, 0.5}}},
+      {"C1C2C3", {{"Methane", "Ethane", "Propane"}, {0.5, 0.3, 0.2}}},
+      {"Amarillo", {NG10, {0.906724, 0.031284, 0.004676, 0.045279, 0.00828, 0.001037, 0.001563, 0.000321, 0.000443, 0.000393}}},
+      {"C1H2S", {{"Methane", "HydrogenSulfide"}, {0.5, 0.5}}},
+      {"humidair", {{"Nitrogen", "Oxygen", "Argon", "CarbonDioxide", "Water"}, {0.7654, 0.2053, 0.0090, 0.0003, 0.02}}}};
+    char name[64];
+    int idx;
+    double T, p, ro, qo, rn, qn;
     std::string cur;
     while (std::scanf("%63s %d %lf %lf %lf %lf %lf %lf", name, &idx, &T, &p, &ro, &qo, &rn, &qn) == 8) {
         auto& m = M.at(name);
-        if (cur != name) { setup_rp(m.first, true); cur = name; }
-        std::vector<double> z = m.second; z.resize(20, 0.0);
-        double pk = p / 1000, D = 0, Dl = 0, Dv = 0, xl[20] = {}, yv[20] = {}, qq = 0, e = 0, hh = 0, ss = 0, cv = 0, cp = 0, w = 0; int ie = 0; char herr[256];
+        if (cur != name) {
+            setup_rp(m.first, true);
+            cur = name;
+        }
+        std::vector<double> z = m.second;
+        z.resize(20, 0.0);
+        double pk = p / 1000, D = 0, Dl = 0, Dv = 0, xl[20] = {}, yv[20] = {}, qq = 0, e = 0, hh = 0, ss = 0, cv = 0, cp = 0, w = 0;
+        int ie = 0;
+        char herr[256];
         RP_TPFLSH(&T, &pk, &z[0], &D, &Dl, &Dv, xl, yv, &qq, &e, &hh, &ss, &cv, &cp, &w, &ie, herr, 255);
-        auto ok = [&](double r){ return std::abs(r - D*1000) <= 1e-4 * D*1000; };
-        std::printf("%-9s %5d T=%8.3f p=%10.4g | old %10.2f Q=%-8.4g %-5s | new %10.2f Q=%-8.4g %-5s | TPFLSH %10.2f q=%g ierr=%d\n", name, idx, T, p, ro, qo, ok(ro)?"OK":"x", rn, qn, ok(rn)?"OK":"x", D*1000, qq, ie);
+        auto ok = [&](double r) { return std::abs(r - D * 1000) <= 1e-4 * D * 1000; };
+        std::printf("%-9s %5d T=%8.3f p=%10.4g | old %10.2f Q=%-8.4g %-5s | new %10.2f Q=%-8.4g %-5s | TPFLSH %10.2f q=%g ierr=%d\n", name, idx, T, p,
+                    ro, qo, ok(ro) ? "OK" : "x", rn, qn, ok(rn) ? "OK" : "x", D * 1000, qq, ie);
     }
 }

@@ -39,8 +39,8 @@ bool load_rp(const std::string& dir) {
 const std::map<std::string, std::string> RPNAME = {
   {"Methane", "METHANE"}, {"Ethane", "ETHANE"},       {"Propane", "PROPANE"},   {"HydrogenSulfide", "H2S"}, {"Nitrogen", "NITROGEN"},
   {"Oxygen", "OXYGEN"},   {"Argon", "ARGON"},         {"CarbonDioxide", "CO2"}, {"Water", "WATER"},         {"IsoButane", "ISOBUTAN"},
-  {"n-Butane", "BUTANE"}, {"Isopentane", "IPENTANE"}, {"n-Pentane", "PENTANE"}, {"n-Hexane", "HEXANE"},
-  {"R32", "R32"},         {"R1234yf", "R1234YF"}, {"Helium", "HELIUM"},       {"Hydrogen", "HYDROGEN"}};
+  {"n-Butane", "BUTANE"}, {"Isopentane", "IPENTANE"}, {"n-Pentane", "PENTANE"}, {"n-Hexane", "HEXANE"},     {"R32", "R32"},
+  {"R1234yf", "R1234YF"}, {"Helium", "HELIUM"},       {"Hydrogen", "HYDROGEN"}};
 bool setup_rp(const std::vector<std::string>& fluids, bool gerg) {
     char hf0[256] = {}, herr0[256] = {};
     std::strcpy(hf0, "GERG");
@@ -78,31 +78,66 @@ double mean(const std::vector<double>& v) {
 }
 
 double gRT(CoolProp::HelmholtzEOSMixtureBackend& H) {
-    double g = 0; auto x = H.get_mole_fractions();
-    for (std::size_t i = 0; i < x.size(); ++i) if (x[i] > 0) g += x[i] * (std::log(x[i]) + CoolProp::MixtureDerivatives::ln_fugacity_coefficient(H, i, CoolProp::XN_INDEPENDENT));
+    double g = 0;
+    auto x = H.get_mole_fractions();
+    for (std::size_t i = 0; i < x.size(); ++i)
+        if (x[i] > 0) g += x[i] * (std::log(x[i]) + CoolProp::MixtureDerivatives::ln_fugacity_coefficient(H, i, CoolProp::XN_INDEPENDENT));
     return g;
 }
 }  // namespace
 // stdin: "k T p rho_cp" lines; k selects the mixture.  Prints TPFLSH's split evaluated in CoolProp's GERG-2008.
 int main(int argc, char** argv) {
     load_rp("/Users/ianbell/REFPROP10/");
-    std::vector<std::vector<std::string>> F = {{}, {"Nitrogen","Methane","Ethane","n-Butane","n-Pentane"}, {"CarbonDioxide","Hydrogen"}, {"CarbonDioxide","Nitrogen","Oxygen","Helium"}, {"Nitrogen","Oxygen","Argon"}};
-    std::vector<std::vector<double>> Z = {{}, {0.3797,0.3225,0.278,0.0014,0.0184}, {0.9677,0.0323}, {0.9403/1.00002,0.0582/1.00002,0.00127/1.00002,0.00025/1.00002}, {0.609067,0.370414,0.0205193}};
-    int k; double T, p, rhocp; int cur = -1;
+    std::vector<std::vector<std::string>> F = {{},
+                                               {"Nitrogen", "Methane", "Ethane", "n-Butane", "n-Pentane"},
+                                               {"CarbonDioxide", "Hydrogen"},
+                                               {"CarbonDioxide", "Nitrogen", "Oxygen", "Helium"},
+                                               {"Nitrogen", "Oxygen", "Argon"}};
+    std::vector<std::vector<double>> Z = {{},
+                                          {0.3797, 0.3225, 0.278, 0.0014, 0.0184},
+                                          {0.9677, 0.0323},
+                                          {0.9403 / 1.00002, 0.0582 / 1.00002, 0.00127 / 1.00002, 0.00025 / 1.00002},
+                                          {0.609067, 0.370414, 0.0205193}};
+    int k;
+    double T, p, rhocp;
+    int cur = -1;
     std::unique_ptr<CoolProp::AbstractState> AS;
     while (std::scanf("%d %lf %lf %lf", &k, &T, &p, &rhocp) == 4) {
-        if (k != cur) { setup_rp(F[k], true); AS.reset(CoolProp::AbstractState::factory("GERG2008", join(F[k]))); cur = k; }
+        if (k != cur) {
+            setup_rp(F[k], true);
+            AS.reset(CoolProp::AbstractState::factory("GERG2008", join(F[k])));
+            cur = k;
+        }
         auto& H = *dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
-        std::vector<double> z = Z[k]; z.resize(20, 0.0);
-        double pk = p / 1000, D = 0, Dl = 0, Dv = 0, xl[20] = {}, yv[20] = {}, q = 0, e = 0, hh = 0, ss = 0, cv = 0, cp = 0, w = 0; int ie = 0; char herr[256];
+        std::vector<double> z = Z[k];
+        z.resize(20, 0.0);
+        double pk = p / 1000, D = 0, Dl = 0, Dv = 0, xl[20] = {}, yv[20] = {}, q = 0, e = 0, hh = 0, ss = 0, cv = 0, cp = 0, w = 0;
+        int ie = 0;
+        char herr[256];
         RP_TPFLSH(&T, &pk, &z[0], &D, &Dl, &Dv, xl, yv, &q, &e, &hh, &ss, &cv, &cp, &w, &ie, herr, 255);
         const std::size_t N = F[k].size();
         std::vector<double> x(xl, xl + N), y(yv, yv + N), zz(Z[k]);
-        H.set_mole_fractions(zz); H.update_DmolarT_direct(rhocp, T); const double gs = gRT(H);
-        H.set_mole_fractions(x); H.update_DmolarT_direct(Dl * 1000, T); const double gl = gRT(H); std::vector<double> lfl(N); for (std::size_t i = 0; i < N; ++i) lfl[i] = std::log(x[i]) + CoolProp::MixtureDerivatives::ln_fugacity_coefficient(H, i, CoolProp::XN_INDEPENDENT); const double pL = H.p();
-        H.set_mole_fractions(y); H.update_DmolarT_direct(Dv * 1000, T); const double gv = gRT(H); double dlnf = 0; for (std::size_t i = 0; i < N; ++i) dlnf = std::max(dlnf, std::abs(std::log(y[i]) + CoolProp::MixtureDerivatives::ln_fugacity_coefficient(H, i, CoolProp::XN_INDEPENDENT) - lfl[i])); const double pV = H.p();
+        H.set_mole_fractions(zz);
+        H.update_DmolarT_direct(rhocp, T);
+        const double gs = gRT(H);
+        H.set_mole_fractions(x);
+        H.update_DmolarT_direct(Dl * 1000, T);
+        const double gl = gRT(H);
+        std::vector<double> lfl(N);
+        for (std::size_t i = 0; i < N; ++i)
+            lfl[i] = std::log(x[i]) + CoolProp::MixtureDerivatives::ln_fugacity_coefficient(H, i, CoolProp::XN_INDEPENDENT);
+        const double pL = H.p();
+        H.set_mole_fractions(y);
+        H.update_DmolarT_direct(Dv * 1000, T);
+        const double gv = gRT(H);
+        double dlnf = 0;
+        for (std::size_t i = 0; i < N; ++i)
+            dlnf = std::max(
+              dlnf, std::abs(std::log(y[i]) + CoolProp::MixtureDerivatives::ln_fugacity_coefficient(H, i, CoolProp::XN_INDEPENDENT) - lfl[i]));
+        const double pV = H.p();
         const double g2 = (1 - q) * gl + q * gv;
-        std::printf("k=%d T=%8.3f p=%10.4g q=%.4f rhoL=%8.1f rhoV=%8.1f (p_L/p-1=%.1e p_V/p-1=%.1e) max|dlnf|=%.1e | g_split-g_single=%+.3e | x0 L/V %.4f/%.4f | CoolProp rho=%.1f\n",
+        std::printf("k=%d T=%8.3f p=%10.4g q=%.4f rhoL=%8.1f rhoV=%8.1f (p_L/p-1=%.1e p_V/p-1=%.1e) max|dlnf|=%.1e | g_split-g_single=%+.3e | x0 L/V "
+                    "%.4f/%.4f | CoolProp rho=%.1f\n",
                     k, T, p, q, Dl * 1000, Dv * 1000, pL / p - 1, pV / p - 1, dlnf, g2 - gs, x[0], y[0], rhocp);
     }
 }
