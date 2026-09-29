@@ -13,6 +13,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
     # Short-lived (1 h) installation token from the org-owned
@@ -40,7 +41,7 @@ jobs:
       # curl --fail only catches >= 400, so a 3xx (renamed/transferred repo)
       # would otherwise exit 0 and go stale silently again (GH #3439).
       run: |
-        status=$(curl -sS -o response.txt -w '%{http_code}' -X POST \
+        status=$(curl -sS --max-time 30 -o response.txt -w '%{http_code}' -X POST \
           https://api.github.com/repos/CoolProp/devdocs/dispatches \
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer $DEVDOCS_TOKEN" \
