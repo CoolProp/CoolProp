@@ -39,8 +39,10 @@ def load(files):
 # Verdict markers: CoolProp wrong / knife-edge in ink; TPFLSH wrong / minor / out of scope smaller and lighter.
 # Every verdict is checked with REFPROP's own GERG routines (no CoolProp code), see tools/README.md.
 VMARK = {
-    "cp_wrong": dict(marker="X", s=70, c=INK, edgecolors=SURFACE, linewidths=0.8, zorder=6, label="CoolProp wrong: misses or mis-splits a verified split"),
+    "cp_wrong": dict(marker="X", s=70, c=INK, edgecolors=SURFACE, linewidths=0.8, zorder=6, label="CoolProp wrong: misses a verified split"),
     "cp_history": dict(marker="D", s=34, facecolors="none", edgecolors=INK, linewidths=1.1, zorder=6, label="CoolProp verdict flips under a ~1e-10 input change"),
+    "cp_rho": dict(marker="P", s=26, c="#b3541e", edgecolors=SURFACE, linewidths=0.4, zorder=6, label="CoolProp wrong root / wrong split: density off >1e-3"),
+    "cp_loose": dict(marker="o", s=10, facecolors="none", edgecolors="#b3541e", linewidths=0.5, zorder=5, label="CoolProp split loose: density off 1e-4..1e-3"),
     "rp_wrong": dict(marker="^", s=9, facecolors="none", edgecolors="#5c5b55", linewidths=0.45, zorder=5, label="TPFLSH wrong: split off equilibrium by >=1e-3 (its own ln f, p)"),
     "rp_minor": dict(marker="o", s=6, facecolors="none", edgecolors="#a3a29b", linewidths=0.35, zorder=4, label="TPFLSH minor: phase label only, loose (1e-5..1e-3), or knife-edge"),
     "rp_scope": dict(marker="v", s=7, facecolors="none", edgecolors="#8a4fb3", linewidths=0.35, alpha=0.75, zorder=5, label="TPFLSH misses a verified split (LLE, water condensation)"),
@@ -82,9 +84,16 @@ def main(out, args):
     ncol = max(len(r) for r in rows)
     grid = lcm(*[len(r) for r in rows]) if all(rows) else ncol
     nrow = len(rows)
+    import textwrap
+    wrapw = 60 * ncol
+    head = (f"CoolProp PT flash vs REFPROP 10 TPFLSH, per state ({nstates} states per mixture, min of 3 timings each"
+            f"{', mixtures run as parallel processes' if nstates > 2000 else ''}).  CoolProp build: {build}.  Dark outline: CoolProp publishes a two-phase state.")
+    title_text = textwrap.fill(head, wrapw) + "\n" + ("Gernert & Span (EOS-CG) on both sides." if all("Gernert" in m for m in mixes) else
+                  "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model; its disagreements are not judged).")
+    nlines = title_text.count("\n") + 1
     fig = plt.figure(figsize=(4.6 * ncol, 4.1 * nrow + 0.9))
     extra = 0.055 if verdicts else 0.0  # room for the marker legend under the colorbar
-    gs = fig.add_gridspec(nrow, grid, hspace=0.62, wspace=0.9 if grid > ncol else 0.18, bottom=(0.17 if nrow <= 2 else 0.1) + extra, top=0.86 if nrow <= 2 else 0.91)
+    gs = fig.add_gridspec(nrow, grid, hspace=0.62, wspace=0.9 if grid > ncol else 0.18, bottom=(0.17 if nrow <= 2 else 0.1) + extra, top=min(0.86 if nrow <= 2 else 0.91, 1.0 - (0.45 + 0.2 * nlines) / (4.1 * nrow + 0.9)))
     placement = {}
     for r, names in enumerate(rows):
         w = grid // len(names)
@@ -161,13 +170,11 @@ def main(out, args):
                 continue
             face = st.get("c", st.get("facecolors"))
             handles.append(Line2D([], [], linestyle="", marker=st["marker"], markersize=7 if key.startswith("cp") else 5.5,
-                                  markerfacecolor=face if face != "none" else "none", markeredgecolor=st["edgecolors"] if key != "cp_wrong" else INK,
+                                  markerfacecolor=face if face != "none" else "none", markeredgecolor=st["edgecolors"] if key not in ("cp_wrong", "cp_rho") else face,
                                   markeredgewidth=1.0, label=f"{st['label']} ({vcount[key]})"))
-        fig.legend(handles=handles, loc="lower center", ncol=3, frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 0.0),
+        fig.legend(handles=handles, loc="lower center", ncol=min(3, ncol), frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 0.0),
                    labelcolor=INK)
-    fig.suptitle(f"CoolProp PT flash vs REFPROP 10 TPFLSH, per state ({nstates} states per mixture, min of 3 timings each{', mixtures run as parallel processes' if nstates > 2000 else ''})\n"
-                 f"CoolProp build: {build}.  Dark outline: CoolProp publishes a two-phase state.\n"
-                 "GERG-2008 on both sides, except R454B (CoolProp HEOS vs REFPROP default mixture model; its disagreements are not judged) and CO2/H2O (Gernert & Span EOS-CG on both sides).",
+    fig.suptitle(title_text,
                  fontsize=10, color=INK, x=0.06, ha="left", y=0.975 if nrow <= 2 else 0.985)
     fig.savefig(out, dpi=140, bbox_inches="tight", facecolor=SURFACE)
     print("wrote", out)
