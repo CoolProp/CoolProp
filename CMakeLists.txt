@@ -260,6 +260,36 @@ option(COOLPROP_BUILD_SVDSBTL_PROFILE
 # Force C++11 since lambdas are used in CPStrings.h
 # In the future, we may want to force C++14 since std::make_unique is used in DataStructures.cpp
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# CoolProp uses <filesystem> in src/CPfilepaths.cpp, include/CoolProp/detail/
+# atomic_write.h and the SBTL sources, and links no separate filesystem library.
+# GCC only ships <filesystem> from 8, and only stops needing -lstdc++fs for it
+# at 9, so 9 is the real floor.
+#
+# Say so here rather than letting it surface later.  GCC 7.5, which openSUSE
+# Leap 15.x still installs as its default compiler, announces partial C++17
+# support and then fails well into the build with
+#
+#     src/CPfilepaths.cpp:11:10: fatal error: filesystem: No such file or
+#     directory
+#
+# followed by an unrelated-looking overload resolution error in
+# SVDEvaluator.h.  Neither names the actual problem.  That was a real OBS
+# build failure.
+#
+# Only GNU is checked.  The floors for MSVC, Clang and AppleClang are easy to
+# state wrongly and none of the toolchains CoolProp is built with come close
+# to them, so an unverified check there would risk breaking builds that work
+# rather than explaining one that does not.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION
+                                            VERSION_LESS 9)
+  message(
+    FATAL_ERROR
+      "CoolProp needs GCC 9 or newer for std::filesystem, and this is GCC "
+      "${CMAKE_CXX_COMPILER_VERSION}. On openSUSE Leap 15.x install gcc13-c++ "
+      "and configure with -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13.")
+endif()
 
 
 # Define -DCOOLPROP_ASAN=ON to enable the option of using address sanitizer of clang
@@ -556,7 +586,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CoolPropJSONVisibility)
 
 message(STATUS "Looking for Python")
-find_package(Python REQUIRED COMPONENTS Interpreter)
+# The floor is 3.9, matching requires-python in pyproject.toml: the build runs
+# dev/generate_headers.py to embed the fluid data, and that script uses builtin
+# generics such as list[Path], which are a syntax error before 3.9.
+#
+# Stating the floor here makes CMake skip an interpreter that is too old and
+# keep looking.  Without it, a distribution whose default python3 predates 3.9
+# (Leap 15.x still ships 3.6) configures happily and then dies mid-build with
+# "TypeError: 'type' object is not subscriptable", which says nothing about the
+# real problem.  That was a real OBS build failure.
+find_package(Python 3.9 REQUIRED COMPONENTS Interpreter)
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
 include(FlagFunctions) # Is found since it is in the module path.
@@ -617,6 +656,83 @@ elseif(FORCE_BITNESS_64)
   set(BITNESS "64")
 elseif(FORCE_BITNESS_NATIVE)
   set(BITNESS "NATIVE")
+endif()
+
+#######################################
+#           BITNESS FLAG              #
+#-------------------------------------#
+# Decide ONCE whether -m32/-m64 can   #
+# be used, and let every target below #
+# use the answer.                     #
+#######################################
+
+# -m32 and -m64 pick between the two ABIs an x86 toolchain can both emit,
+# which is what FORCE_BITNESS_32 is for.  Other architectures have one ABI per
+# toolchain and reject the flag outright rather than ignoring it:
+#
+#     c++: error: unrecognized command-line option '-m64'          (aarch64)
+#     c++: error: unrecognized command-line option '-m32'          (armhf)
+#
+# Both were real OBS build failures.  Rather than guess from the processor
+# name, ask the compiler: a name list cannot know about every toolchain, and
+# CMAKE_SYSTEM_PROCESSOR is empty when a toolchain file does not set it.
+if(MSVC OR BITNESS STREQUAL "NATIVE")
+  set(COOLPROP_BITNESS_FLAG "")
+else()
+  include(CheckCXXCompilerFlag)
+  # The result variable carries the flag in its NAME.  check_cxx_compiler_flag
+  # caches by variable name, so a single shared name would answer for whichever
+  # flag was probed first: configure once with the default 64-bit, then set
+  # FORCE_BITNESS_32 in the same build directory, and the cached "-m64 works"
+  # would be reused as though it said "-m32 works".  The flag would then be
+  # passed to a compiler that rejects it, which is the exact failure this probe
+  # exists to prevent.  Verified by reconfiguring one build directory with each
+  # value.
+  #
+  # -m32/-m64 also change which libraries the link step can find, not just how
+  # the compile step generates code, so the probe links with the flag too.
+  #
+  # Only when there is a link step, though.  A toolchain file may set
+  # CMAKE_TRY_COMPILE_TARGET_TYPE to STATIC_LIBRARY, which is the usual way to
+  # probe a cross compiler that cannot link a runnable binary.  CMake then
+  # hands the link options to ar instead, which reads -m as one of its own
+  # operation letters and dies with "two different operation options
+  # specified".  The probe would fail for a reason that has nothing to do with
+  # the compiler, and FORCE_BITNESS_32/64 would then abort the build.
+  # Reproduced with ar; without the guard even a plain -m64 probe fails.
+  #
+  # The flag is APPENDED to whatever the caller already asked for.  A toolchain
+  # file may put a --sysroot or a -L in CMAKE_REQUIRED_LINK_OPTIONS that every
+  # check needs in order to link at all; replacing that list would fail the
+  # probe for want of the caller's own options.  Note the list has to be
+  # expanded unquoted here: set(X "${empty}" "-m64") yields a two-element list
+  # whose first element is empty, and that empty string would be handed to the
+  # linker as an argument.
+  set(_cp_saved_link_options "${CMAKE_REQUIRED_LINK_OPTIONS}")
+  if(NOT DEFINED CMAKE_TRY_COMPILE_TARGET_TYPE
+     OR CMAKE_TRY_COMPILE_TARGET_TYPE STREQUAL "EXECUTABLE")
+    set(CMAKE_REQUIRED_LINK_OPTIONS ${_cp_saved_link_options})
+    list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-m${BITNESS}")
+  endif()
+  check_cxx_compiler_flag("-m${BITNESS}" COOLPROP_CXX_ACCEPTS_M${BITNESS})
+  set(CMAKE_REQUIRED_LINK_OPTIONS "${_cp_saved_link_options}")
+  unset(_cp_saved_link_options)
+  if(COOLPROP_CXX_ACCEPTS_M${BITNESS})
+    set(COOLPROP_BITNESS_FLAG "-m${BITNESS}")
+  else()
+    set(COOLPROP_BITNESS_FLAG "")
+    # BITNESS normally just describes CMAKE_SIZEOF_VOID_P, so dropping the
+    # flag changes nothing.  Being asked for a bitness the toolchain cannot
+    # produce is different, and is refused rather than silently ignored:
+    # ignoring it would hand back a library of the other bitness.
+    if(FORCE_BITNESS_32 OR FORCE_BITNESS_64)
+      message(
+        FATAL_ERROR
+          "FORCE_BITNESS_32/64 needs a compiler that accepts -m${BITNESS}, and "
+          "this one rejects it. Build for the bitness of the toolchain "
+          "instead, or use a toolchain file that targets the other one.")
+    endif()
+  endif()
 endif()
 
 #######################################
@@ -1539,8 +1655,10 @@ if(COOLPROP_R_MODULE)
 
   link_directories(${R_BIN_OUT})
   if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m${BITNESS}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m${BITNESS}")
+    set(CMAKE_CXX_FLAGS_RELEASE
+        "${CMAKE_CXX_FLAGS_RELEASE} ${COOLPROP_BITNESS_FLAG}")
+    set(CMAKE_CXX_FLAGS_DEBUG
+        "${CMAKE_CXX_FLAGS_DEBUG} ${COOLPROP_BITNESS_FLAG}")
   endif()
 
   add_definitions(-DNO_ERROR_CATCHING)
@@ -1647,8 +1765,9 @@ if(COOLPROP_JAVA_MODULE)
   endif()
 
   if(NOT MSVC)
-    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}"
-                                              LINK_FLAGS "-m${BITNESS}")
+    set_target_properties(
+      CoolProp PROPERTIES COMPILE_FLAGS "${COOLPROP_BITNESS_FLAG}"
+                          LINK_FLAGS "${COOLPROP_BITNESS_FLAG}")
   endif()
 
   add_dependencies(${app_name} generate_headers generate_examples)
@@ -1826,8 +1945,9 @@ if(COOLPROP_PHP_MODULE)
   endif()
 
   if(NOT MSVC)
-    set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}"
-                                              LINK_FLAGS "-m${BITNESS}")
+    set_target_properties(
+      CoolProp PROPERTIES COMPILE_FLAGS "${COOLPROP_BITNESS_FLAG}"
+                          LINK_FLAGS "${COOLPROP_BITNESS_FLAG}")
   endif()
   add_dependencies(CoolProp generate_headers)
 
@@ -2062,15 +2182,15 @@ if(COOLPROP_MATHEMATICA_MODULE)
   # Set the bitness
   if(NOT MSVC)
     if(NOT "${BITNESS}" STREQUAL "NATIVE")
-      message(STATUS "Setting bitness flag -m${BITNESS}")
+      message(STATUS "Setting bitness flag ${COOLPROP_BITNESS_FLAG}")
       set_property(
         TARGET ${app_name}
         APPEND_STRING
-        PROPERTY COMPILE_FLAGS " -m${BITNESS}")
+        PROPERTY COMPILE_FLAGS " ${COOLPROP_BITNESS_FLAG}")
       set_property(
         TARGET ${app_name}
         APPEND_STRING
-        PROPERTY LINK_FLAGS " -m${BITNESS}")
+        PROPERTY LINK_FLAGS " ${COOLPROP_BITNESS_FLAG}")
     endif()
   endif()
 
