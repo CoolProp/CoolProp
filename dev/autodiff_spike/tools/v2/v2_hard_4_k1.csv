@@ -1,0 +1,338 @@
+mixture,i,verdict,detail
+N2/O2/Ar (O2-enriched air),34,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.174e-03)
+N2/O2/Ar (O2-enriched air),37,rp_wrong,TPFLSH split off equilibrium by 4.183e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),38,rp_wrong,TPFLSH split off equilibrium by 2.778e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),55,rp_wrong,TPFLSH split off equilibrium by 2.340e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),58,rp_wrong,TPFLSH split off equilibrium by 4.074e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),78,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.815e-03)
+N2/O2/Ar (O2-enriched air),134,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.918e-03)
+N2/O2/Ar (O2-enriched air),165,rp_wrong,TPFLSH split off equilibrium by 1.874e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),215,rp_wrong,TPFLSH split off equilibrium by 4.059e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),265,rp_wrong,TPFLSH split off equilibrium by 4.191e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),288,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),348,rp_wrong,TPFLSH split off equilibrium by 3.462e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),354,rp_wrong,TPFLSH split off equilibrium by 3.024e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),390,rp_wrong,TPFLSH split off equilibrium by 4.206e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),391,rp_wrong,TPFLSH split off equilibrium by 6.718e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),408,rp_wrong,TPFLSH split off equilibrium by 3.116e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),417,rp_wrong,TPFLSH split off equilibrium by 1.868e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),435,rp_wrong,TPFLSH split off equilibrium by 6.709e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),452,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.177e-03)
+N2/O2/Ar (O2-enriched air),458,rp_wrong,TPFLSH split off equilibrium by 1.855e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),466,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.399e-03)
+N2/O2/Ar (O2-enriched air),497,rp_wrong,TPFLSH split off equilibrium by 3.054e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),507,rp_wrong,TPFLSH split off equilibrium by 2.509e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),536,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 9.985e-03)
+N2/O2/Ar (O2-enriched air),537,rp_wrong,TPFLSH split off equilibrium by 3.770e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),572,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.693e-03)
+N2/O2/Ar (O2-enriched air),661,rp_wrong,TPFLSH split off equilibrium by 2.480e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),708,rp_wrong,TPFLSH split off equilibrium by 2.098e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),719,rp_wrong,TPFLSH split off equilibrium by 6.623e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),738,rp_wrong,TPFLSH split off equilibrium by 4.959e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),774,rp_wrong,TPFLSH split off equilibrium by 2.244e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),799,rp_wrong,TPFLSH split off equilibrium by 3.221e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),879,rp_wrong,TPFLSH split off equilibrium by 2.015e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),918,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.330e-03)
+N2/O2/Ar (O2-enriched air),954,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.796e-03)
+N2/O2/Ar (O2-enriched air),965,rp_wrong,TPFLSH split off equilibrium by 3.123e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),974,rp_wrong,TPFLSH split off equilibrium by 4.083e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),998,rp_wrong,TPFLSH split off equilibrium by 3.911e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1015,rp_wrong,TPFLSH split off equilibrium by 1.171e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1020,rp_wrong,TPFLSH split off equilibrium by 6.524e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1090,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.645e-03)
+N2/O2/Ar (O2-enriched air),1110,rp_wrong,TPFLSH split off equilibrium by 4.125e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1119,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.412e-03)
+N2/O2/Ar (O2-enriched air),1127,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.867e-03)
+N2/O2/Ar (O2-enriched air),1235,rp_wrong,TPFLSH split off equilibrium by 2.049e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1261,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.123e-03)
+N2/O2/Ar (O2-enriched air),1292,rp_wrong,TPFLSH split off equilibrium by 3.903e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1310,rp_wrong,TPFLSH split off equilibrium by 4.099e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1328,rp_wrong,TPFLSH split off equilibrium by 3.602e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1342,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.844e-03)
+N2/O2/Ar (O2-enriched air),1347,rp_wrong,TPFLSH split off equilibrium by 4.569e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1438,rp_wrong,TPFLSH split off equilibrium by 1.378e-01 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1441,rp_wrong,TPFLSH split off equilibrium by 4.215e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1460,rp_wrong,TPFLSH split off equilibrium by 4.306e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1537,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),1568,rp_wrong,TPFLSH split off equilibrium by 1.398e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1609,rp_wrong,TPFLSH split off equilibrium by 3.840e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1618,rp_wrong,TPFLSH split off equilibrium by 3.166e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1625,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),1686,rp_wrong,TPFLSH split off equilibrium by 2.305e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1738,rp_wrong,TPFLSH split off equilibrium by 3.113e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1767,rp_wrong,TPFLSH split off equilibrium by 2.769e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1778,rp_wrong,TPFLSH split off equilibrium by 6.534e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1810,rp_wrong,TPFLSH split off equilibrium by 4.250e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1815,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.409e-03)
+N2/O2/Ar (O2-enriched air),1849,rp_wrong,TPFLSH split off equilibrium by 2.411e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1903,rp_wrong,TPFLSH split off equilibrium by 4.264e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1907,rp_wrong,TPFLSH split off equilibrium by 3.296e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1948,rp_wrong,TPFLSH split off equilibrium by 3.306e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),1952,rp_wrong,TPFLSH split off equilibrium by 4.112e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2010,rp_wrong,TPFLSH split off equilibrium by 1.565e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2063,rp_wrong,TPFLSH split off equilibrium by 1.312e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2104,rp_wrong,TPFLSH split off equilibrium by 4.170e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2150,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.065e-03)
+N2/O2/Ar (O2-enriched air),2158,rp_wrong,TPFLSH split off equilibrium by 1.990e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2181,rp_wrong,TPFLSH split off equilibrium by 4.786e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2200,rp_wrong,TPFLSH split off equilibrium by 6.481e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2210,rp_wrong,TPFLSH split off equilibrium by 3.781e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2260,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.380e-02)
+N2/O2/Ar (O2-enriched air),2277,rp_wrong,TPFLSH split off equilibrium by 2.374e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2296,rp_wrong,TPFLSH split off equilibrium by 2.946e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2329,rp_wrong,TPFLSH split off equilibrium by 3.913e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2341,rp_wrong,TPFLSH split off equilibrium by 1.879e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2353,rp_wrong,TPFLSH split off equilibrium by 3.907e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2391,rp_wrong,TPFLSH split off equilibrium by 2.398e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2499,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.490e-03)
+N2/O2/Ar (O2-enriched air),2501,rp_wrong,TPFLSH split off equilibrium by 4.184e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2503,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.641e-03)
+N2/O2/Ar (O2-enriched air),2510,rp_wrong,TPFLSH split off equilibrium by 1.249e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2534,rp_wrong,TPFLSH split off equilibrium by 4.066e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2542,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),2598,rp_wrong,TPFLSH split off equilibrium by 6.605e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2679,rp_wrong,TPFLSH split off equilibrium by 2.534e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2681,rp_wrong,TPFLSH split off equilibrium by 3.306e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2684,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.405e-04)
+N2/O2/Ar (O2-enriched air),2688,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.410e-03)
+N2/O2/Ar (O2-enriched air),2721,rp_wrong,TPFLSH split off equilibrium by 4.202e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2739,rp_wrong,TPFLSH split off equilibrium by 7.624e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2751,rp_wrong,TPFLSH split off equilibrium by 4.223e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2770,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.119e-02)
+N2/O2/Ar (O2-enriched air),2771,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.423e-03)
+N2/O2/Ar (O2-enriched air),2795,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.375e-03)
+N2/O2/Ar (O2-enriched air),2796,rp_wrong,TPFLSH split off equilibrium by 6.863e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2817,rp_wrong,TPFLSH split off equilibrium by 2.836e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2823,rp_wrong,TPFLSH split off equilibrium by 2.583e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2834,rp_wrong,TPFLSH split off equilibrium by 3.952e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2853,rp_wrong,TPFLSH split off equilibrium by 4.435e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2872,rp_wrong,TPFLSH split off equilibrium by 3.912e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2886,rp_wrong,TPFLSH split off equilibrium by 4.286e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),2989,rp_wrong,TPFLSH split off equilibrium by 1.932e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3020,rp_wrong,TPFLSH split off equilibrium by 6.654e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3072,rp_wrong,TPFLSH split off equilibrium by 3.202e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3229,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.387e-03)
+N2/O2/Ar (O2-enriched air),3249,rp_wrong,TPFLSH split off equilibrium by 6.969e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3266,rp_wrong,TPFLSH split off equilibrium by 6.751e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3284,rp_wrong,TPFLSH split off equilibrium by 2.960e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3303,rp_wrong,TPFLSH split off equilibrium by 2.810e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3332,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.852e-03)
+N2/O2/Ar (O2-enriched air),3333,rp_wrong,TPFLSH split off equilibrium by 3.176e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3336,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.257e-03)
+N2/O2/Ar (O2-enriched air),3345,rp_wrong,TPFLSH split off equilibrium by 1.130e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3355,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.731e-03)
+N2/O2/Ar (O2-enriched air),3366,rp_wrong,TPFLSH split off equilibrium by 6.579e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3370,rp_wrong,TPFLSH split off equilibrium by 1.461e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3437,rp_wrong,TPFLSH split off equilibrium by 2.263e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3443,rp_wrong,TPFLSH split off equilibrium by 3.788e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3474,rp_wrong,TPFLSH split off equilibrium by 4.550e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3522,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.449e-03)
+N2/O2/Ar (O2-enriched air),3595,rp_wrong,TPFLSH split off equilibrium by 1.914e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3700,rp_wrong,TPFLSH split off equilibrium by 3.017e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3771,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.431e-03)
+N2/O2/Ar (O2-enriched air),3822,rp_wrong,TPFLSH split off equilibrium by 1.159e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3882,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.662e-03)
+N2/O2/Ar (O2-enriched air),3888,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 9.246e-03)
+N2/O2/Ar (O2-enriched air),3917,rp_wrong,TPFLSH split off equilibrium by 1.322e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3928,rp_wrong,TPFLSH split off equilibrium by 3.040e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3972,rp_wrong,TPFLSH split off equilibrium by 1.925e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),3973,rp_wrong,TPFLSH split off equilibrium by 2.377e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4004,rp_wrong,TPFLSH split off equilibrium by 2.587e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4077,rp_wrong,TPFLSH split off equilibrium by 2.313e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4090,cp_wrong,CoolProp missed a genuine lower-G split
+N2/O2/Ar (O2-enriched air),4115,rp_wrong,TPFLSH split off equilibrium by 3.798e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4128,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.704e-03)
+N2/O2/Ar (O2-enriched air),4133,rp_wrong,TPFLSH split off equilibrium by 3.313e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4157,rp_wrong,TPFLSH split off equilibrium by 4.816e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4214,rp_wrong,TPFLSH split off equilibrium by 2.501e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4348,rp_wrong,TPFLSH split off equilibrium by 3.604e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4365,rp_wrong,TPFLSH split off equilibrium by 4.042e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4366,rp_wrong,TPFLSH split off equilibrium by 6.682e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4367,rp_wrong,TPFLSH split off equilibrium by 4.186e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4375,rp_wrong,TPFLSH split off equilibrium by 3.162e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4385,rp_wrong,TPFLSH split off equilibrium by 6.464e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4454,rp_wrong,TPFLSH split off equilibrium by 1.490e-01 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4478,rp_wrong,TPFLSH split off equilibrium by 3.486e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4484,rp_wrong,TPFLSH split off equilibrium by 3.467e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4497,rp_wrong,TPFLSH split off equilibrium by 1.879e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4499,rp_wrong,TPFLSH split off equilibrium by 4.069e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4517,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),4573,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.442e-03)
+N2/O2/Ar (O2-enriched air),4636,rp_wrong,TPFLSH split off equilibrium by 4.134e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4641,rp_wrong,TPFLSH split off equilibrium by 3.027e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4692,rp_wrong,TPFLSH split off equilibrium by 4.371e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4714,rp_wrong,TPFLSH split off equilibrium by 2.780e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4716,rp_wrong,TPFLSH split off equilibrium by 3.040e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4727,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.551e-02)
+N2/O2/Ar (O2-enriched air),4755,rp_wrong,TPFLSH split off equilibrium by 4.016e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4760,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.679e-03)
+N2/O2/Ar (O2-enriched air),4789,rp_wrong,TPFLSH split off equilibrium by 1.195e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4818,rp_wrong,TPFLSH split off equilibrium by 4.023e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4833,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.052e-03)
+N2/O2/Ar (O2-enriched air),4844,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.218e-03)
+N2/O2/Ar (O2-enriched air),4848,rp_wrong,TPFLSH split off equilibrium by 3.302e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4855,rp_wrong,TPFLSH split off equilibrium by 1.985e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4868,rp_wrong,TPFLSH split off equilibrium by 6.490e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4911,rp_wrong,TPFLSH split off equilibrium by 3.804e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4927,rp_wrong,TPFLSH split off equilibrium by 6.862e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4937,rp_wrong,TPFLSH split off equilibrium by 6.769e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4940,rp_wrong,TPFLSH split off equilibrium by 2.040e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4967,rp_wrong,TPFLSH split off equilibrium by 6.725e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),4971,rp_wrong,TPFLSH split off equilibrium by 1.783e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5000,rp_wrong,TPFLSH split off equilibrium by 3.055e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5012,rp_wrong,TPFLSH split off equilibrium by 2.925e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5020,rp_wrong,TPFLSH split off equilibrium by 3.138e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5043,rp_wrong,TPFLSH split off equilibrium by 2.941e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5080,rp_wrong,TPFLSH split off equilibrium by 5.154e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5095,rp_wrong,TPFLSH split off equilibrium by 3.845e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5097,rp_wrong,TPFLSH split off equilibrium by 3.564e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5103,rp_wrong,TPFLSH split off equilibrium by 2.758e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5113,rp_wrong,TPFLSH split off equilibrium by 6.760e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5170,rp_wrong,TPFLSH split off equilibrium by 3.019e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5269,rp_wrong,TPFLSH split off equilibrium by 6.856e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5374,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.093e-03)
+N2/O2/Ar (O2-enriched air),5410,rp_wrong,TPFLSH split off equilibrium by 2.593e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5412,rp_wrong,TPFLSH split off equilibrium by 2.763e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5415,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.781e-03)
+N2/O2/Ar (O2-enriched air),5502,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.122e-03)
+N2/O2/Ar (O2-enriched air),5553,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.536e-03)
+N2/O2/Ar (O2-enriched air),5590,rp_wrong,TPFLSH split off equilibrium by 4.179e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5640,rp_wrong,TPFLSH split off equilibrium by 1.391e-01 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5665,rp_wrong,TPFLSH split off equilibrium by 3.993e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5684,rp_wrong,TPFLSH split off equilibrium by 4.245e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5730,rp_wrong,TPFLSH split off equilibrium by 2.260e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5752,rp_wrong,TPFLSH split off equilibrium by 4.427e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5825,rp_wrong,TPFLSH split off equilibrium by 1.128e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5855,rp_wrong,TPFLSH split off equilibrium by 3.295e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5859,rp_wrong,TPFLSH split off equilibrium by 4.218e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5866,rp_wrong,TPFLSH split off equilibrium by 1.977e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),5920,rp_wrong,TPFLSH split off equilibrium by 4.235e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6035,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.294e-03)
+N2/O2/Ar (O2-enriched air),6045,rp_wrong,TPFLSH split off equilibrium by 3.645e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6054,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.044e-03)
+N2/O2/Ar (O2-enriched air),6060,rp_wrong,TPFLSH split off equilibrium by 3.041e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6083,rp_wrong,TPFLSH split off equilibrium by 6.792e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6101,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.019e-03)
+N2/O2/Ar (O2-enriched air),6162,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.633e-03)
+N2/O2/Ar (O2-enriched air),6164,rp_wrong,TPFLSH split off equilibrium by 5.472e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6165,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.011e-03)
+N2/O2/Ar (O2-enriched air),6169,rp_wrong,TPFLSH split off equilibrium by 4.355e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6202,rp_wrong,TPFLSH split off equilibrium by 4.673e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6207,rp_wrong,TPFLSH split off equilibrium by 4.209e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6225,rp_wrong,TPFLSH split off equilibrium by 2.410e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6246,rp_wrong,TPFLSH split off equilibrium by 1.157e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6303,rp_wrong,TPFLSH split off equilibrium by 4.130e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6304,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.403e-03)
+N2/O2/Ar (O2-enriched air),6313,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.040e-03)
+N2/O2/Ar (O2-enriched air),6435,rp_wrong,TPFLSH split off equilibrium by 3.928e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6520,rp_wrong,TPFLSH split off equilibrium by 3.177e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6535,rp_wrong,TPFLSH split off equilibrium by 3.989e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6537,rp_wrong,TPFLSH split off equilibrium by 2.318e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6574,rp_wrong,TPFLSH split off equilibrium by 4.310e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6645,rp_wrong,TPFLSH split off equilibrium by 6.666e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6677,rp_wrong,TPFLSH split off equilibrium by 1.747e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6680,rp_wrong,TPFLSH split off equilibrium by 4.245e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6691,rp_wrong,TPFLSH split off equilibrium by 1.646e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6705,rp_wrong,TPFLSH split off equilibrium by 4.010e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6718,rp_wrong,TPFLSH split off equilibrium by 2.659e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6799,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.347e-03)
+N2/O2/Ar (O2-enriched air),6836,rp_wrong,TPFLSH split off equilibrium by 1.906e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6853,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.518e-03)
+N2/O2/Ar (O2-enriched air),6871,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.764e-03)
+N2/O2/Ar (O2-enriched air),6898,rp_wrong,TPFLSH split off equilibrium by 3.775e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),6922,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.021e-03)
+N2/O2/Ar (O2-enriched air),6973,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.237e-03)
+N2/O2/Ar (O2-enriched air),7012,rp_wrong,TPFLSH split off equilibrium by 4.095e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7041,rp_wrong,TPFLSH split off equilibrium by 4.391e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7056,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.332e-03)
+N2/O2/Ar (O2-enriched air),7082,rp_wrong,TPFLSH split off equilibrium by 2.413e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7089,rp_wrong,TPFLSH split off equilibrium by 6.812e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7099,rp_wrong,TPFLSH split off equilibrium by 1.733e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7188,rp_wrong,TPFLSH split off equilibrium by 4.042e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7200,rp_wrong,TPFLSH split off equilibrium by 1.933e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7263,rp_wrong,TPFLSH split off equilibrium by 4.037e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7428,rp_wrong,TPFLSH split off equilibrium by 1.780e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7459,rp_wrong,TPFLSH split off equilibrium by 2.491e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7472,rp_wrong,TPFLSH split off equilibrium by 3.592e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7545,rp_wrong,TPFLSH split off equilibrium by 4.264e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7575,rp_wrong,TPFLSH split off equilibrium by 3.229e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7597,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.955e-03)
+N2/O2/Ar (O2-enriched air),7610,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 5.449e-03)
+N2/O2/Ar (O2-enriched air),7658,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),7660,rp_wrong,TPFLSH split off equilibrium by 3.019e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7761,rp_wrong,TPFLSH split off equilibrium by 1.970e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7778,rp_wrong,TPFLSH split off equilibrium by 4.133e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7789,rp_wrong,TPFLSH split off equilibrium by 1.701e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7807,rp_wrong,TPFLSH split off equilibrium by 2.715e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7812,rp_wrong,TPFLSH split off equilibrium by 4.026e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7831,rp_wrong,TPFLSH split off equilibrium by 6.784e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7919,rp_wrong,TPFLSH split off equilibrium by 3.863e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7929,rp_wrong,TPFLSH split off equilibrium by 1.141e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),7992,rp_wrong,TPFLSH split off equilibrium by 4.174e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8054,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+N2/O2/Ar (O2-enriched air),8089,rp_wrong,TPFLSH split off equilibrium by 3.167e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8098,rp_wrong,TPFLSH split off equilibrium by 3.103e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8117,rp_wrong,TPFLSH split off equilibrium by 3.968e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8118,rp_wrong,TPFLSH split off equilibrium by 2.491e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8176,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.445e-03)
+N2/O2/Ar (O2-enriched air),8216,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.137e-03)
+N2/O2/Ar (O2-enriched air),8252,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.443e-03)
+N2/O2/Ar (O2-enriched air),8264,rp_wrong,TPFLSH split off equilibrium by 2.145e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8278,rp_wrong,TPFLSH split off equilibrium by 1.905e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8318,rp_wrong,TPFLSH split off equilibrium by 1.931e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8332,rp_wrong,TPFLSH split off equilibrium by 4.097e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8347,rp_wrong,TPFLSH split off equilibrium by 4.080e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8366,rp_wrong,TPFLSH split off equilibrium by 6.855e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8409,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.799e-03)
+N2/O2/Ar (O2-enriched air),8431,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.091e-03)
+N2/O2/Ar (O2-enriched air),8449,rp_wrong,TPFLSH split off equilibrium by 1.924e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8463,rp_wrong,TPFLSH split off equilibrium by 4.022e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8469,rp_wrong,TPFLSH split off equilibrium by 6.959e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8579,rp_wrong,TPFLSH split off equilibrium by 2.148e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8645,rp_wrong,TPFLSH split off equilibrium by 3.113e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8689,rp_wrong,TPFLSH split off equilibrium by 1.747e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8722,rp_wrong,TPFLSH split off equilibrium by 2.591e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8731,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.581e-03)
+N2/O2/Ar (O2-enriched air),8732,rp_wrong,TPFLSH split off equilibrium by 4.093e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8770,rp_wrong,TPFLSH split off equilibrium by 6.558e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8832,rp_wrong,TPFLSH split off equilibrium by 2.196e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8953,rp_wrong,TPFLSH split off equilibrium by 1.388e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8981,rp_wrong,TPFLSH split off equilibrium by 2.063e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),8986,rp_wrong,TPFLSH split off equilibrium by 6.837e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9077,rp_wrong,TPFLSH split off equilibrium by 1.289e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9095,rp_wrong,TPFLSH split off equilibrium by 4.298e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9122,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.424e-03)
+N2/O2/Ar (O2-enriched air),9132,rp_wrong,TPFLSH split off equilibrium by 2.575e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9135,rp_wrong,TPFLSH split off equilibrium by 3.642e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9150,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.655e-03)
+N2/O2/Ar (O2-enriched air),9163,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.502e-03)
+N2/O2/Ar (O2-enriched air),9192,rp_wrong,TPFLSH split off equilibrium by 4.218e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9194,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.948e-04)
+N2/O2/Ar (O2-enriched air),9272,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.298e-03)
+N2/O2/Ar (O2-enriched air),9283,rp_wrong,TPFLSH split off equilibrium by 5.339e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9310,rp_wrong,TPFLSH split off equilibrium by 3.861e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9398,rp_wrong,TPFLSH split off equilibrium by 1.859e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9416,rp_wrong,TPFLSH split off equilibrium by 6.956e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9467,rp_wrong,TPFLSH split off equilibrium by 2.077e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9472,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.464e-03)
+N2/O2/Ar (O2-enriched air),9476,rp_wrong,TPFLSH split off equilibrium by 3.053e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9504,rp_wrong,TPFLSH split off equilibrium by 7.505e-03 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9506,rp_wrong,TPFLSH split off equilibrium by 6.776e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9531,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.057e-03)
+N2/O2/Ar (O2-enriched air),9539,rp_wrong,TPFLSH split off equilibrium by 2.440e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9627,rp_wrong,TPFLSH split off equilibrium by 4.114e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9664,cp_wrong,CoolProp missed a genuine lower-G split
+N2/O2/Ar (O2-enriched air),9671,rp_wrong,TPFLSH split off equilibrium by 4.086e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9703,rp_wrong,TPFLSH split off equilibrium by 6.525e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9705,rp_wrong,TPFLSH split off equilibrium by 3.672e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9796,rp_wrong,TPFLSH split off equilibrium by 1.569e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9828,rp_wrong,TPFLSH split off equilibrium by 3.244e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9830,rp_wrong,TPFLSH split off equilibrium by 4.349e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9856,rp_wrong,TPFLSH split off equilibrium by 3.565e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9867,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.884e-03)
+N2/O2/Ar (O2-enriched air),9869,rp_wrong,TPFLSH split off equilibrium by 2.985e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9888,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.443e-03)
+N2/O2/Ar (O2-enriched air),9917,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 2.723e-02)
+N2/O2/Ar (O2-enriched air),9920,rp_wrong,TPFLSH split off equilibrium by 3.269e-02 in REFPROP's own ln f / p
+N2/O2/Ar (O2-enriched air),9957,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.426e-03)
+N2/O2/Ar (O2-enriched air),9998,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.538e-03)

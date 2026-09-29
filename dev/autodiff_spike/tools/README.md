@@ -35,9 +35,27 @@ VLERoutines.cpp). Each is read once per process.
 | `fd_lnphi_dnj.cpp` | Finite-difference check of n·∂lnφᵢ/∂nⱼ at constant T, p against the analytic forms (the #3357 Hessian building block). |
 | `repro_*.cpp` | Single-state reproducers: the #3357 near-dew/near-bubble band, methanol/benzene at 308.15 K, the two Amarillo NaN-K-factor states. |
 | `ssskip_audit.patch` | Audit build for #3427: whenever the SS-skip fires, also runs the old minimizer on a copy and logs its verdict (`SSSKIP_AUDIT=1`); `SSSKIP_OFF=1` reproduces pre-#3427 behaviour. Apply to master after #3427. |
+| `verdict.cpp` | v1 per-state verdicts for CoolProp/TPFLSH **disagreements** in a `bench_ratio` CSV. Judges with CoolProp's own GERG code and the kernel's `select()` root, and never looks at states where the two codes agree. Superseded for the figures by the v2 pipeline below. |
+| `rp_stability.cpp` | Brute-force tangent-plane stability test using **only REFPROP** (GERG mode: `TPRHO` + `FGCTY2` + `PRESS`). Five near-pure plus 20 random trial compositions, both density roots, SS to 1e-12. Args `'A.FLD\|B.FLD' 'z1,z2'`; reads `idx T p[Pa]`, prints `idx T p tm_min` (tm < 0: a split exists). Shares no code with CoolProp. |
+| `rp_selfjudge.cpp` | Re-evaluates TPFLSH's own two-phase answers with REFPROP's own `FGCTY2`/`PRESS`: the max of \|Δln f\| and \|p_phase/p − 1\| per state. Reads `rpwrong_states2.tsv` (`mixture T p idx`). |
+| `build_verdicts_v2.py` | Builds the v2 verdicts (`v2/*.csv`) from the v1 files plus the two REFPROP-only judges. |
+
+### Verdicts v2 (2026-09-29): what changed and why
+
+v1 flattered CoolProp. It only judged states where the two codes disagreed, and REFPROP never searches for liquid-liquid splits, so CoolProp LLE misses that REFPROP shared were invisible. It also used CoolProp code as the judge. v2 fixes both:
+
+- **CoolProp wrong: 4 → 28.** `rp_stability` on all ~72k states that both codes call single phase finds 24 missed splits, all in the N2/C1/C2/nC4/nC5 LLE region (104–119 K, 1–28 MPa). It finds none in the other 8 GERG mixtures. The 4 v1 cases are confirmed.
+- **TPFLSH wrong: 1024 → 767**, re-judged by REFPROP's own routines. The other 257 are `rp_minor`:
+  - 219 where TPFLSH's density matches CoolProp's single phase and only the two-phase label is wrong;
+  - loose splits off equilibrium by only 1e-5..1e-3;
+  - 22 "not reproducible" re-calls. Those were made from 10-digit-rounded CSV inputs, the same artifact as `cp_history`.
+- **TPFLSH misses a verified split: 1719.** All are confirmed by `rp_stability`.
+- The R454B disagreements (2816) are not judged: the two sides use different models.
+
+Validation of the judge: it flags all 328 splits CoolProp publishes in the N2-mixture LLE box. It needs a guard against 0·ln 0 when a trace component's trial fraction underflows; without it, humid air gave 14 false positives.
 
 The benchmark and figure scripts are one level up: `bench_ratio.cpp` (per-state CoolProp vs
-TPFLSH timing CSV) and `plot_ratio_pT.py` (the (T, p) ratio maps in `figs/`).
+TPFLSH timing CSV) and `plot_ratio_pT.py` (the (T, p) ratio maps in `figs/`; `build:"..."` is required and names the CoolProp build in the title).  `figs/ratio_pT_vs_tpflsh_all_verdicts.png` is the UNMERGED kernel build with v2 verdicts; `figs/ratio_pT_vs_tpflsh_all_kernel_off.png` is the same states with the kernel off, which is close to what master ships.  Each panel title gives both the median per-state ratio and the total-time ratio. They differ a lot where either code has a heavy tail, e.g. Amarillo: median state 3.9× faster, total time 1.1× faster.
 
 Machine discipline: timing runs only on a quiet machine, sequentially (or with each state timing
 both codes back to back when run in parallel); min of 3 timings per state.

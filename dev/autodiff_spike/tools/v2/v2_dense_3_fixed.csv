@@ -1,0 +1,118 @@
+mixture,i,verdict,detail
+Amarillo (10),55,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),128,cp_wrong,CoolProp missed a genuine lower-G split
+Amarillo (10),161,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.669e+00)
+Amarillo (10),308,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.773e+00)
+Amarillo (10),370,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.588e+00)
+Amarillo (10),476,rp_wrong,TPFLSH split off equilibrium by 1.890e+00 in REFPROP's own ln f / p
+Amarillo (10),530,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),638,rp_wrong,TPFLSH split off equilibrium by 2.194e+00 in REFPROP's own ln f / p
+Amarillo (10),786,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),797,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.677e+00)
+Amarillo (10),890,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.890e+00)
+Amarillo (10),897,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),935,rp_wrong,TPFLSH split off equilibrium by 2.121e+00 in REFPROP's own ln f / p
+Amarillo (10),1096,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),1121,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.860e+00)
+Amarillo (10),1212,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.723e+00)
+Amarillo (10),1213,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.541e+00)
+Amarillo (10),1260,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.596e+00)
+Amarillo (10),1424,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),1604,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.836e+00)
+Amarillo (10),1697,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.126e-03)
+Amarillo (10),1733,rp_wrong,TPFLSH split off equilibrium by 5.474e+00 in REFPROP's own ln f / p
+Amarillo (10),1749,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.700e+00)
+Amarillo (10),1782,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.695e+00)
+Amarillo (10),1821,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.619e+00)
+Amarillo (10),1887,rp_wrong,TPFLSH split off equilibrium by 5.577e+00 in REFPROP's own ln f / p
+Amarillo (10),1899,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),2023,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.804e+00)
+Amarillo (10),2034,rp_wrong,TPFLSH split off equilibrium by 1.974e+00 in REFPROP's own ln f / p
+Amarillo (10),2093,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.799e+00)
+Amarillo (10),2204,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),2245,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),2547,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.757e+00)
+Amarillo (10),2669,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.514e+00)
+Amarillo (10),2671,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.569e+00)
+Amarillo (10),2821,rp_wrong,TPFLSH split off equilibrium by 1.892e+00 in REFPROP's own ln f / p
+Amarillo (10),2904,rp_wrong,TPFLSH split off equilibrium by 5.422e+00 in REFPROP's own ln f / p
+Amarillo (10),3058,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.592e+00)
+Amarillo (10),3059,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.880e+00)
+Amarillo (10),3195,rp_wrong,TPFLSH split off equilibrium by 4.846e+00 in REFPROP's own ln f / p
+Amarillo (10),3327,rp_wrong,TPFLSH split off equilibrium by 1.268e+00 in REFPROP's own ln f / p
+Amarillo (10),3350,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),3391,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.876e+00)
+Amarillo (10),3434,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),3496,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.518e+00)
+Amarillo (10),3586,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.822e+00)
+Amarillo (10),3658,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.799e+00)
+Amarillo (10),3781,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.639e+00)
+Amarillo (10),3791,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.604e+00)
+Amarillo (10),4000,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),4014,rp_wrong,TPFLSH split off equilibrium by 2.125e+00 in REFPROP's own ln f / p
+Amarillo (10),4284,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.651e+00)
+Amarillo (10),4299,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.823e+00)
+Amarillo (10),4382,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.540e+00)
+Amarillo (10),4390,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.737e+00)
+Amarillo (10),4561,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.385e-03)
+Amarillo (10),4655,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),4682,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.810e+00)
+Amarillo (10),4721,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),4860,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.829e+00)
+Amarillo (10),5054,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.695e+00)
+Amarillo (10),5348,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),5441,rp_wrong,TPFLSH split off equilibrium by 1.996e+00 in REFPROP's own ln f / p
+Amarillo (10),5505,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.191e-03)
+Amarillo (10),5517,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.694e+00)
+Amarillo (10),5644,rp_wrong,TPFLSH split off equilibrium by 2.027e+00 in REFPROP's own ln f / p
+Amarillo (10),5663,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.554e+00)
+Amarillo (10),5778,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.539e+00)
+Amarillo (10),5794,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.082e-03)
+Amarillo (10),5819,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.587e+00)
+Amarillo (10),6101,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),6147,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.817e+00)
+Amarillo (10),6276,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.587e+00)
+Amarillo (10),6386,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.564e+00)
+Amarillo (10),6760,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.833e+00)
+Amarillo (10),6783,rp_wrong,TPFLSH split off equilibrium by 5.286e+00 in REFPROP's own ln f / p
+Amarillo (10),6874,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.536e+00)
+Amarillo (10),6930,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.888e+00)
+Amarillo (10),6931,cp_history,CoolProp answer depends on call history (fresh object: two-phase)
+Amarillo (10),7008,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.575e+00)
+Amarillo (10),7018,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.543e+00)
+Amarillo (10),7100,rp_wrong,TPFLSH split off equilibrium by 1.531e+00 in REFPROP's own ln f / p
+Amarillo (10),7114,rp_wrong,TPFLSH split off equilibrium by 1.965e+00 in REFPROP's own ln f / p
+Amarillo (10),7259,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),7403,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.616e+00)
+Amarillo (10),7528,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.708e+00)
+Amarillo (10),7580,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.763e+00)
+Amarillo (10),7622,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.640e+00)
+Amarillo (10),7628,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.909e+00)
+Amarillo (10),7675,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.534e+00)
+Amarillo (10),7690,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),7699,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.595e+00)
+Amarillo (10),7884,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.573e+00)
+Amarillo (10),7905,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.741e+00)
+Amarillo (10),7993,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.744e+00)
+Amarillo (10),8150,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),8170,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),8266,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.519e+00)
+Amarillo (10),8267,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),8379,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.854e+00)
+Amarillo (10),8406,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.567e+00)
+Amarillo (10),8665,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.523e+00)
+Amarillo (10),8718,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.732e+00)
+Amarillo (10),8730,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.562e+00)
+Amarillo (10),8740,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.680e+00)
+Amarillo (10),8831,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.614e+00)
+Amarillo (10),8838,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.677e+00)
+Amarillo (10),8872,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.708e+00)
+Amarillo (10),9115,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.528e+00)
+Amarillo (10),9244,rp_scope,"TPFLSH single phase; CoolProp split validated (equal f, lower G) - LLE or missed VLE"
+Amarillo (10),9320,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.660e+00)
+Amarillo (10),9384,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.765e+00)
+Amarillo (10),9623,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.629e+00)
+Amarillo (10),9677,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.926e+00)
+Amarillo (10),9835,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.869e+00)
+Amarillo (10),9852,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.543e+00)
+Amarillo (10),9891,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.635e+00)

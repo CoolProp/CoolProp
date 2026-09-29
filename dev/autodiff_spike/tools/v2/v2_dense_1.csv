@@ -1,0 +1,57 @@
+mixture,i,verdict,detail
+C1/C2 50/50,279,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.696e-04)
+C1/C2 50/50,308,rp_wrong,TPFLSH split off equilibrium by 5.958e-03 in REFPROP's own ln f / p
+C1/C2 50/50,638,rp_minor,TPFLSH split off equilibrium by only 3.697e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,765,rp_minor,TPFLSH split off equilibrium by only 3.814e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,1099,rp_minor,TPFLSH split off equilibrium by only 2.825e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,1170,rp_minor,TPFLSH split off equilibrium by only 2.256e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,1212,rp_wrong,TPFLSH split off equilibrium by 6.104e-03 in REFPROP's own ln f / p
+C1/C2 50/50,1213,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.195e-03)
+C1/C2 50/50,1237,rp_minor,TPFLSH split off equilibrium by only 2.887e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,1238,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 9.322e-05)
+C1/C2 50/50,1271,rp_minor,TPFLSH split off equilibrium by only 3.430e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,1857,rp_wrong,TPFLSH split off equilibrium by 1.446e-03 in REFPROP's own ln f / p
+C1/C2 50/50,2023,rp_wrong,TPFLSH split off equilibrium by 5.770e-03 in REFPROP's own ln f / p
+C1/C2 50/50,2038,rp_wrong,TPFLSH split off equilibrium by 5.373e-03 in REFPROP's own ln f / p
+C1/C2 50/50,2093,rp_wrong,TPFLSH split off equilibrium by 5.958e-03 in REFPROP's own ln f / p
+C1/C2 50/50,2547,rp_wrong,TPFLSH split off equilibrium by 6.080e-03 in REFPROP's own ln f / p
+C1/C2 50/50,2586,rp_minor,TPFLSH split off equilibrium by only 3.548e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,2599,rp_minor,TPFLSH split off equilibrium by only 2.851e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,2663,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.900e-05)
+C1/C2 50/50,2669,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.159e-03)
+C1/C2 50/50,2706,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.798e-05)
+C1/C2 50/50,3222,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.713e-05)
+C1/C2 50/50,3496,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.047e-03)
+C1/C2 50/50,3658,rp_wrong,TPFLSH split off equilibrium by 5.449e-03 in REFPROP's own ln f / p
+C1/C2 50/50,4240,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.663e-03)
+C1/C2 50/50,4299,rp_wrong,TPFLSH split off equilibrium by 6.101e-03 in REFPROP's own ln f / p
+C1/C2 50/50,4382,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.849e-03)
+C1/C2 50/50,4463,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 5.960e-05)
+C1/C2 50/50,4606,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 8.938e-05)
+C1/C2 50/50,5054,rp_wrong,TPFLSH split off equilibrium by 6.301e-03 in REFPROP's own ln f / p
+C1/C2 50/50,5154,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.122e-05)
+C1/C2 50/50,5493,rp_minor,TPFLSH split off equilibrium by only 3.178e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,5517,rp_wrong,TPFLSH split off equilibrium by 6.253e-03 in REFPROP's own ln f / p
+C1/C2 50/50,5947,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.952e-05)
+C1/C2 50/50,6417,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.383e-05)
+C1/C2 50/50,6529,rp_minor,TPFLSH split off equilibrium by only 1.748e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,6555,rp_minor,TPFLSH two-phase not reproduced on re-call from 10-digit CSV inputs (same knife-edge artifact as cp_history)
+C1/C2 50/50,6701,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.282e-04)
+C1/C2 50/50,7234,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.333e-05)
+C1/C2 50/50,7510,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.112e-05)
+C1/C2 50/50,7528,rp_wrong,TPFLSH split off equilibrium by 6.328e-03 in REFPROP's own ln f / p
+C1/C2 50/50,7675,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.581e-03)
+C1/C2 50/50,8379,rp_wrong,TPFLSH split off equilibrium by 5.314e-03 in REFPROP's own ln f / p
+C1/C2 50/50,8389,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 4.462e-03)
+C1/C2 50/50,8539,rp_minor,TPFLSH split off equilibrium by only 1.091e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,8617,rp_minor,TPFLSH split off equilibrium by only 2.830e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,8622,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 7.875e-05)
+C1/C2 50/50,8665,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.446e-03)
+C1/C2 50/50,8718,rp_wrong,TPFLSH split off equilibrium by 6.301e-03 in REFPROP's own ln f / p
+C1/C2 50/50,8796,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.103e-05)
+C1/C2 50/50,8910,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 9.875e-05)
+C1/C2 50/50,9115,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 6.580e-03)
+C1/C2 50/50,9179,rp_minor,TPFLSH split off equilibrium by only 3.065e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,9368,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 1.096e-04)
+C1/C2 50/50,9609,rp_minor,TPFLSH split off equilibrium by only 1.460e-04 in its own ln f / p (loose convergence?)
+C1/C2 50/50,9633,rp_minor,TPFLSH density matches the single-phase answer; only the two-phase label is wrong (REFPROP self-check 3.361e-03)
