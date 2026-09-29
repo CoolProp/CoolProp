@@ -145,14 +145,13 @@ void GERGMixtureBackend::check_gerg_range_of_validity() {
     // valid"; the union (or a weighted average) would let a mixture be
     // evaluated at a temperature at which one of its own components has been
     // declared out of range.  Concretely, with every GERG component carrying
-    // Tmax = 700 K and Tmin = min(60 K, Tc), this makes the mixture range
-    // exactly [60, 700] K unless EVERY component has Tc < 60 K (helium
-    // alone: [5.1953, 700]; helium + hydrogen: [33.19, 700]), which is the
-    // published mixture-model range of Kunz & Wagner 2012 section 4.1 rather
-    // than an artefact of the composition vector.  NOTE this is a
-    // deliberate behaviour change from the mole-fraction-weighted average:
-    // a helium-rich mixture that used to be accepted at 45 K is now
-    // rejected, because methane's own 60 K limit is part of the mixture.
+    // Tmin = 60 K and Tmax = 700 K (make_gerg_fluid), this makes the mixture
+    // range exactly [60, 700] K for every composition, which is the published
+    // mixture-model range of Kunz & Wagner 2012 section 4.1 rather than an
+    // artefact of the composition vector.  With identical component limits
+    // the intersection and the mole-fraction-weighted average agree when
+    // sum(x) = 1; the intersection is kept because it does not depend on
+    // sum(x) at all (see Web/coolprop/GERG.rst).
     //
     // Deliberately NOT fixed by changing calc_Tmin/calc_Tmax in the shared
     // Helmholtz backend: those are used by every other backend and their
