@@ -38,7 +38,7 @@ def load(files):
 # Verdict markers: CoolProp wrong / history-dependent in ink; TPFLSH wrong / out of scope smaller and lighter.
 VMARK = {
     "cp_wrong": dict(marker="X", s=70, c=INK, edgecolors=SURFACE, linewidths=0.8, zorder=6, label="CoolProp wrong (verified in-model)"),
-    "cp_history": dict(marker="D", s=34, facecolors="none", edgecolors=INK, linewidths=1.1, zorder=6, label="CoolProp answer depends on call history"),
+    "cp_history": dict(marker="D", s=34, facecolors="none", edgecolors=INK, linewidths=1.1, zorder=6, label="CoolProp verdict flips under a ~1e-10 input change"),
     "rp_wrong": dict(marker="^", s=9, facecolors="none", edgecolors="#5c5b55", linewidths=0.45, zorder=5, label="TPFLSH wrong (non-equilibrium split / wrong root)"),
     "rp_scope": dict(marker="v", s=7, facecolors="none", edgecolors="#8a4fb3", linewidths=0.35, alpha=0.75, zorder=5, label="TPFLSH misses a verified split (LLE, water condensation)"),
 }

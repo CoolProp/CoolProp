@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
                 sink = sink + D;
             }
         for (int i = 0; i < NS; ++i)
-            std::fprintf(fo, "\"%s\",%d,%.10g,%.10g,%.4f,%.4f,%.12g,%.8g,%d,%.12g,%.8g,%d\n", mx.name.c_str(), i, Ts[i], ps[i], t_cp[i], t_rp[i], rho_cp[i],
+            std::fprintf(fo, "\"%s\",%d,%.17g,%.17g,%.4f,%.4f,%.12g,%.8g,%d,%.12g,%.8g,%d\n", mx.name.c_str(), i, Ts[i], ps[i], t_cp[i], t_rp[i], rho_cp[i],
                          Q_cp[i], cpfail[i], rho_rp[i], q_rp[i], ierr[i]);
         std::printf("%-20s median CoolProp %8.1f us   TPFLSH %8.1f us\n", mx.name.c_str(), median(t_cp), median(t_rp));
         std::fflush(stdout);
