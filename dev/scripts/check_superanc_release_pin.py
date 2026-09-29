@@ -68,11 +68,6 @@ DOCS_SCRIPT = REPO / 'Web' / 'scripts' / 'fluid_properties.Superancillary.py'
 # whenever the pinned release is fully current.
 PENDING_UPSTREAM = {
     # 'R1243zf': 'awaiting fastchebpure regen, CoolProp/fastchebpure#6',
-    'Ammonia': 'citation-only restamp after #3433 (EOS unchanged); awaiting fastchebpure re-tag, Linear COO-109',
-    'D4': 'citation-only restamp after #3433 (EOS unchanged); awaiting fastchebpure re-tag, Linear COO-109',
-    'Dichloroethane': 'citation-only restamp after #3433 (EOS unchanged); awaiting fastchebpure re-tag, Linear COO-109',
-    'Helium': 'citation-only restamp after #3433 (EOS unchanged); awaiting fastchebpure re-tag, Linear COO-109',
-    'n-Octane': 'citation-only restamp after #3433 (EOS unchanged); awaiting fastchebpure re-tag, Linear COO-109',
 }
 
 
