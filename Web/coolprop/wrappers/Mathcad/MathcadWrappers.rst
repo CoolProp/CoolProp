@@ -917,6 +917,8 @@ Get/set access to CoolProp's process-wide `Configuration <https://coolprop.org/c
 .. warning::
     **Set configuration before evaluating properties, not during.** ``config_set_*`` only guards itself against other ``config_set_*``/``config_get_*`` calls; it does not hold up ``PropsSI``, ``PropsSImulti``, ``HAPropsSI``, or any ``AS_*`` call, all of which also read this same global configuration. Do your ``config_set_*`` calls once, at the top of a worksheet (or in the setup portion of a program block), *before* any property calculation runs, then leave the configuration alone for the rest of the session. Calling a setter for a key while a property calculation that reads that key is still in flight is not something this wrapper protects against.
 
+    Placing the setter at the top of the worksheet isn't enough on its own, though: Mathcad's automatic recalculation follows the dependency graph, not source order (the same caveat as ``AS_factory``'s worksheet-level pattern above), so an independent property call with no dependency edge back to the setter could still evaluate before it on a given pass. Once the setter has *actually run* once, its value is applied for the rest of the session regardless of order; to guarantee that first run happens before anything below it reads the result, use **Recalculate Worksheet** (a full top-to-bottom recalculation in region order, not a partial/incremental recalc) after adding or changing a ``config_set_*`` call, the same way ``AS_factory``'s own pattern already relies on it.
+
 .. tip::
     **USING ENVIRONMENT VARIABLES TO SET CONFIGURATION**  
 
