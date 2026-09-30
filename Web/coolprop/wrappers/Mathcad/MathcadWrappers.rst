@@ -907,12 +907,15 @@ Get/set access to CoolProp's process-wide `Configuration <https://coolprop.org/c
     This does **not** make *which* open worksheet wins deterministic: that still depends on Mathcad's recalculation order, not on anything in either worksheet's own contents. What it buys is that a conflict is now detectable (a different return string, plus an inspectable warning) instead of one worksheet's setting silently overwriting another's. A ``config_set_*`` call whose return value isn't captured or checked won't visibly show that it lost: check the return, or check ``get_global_param_string("warnstring")``, to find out.
 
 .. tip::
-    **RECOMMENDATION:** When changing a CoolProp setting away from its default with Mathcad *set* functions, 
+    **RECOMMENDATION:** When changing a CoolProp setting away from its default with Mathcad *set* functions,
 
     - keep only **one worksheet open at a time** in that Mathcad Prime window/session,
-    - set each configuration key value **only once at the top of the worksheet**. 
+    - set each configuration key value **only once at the top of the worksheet**.
 
     To change a configuration setting **permanently**, across every worksheet and every session, use the environment variable method explained below.
+
+.. warning::
+    **Set configuration before evaluating properties, not during.** ``config_set_*`` only guards itself against other ``config_set_*``/``config_get_*`` calls; it does not hold up ``PropsSI``, ``PropsSImulti``, ``HAPropsSI``, or any ``AS_*`` call, all of which also read this same global configuration. Do your ``config_set_*`` calls once, at the top of a worksheet (or in the setup portion of a program block), *before* any property calculation runs, then leave the configuration alone for the rest of the session. Calling a setter for a key while a property calculation that reads that key is still in flight is not something this wrapper protects against.
 
 .. tip::
     **USING ENVIRONMENT VARIABLES TO SET CONFIGURATION**  
@@ -921,7 +924,11 @@ Get/set access to CoolProp's process-wide `Configuration <https://coolprop.org/c
 
     ``COOLPROP_MIXTURE_STABILITY_ALGORITHM = 1``
 
-    That value is read exactly once, when CoolProp loads, before any worksheet's calculations run, so every worksheet in the session starts with it already applied to that key. The four getters below (and ``get_config_as_json_string``) are useful for confirming an environment variable actually took effect.
+    That value is read exactly once, when CoolProp loads, before any worksheet's calculations run, so every worksheet in the session starts with it already applied to that key.
+
+    This only sets the *starting* value, though; it doesn't lock the key. A worksheet's own ``config_set_*`` call for that same key still claims it on its first run, same as it would for any other starting value, and can change it away from what the environment variable set. If you're relying on an environment variable to hold a value for the whole session, don't also call the matching setter for that key anywhere in your worksheets.
+
+    The four getters below (and ``get_config_as_json_string``) are useful for confirming an environment variable actually took effect.
 
 .. note::
     **Two keys are read-only from Mathcad, unconditionally:** every ``config_set_*`` function refuses ``"FLOAT_PUNCTUATION"`` and ``"LIST_STRING_DELIMITER"`` with a Custom Error, independent of the once-per-session logic above: both are relied on by this wrapper's own string parsing (``FLOAT_PUNCTUATION`` controls the decimal separator CoolProp uses when formatting/parsing numbers in strings; ``LIST_STRING_DELIMITER`` is the separator this wrapper already assumes when splitting a Low-Level handle's fluid-name list; see ``AS_mole_to_mass_fractions`` above), so changing either at runtime, even once, would silently corrupt string parsing elsewhere in this same wrapper. Both remain readable via ``config_get_bool``/``config_get_string``.

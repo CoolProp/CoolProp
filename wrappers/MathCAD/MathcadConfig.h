@@ -584,8 +584,13 @@ static LRESULT CP_config_set_double(LPMCSTRING Dummy,        // output: "Set" or
             if (current == newValue) {
                 resultText = "Set";
             } else {
-                CoolProp::set_warning_string(format("config_set_double(\"%s\", %g) ignored -- already set to %g earlier in this Mathcad Prime "
-                                                    "session; configuration keys can only be set once per session",
+                // %.17g, not %g: %g's default 6-significant-digit rounding
+                // can print two genuinely different doubles identically
+                // (e.g. 1000000 vs 1000001 both show as "1e+06"), which
+                // would make this warning useless for telling them apart.
+                // %.17g is enough digits to round-trip any double exactly.
+                CoolProp::set_warning_string(format("config_set_double(\"%s\", %.17g) ignored -- already set to %.17g earlier in this Mathcad "
+                                                    "Prime session; configuration keys can only be set once per session",
                                                     Key->str, newValue, current));
                 resultText = "Not Set";
             }
