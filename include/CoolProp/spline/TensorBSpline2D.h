@@ -152,9 +152,22 @@ inline void TensorBSpline2D::validate_axis(const std::vector<double>& knots, std
 inline TensorBSpline2D::TensorBSpline2D(std::vector<double> knots_x, std::vector<double> knots_y, std::size_t order_x, std::size_t order_y,
                                         std::vector<double> coefs)
   : kx_(std::move(knots_x)), ky_(std::move(knots_y)), ox_(order_x), oy_(order_y), nx_(0), ny_(0), coefs_(std::move(coefs)) {
-    // Both axes are validated before nx_/ny_ are derived, because the
-    // subtraction that derives them is unsigned and would wrap on a
-    // short knot vector instead of reporting the real problem.
+    // Both axes are validated before nx_/ny_ are derived: the
+    // subtraction is unsigned, and deriving a value before checking the
+    // inputs it comes from is worth avoiding on principle.
+    //
+    // It is only principle, though.  What makes a wrapped nx_ unreachable
+    // is validate_axis's knots.size() >= 2 * order check: a wrap needs
+    // size < order, which implies size < 2 * order, so validate_axis
+    // throws on every input that could wrap, and the coefficient-count
+    // check below is never reached with a wrapped extent.  That guard
+    // would hold just the same if the derivation moved into the init
+    // list, so do not credit this ordering with more than it does.
+    //
+    // clang-tidy asks for these in the member-init list
+    // (cppcoreguidelines-prefer-member-initializer) and for `= 0` on the
+    // declarations (modernize-use-default-member-init).  The second is
+    // inert.  The first is declined to keep the ordering above.
     validate_axis(kx_, ox_, "x");
     validate_axis(ky_, oy_, "y");
     nx_ = kx_.size() - ox_;
@@ -233,6 +246,33 @@ inline void TensorBSpline2D::basis_ders(const std::vector<double>& knots, std::s
     }
     const int k_want = static_cast<int>(nd);
 
+    // C arrays, and uninitialised, both on purpose.
+    //
+    // Converting these to std::array was tried and reverted: it costs
+    // 949 -> 1023 ns per six-derivative property set at -O3 (+7.8%) at the
+    // order 6/6, 80x40 geometry this is used at -- min of 9 x 200k
+    // iterations, interleaved, reproduced independently.  The cost is in
+    // the locals, not the signatures: a variant keeping the double*
+    // parameters measures the same 1022 ns.  It looks like SROA handling a
+    // flat double[16][16] but giving up on a nested std::array.
+    // modernize-avoid-c-arrays is suppressed in .clang-tidy instead, which
+    // is what that config already intended.
+    //
+    // Leaving them uninitialised is worth far more than that: zeroing ndu
+    // and ders alone costs 949 -> 1326 ns (+40%).  It also buys nothing,
+    // because the recurrence writes every element it later reads.
+    // Verified by poisoning all five -- plus basis_funs' left/right and
+    // eval's bx/by -- with NaN, and again with 1.7e308 in case a NaN could
+    // be branched around, then sweeping every order in 1..16 x 1..16 with
+    // every derivative order up to `order`: ~3.3M evaluations, results
+    // bit-identical to the clean build, no throw.
+    //
+    // Zeroing would also be worse than slow.  It turns any future
+    // read-before-write into a silent 0.0, which drops a basis function
+    // and is finite -- so it would slip past the isfinite(acc) backstop in
+    // eval(), and, being defined, past MemorySanitizer too.  Note MSan is
+    // not run anywhere in this project's CI today, so that sweep is the
+    // only thing that has ever checked this property.
     double ndu[kMaxOrder][kMaxOrder];
     double a[2][kMaxOrder];
     double ders[kMaxOrder][kMaxOrder];
