@@ -105,4 +105,6 @@ if [ "$HAS_LINE_FILTER" = 0 ]; then
   EXTRA_ARGS+=("--header-filter=^\$")
 fi
 
-exec "$CLANG_TIDY" -p "$BUILD_DIR" "${EXTRA_ARGS[@]}" "$@"
+# ${EXTRA_ARGS[@]+...}: macOS's /bin/bash 3.2 aborts on an empty array under
+# set -u ("unbound variable"), and that abort carries no "error: " line.
+exec "$CLANG_TIDY" -p "$BUILD_DIR" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} "$@"
