@@ -23,8 +23,8 @@ COMPDB="$BUILD_DIR/compile_commands.json"
 
 # Locate clang-tidy.  Prefer PATH (Linux/CI), fall back to common
 # Homebrew install locations on macOS (per issue #2926 reproduction
-# notes).  Pin to llvm@18 by default for CI parity; allow override via
-# COOLPROP_CLANG_TIDY.
+# notes); allow override via COOLPROP_CLANG_TIDY.  Version 19+ is required
+# -- see the check after this block.
 if [ -n "${COOLPROP_CLANG_TIDY:-}" ]; then
   CLANG_TIDY="$COOLPROP_CLANG_TIDY"
 elif command -v clang-tidy >/dev/null 2>&1; then
@@ -34,14 +34,11 @@ elif [ "$(uname -s)" = "Darwin" ]; then
   # uses C++23 builtins (__builtin_clzg, __builtin_ctzg, __builtin_addcb,
   # ...) that clang-tidy 18 doesn't know about, so parsing <bitset> /
   # <charconv> emits a wave of bogus clang-diagnostic-error noise.
-  # clang-tidy 21+ handles them.  CI runs on Linux with matching headers,
-  # so the 18 pin there is fine.
+  # clang-tidy 21+ handles them.
   if [ -x "/opt/homebrew/opt/llvm@21/bin/clang-tidy" ]; then
     CLANG_TIDY="/opt/homebrew/opt/llvm@21/bin/clang-tidy"
   elif [ -x "/opt/homebrew/opt/llvm/bin/clang-tidy" ]; then
     CLANG_TIDY="/opt/homebrew/opt/llvm/bin/clang-tidy"
-  elif [ -x "/opt/homebrew/opt/llvm@18/bin/clang-tidy" ]; then
-    CLANG_TIDY="/opt/homebrew/opt/llvm@18/bin/clang-tidy"
   fi
 fi
 if [ -z "${CLANG_TIDY:-}" ]; then
@@ -49,6 +46,21 @@ if [ -z "${CLANG_TIDY:-}" ]; then
   echo "         install with: brew install llvm   (macOS)" >&2
   echo "         (or set COOLPROP_CLANG_TIDY=/path/to/clang-tidy to point at a specific binary)" >&2
   exit 0
+fi
+
+# .clang-tidy uses ExcludeHeaderFilterRegex, which clang-tidy 19 introduced.
+# clang-tidy 18 does not skip the file on that unknown key -- it rejects the
+# whole config and silently runs its DEFAULT checks, so an old binary would
+# "pass" against the wrong rule set.  Fail rather than skip: the message
+# starts with "error: " so preflight counts it as a finding.
+# `|| true` is deliberate: a binary that will not run leaves CT_MAJOR empty
+# and lands in the error branch below; without it, pipefail + set -e would
+# exit here with no message, which preflight's log grep would read as clean.
+CT_MAJOR="$("$CLANG_TIDY" --version 2>/dev/null | sed -nE 's/.*version ([0-9]+)\..*/\1/p' | head -1 || true)"
+if [ -z "$CT_MAJOR" ] || [ "$CT_MAJOR" -lt 19 ]; then
+  echo "error: $CLANG_TIDY is version '${CT_MAJOR:-unknown}'; clang-tidy >= 19 is required (.clang-tidy uses ExcludeHeaderFilterRegex)" >&2
+  echo "       install with: brew install llvm   (macOS), or set COOLPROP_CLANG_TIDY=/path/to/clang-tidy-19+" >&2
+  exit 1
 fi
 
 if [ ! -f "$COMPDB" ]; then

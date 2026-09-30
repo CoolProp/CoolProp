@@ -92,7 +92,7 @@ pre-push hook once via `ln -s ../../dev/ci/pre-push.sample
 - build CatchTestRunner
 - Catch2 tests with auto-selected tag scope based on changed paths
 - cppcheck (`--enable=warning`) on changed files
-- clang-tidy diff-only (requires LLVM 18+ on PATH)
+- clang-tidy diff-only (requires LLVM 19+; `.clang-tidy` uses `ExcludeHeaderFilterRegex`)
 - semgrep `p/security-audit` + local `.semgrep/` rules (uvx-resolved)
 
 If preflight passes, CI should pass with high probability.  See
