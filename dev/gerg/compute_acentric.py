@@ -77,10 +77,11 @@ TWO JUDGEMENT CALLS, both deliberate
 
 HELIUM AND HYDROGEN
 -------------------
-``make_gerg_fluid`` caps ``EOS.limits.Tmin`` at the component's own reducing
-temperature, so for helium (T_c = 5.1953 K) and hydrogen (T_c = 33.19 K) the
-enforced Tmin EQUALS T_c and 0.7*T_c (3.6367 K / 23.2330 K) is below the range
-``check_gerg_range_of_validity`` lets a caller reach at run time.
+``make_gerg_fluid`` applies the published 60 K lower limit to every
+component, so for helium (T_c = 5.1953 K) and hydrogen (T_c = 33.19 K)
+0.7*T_c (3.6367 K / 23.2330 K) is far below the range
+``check_gerg_range_of_validity`` lets a caller reach at run time.  As pure
+fluids both are supercritical across the whole 60-700 K range.
 
 That is not an obstacle to this quantity and it is not smuggled past one.  The
 acentric factor is a DEFINITIONAL, compile-time constant of the equation, not
@@ -289,9 +290,9 @@ HEADER = '''// GENERATED FILE -- do not edit by hand.
 //     p_c/T_c and omega off the same fluid.
 //
 // See dev/gerg/compute_acentric.py for both judgement calls in full, and for
-// why helium and hydrogen -- whose enforced Tmin equals their T_c, so 0.7*T_c
-// is below the range a caller can reach -- are computed the same way as the
-// other 21 rather than left out.
+// why helium and hydrogen -- whose 0.7*T_c is far below the enforced 60 K
+// lower limit, so below the range a caller can reach -- are computed the same
+// way as the other 21 rather than left out.
 //
 // RECOMPUTE WHENEVER A GERG COEFFICIENT TABLE CHANGES.
 // dev/gerg/verify_transcription.py re-derives this whole table and diffs it

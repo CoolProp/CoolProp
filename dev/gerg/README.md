@@ -534,9 +534,9 @@ the fallback path.
 ### Two consequences worth knowing about
 
 - **Helium and hydrogen have no reachable saturation states.** `make_gerg_fluid`
-  clamps `EOS.limits.Tmin` to `min(60 K, Tc)`, and for those two that *is* `Tc`
-  (5.1953 K and 33.19 K), so the whole subcritical region is outside the
-  backend's range. Ancillaries are still fitted and shipped for them — the
+  sets `EOS.limits.Tmin` to the published 60 K for every component, and those
+  two have `Tc` of 5.1953 K and 33.19 K, so the whole subcritical region is
+  outside the backend's range. Ancillaries are still fitted and shipped for them — the
   table is complete, and `DONT_CHECK_PROPERTY_LIMITS` reaches them — but the
   `[GERG]` saturation sweep skips them, and asserts that it skips exactly 4
   fluid/model combinations so the skip cannot quietly widen.
@@ -544,10 +544,9 @@ the fallback path.
   envelope, 60-700 K and p <= 70 MPa (Kunz & Wagner 2012 §4.1), is stated for
   the mixture model as a whole. GERG publishes no per-component lower
   temperature limit, and this backend deliberately does not consult CoolProp's
-  triple-point data. A pure-component `Tmin` below 60 K (helium's 5.1953 K) is
-  the removal of a self-contradiction — `Tmin` above `Tc` — not a validity
-  statement, and neither is an ancillary `Tmin` below 60 K (methane's is
-  57.17 K).
+  triple-point data, so every component carries the same 60 K `Tmin`. An
+  ancillary `Tmin` below 60 K (methane's is 57.17 K) is the low end of the
+  fitted ancillary, not a validity statement.
 
 ## `compute_acentric.py` — acentric factors (bd CoolProp-deut)
 
@@ -601,8 +600,8 @@ carbon monoxide and isopentane, which moves their saturation curve.
 
 ### Helium and hydrogen
 
-Their enforced `Tmin` equals their reducing temperature (5.1953 K, 33.19 K), so
-`0.7*T_c` — 3.6367 K and 23.2330 K — is below the range
+Their reducing temperatures are 5.1953 K and 33.19 K, so `0.7*T_c` (3.6367 K
+and 23.2330 K) is far below the enforced 60 K `Tmin`, outside the range
 `check_gerg_range_of_validity` lets a caller reach.
 
 Computed there anyway, deliberately. `omega` is a definitional constant of the
