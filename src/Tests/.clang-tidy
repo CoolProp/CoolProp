@@ -1,0 +1,9 @@
+---
+# Test-only overrides on top of the repo-root .clang-tidy.
+#
+# cert-err58-cpp: every Catch2 TEST_CASE registers itself through a
+# namespace-scope static (`autoReg` / `dummyUser`) whose constructor can
+# throw.  That is Catch2's registration design, not something a test can
+# change, and it produced ~200 findings on the v8.0.0..master diff.
+InheritParentConfig: true
+Checks: '-cert-err58-cpp'

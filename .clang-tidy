@@ -73,13 +73,18 @@ WarningsAsErrors: '*'
 # .cpm_cache/, preflight's ~/.cache/CPM/, and any other CPM_SOURCE_CACHE via
 # its <package>/<40-hex-hash>/ layout), CPM's no-cache _deps/, vendored
 # externals/, and the generated data headers.  The key needs clang-tidy >= 19:
-# clang-tidy 18 rejects the whole file on an unknown key and silently falls
-# back to its default checks.
+# clang-tidy 18 prints a parse error on the unknown key, discards the whole
+# file and runs its default checks -- still exiting 0.
 HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: '(/\.cpm_cache/|/\.cache/CPM/|/[0-9a-f]{40}/|/_deps/|/externals/|/include/[A-Za-z0-9_]+_(JSON|CBOR)\.h$|/include/gitrevision\.h$)'
 FormatStyle:     file
 CheckOptions:
   - key:             performance-for-range-copy.WarnOnAllAutoCopies
+    value:           'true'
+  # Catch2's CHECK/REQUIRE macros expand to do { } while (false); without this
+  # every assertion in a test (and in the TEST_CASEs embedded in src/) is a
+  # finding -- ~1200 of them on the v8.0.0..master diff alone.
+  - key:             cppcoreguidelines-avoid-do-while.IgnoreMacros
     value:           'true'
   # modernize-use-override tuning (CoolProp-7ue): allow `override final`
   # together rather than collapsing to `final` only, and don't add `override`

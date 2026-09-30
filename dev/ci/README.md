@@ -201,8 +201,9 @@ clang-tidy -p build --extra-arg=--sysroot=$SDK src/CPstrings.cpp
 ```
 
 clang-tidy 19+ is **required** on every platform: `.clang-tidy` uses
-`ExcludeHeaderFilterRegex`, which 19 introduced, and clang-tidy 18 rejects the
-whole config on that unknown key and silently falls back to its default checks.
+`ExcludeHeaderFilterRegex`, which 19 introduced; clang-tidy 18 prints a parse
+error on that unknown key, discards the whole config and runs its default checks
+while still exiting 0.
 `dev/ci/run-clang-tidy-staged.sh` refuses anything older.  (On macOS, versions
 before 19 also don't recognize new libc++ builtins -- `__builtin_clzg`,
 `__builtin_ctzg` -- that Apple's libc++ headers use.)  CI installs

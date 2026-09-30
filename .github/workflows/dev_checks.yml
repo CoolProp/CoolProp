@@ -460,7 +460,9 @@ jobs:
     # upload are load-bearing: they keep this workflow informational across
     # every code path.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: clang-tidy-20 and the llvm-20 path
+    # below come from the Ubuntu 24.04 archive.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -468,14 +470,23 @@ jobs:
 
       # clang-tidy >= 19 is REQUIRED: .clang-tidy uses ExcludeHeaderFilterRegex
       # (new in 19), and clang-tidy 18 rejects the whole config on that
-      # unknown key and silently falls back to its default checks.
+      # unknown key, runs its default checks and still exits 0.
       - name: Install clang-tidy-20 + ninja
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-tidy-20 ninja-build
+          # The runner image registers its default clang-tidy (18) at priority
+          # 100 too, and a tie keeps the current choice -- so --install alone
+          # left /usr/bin/clang-tidy at 18.  --set makes the choice explicit;
+          # the run step also names the binary, and the version is asserted.
           sudo update-alternatives --install \
             /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-20 100
+          sudo update-alternatives --set clang-tidy /usr/bin/clang-tidy-20
           clang-tidy --version
+          if ! /usr/bin/clang-tidy-20 --version | grep -q 'version 20\.'; then
+            echo "::error::clang-tidy-20 is not version 20"
+            exit 1
+          fi
 
       - name: Cache CPM packages
         uses: actions/cache@v6
@@ -538,6 +549,7 @@ jobs:
             | python3 ${{ steps.diff_script.outputs.path }} \
                 -p1 \
                 -path ${{ github.workspace }}/build \
+                -clang-tidy-binary /usr/bin/clang-tidy-20 \
                 -regex '.*\.(c|cpp|h|hpp)$' \
                 -j$(nproc) \
                 2>&1 | tee clang-tidy-diff.log

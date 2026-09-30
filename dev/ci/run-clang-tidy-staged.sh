@@ -39,6 +39,10 @@ elif [ "$(uname -s)" = "Darwin" ]; then
     CLANG_TIDY="/opt/homebrew/opt/llvm@21/bin/clang-tidy"
   elif [ -x "/opt/homebrew/opt/llvm/bin/clang-tidy" ]; then
     CLANG_TIDY="/opt/homebrew/opt/llvm/bin/clang-tidy"
+  elif [ -x "/opt/homebrew/opt/llvm@18/bin/clang-tidy" ]; then
+    # Found only so the version check below rejects it by name, rather
+    # than reporting "not found" and skipping.
+    CLANG_TIDY="/opt/homebrew/opt/llvm@18/bin/clang-tidy"
   fi
 fi
 if [ -z "${CLANG_TIDY:-}" ]; then
@@ -49,9 +53,9 @@ if [ -z "${CLANG_TIDY:-}" ]; then
 fi
 
 # .clang-tidy uses ExcludeHeaderFilterRegex, which clang-tidy 19 introduced.
-# clang-tidy 18 does not skip the file on that unknown key -- it rejects the
-# whole config and silently runs its DEFAULT checks, so an old binary would
-# "pass" against the wrong rule set.  Fail rather than skip: the message
+# clang-tidy 18 does not skip that unknown key -- it prints a parse error,
+# discards the whole config and runs its DEFAULT checks, still exiting 0, so
+# an old binary would "pass" against the wrong rule set.  Fail rather than skip: the message
 # starts with "error: " so preflight counts it as a finding.
 # `|| true` is deliberate: a binary that will not run leaves CT_MAJOR empty
 # and lands in the error branch below; without it, pipefail + set -e would
@@ -84,6 +88,21 @@ if [ "$(uname -s)" = "Darwin" ] && command -v xcrun >/dev/null 2>&1; then
       "--extra-arg=-isystem$SDK_PATH/usr/include/c++/v1"
     )
   fi
+fi
+
+# Header scope.  .clang-tidy reports findings in project headers; that is
+# what a changed-lines run (-line-filter, as CI's clang-tidy-diff does) wants,
+# since the line filter confines them to lines the change touched.  A
+# whole-file run has no such bound: one src/*.cpp would drag in ~600
+# pre-existing findings from the headers it includes and fail every push.  So
+# without a line filter, keep the scope to the file itself (a regex that
+# matches no path), which is what the old, broken '*' filter did in effect.
+HAS_LINE_FILTER=0
+for arg in "$@"; do
+  case "$arg" in -line-filter | --line-filter | -line-filter=* | --line-filter=*) HAS_LINE_FILTER=1 ;; esac
+done
+if [ "$HAS_LINE_FILTER" = 0 ]; then
+  EXTRA_ARGS+=("--header-filter=^\$")
 fi
 
 exec "$CLANG_TIDY" -p "$BUILD_DIR" "${EXTRA_ARGS[@]}" "$@"
