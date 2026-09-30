@@ -954,8 +954,10 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
 #include "MathcadLowLevel.h"
 
 // ********************************************************************************************************
-// CoolProp global Configuration get/set functions (config_get_*/config_set_*)
-// -- not prefixed "AS_" since they apply to the high-level functions above
+// CoolProp global Configuration functions (config_get_*/config_set_*/
+// get_config_as_json_string; each config_set_* key can only be set once
+// per Mathcad Prime session -- see MathcadConfig.h's top comment) -- not
+// prefixed "AS_" since they apply to the high-level functions above
 // just as much as to the Low-Level (AbstractState) functions above them.
 // Implementations, helpers, and FUNCTIONINFO registrations live in
 // MathcadConfig.h, not here -- see that file's own top comment.
