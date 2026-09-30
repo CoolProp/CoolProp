@@ -551,7 +551,7 @@ jobs:
                 -path ${{ github.workspace }}/build \
                 -clang-tidy-binary /usr/bin/clang-tidy-20 \
                 -regex '.*\.(c|cpp|h|hpp)$' \
-                -j$(nproc) \
+                -j"$(nproc)" \
                 2>&1 | tee clang-tidy-diff.log
           echo "clang-tidy-diff.log size: $(wc -l < clang-tidy-diff.log) lines"
 
