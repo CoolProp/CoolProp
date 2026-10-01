@@ -1974,7 +1974,7 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
             if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
                 if (refine_nontrivial(num_steps, 1e-6)) return true;
             }
-        } catch (const CoolProp::CoolPropBaseError&) {
+        } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
             // Strategy 1 density solve failed; fall through to the near-pure fallback (Strategy 2).
         }
     }
@@ -1982,36 +1982,58 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
     // Strategy 2: near-pure seed for a WIDE-BOILING mixture (GitHub: flash-trial-compositions).  When
     // the incipient phase is small and nearly pure -- e.g. a near-pure WATER liquid condensing out of
     // a CO2-rich gas, or a near-pure light-gas VAPOR out of a CO2-rich liquid -- the ideal Wilson seed
-    // above collapses to the trivial root.  Seed the single most extreme component (largest |ln K|) as
-    // its own phase (least volatile -> incipient liquid, most volatile -> incipient vapor) with the
-    // feed as the other phase, and FORCE the matching density root.  Component-agnostic (selected by
-    // Wilson-K extremity, not identity), minimal-cost (one extra seed, and only for a wide Wilson-K
-    // spread so ordinary mixtures are untouched), and the flash caller still verifies fugacity equality.
+    // above collapses to the trivial root.  Seed one extreme component as its own phase (least
+    // volatile -> incipient liquid, most volatile -> incipient vapor) with the feed as the other
+    // phase.  Component-agnostic (selected by Wilson K, not identity), minimal-cost (only for a wide
+    // Wilson-K spread, so ordinary mixtures are untouched), and the flash caller still verifies
+    // fugacity equality on whatever is returned.
+    //
+    // Which incipient phase to try first comes from the side of the Wilson Rachford-Rice bracket the
+    // feed falls on, not from comparing |ln Kmin| with |ln Kmax|: for CO2/water at 298 K those are
+    // 3.5 vs 3.7, so the extremity rule picked the wrong (near-pure CO2 vapor) seed on a near-tie and
+    // the refinement diverged.  g1 >= 0 puts the feed at or above its ideal dew point (vapor-like) ->
+    // a liquid is incipient; g0 <= 0 puts it at or below its ideal bubble point (liquid-like) -> a
+    // vapor is incipient.  Since g1 - g0 = sum z_i (2 - K_i - 1/K_i) <= 0, the two cannot both hold
+    // strictly; only when the ideal estimate brackets (and Strategy 1 nonetheless collapsed) does the
+    // |ln K| extremity break the tie.  If the first seed fails, the other is tried.
     if (Kmax > 0 && Kmin < HUGE_VAL && imin != imax && Kmax / Kmin > 1e3) {
-        const bool heavy = std::abs(std::log(Kmin)) >= std::abs(std::log(Kmax));
-        const std::size_t iext = heavy ? imin : imax;
-        std::vector<CoolPropDbl> near_pure(N, 1e-6);
-        near_pure[iext] = 1.0;
-        normalize_vector(near_pure);
-        if (heavy) {  // near-pure least-volatile component is the incipient liquid; feed is the vapor
-            x = near_pure;
-            y = z;
-        } else {  // near-pure most-volatile component is the incipient vapor; feed is the liquid
-            x = z;
-            y = near_pure;
+        bool heavy_first;
+        if (g1 >= 0) {
+            heavy_first = true;
+        } else if (g0 <= 0) {
+            heavy_first = false;
+        } else {
+            heavy_first = std::abs(std::log(Kmin)) >= std::abs(std::log(Kmax));
         }
-        // Global (lowest-Gibbs) density root for each seed phase: at these conditions the near-pure
-        // heavy component is a liquid and the CO2-rich feed is a vapor, so no phase needs to be forced.
-        HEOS.SatL->set_mole_fractions(x);
-        rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
-        HEOS.SatV->set_mole_fractions(y);
-        rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
-        // The near-pure split is stiff (extreme fugacity ratios); refine it as tightly as the SS can
-        // (its fixed point sits at ~1e-5 for these splits) so the flash's Newton two-phase solver
-        // starts essentially at the solution, or -- when that solver overshoots -- the flash accepts
-        // this mass-balanced seed directly within its recovery tolerance.
-        if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
-            if (refine_nontrivial(std::max(num_steps, 80), 1e-11)) return true;
+        for (const bool heavy : {heavy_first, !heavy_first}) {
+            const std::size_t iext = heavy ? imin : imax;
+            std::vector<CoolPropDbl> near_pure(N, 1e-6);
+            near_pure[iext] = 1.0;
+            normalize_vector(near_pure);
+            if (heavy) {  // near-pure least-volatile component is the incipient liquid; feed is the vapor
+                x = near_pure;
+                y = z;
+            } else {  // near-pure most-volatile component is the incipient vapor; feed is the liquid
+                x = z;
+                y = near_pure;
+            }
+            // Global (lowest-Gibbs) density root for each seed phase; no phase is forced.  A throw here
+            // fails only this seed, so the other incipient phase is still attempted.
+            try {
+                HEOS.SatL->set_mole_fractions(x);
+                rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
+                HEOS.SatV->set_mole_fractions(y);
+                rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+            } catch (const CoolProp::CoolPropBaseError&) {
+                continue;
+            }
+            // The near-pure split is stiff (extreme fugacity ratios); refine it as tightly as the SS can
+            // (its fixed point sits at ~1e-5 for these splits) so the flash's Newton two-phase solver
+            // starts essentially at the solution, or -- when that solver overshoots -- the flash accepts
+            // this mass-balanced seed directly within its recovery tolerance.
+            if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
+                if (refine_nontrivial(std::max(num_steps, 80), 1e-11)) return true;
+            }
         }
     }
     return false;
