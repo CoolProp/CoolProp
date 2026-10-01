@@ -38,7 +38,17 @@ VLERoutines.cpp). Each is read once per process.
 | `verdict.cpp` | v1 per-state verdicts for CoolProp/TPFLSH **disagreements** in a `bench_ratio` CSV. Judges with CoolProp's own GERG code and the kernel's `select()` root, and never looks at states where the two codes agree. Superseded for the figures by the v2 pipeline below. |
 | `rp_stability.cpp` | Brute-force tangent-plane stability test using **only REFPROP** (GERG mode: `TPRHO` + `FGCTY2` + `PRESS`). Five near-pure plus 20 random trial compositions, both density roots, SS to 1e-12. Args `'A.FLD\|B.FLD' 'z1,z2'`; reads `idx T p[Pa]`, prints `idx T p tm_min` (tm < 0: a split exists). Shares no code with CoolProp. |
 | `rp_selfjudge.cpp` | Re-evaluates TPFLSH's own two-phase answers with REFPROP's own `FGCTY2`/`PRESS`: the max of \|Δln f\| and \|p_phase/p − 1\| per state. Reads `rpwrong_states2.tsv` (`mixture T p idx`). |
+| `rp_truth_n.cpp` | REFPROP-only per-state reference for any N (`'A.FLD\|B.FLD' 'z1,z2' gerg\|default`). |
+| `score_all.py` | Scores CoolProp builds and TPFLSH against the reference at every state (v3). |
 | `build_verdicts_v2.py` | Builds the v2 verdicts (`v2/*.csv`) from the v1 files plus the two REFPROP-only judges. |
+
+### Verdicts v3 (2026-10-01): score every state against a REFPROP-only reference
+
+`rp_truth_n.cpp` gives every state its own answer from REFPROP routines alone: the lower-g single-phase root, a
+brute-force stability test, and an independently converged split.  `score_all.py` then scores CoolProp (each
+build) and TPFLSH against it at **every** state.  v1 and v2 judged only disagreements, or only states both codes
+called single phase, and that hid CoolProp misses twice.  The figures are made with:
+`score_all.py v3 on:<dir> master:<dir> -- <truth dir>`.  `tools/v3/` holds the verdicts.
 
 ### Verdicts v2 (2026-09-29): what changed and why
 
