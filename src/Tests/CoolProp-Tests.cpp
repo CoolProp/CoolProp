@@ -492,9 +492,10 @@ class TransportValidationFixture
         // Published check values are the correlation evaluated at (T, rho), and some
         // sit inside the EOS's dome (metastable, or just inside it because the paper
         // used a different EOS).  Transport properties refuse two-phase states (#3446),
-        // so impose the single phase the paper meant; at fixed (T, rho) this changes
-        // only the phase label, not the state.
-        if (pState->phase() == CoolProp::iphase_twophase) {
+        // so impose the single phase the paper meant and re-flash, which puts the EOS
+        // pressure at (T, rho) rather than psat in p().  Only interior qualities: a
+        // saturated row (Q = 0 or 1) is left as flashed.
+        if (pState->phase() == CoolProp::iphase_twophase && pState->Q() > 0 && pState->Q() < 1) {
             pState->specify_phase(pState->rhomolar() > pState->rhomolar_critical() ? CoolProp::iphase_liquid : CoolProp::iphase_gas);
             pState->update(pair, o1, o2);
         }
@@ -1277,6 +1278,21 @@ TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[vi
             CHECK(eta == Catch::Approx(eta_sat).epsilon(1e-12));
         }
     }
+    SECTION("states on the saturation curve to within roundoff are not refused") {
+        // The pure-fluid flashes label |Q| <= 1e-9 (and |Q - 1| <= 1e-9) two-phase, keeping
+        // the slightly negative or slightly-above-one Q; those must not throw.
+        const std::string fluid = GENERATE(as<std::string>{}, "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        AS->update(CoolProp::QT_INPUTS, 0, 0.9 * AS->T_critical());
+        const double p = AS->p(), hL = AS->saturated_liquid_keyed_output(CoolProp::iHmolar), hV = AS->saturated_vapor_keyed_output(CoolProp::iHmolar);
+        for (const double h : {hL - 1e-10 * std::abs(hL), hV + 1e-10 * std::abs(hV)}) {
+            AS->update(CoolProp::HmolarP_INPUTS, h, p);
+            CAPTURE(AS->phase(), AS->Q());
+            CHECK_NOTHROW(AS->viscosity());
+            CHECK_NOTHROW(AS->conductivity());
+        }
+    }
     SECTION("imposing a phase still gives the metastable value at (T, rho)") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane"));
         AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);  // the state from the bug report
@@ -1298,6 +1314,21 @@ TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[vi
             REQUIRE(ethane->phase() == CoolProp::iphase_twophase);  // premise of the test
             CHECK(ValidNumber(AS->viscosity()));
             CHECK(ValidNumber(AS->conductivity()));
+        }
+        SECTION("component states keep psat in p(), so friction-theory viscosity is unchanged") {
+            // H2S viscosity is friction theory, which reads p(); at these single-phase mixture
+            // states the H2S component evaluated at the mixture's (T, rho) is inside its dome.
+            // Re-flashing it with an imposed phase would swap psat for the EOS pressure and
+            // move these by up to 7%.  Values are master (3f16d5fbb) before #3446.
+            struct row
+            {
+                double T, p, eta;
+            };
+            const row rows[] = {{255, 2e6, 1.0158842386870101e-05}, {230, 10e6, 5.2617732506557792e-05}, {280, 2e6, 1.0882970508098438e-05}};
+            for (const auto& r : rows) {
+                CAPTURE(r.T, r.p);
+                CHECK(CoolProp::PropsSI("V", "T", r.T, "P", r.p, "Methane[0.9]&HydrogenSulfide[0.1]") == Catch::Approx(r.eta).epsilon(1e-12));
+            }
         }
         SECTION("interior quality throws") {
             AS->update(CoolProp::PQ_INPUTS, 1e6, 0.5);

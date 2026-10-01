@@ -832,15 +832,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
 /// Transport properties are only defined for a single phase.  Inside the two-phase
 /// region the saturated liquid and vapor have different values and there is no
 /// meaningful bulk value, so refuse rather than evaluate a single-phase correlation
-/// at the overall density (#3446).  Q = 0 and Q = 1 are the saturated phases; the
-/// tolerance admits a (T, rho) input that sits on the saturation boundary to within
-/// roundoff, where the bulk density is the saturated one.  A metastable value can
-/// still be had by imposing the phase with specify_phase().
+/// at the overall density (#3446).  Q = 0 and Q = 1 are the saturated phases.  The
+/// tolerance matches the 1e-9 band in which the pure-fluid flashes already label a
+/// state two-phase, so a state on the saturation curve to within roundoff passes.
+/// Written so that a NaN quality throws.  A metastable value can still be had by
+/// imposing the phase with specify_phase().
 static void check_transport_property_defined(HelmholtzEOSMixtureBackend& HEOS, const char* property) {
-    const double Q_tol = 1e-10;
-    if (HEOS.phase() == iphase_twophase && std::abs(HEOS.Q()) > Q_tol && std::abs(HEOS.Q() - 1) > Q_tol) {
-        throw ValueError(format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead",
-                                property, HEOS.Q()));
+    const double Q_tol = 1e-9, Q = HEOS.Q();
+    if (HEOS.phase() == iphase_twophase && !(Q <= Q_tol || Q >= 1 - Q_tol)) {
+        throw ValueError(
+          format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead", property, Q));
     }
 }
 
@@ -855,10 +856,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
-            // The mixture's (T, rho) may fall inside the pure component's dome; impose a
-            // homogeneous phase so the correlation is evaluated there regardless (#3446)
-            HEOS->specify_phase(iphase_gas);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            // The mixture's (T, rho) may fall inside the pure component's dome.  Relabel
+            // the phase so the two-phase check lets the correlation be evaluated there
+            // regardless (#3446).  Relabel after the update rather than imposing it before:
+            // a re-flash with an imposed phase would replace psat in p() by the EOS pressure,
+            // which the friction-theory viscosity models read.
+            HEOS->specify_phase(iphase_gas);
             summer += mole_fractions[i] * log(HEOS->viscosity());
         }
         return exp(summer);
@@ -1121,10 +1125,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
-            // The mixture's (T, rho) may fall inside the pure component's dome; impose a
-            // homogeneous phase so the correlation is evaluated there regardless (#3446)
-            HEOS->specify_phase(iphase_gas);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            // The mixture's (T, rho) may fall inside the pure component's dome.  Relabel
+            // the phase so the two-phase check lets the correlation be evaluated there
+            // regardless (#3446).  Relabel after the update rather than imposing it before:
+            // a re-flash with an imposed phase would replace psat in p() by the EOS pressure,
+            // which the friction-theory viscosity models read.
+            HEOS->specify_phase(iphase_gas);
             summer += mole_fractions[i] * HEOS->conductivity();
         }
         return summer;
