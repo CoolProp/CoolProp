@@ -39,15 +39,15 @@ namespace {
 
 struct SplitProbe
 {
-    bool qt_two_phase;       // did the reference QT flash land on a genuine two-phase state?
-    double P;                // boundary pressure from the QT flash [Pa]
-    bool pt_two_phase;       // did the PT flash at (T, P) also find two phases?
-    double pt_Q;             // vapour quality reported by the PT flash (< 0 or > 1 => single-phase)
-    double xL_light;         // incipient-liquid mole fraction of the light (first) component
-    double yV_light;         // incipient-vapour mole fraction of the light (first) component
-    double pt_xL_light;      // PT-flash liquid mole fraction of the light (first) component
-    double pt_yV_light;      // PT-flash vapour mole fraction of the light (first) component
-    double pt_mass_balance;  // max_i |(1-Q) x_i + Q y_i - z_i| of the PT split (feed reconstruction error)
+    bool qt_two_phase;         // did the reference QT flash land on a genuine two-phase state?
+    double P;                  // boundary pressure from the QT flash [Pa]
+    bool pt_two_phase;         // did the PT flash at (T, P) also find two phases?
+    double pt_Q;               // vapour quality reported by the PT flash (< 0 or > 1 => single-phase)
+    std::vector<double> qt_x;  // QT reference liquid composition (all components)
+    std::vector<double> qt_y;  // QT reference vapour composition (all components)
+    std::vector<double> pt_x;  // PT-flash liquid composition (filled only when two-phase)
+    std::vector<double> pt_y;  // PT-flash vapour composition (filled only when two-phase)
+    double pt_mass_balance;    // max_i |(1-Q) x_i + Q y_i - z_i| of the PT split; NaN if any term is
 };
 
 // Reference the split with a QT flash (imposes Q -> boundary), then test PT at that same (T, P).
@@ -58,8 +58,10 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
     ref->update(QT_INPUTS, Q, T);
     r.P = ref->p();
     r.qt_two_phase = (ref->phase() == iphase_twophase);
-    r.xL_light = ref->mole_fractions_liquid()[0];
-    r.yV_light = ref->mole_fractions_vapor()[0];
+    for (auto v : ref->mole_fractions_liquid())
+        r.qt_x.push_back(static_cast<double>(v));
+    for (auto v : ref->mole_fractions_vapor())
+        r.qt_y.push_back(static_cast<double>(v));
 
     std::shared_ptr<AbstractState> pt(AbstractState::factory(backend, fluids));
     pt->set_mole_fractions(z);
@@ -68,12 +70,16 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
         r.pt_two_phase = (pt->phase() == iphase_twophase);
         r.pt_Q = r.pt_two_phase ? pt->Q() : -1.0;
         if (r.pt_two_phase) {
-            const auto x = pt->mole_fractions_liquid();
-            const auto y = pt->mole_fractions_vapor();
-            r.pt_xL_light = x[0];
-            r.pt_yV_light = y[0];
-            for (std::size_t i = 0; i < z.size(); ++i)
-                r.pt_mass_balance = std::max(r.pt_mass_balance, std::abs((1.0 - r.pt_Q) * x[i] + r.pt_Q * y[i] - z[i]));
+            for (auto v : pt->mole_fractions_liquid())
+                r.pt_x.push_back(static_cast<double>(v));
+            for (auto v : pt->mole_fractions_vapor())
+                r.pt_y.push_back(static_cast<double>(v));
+            // NaN-propagating max: std::max(0, NaN) would silently return 0 and pass the check below.
+            r.pt_mass_balance = (r.pt_x.size() == z.size() && r.pt_y.size() == z.size()) ? 0.0 : NAN;
+            for (std::size_t i = 0; i < z.size() && r.pt_x.size() == z.size() && r.pt_y.size() == z.size(); ++i) {
+                const double err = std::abs((1.0 - r.pt_Q) * r.pt_x[i] + r.pt_Q * r.pt_y[i] - z[i]);
+                if (!(err <= r.pt_mass_balance)) r.pt_mass_balance = err;  // NaN err (or NaN so far) sticks
+            }
         }
     } catch (...) {
         r.pt_two_phase = false;  // a throw from the flash is also a "missed split" for our purposes
@@ -82,9 +88,22 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
     return r;
 }
 
+// Every component of a PT-flash phase must match the QT reference phase RELATIVELY, so the trace
+// (minority) component -- n-decane in a near-pure H2 vapour, dissolved H2 in a CO2-rich liquid -- is
+// held to the same 1e-3 relative accuracy as the major one; an absolute or major-component check would
+// let a wrong incipient phase through.  The tiny margin only covers exact-zero references.
+void check_phase_matches(const char* phase, const std::vector<double>& pt, const std::vector<double>& qt) {
+    REQUIRE(pt.size() == qt.size());
+    for (std::size_t i = 0; i < qt.size(); ++i) {
+        CAPTURE(phase, i, pt[i], qt[i]);
+        CHECK(std::isfinite(pt[i]));
+        CHECK(pt[i] == Catch::Approx(qt[i]).epsilon(1e-3).margin(1e-12));
+    }
+}
+
 void check_pt_matches_qt(const std::string& backend, const std::string& fluids, const std::vector<double>& z, double T, double Q) {
     SplitProbe r = probe_split(backend, fluids, z, T, Q);
-    CAPTURE(backend, fluids, z, T, Q, r.P, r.pt_Q, r.xL_light, r.yV_light, r.pt_xL_light, r.pt_yV_light, r.pt_mass_balance);
+    CAPTURE(backend, fluids, z, T, Q, r.P, r.pt_Q, r.qt_x, r.qt_y, r.pt_x, r.pt_y, r.pt_mass_balance);
     REQUIRE(r.qt_two_phase);  // sanity: the QT reference really is two-phase here
     CHECK(r.pt_two_phase);    // PT flash must agree; near-pure incipient phase must not be missed
     // The PT flash must land on the SAME physical state as the QT reference, not merely on "a" split.
@@ -94,9 +113,9 @@ void check_pt_matches_qt(const std::string& backend, const std::string& fluids, 
     // QT flash's reported Q is not always consistent with its own x, y at extreme Q (e.g. H2/n-decane,
     // QT Q = 1e-4 where its x, y imply 2.1e-4), so a tight Q comparison would test the reference.
     if (r.pt_two_phase) {
-        CHECK(r.pt_xL_light == Catch::Approx(r.xL_light).epsilon(1e-3).margin(1e-8));
-        CHECK(r.pt_yV_light == Catch::Approx(r.yV_light).epsilon(1e-3).margin(1e-8));
-        CHECK(r.pt_mass_balance <= 1e-6);
+        check_phase_matches("liquid", r.pt_x, r.qt_x);
+        check_phase_matches("vapour", r.pt_y, r.qt_y);
+        CHECK(r.pt_mass_balance <= 1e-6);  // false for NaN
         CHECK(std::abs(r.pt_Q - Q) <= 0.05);
     }
 }
