@@ -47,7 +47,7 @@ struct SplitProbe
     std::vector<double> qt_y;  // QT reference vapour composition (all components)
     std::vector<double> pt_x;  // PT-flash liquid composition (filled only when two-phase)
     std::vector<double> pt_y;  // PT-flash vapour composition (filled only when two-phase)
-    double pt_mass_balance;    // max_i |(1-Q) x_i + Q y_i - z_i| of the PT split; NaN if any term is
+    double pt_mass_balance;    // max_i |(1-Q) x_i + Q y_i - z_i| of the PT split; NaN if any term is NaN
 };
 
 // Reference the split with a QT flash (imposes Q -> boundary), then test PT at that same (T, P).
@@ -78,7 +78,11 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
             r.pt_mass_balance = (r.pt_x.size() == z.size() && r.pt_y.size() == z.size()) ? 0.0 : NAN;
             for (std::size_t i = 0; i < z.size() && r.pt_x.size() == z.size() && r.pt_y.size() == z.size(); ++i) {
                 const double err = std::abs((1.0 - r.pt_Q) * r.pt_x[i] + r.pt_Q * r.pt_y[i] - z[i]);
-                if (!(err <= r.pt_mass_balance)) r.pt_mass_balance = err;  // NaN err (or NaN so far) sticks
+                if (std::isnan(err) || std::isnan(r.pt_mass_balance)) {
+                    r.pt_mass_balance = NAN;  // once NaN, stays NaN: a later finite term must not overwrite it
+                } else if (err > r.pt_mass_balance) {
+                    r.pt_mass_balance = err;
+                }
             }
         }
     } catch (...) {
