@@ -1917,8 +1917,14 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
         g0 += z[i] * (K[i] - 1.0);             // Rachford-Rice residual at beta = 0
         g1 += z[i] * (1.0 - 1.0 / K[i]);       // Rachford-Rice residual at beta = 1
         if (z[i] > 0) {
-            if (K[i] < Kmin) { Kmin = K[i]; imin = i; }
-            if (K[i] > Kmax) { Kmax = K[i]; imax = i; }
+            if (K[i] < Kmin) {
+                Kmin = K[i];
+                imin = i;
+            }
+            if (K[i] > Kmax) {
+                Kmax = K[i];
+                imax = i;
+            }
         }
     }
     // Two-phase iff the residual changes sign on (0, 1): g0 > 0 (z above its bubble

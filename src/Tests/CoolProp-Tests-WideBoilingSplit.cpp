@@ -40,12 +40,12 @@ namespace {
 
 struct SplitProbe
 {
-    bool qt_two_phase;   // did the reference QT flash land on a genuine two-phase state?
-    double P;            // boundary pressure from the QT flash [Pa]
-    bool pt_two_phase;   // did the PT flash at (T, P) also find two phases?
-    double pt_Q;         // vapour quality reported by the PT flash (< 0 or > 1 => single-phase)
-    double xL_light;     // incipient-liquid mole fraction of the light (first) component
-    double yV_light;     // incipient-vapour mole fraction of the light (first) component
+    bool qt_two_phase;  // did the reference QT flash land on a genuine two-phase state?
+    double P;           // boundary pressure from the QT flash [Pa]
+    bool pt_two_phase;  // did the PT flash at (T, P) also find two phases?
+    double pt_Q;        // vapour quality reported by the PT flash (< 0 or > 1 => single-phase)
+    double xL_light;    // incipient-liquid mole fraction of the light (first) component
+    double yV_light;    // incipient-vapour mole fraction of the light (first) component
 };
 
 // Reference the split with a QT flash (imposes Q -> boundary), then test PT at that same (T, P).
@@ -75,8 +75,8 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
 void check_pt_matches_qt(const std::string& backend, const std::string& fluids, const std::vector<double>& z, double T, double Q) {
     SplitProbe r = probe_split(backend, fluids, z, T, Q);
     CAPTURE(backend, fluids, T, Q, r.P, r.pt_Q, r.xL_light, r.yV_light);
-    REQUIRE(r.qt_two_phase);   // sanity: the QT reference really is two-phase here
-    CHECK(r.pt_two_phase);     // PT flash must agree; near-pure incipient phase must not be missed
+    REQUIRE(r.qt_two_phase);  // sanity: the QT reference really is two-phase here
+    CHECK(r.pt_two_phase);    // PT flash must agree; near-pure incipient phase must not be missed
     // The PT flash must land on the SAME physical state as the QT reference, not merely on "a" split:
     // its vapor fraction must match the imposed QT quality.  This guards the material-balance fix --
     // a published split whose (x, y, beta) did not reconstruct the feed would report the wrong Q here.

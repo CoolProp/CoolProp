@@ -265,7 +265,10 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 CoolPropDbl best = 0;
                 for (std::size_t i = 0; i < o.z.size(); ++i) {
                     CoolPropDbl d = std::abs(o.y[i] - o.x[i]);
-                    if (d > best) { best = d; ib = i; }
+                    if (d > best) {
+                        best = d;
+                        ib = i;
+                    }
                 }
                 if (best > 0) {
                     CoolPropDbl b = (o.z[ib] - o.x[ib]) / (o.y[ib] - o.x[ib]);
