@@ -27,6 +27,7 @@
 #    include "CoolProp/AbstractState.h"
 #    include "CoolProp/DataStructures.h"
 
+#    include <algorithm>
 #    include <cmath>
 #    include <memory>
 #    include <string>
@@ -38,12 +39,15 @@ namespace {
 
 struct SplitProbe
 {
-    bool qt_two_phase;  // did the reference QT flash land on a genuine two-phase state?
-    double P;           // boundary pressure from the QT flash [Pa]
-    bool pt_two_phase;  // did the PT flash at (T, P) also find two phases?
-    double pt_Q;        // vapour quality reported by the PT flash (< 0 or > 1 => single-phase)
-    double xL_light;    // incipient-liquid mole fraction of the light (first) component
-    double yV_light;    // incipient-vapour mole fraction of the light (first) component
+    bool qt_two_phase;       // did the reference QT flash land on a genuine two-phase state?
+    double P;                // boundary pressure from the QT flash [Pa]
+    bool pt_two_phase;       // did the PT flash at (T, P) also find two phases?
+    double pt_Q;             // vapour quality reported by the PT flash (< 0 or > 1 => single-phase)
+    double xL_light;         // incipient-liquid mole fraction of the light (first) component
+    double yV_light;         // incipient-vapour mole fraction of the light (first) component
+    double pt_xL_light;      // PT-flash liquid mole fraction of the light (first) component
+    double pt_yV_light;      // PT-flash vapour mole fraction of the light (first) component
+    double pt_mass_balance;  // max_i |(1-Q) x_i + Q y_i - z_i| of the PT split (feed reconstruction error)
 };
 
 // Reference the split with a QT flash (imposes Q -> boundary), then test PT at that same (T, P).
@@ -63,6 +67,14 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
         pt->update(PT_INPUTS, r.P, T);
         r.pt_two_phase = (pt->phase() == iphase_twophase);
         r.pt_Q = r.pt_two_phase ? pt->Q() : -1.0;
+        if (r.pt_two_phase) {
+            const auto x = pt->mole_fractions_liquid();
+            const auto y = pt->mole_fractions_vapor();
+            r.pt_xL_light = x[0];
+            r.pt_yV_light = y[0];
+            for (std::size_t i = 0; i < z.size(); ++i)
+                r.pt_mass_balance = std::max(r.pt_mass_balance, std::abs((1.0 - r.pt_Q) * x[i] + r.pt_Q * y[i] - z[i]));
+        }
     } catch (...) {
         r.pt_two_phase = false;  // a throw from the flash is also a "missed split" for our purposes
         r.pt_Q = -1.0;
@@ -72,13 +84,19 @@ SplitProbe probe_split(const std::string& backend, const std::string& fluids, co
 
 void check_pt_matches_qt(const std::string& backend, const std::string& fluids, const std::vector<double>& z, double T, double Q) {
     SplitProbe r = probe_split(backend, fluids, z, T, Q);
-    CAPTURE(backend, fluids, T, Q, r.P, r.pt_Q, r.xL_light, r.yV_light);
+    CAPTURE(backend, fluids, z, T, Q, r.P, r.pt_Q, r.xL_light, r.yV_light, r.pt_xL_light, r.pt_yV_light, r.pt_mass_balance);
     REQUIRE(r.qt_two_phase);  // sanity: the QT reference really is two-phase here
     CHECK(r.pt_two_phase);    // PT flash must agree; near-pure incipient phase must not be missed
-    // The PT flash must land on the SAME physical state as the QT reference, not merely on "a" split:
-    // its vapor fraction must match the imposed QT quality.  This guards the material-balance fix --
-    // a published split whose (x, y, beta) did not reconstruct the feed would report the wrong Q here.
+    // The PT flash must land on the SAME physical state as the QT reference, not merely on "a" split.
+    // For a binary at fixed (T, P) the phase compositions are fixed (phase rule), so they must match
+    // the QT reference's; and the published (x, y, Q) must reconstruct the feed -- this guards the
+    // material-balance fix directly.  The vapour fraction itself is only checked loosely: the mixture
+    // QT flash's reported Q is not always consistent with its own x, y at extreme Q (e.g. H2/n-decane,
+    // QT Q = 1e-4 where its x, y imply 2.1e-4), so a tight Q comparison would test the reference.
     if (r.pt_two_phase) {
+        CHECK(r.pt_xL_light == Catch::Approx(r.xL_light).epsilon(1e-3).margin(1e-8));
+        CHECK(r.pt_yV_light == Catch::Approx(r.yV_light).epsilon(1e-3).margin(1e-8));
+        CHECK(r.pt_mass_balance <= 1e-6);
         CHECK(std::abs(r.pt_Q - Q) <= 0.05);
     }
 }
@@ -106,7 +124,10 @@ void check_single_phase_off_boundary(const std::string& backend, const std::stri
     std::shared_ptr<AbstractState> ref(AbstractState::factory(backend, fluids));
     ref->set_mole_fractions(z);
     ref->update(QT_INPUTS, Q_boundary, T);
-    REQUIRE(ref->phase() == iphase_twophase);  // sanity: the boundary flash really is on the envelope
+    // The mixture QT flash always reports two-phase, so check what can actually go wrong: a usable
+    // boundary pressure.  (A throwing QT flash fails the case as an error, not silently.)
+    REQUIRE(std::isfinite(ref->p()));
+    REQUIRE(ref->p() > 0);
     check_single_phase_at(backend, fluids, z, T, factor * ref->p());
 }
 
@@ -182,7 +203,7 @@ TEST_CASE("Wide-boiling split: near-pure heavy liquid out of a light gas", "[fla
       {"SRK", "CarbonDioxide&n-Decane", {0.99, 0.01}, 300.0, 0.9999}, {"PR", "CarbonDioxide&n-Decane", {0.99, 0.01}, 300.0, 0.9999},
     };
     for (const auto& c : cases) {
-        DYNAMIC_SECTION(c.backend << " " << c.fluids << " T=" << c.T << " Q=" << c.Q) {
+        DYNAMIC_SECTION(c.backend << " " << c.fluids << " z0=" << c.z[0] << " T=" << c.T << " Q=" << c.Q) {
             check_pt_matches_qt(c.backend, c.fluids, c.z, c.T, c.Q);
         }
     }
@@ -205,7 +226,7 @@ TEST_CASE("Wide-boiling split: near-pure light vapour out of a heavy liquid", "[
       {"HEOS", "CarbonDioxide&Hydrogen", {0.999, 0.001}, 250.0, 0.0001},
     };
     for (const auto& c : cases) {
-        DYNAMIC_SECTION(c.backend << " " << c.fluids << " T=" << c.T << " Q=" << c.Q) {
+        DYNAMIC_SECTION(c.backend << " " << c.fluids << " z0=" << c.z[0] << " T=" << c.T << " Q=" << c.Q) {
             check_pt_matches_qt(c.backend, c.fluids, c.z, c.T, c.Q);
         }
     }
@@ -223,7 +244,7 @@ TEST_CASE("Wide-boiling split: narrow-boiling controls are unaffected", "[flash]
       {"PR", "CarbonDioxide&Nitrogen", {0.5, 0.5}, 230.0, 0.9999},
     };
     for (const auto& c : cases) {
-        DYNAMIC_SECTION(c.backend << " " << c.fluids << " T=" << c.T << " Q=" << c.Q) {
+        DYNAMIC_SECTION(c.backend << " " << c.fluids << " z0=" << c.z[0] << " T=" << c.T << " Q=" << c.Q) {
             check_pt_matches_qt(c.backend, c.fluids, c.z, c.T, c.Q);
         }
     }
@@ -251,7 +272,8 @@ TEST_CASE("Wide-boiling split: single-phase states off the envelope stay single-
       {"HEOS", "Methane&n-Decane", {0.3, 0.7}, 350.0, 0.0, 1.2},
     };
     for (const auto& c : cases) {
-        DYNAMIC_SECTION(c.backend << " " << c.fluids << " T=" << c.T << " x" << c.factor << " of Q=" << c.Q_boundary << " pressure") {
+        DYNAMIC_SECTION(c.backend << " " << c.fluids << " z0=" << c.z[0] << " T=" << c.T << " x" << c.factor << " of Q=" << c.Q_boundary
+                                  << " pressure") {
             check_single_phase_off_boundary(c.backend, c.fluids, c.z, c.T, c.Q_boundary, c.factor);
         }
     }

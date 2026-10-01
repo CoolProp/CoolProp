@@ -2028,11 +2028,17 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
                 try {
                     rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
                 } catch (const CoolProp::CoolPropBaseError&) {
+                    // Only for the near-pure LIGHT vapor seed (heavy == false); with the heavy seed SatV
+                    // holds the feed, which may well be liquid-like, so its failure just fails the seed.
                     // The global search scans up to calc_rhomolar_max_bound and throws when it meets a
-                    // single stationary point there -- e.g. a near-pure H2 vapor seed at 300 K (~9 Tc),
-                    // whose isotherm has no van der Waals loop at all (H2/n-decane bubble side).  The
-                    // vapor root is then the only physical one and lies near ideal gas, so solve from
-                    // the ideal-gas density instead.  The flash caller still verifies the split.
+                    // single stationary point there -- e.g. near-pure H2 at 300 K (~9 Tc), whose isotherm
+                    // has no van der Waals loop at all (H2/n-decane bubble side).  A near-pure light gas
+                    // far above its critical temperature is close to ideal, so solve from the ideal-gas
+                    // density.  The flash caller still verifies the split (spread, material balance,
+                    // phase pressures, fugacities) and rejects a root that is not a genuine equilibrium.
+                    // The near-pure heavy LIQUID seed gets no such fallback: it is far subcritical, so
+                    // the global search sees its loop; no case so far has needed one.
+                    if (heavy) throw;
                     rhomolar_vap = HEOS.SatV->solver_rho_Tp(T, p, p / (HEOS.SatV->gas_constant() * T));
                 }
             } catch (const CoolProp::CoolPropBaseError&) {
