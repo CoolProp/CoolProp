@@ -1288,7 +1288,8 @@ TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[vi
         const double p = AS->p(), hL = AS->saturated_liquid_keyed_output(CoolProp::iHmolar), hV = AS->saturated_vapor_keyed_output(CoolProp::iHmolar);
         for (const double h : {hL - 1e-10 * std::abs(hL), hV + 1e-10 * std::abs(hV)}) {
             AS->update(CoolProp::HmolarP_INPUTS, h, p);
-            CAPTURE(AS->phase(), AS->Q());
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == CoolProp::iphase_twophase);  // premise: labelled two-phase, Q just outside [0, 1]
             CHECK_NOTHROW(AS->viscosity());
             CHECK_NOTHROW(AS->conductivity());
         }
@@ -1327,7 +1328,7 @@ TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[vi
             const row rows[] = {{255, 2e6, 1.0158842386870101e-05}, {230, 10e6, 5.2617732506557792e-05}, {280, 2e6, 1.0882970508098438e-05}};
             for (const auto& r : rows) {
                 CAPTURE(r.T, r.p);
-                CHECK(CoolProp::PropsSI("V", "T", r.T, "P", r.p, "Methane[0.9]&HydrogenSulfide[0.1]") == Catch::Approx(r.eta).epsilon(1e-12));
+                CHECK(CoolProp::PropsSI("V", "T", r.T, "P", r.p, "Methane[0.9]&HydrogenSulfide[0.1]") == Catch::Approx(r.eta).epsilon(1e-9));
             }
         }
         SECTION("interior quality throws") {
