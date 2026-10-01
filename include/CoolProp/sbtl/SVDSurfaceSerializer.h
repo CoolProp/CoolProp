@@ -227,7 +227,16 @@ class SVDSurfaceSerializer
     //           rebuild.  (A non-default `pmin` option already produces a
     //           distinct cache via the opthash; this rev covers the
     //           all-defaults "{}" case whose opthash is unchanged.)
-    static constexpr int kRevision = 19;
+    //   rev 20: CoolProp-ihto.  The CoolProp::parameters enum gained
+    //           iHmolar_formation in the General-parameters block,
+    //           immediately after idipole_moment, renumbering every enum
+    //           entry from iT onward.  Cached surfaces store each
+    //           property's parameters value as a raw int, so a rev-19
+    //           cache's property keys would silently decode to the WRONG
+    //           parameter under the new numbering rather than failing
+    //           loudly; bumping the revision forces those caches to be
+    //           rejected and rebuilt instead of misread.
+    static constexpr int kRevision = 20;
 
     // Pack one surface into a zlib-compressed msgpack blob.
     static std::vector<char> save(const SVDSurface& surface);

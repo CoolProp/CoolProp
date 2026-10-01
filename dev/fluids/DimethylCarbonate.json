@@ -4157,7 +4157,22 @@
     "INCHI_STRING": "InChI=1S/C3H6O3/c1-5-3(4)6-2/h1-2H3",
     "NAME": "DimethylCarbonate",
     "REFPROP_NAME": "DMC",
-    "SMILES": "COC(=O)OC"
+    "SMILES": "COC(=O)OC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "616-38-6*0",
+        "source": "ATcT",
+        "uncertainty": 370.0,
+        "units": "J/mol",
+        "value": -570460.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

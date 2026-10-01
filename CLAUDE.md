@@ -2,6 +2,18 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
+## Attribution — REQUIRED
+
+Work you produce here must be attributed. Every commit whose content you
+generated or materially shaped carries a `Co-authored-by:` trailer naming the
+model, and the PR body states what you did and what the human verified. Full
+policy:
+[`AGENTS.md`](AGENTS.md#ai-assistance-and-attribution).
+
+```
+Co-authored-by: Claude Opus 5 <noreply@anthropic.com>
+```
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
@@ -65,7 +77,7 @@ cmake --build build_catch --target CatchTestRunner -j8
 # Run the test suite — see "Test filter discipline" below for tag scope
 ./build_catch/CatchTestRunner [SBTL]            # SBTL adapter layer
 ./build_catch/CatchTestRunner [SVDSBTL]         # backend-level tests
-./build_catch/CatchTestRunner "[!slow]"         # everything fast
+./build_catch/CatchTestRunner "~[slow]"         # everything except [slow]
 ```
 
 ## Pre-Push Gate — REQUIRED before every `git push`
@@ -93,8 +105,11 @@ push without preflight, use `git push --no-verify` and document why.
 ### Test filter discipline
 
 When changes touch files under `src/SBTL/`, `include/CoolProp/sbtl/`,
-`src/Backends/SVDSBTL/`, or `src/Region/`, run the **umbrella**
-`[SBTL]` tag locally — NOT just `[SVDSBTL]`.  The SBTL adapter layer
+`src/Backends/SVDSBTL/`, `src/Region/`, **or `dev/fluids/` and
+`dev/mixtures/`**, run the **umbrella** `[SBTL]` tag locally — NOT just
+`[SVDSBTL]`, and NOT just `~[slow]`.  The SVD tables are sampled from the
+fluid data, so changing a fluid silently invalidates its cached table; the
+tests that would catch it are tagged `[slow]`.  The SBTL adapter layer
 (serializer round-trip, multi-fluid PH preset tests) lives under
 `[SBTL]` only; narrowing to `[SVDSBTL]` misses tests that bite in CI.
 `./dev/ci/preflight.sh` auto-selects the right umbrella tag from the

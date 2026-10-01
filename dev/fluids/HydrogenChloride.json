@@ -3873,7 +3873,22 @@
     "INCHI_STRING": "InChI=1S/ClH/h1H",
     "NAME": "HydrogenChloride",
     "REFPROP_NAME": "HCL",
-    "SMILES": "Cl"
+    "SMILES": "Cl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7647-01-0*0",
+        "source": "ATcT",
+        "uncertainty": 6.2,
+        "units": "J/mol",
+        "value": -92172.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

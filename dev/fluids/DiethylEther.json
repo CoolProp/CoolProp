@@ -3499,7 +3499,22 @@
     "INCHI_STRING": "InChI=1S/C4H10O/c1-3-5-4-2/h3-4H2,1-2H3",
     "NAME": "DiethylEther",
     "REFPROP_NAME": "DEE",
-    "SMILES": "CCOCC"
+    "SMILES": "CCOCC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "60-29-7*0",
+        "source": "ATcT",
+        "uncertainty": 750.0,
+        "units": "J/mol",
+        "value": -250200.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

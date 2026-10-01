@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fail if forbidden internal headers are shipped in the installed tree.
 #
-# Two assertions:
+# Assertions (numbered in the body below):
 #
 #  1. detail/json.h must NOT ship.  That header #includes nlohmann/json.hpp
 #     and valijson; it is internal-only and is excluded by CMake's install
@@ -11,6 +11,11 @@
 #     install-side companion to the symbol-leak gate (check-json-symbols.sh):
 #     even if detail/json.h is correctly excluded, a newly added public header
 #     that transitively pulls nlohmann/valijson would be a regression.
+#
+#  3. Every installed CoolProp-owned header compiles standalone as C++.
+#
+#  4. Every installed header containing a literal extern "C" (at least
+#     CoolPropLib.h and detail/state_capi.h) also compiles standalone as C99.
 #
 # Generic positive control: at least ONE installed header matching
 # */detail/*.h (other than detail/json.h) must be present.  This proves the
@@ -81,14 +86,17 @@ if [ -n "$LEAKING_INCLUDES" ]; then
     exit 1
 fi
 
-# Assertion 3: every installed header must compile STANDALONE.  This catches the
-# general non-self-contained case the grep above cannot -- e.g. a shipped header
-# that #includes a non-installed header by some other path (the old
+# Assertion 3: every installed CoolProp-owned header must compile STANDALONE.
+# Vendored third-party headers are intentionally excluded: their internal
+# headers are not part of CoolProp's self-containedness contract.  This catches
+# the general non-self-contained case the grep above cannot -- e.g. a shipped
+# header that #includes a non-installed header by some other path (the old
 # detail/msgpack.h pulling msgpack.hpp slipped past the nlohmann/valijson grep).
-# Compile each installed *.h as its own translation unit.  The installed surface
+# Compile each CoolProp-owned *.h as its own translation unit.  That surface
 # depends only on Eigen (the fluids/numerics/superancillary tiers) and on fmt
-# unless NO_FMTLIB is defined; resolve Eigen from the build's CPM cache and
-# define NO_FMTLIB so fmt is not required.  Boost is deliberately NOT on the
+# unless NO_FMTLIB is defined; use the installed Eigen copy and define
+# NO_FMTLIB so fmt is not required. For a non-vendored package, set EIGEN_DIR
+# to the system Eigen include directory. Boost is deliberately NOT on the
 # path: the superancillary rootfinder routes through an out-of-line helper
 # (src/superancillary.cpp), so a regression that re-introduces a boost include
 # into an installed header fails this compile (and assertion 2 above).
@@ -98,34 +106,201 @@ if [ ! -f "$CACHE" ]; then
     echo "FAIL: $CACHE not found -- '$BUILD_DIR' is not a configured CMake build dir; cannot resolve Eigen for the self-containedness check." >&2
     exit 1
 fi
-EIGEN_DIR="$(sed -n 's/^CPM_PACKAGE_Eigen_SOURCE_DIR:INTERNAL=//p' "$CACHE" | head -1)"
-if [ -z "$EIGEN_DIR" ] || [ ! -d "$EIGEN_DIR" ]; then
-    echo "FAIL: could not resolve the Eigen include dir from $CACHE -- cannot run the self-containedness check (fail-closed)." >&2
+INSTALL_INCLUDEDIR="$(sed -n 's/^CMAKE_INSTALL_INCLUDEDIR:[^=]*=//p' "$CACHE" | head -1)"
+if [ -z "$INSTALL_INCLUDEDIR" ]; then
+    echo "FAIL: could not resolve CMAKE_INSTALL_INCLUDEDIR from $CACHE -- cannot select the canonical package include root." >&2
     exit 1
 fi
-INC_ROOT="$(find "$PREFIX" -path '*/include/CoolProp/CoolProp.h' | head -1)"
-INC_ROOT="${INC_ROOT%/CoolProp/CoolProp.h}"
-if [ -z "$INC_ROOT" ] || [ ! -d "$INC_ROOT" ]; then
-    echo "FAIL: could not locate the installed include root (no CoolProp/CoolProp.h) -- cannot validate self-containedness." >&2
+INC_ROOT="$PREFIX/$INSTALL_INCLUDEDIR"
+EIGEN_DIR="${EIGEN_DIR:-$INC_ROOT/CoolProp/third_party/eigen}"
+if [ ! -f "$EIGEN_DIR/Eigen/Core" ]; then
+    echo "FAIL: Eigen/Core not found under $EIGEN_DIR; for a non-vendored package, set EIGEN_DIR to the system Eigen include directory." >&2
+    exit 1
+fi
+if [ ! -f "$INC_ROOT/CoolProp/CoolProp.h" ]; then
+    echo "FAIL: canonical installed header $INC_ROOT/CoolProp/CoolProp.h is missing -- cannot validate self-containedness." >&2
     exit 1
 fi
 SC_LOG=/tmp/installed-headers-selfcontained.log
 : >"$SC_LOG"
-SC_FAIL=0
+
+# The sweep is ~93 INDEPENDENT -fsyntax-only invocations, so it parallelises
+# cleanly across cores.  Serially it was 47.7 s -- the single largest item in
+# ./dev/ci/preflight.sh's 122 s floor, and ~1000x the 0.05 s that `cmake
+# --install` itself costs (bd CoolProp-5vun).
+SC_JOBS="${COOLPROP_HEADER_CHECK_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
+# Clamp the auto-detected value.  getconf reports HOST cores, not a container's
+# cgroup quota, and a syntax-only TU peaks around 180 MB here -- so on a large
+# machine an unbounded -P invites the OOM killer, which takes cc1plus rather than
+# the bash child.  The child would then see a non-zero compiler status and report
+# "installed header is not self-contained", i.e. a false regression rather than
+# an infrastructure error.  8 keeps nearly all the speedup (the sweep is only ~93
+# items); an explicit COOLPROP_HEADER_CHECK_JOBS is honoured as given -- including
+# 0, which xargs reads as "unbounded" and which therefore re-opens the very OOM
+# case the clamp exists to prevent.  That is the point of an override, but set it
+# deliberately.
+if [ -z "${COOLPROP_HEADER_CHECK_JOBS:-}" ] && [ "$SC_JOBS" -gt 8 ] 2>/dev/null; then
+    SC_JOBS=8
+fi
+SC_TMP="$(mktemp -d)"
+# Supersede the earlier trap so the scratch dir is cleaned up too.  Both paths
+# are quoted; PREFIX and SC_TMP are mktemp output, but the quoting is what keeps
+# a future edit from turning this into an unbounded rm.
+trap 'rm -rf "$PREFIX" "$SC_TMP"' EXIT
+
+SC_TOTAL="$(find "$INC_ROOT" -path "$INC_ROOT/CoolProp/third_party" -prune -o -type f -name '*.h' -print | grep -c . || true)"
+[ -n "$SC_TOTAL" ] || SC_TOTAL=0
+if [ "$SC_TOTAL" -eq 0 ]; then
+    echo "FAIL: no *.h found under the installed include root ($INC_ROOT) -- the self-containedness sweep would verify nothing." >&2
+    exit 1
+fi
+
+export CXX_BIN INC_ROOT EIGEN_DIR SC_TMP
+
+# One header per child.  Each child writes to its OWN files: two parallel
+# writers appending to a single log interleave mid-line, which would corrupt the
+# very diagnostics this gate prints.  A child records `ok.` or `fail.` either
+# way and exits 0, so xargs' own status stays reserved for infrastructure failure
+# (couldn't spawn, bad interpreter) rather than a compile result.  The one
+# deviation is safe: if the marker path itself cannot be written (ENAMETOOLONG on
+# a pathologically deep header) the child exits non-zero and surfaces through
+# xargs as exactly that kind of infrastructure failure, and the count guard below
+# catches it independently.
+#
+# -print0/-0 keeps a path containing spaces as one argument.  The command is
+# passed inline rather than via `export -f`: exported bash functions do not
+# survive a version mismatch between the parent shell and the `bash` on PATH.
+SC_XARGS_RC=0
+find "$INC_ROOT" -path "$INC_ROOT/CoolProp/third_party" -prune -o -type f -name '*.h' -print0 \
+    | xargs -0 -P "$SC_JOBS" -n1 bash -c '
+        # SHELLOPTS is not exported, so this child does NOT inherit the parent'"'"'s
+        # pipefail.  Without it a failing printf would hand the compiler an empty
+        # translation unit, which exits 0 -- recording a header as self-contained
+        # without ever having compiled it.
+        set -o pipefail
+        hdr="$1"
+        rel="${hdr#"$INC_ROOT"/}"
+        # Percent-encoding, and the % must be escaped BEFORE / is mapped onto
+        # it -- that ordering is what makes this reversible, so two distinct
+        # headers cannot land on one marker file and silently lose a result.
+        # Mapping every separator onto _ is not injective (a plain tr collides
+        # "a/b.h" with "a_b.h"); neither is doubling _ first, which still
+        # collides "a_/b.h" with "a/_b.h" -- both become "a___b.h".
+        slug="$(printf "%s" "$rel" | sed "s/%/%25/g; s#/#%2F#g")"
+        if printf "#include \"%s\"\n" "$rel" | "$CXX_BIN" -std=c++17 -fsyntax-only \
+                -DNO_FMTLIB -DCOOLPROP_NO_DEPRECATED_HEADER_WARNINGS \
+                -I"$INC_ROOT" -I"$EIGEN_DIR" -x c++ - >"$SC_TMP/out.$slug" 2>&1; then
+            printf "%s\n" "$rel" >"$SC_TMP/ok.$slug"
+        else
+            printf "%s\n" "$rel" >"$SC_TMP/fail.$slug"
+        fi
+    ' _ || SC_XARGS_RC=$?
+if [ "$SC_XARGS_RC" -ne 0 ]; then
+    echo "FAIL: the parallel header sweep could not run (xargs exit $SC_XARGS_RC) -- treating as a failure rather than a pass." >&2
+    exit 1
+fi
+
+# Collect the per-header compiler output in a stable, deterministic order.  It is
+# sorted by encoded header path -- NOT the directory order find happened to yield
+# when this ran serially -- so the log is reproducible run to run.  LC_ALL=C is
+# what makes that true ACROSS environments: the default collation ignores
+# punctuation, so a C-locale CI runner and a UTF-8 local shell would otherwise
+# order the same slugs differently.
+find "$SC_TMP" -name 'out.*' | LC_ALL=C sort | while IFS= read -r out; do
+    cat "$out" >>"$SC_LOG"
+done
+
+# Parentheses around the -o alternation are belt-and-braces: with only -name
+# predicates here both forms behave identically, but they keep the grouping
+# explicit so adding another test (say -type f) later cannot silently bind to
+# one branch only.
+SC_CHECKED="$(find "$SC_TMP" \( -name 'ok.*' -o -name 'fail.*' \) | grep -c . || true)"
+[ -n "$SC_CHECKED" ] || SC_CHECKED=0
+SC_FAIL="$(find "$SC_TMP" -name 'fail.*' | grep -c . || true)"
+[ -n "$SC_FAIL" ] || SC_FAIL=0
+
+# Fail-closed guard with no serial equivalent: a child killed before it wrote
+# either marker (OOM, SIGKILL) leaves no failure behind, so counting only
+# `fail.` markers would report a clean pass over a sweep that never finished.
+# Every header found must have produced exactly one result.
+if [ "$SC_CHECKED" -ne "$SC_TOTAL" ]; then
+    echo "FAIL: the header sweep recorded $SC_CHECKED result(s) for $SC_TOTAL header(s) -- some check did not complete, so this is not a pass." >&2
+    exit 1
+fi
+
+# Optional legacy layouts contain copies of the canonical headers. Verify
+# those copies too, without compiling every identical header a second time.
+find "$PREFIX" -name '*.h' ! -path "$INC_ROOT/*" | LC_ALL=C sort >"$SC_TMP/unswept"
 while IFS= read -r hdr; do
-    rel="${hdr#"$INC_ROOT"/}"
-    if ! printf '#include "%s"\n' "$rel" | "$CXX_BIN" -std=c++17 -fsyntax-only \
-            -DNO_FMTLIB -DCOOLPROP_NO_DEPRECATED_HEADER_WARNINGS \
-            -I"$INC_ROOT" -I"$EIGEN_DIR" -x c++ - >>"$SC_LOG" 2>&1; then
-        echo "FAIL: installed header is not self-contained: $rel" >&2
-        SC_FAIL=$((SC_FAIL + 1))
+    relative="${hdr#"$PREFIX"/}"
+    case "$relative" in
+        static_library/include/*|shared_library/include/*)
+            canonical="$INC_ROOT/${relative#*/include/}" ;;
+        static_library/CoolPropLib.h|shared_library/CoolPropLib.h)
+            canonical="$INC_ROOT/CoolProp/CoolPropLib.h" ;;
+        *) echo "FAIL: unexpected header outside the canonical include root: $hdr" >&2; exit 1 ;;
+    esac
+    if ! cmp -s "$hdr" "$canonical"; then
+        echo "FAIL: legacy header differs from its checked canonical copy: $hdr" >&2
+        exit 1
     fi
-done < <(find "$INC_ROOT" -name '*.h')
+done <"$SC_TMP/unswept"
+
 if [ "$SC_FAIL" -ne 0 ]; then
+    find "$SC_TMP" -name 'fail.*' | LC_ALL=C sort | while IFS= read -r marker; do
+        echo "FAIL: installed header is not self-contained: $(cat "$marker")" >&2
+    done
     echo "FAIL: $SC_FAIL installed header(s) do not compile standalone (see $SC_LOG)." >&2
     echo "      A shipped header that #includes a non-installed header (internal or third-party)" >&2
     echo "      is broken for downstream consumers." >&2
     exit 1
 fi
 
-echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${NHEADERS} installed headers compile standalone (-DNO_FMTLIB, Eigen-only on the path) from ${BUILD_DIR}"
+# Assertion 4: every CoolProp-owned header that declares a C ABI (contains
+# `extern "C"`) must also compile as C.  Assertion 3 compiles as C++ only, so a
+# C++-only construct (a reference, a default argument, nullptr) slipping into
+# CoolPropLib.h would pass it and break every C consumer.  C99 is the floor, not
+# C89: CoolPropLib.h takes bool from <stdbool.h>.  -Wstrict-prototypes is named
+# explicitly because GCC leaves it out of -Wall/-Wextra, and an empty () is not a
+# prototype in C before C23.  The legacy shared_library/ and static_library/
+# copies of CoolPropLib.h are covered through the cmp above.
+CC_BIN="${CC:-cc}"
+if ! command -v "$CC_BIN" >/dev/null 2>&1; then
+    echo "FAIL: C compiler '$CC_BIN' not found -- cannot check that the C-ABI headers compile as C." >&2
+    exit 1
+fi
+# Detection is a literal `extern "C"` in a *.h file.  A future C-ABI header that
+# gets its linkage only through a macro (e.g. EXPORT_CODE from CoolPropLib.h)
+# would not be found, so the known C-ABI headers are also listed explicitly
+# below and must be found.  That list, not the grep exit code, is the real
+# guard: grep exits 2 on some errors, but BSD grep with --include reports a
+# nonexistent root as 1 ("no match"), which the list then catches.
+C_ABI_RC=0
+C_ABI_HEADERS="$(grep -rl --include='*.h' --exclude-dir=third_party 'extern "C"' "$INC_ROOT" | LC_ALL=C sort)" || C_ABI_RC=$?
+if [ "$C_ABI_RC" -gt 1 ]; then
+    echo "FAIL: searching $INC_ROOT for C-ABI headers failed (grep exit $C_ABI_RC)." >&2
+    exit 1
+fi
+for required in CoolProp/CoolPropLib.h CoolProp/detail/state_capi.h; do
+    if ! printf '%s\n' "$C_ABI_HEADERS" | grep -qxF "$INC_ROOT/$required"; then
+        echo "FAIL: C-ABI header $required was not found by the extern \"C\" search -- the C-mode check would not cover it." >&2
+        exit 1
+    fi
+done
+C_TOTAL=0
+C_FAIL=0
+while IFS= read -r hdr; do
+    rel="${hdr#"$INC_ROOT"/}"
+    C_TOTAL=$((C_TOTAL + 1))
+    if ! printf '#include "%s"\n' "$rel" | "$CC_BIN" -std=c99 -pedantic-errors -Wall -Wextra -Wstrict-prototypes -Werror \
+            -fsyntax-only -I"$INC_ROOT" -x c - >>"$SC_LOG" 2>&1; then
+        echo "FAIL: C-ABI header does not compile as C99: $rel" >&2
+        C_FAIL=$((C_FAIL + 1))
+    fi
+done <<<"$C_ABI_HEADERS"
+if [ "$C_FAIL" -ne 0 ]; then
+    echo "FAIL: $C_FAIL C-ABI header(s) do not compile as C99 with $CC_BIN (see $SC_LOG)." >&2
+    exit 1
+fi
+
+echo "OK: internal json/msgpack headers not installed; no shipped header pulls nlohmann/valijson/msgpack/boost; all ${SC_TOTAL} canonical CoolProp-owned headers compile standalone; ${C_TOTAL} C-ABI header(s) compile as C99; legacy copies match; vendored headers excluded (of ${NHEADERS} installed *.h) from ${BUILD_DIR}"

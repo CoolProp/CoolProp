@@ -1,6 +1,324 @@
 Changelog for CoolProp
 ======================
 
+8.0.1
+-----
+
+Breaking Changes:
+
+* The deprecated ``coolprop()`` and ``coolpropsi()`` functions of the EES wrapper were removed. ``coolprop()`` worked in kPa and kJ and called the CoolProp v4 API, and it asserted the wrong unit system, so a model that satisfied its own error message was computing states a factor of 1000 away. ``coolpropsi()`` had not worked at all for years, because it called the external function with a string variable that was never assigned. An EES model calling ``coolprop()`` has to be changed to ``PropsSI``, with pressures in Pa and energies in J; its results change, because they were wrong before. ``CoolProp.LIB`` and ``COOLPROP_EES.dlf`` have to be installed from the same release: a mismatched pair now reports that rather than computing.
+* The ``COOLPROP_DEBIAN_PACKAGE`` CMake variable and the ``wrappers/DEB`` packaging harness were removed.  The harness had not worked since 2014: a ``cmake-format`` pass broke its version parser, so it produced an empty version string, its ``debian/changelog`` was frozen at 5.0-1 while the tree moved to 8.x, and its ``control`` file depended on a package named ``dl`` that does not exist.  It could not build an installable package, no CI job ran it, and CoolProp is in neither the Debian nor the Ubuntu archive.  Note that CMake does not warn about unknown ``-D`` variables, so a build still passing ``-DCOOLPROP_DEBIAN_PACKAGE=ON`` now configures without error and silently produces no shared library; use ``-DCOOLPROP_SHARED_LIBRARY=ON`` instead.  See `#3388 <https://github.com/CoolProp/CoolProp/issues/3388>`_ for what maintaining Linux packages for the main distributions would require.
+* **CMake library consumers and packagers:** the minimum supported CMake
+  version is now 3.15.  The exported library targets model CoolProp's C++17,
+  header, and link requirements, and nested ``add_subdirectory`` /
+  ``FetchContent`` builds no longer add CoolProp install rules by default.
+  See the detailed CMake behavior changes below.
+* Reintroduced Java wrapper compilation. Java classes generated have been moved from default package, to "org.coolprop" package, in line with Java convention and recommended practice. Applications that previously used the Java wrappers will need to update their import references for CoolProp classes if switching to this version. Java wrappers are built with target Java 11, as Java 8 support has been deprecated. A JDK 11+ must be used to compile using these wrappers.
+
+Highlights:
+
+* **Viscosity for ethylene, propylene glycol, tetrahydrofuran and krypton.**
+  ``PropsSI("V", ..., <fluid>)`` previously raised for all four; these are purely
+  additive.  Each is shipped as fluid-file data using the expression DSL, with no
+  new C++, and each is checked against its source paper's own tabulated values:
+
+  * **Ethylene** — Sotiriadou, Ntonti, Assael, Perkins and Huber, *Int. J. Thermophys.*
+    **45**\ (6):87 (2024).  Agrees with the paper's Table 8 background column to 4.0e-8.
+  * **Propylene glycol** — Velliadou, Antoniadis, Assael and Huber,
+    *Int. J. Thermophys.* **43**\ (3):42 (2022).  Agrees with Table 7 to 2.7e-5.
+  * **Tetrahydrofuran** — Sotiriadou, Ntonti, Assael, Antoniadis and Huber,
+    *Int. J. Thermophys.* **45**\ (9):123 (2024).  Agrees with Tables 9 and 10 to within the precision those tables are printed at.
+  * **Krypton** — Polychroniadou, Antoniadis, Assael and Bell, *Int. J. Thermophys.*
+    **43**\ (1):6 (2022), a correlation from **entropy scaling** rather than the usual
+    dilute/initial-density/residual decomposition: the residual term is a function of the
+    residual entropy and of the second virial coefficient and its temperature
+    derivative.  Agrees with the paper's
+    Table 3 to 6.5e-14.
+
+  The critical enhancement is not included for any of them; the correlations are the
+  background viscosity, which is what the comparisons above are against.
+
+* **Thermal conductivity from the reference correlations of Assael, Huber, Perkins and
+  co-workers.**  Where a model is replaced, the old one stays in the fluid file for
+  reference.  Check values that CoolProp does not reproduce, and why, are documented in
+  the fluid files and tests.
+
+  * R161: Tsolakidou et al. (2017).
+  * Ethylene and propylene: Assael et al. (2016). For propylene this replaces the Huber
+    et al. (2003) ECS model.
+  * Cyclohexane: Koutian et al. (2017).
+  * R245fa: Perkins et al. (2016), replacing the Huber et al. (2003) ECS model.
+  * Novec649: Perkins et al. (2018).
+  * R1233zd(E): Perkins et al. (2017).
+  * Ammonia: Monogenidou et al. (2018), replacing Tufeu et al. (1984).
+  * n-Undecane: Assael et al. (2017).
+  * Tetrahydrofuran: Sotiriadou et al. (2024).
+  * Xenon: Velliadou et al. (2021).
+  * Nitrogen: Sotiriadou et al. (2025), replacing Lemmon and Jacobsen (2004); nitrogen
+    viscosity also moves to Huber et al. (2024). R14, whose ECS model uses nitrogen as
+    its reference fluid, changes with it.
+  * Heavy water: IAPWS R18-21 thermal conductivity and R17-20 viscosity (with its critical enhancement), replacing the 2007 formulations.
+
+* **Relocatable CMake package.** See GitHub issue `#2144
+  <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
+  CoolProp libraries can now be built and installed in one build. Installation
+  exports the config-mode targets ``CoolProp::CoolProp``,
+  ``CoolProp::Static``, and ``CoolProp::Shared`` and supports relocation of the
+  installed prefix. In a dual build the producer-side
+  ``COOLPROP_DEFAULT_LIBRARY`` setting selects the variant exported through
+  ``CoolProp::CoolProp``; that choice is baked into the package, while
+  consumers can select either explicit variant target.
+
+* **Eleven more viscosity correlations**, as fluid-file data using the expression DSL.
+  Each is validated against the verification points its source paper publishes.
+
+  * New — ``PropsSI("V", ...)`` previously raised: **xenon** (Velliadou, *IJT* 2021),
+    **R-161** (Tsolakidou, *JPCRD* 2017), **Novec 649** (Wen, *JCED* 2017),
+    **n-undecane** (Assael, *JPCRD* 2017).
+  * Replaces the previous model, so returned viscosities change: **ammonia**,
+    **ethylbenzene**, **methane**, **R-1234yf**, **R-1234ze(E)**, **R-245fa**, **R-32**.
+    The previous model is kept in the fluid file behind the new one.
+
+  Four source papers print an equation that does not reproduce their own verification
+  table, so the shipped form differs from the typeset one.  Xenon and ethanol have
+  published errata, which CoolProp follows and cites; R-161 and krypton do not.  Each
+  fluid file records the discrepancy.
+
+  **R-134a** and **ethanol** were implemented but are not shipped — R-134a is the ECS
+  reference fluid for seven refrigerants, and ethanol's correlation has a pole in
+  reachable superheated vapour.  Both stay on their previous models.
+
+  No critical enhancement, as with the previous batch.
+
+* Added the :doc:`GERG-2004 and GERG-2008 </coolprop/GERG>` wide-range equations of state for natural gases as two new *strict* backend families (``GERG2004::...``, ``GERG2008::...``).  Strict means the backends admit only the 18 / 21 components each model publishes, carry only that model's own pure-fluid EOS, ideal-gas coefficients, binary reducing parameters and departure functions, use GERG's ``R = 8.314472 J/mol/K`` rather than the CODATA value, and throw rather than answer from a different model — transport properties, superancillaries, and mutable binary interaction parameters are all deliberately unavailable.  Validated against `teqp <https://github.com/usnistgov/teqp>`_ at relative tolerances of 1e-12 on the Helmholtz energies and 1e-10 on pressure, isochoric heat capacity and speed of sound.  See the :doc:`GERG documentation </coolprop/GERG>` for the component tables, the enforced range of validity, the reference-state convention (``h = s = 0`` for the **ideal gas** at 298.15 K / 101325 Pa, which differs from every other CoolProp backend), and the known limitations.  GERG publishes no acentric factor, which CoolProp's VLE and density guess machinery needs; rather than borrow one from a different equation of state, the backends **derive** it from GERG's own equation as :math:`\omega = -1 - \log_{10}(p_{sat}(0.7 T_c)/p_c)` with a converged saturation solve.  Mixture saturation, phase envelopes, VLE flashes and ``DmolarP`` therefore all work.  One limitation deserves calling out here: for **pure** GERG fluids the pressure-plus-caloric input pairs (``HmolarP``, ``PSmolar``, ``PUmolar``) do not work **at all** — through ``PropsSI`` they return ``inf`` plus an error string rather than raising.  That has two separate causes, neither of them the acentric factor: GERG publishes no triple point either, so the flash's temperature bracket falls back to the model's ``Tmin`` instead of the saturation temperature; and the bracket's upper end (1.5x ``Tmax``) is outside the range the backend enforces.  Use ``PT``, ``DmolarT`` or ``DmolarP`` inputs for pure GERG fluids, or ``HEOS`` when you need a caloric input pair.
+* Added wasm32 Python wheels for the Pyodide runtime. These wheels are compatible with Pyodide 0.28.x and later. See the :ref:`Python wrapper docs <python_wasm_demo>` for an example of using these wheels in a browser environment.
+
+**Behavior changes (potentially breaking):**
+
+* **Transport-property** ``"type": "expression"`` **blocks in fluid JSON now
+  require a** ``"state_variables"`` **declaration, and use CoolProp's own parameter
+  names.**  A block must list the thermodynamic quantities its formula reads::
+
+      "state_variables": ["T", "Dmolar"]
+
+  A name that is not declared there is not a state variable inside that block, so
+  a formula that never asks for pressure keeps ``p`` for its own coefficients —
+  which is the point: a dilute term of the form :math:`\eta_0 = \sum n_i T_r^{p_i}`
+  previously could not name its exponent array ``p``, because the language reserved
+  that name in every formula whether the block used it or not.
+
+  The DSL's own spellings ``rhomolar``, ``rhomass`` and ``p`` are **removed**; use
+  CoolProp's canonical ``Dmolar``, ``Dmass`` and ``P``.  CoolProp's back-compatible
+  aliases (``A``, ``C``, ``D``, ``G``, ``M``, ``O``, ``S``, ``U``, and the
+  upper-cased form of any name) are **not** accepted as state variables, precisely
+  because they collide with the single-letter coefficient names correlations use.
+
+  The quantities a block may declare are an explicit set — ``T``, ``P``,
+  ``Dmolar``, ``Dmass``, ``molar_mass``, ``Smolar_residual``, ``Bvirial``,
+  ``dBvirial_dT`` — which grows on demand.  Anything else is refused at fluid-load
+  time, including the critical point and the EOS reducing state (both are
+  configuration-dependent, and a correlation's reducing parameters belong in
+  ``constants``, frozen at the values its authors regressed against).
+
+  There is no version gate and no compatibility shim: a third-party expression
+  block written against the previous format fails when the fluid is loaded, with a
+  message naming the available set.  Blocks shipped with CoolProp are unaffected.
+
+* **CMake library and package integration.** See GitHub issue `#2144
+  <https://github.com/CoolProp/CoolProp/issues/2144>`_.
+
+  - Library targets now propagate ``cxx_std_17`` to C++ compilation units. A
+    downstream target configured for C++11 or C++14 can therefore be promoted
+    to C++17; pure-C consumers are unaffected.
+  - On Windows, ``CoolProp::Shared`` propagates
+    ``COOLPROP_SHARED_LIBRARY_USE``. ``CoolPropLib.h`` consequently declares
+    the C API with ``__declspec(dllimport)``, C linkage, and the calling
+    convention selected when CoolProp was built. Hand-written declarations
+    must use the same convention. Caller-defined ``EXPORT_CODE`` and
+    ``CONVENTION`` macros now remain authoritative when ``EXTERNC`` or
+    ``__powerpc__`` is defined; Windows ``EXTERNC`` builds also retain their
+    symbol-visibility decoration rather than discarding it.
+  - Nested ``add_subdirectory`` / ``FetchContent`` builds leave
+    ``COOLPROP_INSTALL_CMAKE_PACKAGE`` and
+    ``COOLPROP_INSTALL_LEGACY_LAYOUT`` disabled by default and no longer change
+    the parent project's install prefix. A parent which intentionally packages
+    CoolProp must enable the desired install option explicitly.
+  - Build-tree consumers receive the supported ``include/CoolProp`` public
+    header tree plus the Eigen and fmt usage requirements, rather than every
+    source, development, and third-party include directory used internally by
+    CoolProp. Code which included CoolProp's non-public in-tree headers must
+    now provide those unsupported include paths itself.
+  - The installed package carries the pinned Eigen and fmt headers required by
+    CoolProp's public C++ headers under ``include/CoolProp/third_party`` and
+    publishes those directories as SYSTEM usage requirements. A downstream
+    project which also exposes a different Eigen or fmt revision must avoid
+    mixing both revisions in one program. Distribution packagers can instead
+    configure with ``-DCOOLPROP_VENDOR_THIRD_PARTY=OFF`` to build against the
+    installed ``Eigen3`` (3.4 or newer) and ``fmt`` CMake packages; the
+    package then ships neither copy, and consumers must provide both packages.
+    Vendored builds fetch the pinned Eigen and fmt sources even with
+    ``CPM_USE_LOCAL_PACKAGES=ON``; explicit ``CPM_Eigen_SOURCE`` /
+    ``CPM_fmt_SOURCE`` overrides are honored and must point at complete
+    source trees, including the upstream license files.
+  - ``COOLPROP_EXTERNC_LIBRARY`` now adds ``EXTERNC`` to the library targets'
+    public compile definitions, so consumers of those targets compile with it
+    too.
+  - An explicitly supplied top-level ``CMAKE_INSTALL_PREFIX`` is now honored.
+    With no explicit prefix, a top-level CoolProp build keeps the historical
+    ``<source>/install_root`` default; when CMake-package installation is
+    enabled that tree can additionally contain the conventional ``bin``,
+    ``lib``, ``include``, ``lib/cmake/CoolProp``, and ``share/licenses``
+    directories, as applicable to the selected library variants.
+  - An empty ``COOLPROP_INSTALL_PREFIX``, or an empty explicit top-level
+    ``CMAKE_INSTALL_PREFIX``, is now a configure error. Install destinations
+    are relative, so either would otherwise install into the filesystem root.
+  - MSVC runtime selection is target-local for CoolProp libraries and linked
+    in-tree executables. ``COOLPROP_MSVC_STATIC`` and
+    ``COOLPROP_MSVC_DYNAMIC`` no longer rewrite the global C and C++ flags of
+    unrelated targets in a parent build. Debug configurations always use the
+    corresponding debug CRT; the legacy ``COOLPROP_MSVC_DEBUG`` option remains
+    accepted but no longer changes that selection.
+  - Configuring a CoolProp library requires CMake's ``Threads`` package. The
+    installed static target records that link dependency; a shared-only
+    installed package does not impose it on consumers.
+  - In a dual static/shared producer build, the un-namespaced ``CoolProp``
+    build-tree target is an INTERFACE selector and is not itself a build-system
+    target. Build the normal ``all`` target or the concrete
+    ``CoolProp_static`` / ``CoolProp_shared`` target instead of invoking
+    ``cmake --build ... --target CoolProp``.
+
+* **Compositions with two or more exactly-zero mole fractions no longer return
+  NaN for the bulk properties.**  ``GERG2008ReducingFunction::f_Y_ij``
+  evaluates :math:`x_i x_j (x_i + x_j) / (\beta^2 x_i + x_j)`, which is
+  :math:`0/0` as soon as *two* mole fractions are exactly zero.  Any such
+  composition previously produced a NaN reducing temperature and density — and
+  therefore NaN for **every** property — **with no error raised anywhere**.
+  This affects **all** multi-fluid backends, including the default ``HEOS``,
+  and it is exactly the shape a natural-gas analysis arrives in (a full
+  component list with most entries zero).  The removable singularity is now
+  guarded at the both-zero corner, where its limit is zero.
+
+  Scope, stated precisely.  **Fixed:** the reducing state and everything that
+  flows from it — :math:`p`, :math:`\rho`, :math:`\alpha^0`,
+  :math:`\alpha^r`, :math:`c_v`, :math:`c_p`, speed of sound, :math:`h`,
+  :math:`s`, molar mass.  These now equal, to the last digit, the same
+  composition with the zero components trimmed away, where before they were
+  NaN.  Also fixed: the **first** composition derivatives, and therefore
+  ``fugacity()`` / ``fugacity_coefficient()``, which now match the trimmed
+  composition to 1e-12.  Five call sites carried the :math:`0/0` and all five
+  are guarded: ``f_Y_ij``, its two first-derivative helper functions
+  (``dfYkidxi__constxk`` / ``dfYikdxi__constxk``), and the two expressions
+  that the ``XN_DEPENDENT`` branch of ``dYrdxi__constxj`` *inlines* instead of
+  calling those helpers.  That last
+  one is why a single trailing zero used to be so destructive: the inlined
+  loop runs over every component, so ``x[N-1] == 0`` plus one further zero
+  anywhere made the whole first derivative NaN.  Results are now invariant
+  under component reordering, which they previously were not.
+
+  **Not fixed, and not fixable:** the **second and higher** composition
+  derivatives, and therefore phase envelopes, which need
+  :math:`\partial \ln \varphi_i / \partial x_j`.  This is a property of the
+  function rather than work left undone.  :math:`f_{Y,ij}` is homogeneous of
+  degree 2, so its :math:`k`-th composition derivative is homogeneous of
+  degree :math:`2 - k`; over non-negative mole fractions the denominator is
+  bounded away from zero on the unit directions, giving
+  :math:`|\partial^k f(t\mathbf{u})| \le M t^{\,2-k}`.  For :math:`k = 0, 1`
+  that vanishes *uniformly in the direction*, so zero is the unique continuous
+  extension and guarding is exact.  For :math:`k \ge 2` the degree is zero or
+  negative — constant along each ray but different between rays — so no limit
+  exists and no substituted value would be correct.  Those derivatives are
+  therefore deliberately left as NaN.  If you need a phase envelope, trim the
+  zero components out of the composition; the trimmed result is exact.  A
+  *single* zero mole fraction was never affected and its infinite-dilution
+  behaviour is bit-for-bit unchanged.  Tracked as GitHub
+  `#1677 <https://github.com/CoolProp/CoolProp/issues/1677>`_.
+
+* **``set_reference_stateS`` now throws on the GERG backends instead of
+  silently doing nothing.**  ``set_reference_stateS`` dispatches on the backend
+  prefix and had no final ``else``, so an unrecognised prefix returned having
+  done nothing at all — not even validating the reference-state string.  The
+  GERG backends now raise ``NotImplementedError`` there; every other
+  unsupported backend now raises ``ValueError`` (see Bug fixes).
+
+* **vtable change in an internal header:**
+  ``HelmholtzEOSMixtureBackend::set_mixture_parameters()`` is now ``virtual``,
+  so the GERG backends can populate the reducing function and excess term from
+  their own tables instead of CoolProp's global JSON library.  Adding a virtual
+  member function changes the class's vtable layout.  It is **source**
+  compatible — no caller needs to change — but **not binary** compatible.
+  ``src/Backends/Helmholtz/HelmholtzEOSMixtureBackend.h`` is **not** an
+  installed header and ``AbstractState``'s own vtable is unchanged, so
+  consumers using the installed public API are unaffected; the recompile
+  requirement applies to code built against CoolProp's in-tree ``src/``
+  headers.  The new ``backend_families`` / ``backends`` enumerators in
+  ``include/CoolProp/DataStructures.h`` are appended at the end of their enums
+  and are ABI-safe.
+
+Performance:
+
+* **The p,T flash stops recomputing derivatives it already has**, and the
+  supercritical-liquid branch, which solved without derivatives at all, now tries a
+  derivative method before its bracketed fallback.  ``Householder4`` was doing six
+  full derivative evaluations per solve where two suffice.  Compressed water goes
+  from 11.96 to 4.97 microseconds, against REFPROP's 4.45
+  (`#3360 <https://github.com/CoolProp/CoolProp/pull/3360>`_).
+
+* **Entropy-input density solves invert on a logarithmic density axis.**  ``s ~
+  -R*ln(rho)``, so the residual is nearly straight in ``ln(rho)`` where the bracket
+  spans 13 to 18 decades of density.  ``SmolarT`` is 2.4x faster at low pressure
+  (Water 51.18 to 20.96 microseconds per point) and slower at high pressure (Water
+  22.31 to 24.33), the log path running a 1e-12 tolerance rather than 1e-9.  Entropy
+  only — ``h`` and ``u`` have no ideal-gas logarithm and stay on the linear axis.
+  Together the two changes take a 137-fluid flash-consistency sweep from 3614
+  inconsistent points to 2185
+  (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
+
+Bug fixes:
+
+* ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
+* ``REFPROP`` backend: all REFPROP calls are serialized process-wide and each instance reloads its own fluids, so separate instances may be used from separate threads (each instance by one thread at a time).
+
+* **Low-density entropy flashes returned wrong densities.**  ``SmolarT`` resolved
+  absolute density on a bracket spanning up to 18 decades, so at ``rho = 1e-8``
+  mol/m^3 the answer was off by 6.1e-2 relative; it is now 4e-16 to 1e-12 across
+  twelve decades, and the ``SmolarT`` panel of the 137-fluid sweep falls from 1446
+  inconsistent points to 439
+  (`#3362 <https://github.com/CoolProp/CoolProp/pull/3362>`_).
+
+* **The p,T flash did not return the pressure it was given.**  Each density-residual
+  evaluation overwrote ``p`` with the equation of state's pressure at the trial
+  density, so ``PropsSI("P", "P", p, "T", T, fluid)`` came back 7.4e-10 relative
+  away from ``p`` for supercritical nitrogen.  It is now restored exactly, on the
+  **pure-fluid** path (`#3360 <https://github.com/CoolProp/CoolProp/pull/3360>`_).
+  Properties read after a pure-fluid p,T update are now evaluated at the converged
+  density rather than the previous iterate, so bit-exact baselines move in the last
+  digits.
+
+* **R1233zd(E) viscosity works again, with refit constants.**  v8.0.0 replaced
+  this fluid's equation of state with the Akasaka & Lemmon (JPCRD 2022)
+  international standard but did not carry over its ``TRANSPORT`` block, so
+  ``PropsSI("V", ...)`` returned ``inf`` where v7.2.0 had answered
+  (`#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`_).  The
+  ``rhosr-CS`` correlation is restored.
+
+  It does **not** reproduce v7.2.0, deliberately: saturated liquid viscosity is
+  29-38% lower (3.99e-4 rather than 6.37e-4 Pa-s at 0 degC, against 3.71e-4 from
+  REFPROP 10).  The published ``C = 1.2474`` was fitted to a 2012 dataset that
+  later measurements superseded and ran 40-75% high in the liquid
+  (`#1826 <https://github.com/CoolProp/CoolProp/issues/1826>`_, open since 2019).
+  ``rhosr_critical`` is now recomputed from the shipped EOS - it is
+  :math:`\rho_c R (\tau \alpha^r_\tau - \alpha^r)` at the critical point, not a
+  fitted parameter - and ``C = 0.8089`` is fitted on top of it to the 61 liquid
+  data points of `Miyara et al. (2018)
+  <https://doi.org/10.1016/j.ijrefrig.2018.05.021>`_, giving AAD 2.6% against a
+  stated 3.0% experimental uncertainty.  Rerun with ``python
+  dev/scripts/fit_R1233zdE_viscosity.py``.
+
+  Two limitations remain, both noted in the fluid file: saturated *vapor* is
+  ~10% high whatever ``C`` is (the dilute-gas term uses Chung-estimated
+  Lennard-Jones parameters, which ``C`` cannot correct), and thermal
+  conductivity is still unavailable, as it was in v7.2.0.
+
 8.0.0
 -----
 
@@ -14,6 +332,7 @@ Highlights:
 * Thread-safety hardening for the native (HEOS / incompressible / HumidAir) code paths: fluid-library static initialization is now race-free, ``HumidAirProp`` uses per-thread Water/Air backends, and shared derivative counters are atomic.  The REFPROP backend remains **not** thread-safe — REFPROP itself is not reentrant, so calls into the ``REFPROP`` backend must still be serialized by the caller.  See PRs `#2800`, `#2831`, `#2855`.
 * Tabular backends can now be evaluated directly (cache-bypassing batch ``fast_evaluate``), with new ``TABULAR_NX`` / ``TABULAR_NY`` configuration keys for grid resolution and a fix for a BICUBIC ``PT`` segfault near the saturation curve.  See PRs `#2920`, `#2894`, `#2891`.
 * Numerous solver-robustness and graceful-error-handling fixes across the flash and density solvers (illegal quality inputs, zero-/one-length ``PropsSI`` arrays, incompressible molar requests, sub-``TminPsat`` saturation, ancillaries above the reducing temperature, and more).
+* **Incompressible backend hardening:** ``(d(rho)/dT)|p`` — and through it every enthalpy/entropy evaluation — now returns the *exact* value at ``T == Tbase`` instead of a tiny linear approximation across the singularity, for the common case where the would-be pole's coefficient is identically zero (the case for every ordinary, non-fractional fit). Added a regression test sweeping every shipped fluid's ``Tbase``, not just a hand-picked few. The :doc:`docs </fluid_properties/Incompressibles>` now explicitly call out that enthalpy/entropy of mixing is not modeled for incompressible solutions. Properties whose fit never actually ran no longer ship the optimizer's placeholder coefficients: querying them — e.g. ``INCOMP::LiBr`` viscosity (was: 1 Pa·s) and conductivity (was: 0 W/m/K), or ``LiBr``/``MITSW`` freezing temperature (was: ~0 K) — now raises a clear "not defined" error instead of returning plausible-looking garbage (issues `#1331`, `#2567`).
 * Fast single-phase ``HmolarSmolar`` / ``HmassSmass`` (H,S) flash for fluids that have no superancillary — pseudo-pure fluids (Air, R-404A, R-407C, R-410A, R-507A, SES36) and pure fluids built without one.  These previously fell onto a legacy blind temperature scan (~50 nested entropy solves); they now route the single-phase (h,s)→(T,ρ) solve through the dome-free homotopy legs of the superancillary cascade (supercritical isentrope, ideal-gas departure, and melting-line anchor), which require no saturation curve.  Air H,S inputs drop from ~160 ms to ~40 µs per call (~4000×) with identical results; two-phase or unconverged inputs fall through to the legacy path unchanged.
 * New native desktop GUI built with Tauri + React (`#2715`), plus a much-expanded Mathcad wrapper and interactive 3D molecule viewers on the fluid documentation pages.
 * Build-system modernization: git submodules replaced by CPM.cmake (boost fetched as a trimmed subset from ``CoolProp/boost-headers``), Eigen bumped to 5.0.1, and a broad C++17 cleanup that also cuts compile times.

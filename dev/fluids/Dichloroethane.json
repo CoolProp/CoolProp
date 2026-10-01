@@ -82,7 +82,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "",
-      "BibTeX_EOS": "Thol-THESIS-2015",
+      "BibTeX_EOS": "Thol-MP-2017-Dichloroethane",
       "STATES": {
         "hs_anchor": {
           "T": 617.7600000000001,
@@ -3822,7 +3822,7 @@
           "gas_constant / J/mol/K": 8.3144621,
           "rhocrittrue / mol/m^3": 4330.813901171526
         },
-        "source_eos_hash": "4c9a8a72545d2fc7",
+        "source_eos_hash": "9a054980d43efe6d",
         "check_points": [
           {
             "T / K": 280.77679221007304,
@@ -4020,7 +4020,22 @@
     "INCHI_STRING": "InChI=1S/C2H4Cl2/c3-1-2-4/h1-2H2",
     "NAME": "Dichloroethane",
     "REFPROP_NAME": "N/A",
-    "SMILES": "C(CCl)Cl"
+    "SMILES": "C(CCl)Cl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "107-06-2*0",
+        "source": "ATcT",
+        "uncertainty": 530.0,
+        "units": "J/mol",
+        "value": -130450.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

@@ -1,8 +1,15 @@
 name: C# wrapper
 
+# The unified "Csharp" artifact produced by the merge job below is consumed by
+# release_all_files.yml -> release_get_artifact.yml.  Deleting or renaming this
+# file breaks the nightly deploy (see gh#3315: PR #3245 repurposed this file
+# into java_builder.yml, which silently killed the nightly for six weeks).  If
+# you need a workflow for another language, COPY this file -- do not rename it
+# -- and add the copy to the builder list in release_all_files.yml.
+
 on:
   push:
-    branches: [ 'master', 'main', 'develop', 'actions_csharp' ]
+    branches: [ 'master', 'main', 'develop' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
@@ -91,6 +98,10 @@ jobs:
         with:
           name: Csharp-${{ matrix.sysname }}
           path: install_root/Csharp
+          # upload-artifact defaults to 'warn', so a build that installed
+          # nothing would upload no artifact and still pass, leaving the merge
+          # job to publish a Csharp tree missing that platform.
+          if-no-files-found: error
 
   merge:
     needs: build
@@ -123,6 +134,7 @@ jobs:
         with:
           name: Csharp
           path: Csharp
+          if-no-files-found: error
 
       - name: Delete intermediate per-OS artifacts
         uses: geekyeggo/delete-artifact@v6

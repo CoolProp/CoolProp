@@ -235,20 +235,14 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
     }
 #if !defined(NO_TABULAR_BACKENDS)
     else if (f1 == TTSE_BACKEND_FAMILY) {
-        // Will throw if there is a problem with this backend.  These
-        // tabular backends don't accept options today; if the caller
-        // supplied any, fail loud so the suffix isn't silently dropped.
-        if (!options_json.empty()) {
-            throw NotImplementedError("TTSE backend does not yet accept factory-string options");
-        }
+        // Will throw if there is a problem with this backend.  The JSON
+        // options payload is forwarded verbatim to the constructor, which
+        // validates against kTabularOptionsSchemaJson before applying.
         const shared_ptr<AbstractState> AS(factory(f2, clean_fluid_names));
-        return new TTSEBackend(AS);
+        return new TTSEBackend(AS, options_json);
     } else if (f1 == BICUBIC_BACKEND_FAMILY) {
-        if (!options_json.empty()) {
-            throw NotImplementedError("BICUBIC backend does not yet accept factory-string options");
-        }
         const shared_ptr<AbstractState> AS(factory(f2, clean_fluid_names));
-        return new BicubicBackend(AS);
+        return new BicubicBackend(AS, options_json);
     } else if (f1 == SVDSBTL_BACKEND_FAMILY) {
         // SVDSBTL requires an explicit source-of-truth backend in
         // its name (e.g. "SVDSBTL&HEOS").  No default — see
@@ -485,6 +479,8 @@ double AbstractState::trivial_keyed_output(parameters key) {
             return this->rhomass_critical();
         case iODP:
             return this->calc_ODP();
+        case iHmolar_formation:
+            return this->calc_Hmolar_formation();
         case iGWP100:
             return this->calc_GWP100();
         case iGWP20:
@@ -827,6 +823,14 @@ CoolPropDbl AbstractState::calc_Qmass() {
     // This avoids NaN propagation when one phase is unpopulated by the backend
     // at a saturation-curve endpoint (e.g. Q=0 on the bubble line).
     if (_Q == 0.0 || _Q == 1.0) return static_cast<CoolPropDbl>(_Q);
+    // Pure / pseudo-pure: Qmass IS Qmolar, for every quality and not just the
+    // endpoints.  calc_phase_molar_masses() returns {mm, mm} here, so the lever
+    // rule below is an identity in exact arithmetic -- but not in floating point:
+    // (Q*mm)/(Q*mm + (1-Q)*mm) rounds, and comes back an ULP off the caller's
+    // value for a good fraction of molar masses (CO2 and Nitrogen at Q=0.75 both
+    // do; Water happens not to).  It would also divide by zero if a backend left
+    // the phase compositions unpopulated.  Return _Q directly.
+    if (get_mole_fractions().size() == 1) return static_cast<CoolPropDbl>(_Q);
     const auto MM = calc_phase_molar_masses();
     return static_cast<CoolPropDbl>(detail::Qmolar_to_Qmass(_Q, MM.liquid, MM.vapor));
 }
@@ -839,14 +843,11 @@ AbstractState::PhaseMolarMasses AbstractState::calc_phase_molar_masses() {
     }
     throw NotImplementedError("calc_phase_molar_masses must be overridden by mixture backends");
 }
-void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
-    // Map Qmass-pair to its molar sibling and identify which slot (1=value1, 2=value2)
-    // holds the Qmass value.
-    struct Mapping
-    {
-        CoolProp::input_pairs molar;
-        int qmass_slot;
-    };
+/// Map a Qmass input pair to its molar sibling and to the slot (1=value1, 2=value2)
+/// that carries the Qmass value.  Shared by update_Qmass_pair and by the range check
+/// backends need when they rewrite the pair themselves instead of iterating.
+AbstractState::QmassPairMapping AbstractState::qmass_pair_mapping(CoolProp::input_pairs pair) {
+    using Mapping = AbstractState::QmassPairMapping;
     Mapping m;
     switch (pair) {
         case QmassT_INPUTS:
@@ -874,14 +875,46 @@ void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, dou
             m = {DmassQ_INPUTS, 2};
             break;
         default:
-            throw ValueError("update_Qmass_pair called with non-Qmass pair");
+            throw ValueError("qmass_pair_mapping called with non-Qmass pair");
     }
+    return m;
+}
+
+void AbstractState::check_Qmass_pair_range(CoolProp::input_pairs pair, double v1, double v2) {
+    const QmassPairMapping m = qmass_pair_mapping(pair);
+    const double Qmass_target = (m.qmass_slot == 1) ? v1 : v2;
+    if (!(Qmass_target >= 0 && Qmass_target <= 1)) {
+        throw ValueError(format("Qmass out of range [0,1]: %g", Qmass_target));
+    }
+}
+
+void AbstractState::check_input_quality_value(double Q) {
+    if (!is_in_closed_range(0.0, 1.0, Q)) {
+        throw OutOfRangeError(format("Input vapor quality [Q] must be between 0 and 1, got %g", Q));
+    }
+}
+
+void AbstractState::check_input_quality(CoolProp::input_pairs pair, double v1, double v2) {
+    if (CoolProp::is_Qmass_pair(pair)) {
+        check_Qmass_pair_range(pair, v1, v2);
+        return;
+    }
+    // Fail closed: a pair split_input_pair does not know (INPUT_PAIR_INVALID, an
+    // out-of-range value, or a newly added pair nobody registered) throws here
+    // rather than skip the quality check.  A known pair that a backend merely does
+    // not support passes through to that backend's own "not supported" error.
+    parameters p1, p2;
+    split_input_pair(pair, p1, p2);
+    if (p1 == iQ) check_input_quality_value(v1);
+    if (p2 == iQ) check_input_quality_value(v2);
+}
+
+void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
+    const QmassPairMapping m = qmass_pair_mapping(pair);
     const double Qmass_target = (m.qmass_slot == 1) ? v1 : v2;
     const double partner = (m.qmass_slot == 1) ? v2 : v1;
 
-    if (Qmass_target < 0 || Qmass_target > 1) {
-        throw ValueError(format("Qmass out of range [0,1]: %g", Qmass_target));
-    }
+    check_Qmass_pair_range(pair, v1, v2);
 
     auto run_molar = [&](double Qmolar) {
         if (m.qmass_slot == 1)

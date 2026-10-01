@@ -6,7 +6,7 @@
   },
   "Tbase": 273.15,
   "Tmax": 423.15,
-  "Tmin": 233.14999999999998,
+  "Tmin": 233.15,
   "TminPsat": 423.15,
   "conductivity": {
     "NRMS": null,
@@ -37,6 +37,27 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "density_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.15,
+      423.15
+    ],
+    "coeffs": [
+      [
+        969.031512
+      ],
+      [
+        -38.9661595
+      ],
+      [
+        -16.9552675
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "description": "Food water model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
@@ -70,6 +91,27 @@
       ]
     ],
     "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": null,
+    "Trange": [
+      233.15,
+      423.15
+    ],
+    "coeffs": [
+      [
+        4165.15597125
+      ],
+      [
+        48.561815
+      ],
+      [
+        24.69736375
+      ]
+    ],
+    "fit_source": "basis_conversion",
+    "type": "chebyshev",
+    "xbase": 0.0
   },
   "viscosity": {
     "NRMS": null,

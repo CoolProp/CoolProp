@@ -123,7 +123,7 @@
           "p_units": "Pa",
           "rhomolar": 0.965642,
           "rhomolar_units": "mol/m^3",
-          "smolar": 110.816418420,
+          "smolar": 110.81641842,
           "smolar_units": "J/mol/K"
         }
       },
@@ -3794,7 +3794,6 @@
           "rhocrittrue / mol/m^3": 7949.8291965108765
         },
         "source_eos_hash": "3144edae6b63f0b5",
-        "source_eos_hash": "3144edae6b63f0b5",
         "check_points": [
           {
             "T / K": 208.19447461878616,
@@ -3851,7 +3850,22 @@
     "INCHI_STRING": "InChI=1S/Cl2/c1-2",
     "NAME": "Chlorine",
     "REFPROP_NAME": "CHLORINE",
-    "SMILES": "ClCl"
+    "SMILES": "ClCl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7782-50-5*0",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 0.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

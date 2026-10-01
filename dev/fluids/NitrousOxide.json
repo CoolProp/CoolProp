@@ -3620,7 +3620,22 @@
     "INCHI_STRING": "InChI=1S/N2O/c1-2-3",
     "NAME": "NitrousOxide",
     "REFPROP_NAME": "N2O",
-    "SMILES": "[N-]=[N+]=O"
+    "SMILES": "[N-]=[N+]=O",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "10024-97-2*0",
+        "source": "ATcT",
+        "uncertainty": 96.0,
+        "units": "J/mol",
+        "value": 82593.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

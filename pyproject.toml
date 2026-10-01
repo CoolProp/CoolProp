@@ -31,6 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Development Status :: 5 - Production/Stable",
     "Environment :: Other Environment",
+    "Environment :: WebAssembly :: Emscripten",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -45,8 +46,8 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "http://www.coolprop.org"
-Documentation = "http://www.coolprop.org"
+Homepage = "https://www.coolprop.org"
+Documentation = "https://www.coolprop.org"
 Repository = "https://github.com/CoolProp/CoolProp"
 "Bug Tracker" = "https://github.com/CoolProp/CoolProp/issues"
 
@@ -83,6 +84,13 @@ wheel.exclude = [
     "**/.git*",
     "**/*.cpp",  # Exclude generated C++ from Cython
 ]
+
+# Ship third-party notices alongside CoolProp's own LICENSE in
+# dist-info/licenses/.  The components compiled into the extension modules
+# (Eigen, fmt, nanobind, ...) require their notices to accompany binary
+# redistribution.  Listed explicitly: the scikit-build-core default globs
+# (LICEN[CS]E*, NOTICE*, ...) do not match THIRD_PARTY_NOTICES.md.
+wheel.license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 
 # Resolve the version at build time via a small Python provider (see
 # dev/coolprop_version_provider.py).  It parses the base version from
@@ -124,8 +132,8 @@ build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = "*-musllinux_*"
 
 # Test command
-test-command = "python -c \"import CoolProp; print(CoolProp.__version__); CoolProp.CoolProp.PropsSI('T', 'P', 101325, 'Q', 0, 'Water')\""
-test-requires = ["numpy"]
+test-command = "pytest {project}/wrappers/Python/pytest/smoke_test.py"
+test-requires = ["numpy", "pytest"]
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
@@ -138,9 +146,18 @@ archs = ["x86_64", "aarch64"]
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
 
+[tool.cibuildwheel.pyodide]
+build-frontend = {name = "build", args = ["--exports", "whole_archive"]}
+
+[tool.cibuildwheel.pyodide.environment]
+CFLAGS = "-fwasm-exceptions -DCOOLPROP_NO_INCBIN"
+CXXFLAGS = "-fwasm-exceptions -DCOOLPROP_NO_INCBIN"
+LDFLAGS = "-fwasm-exceptions"
+
 [dependency-groups]
 dev = [
     "matplotlib>=3.7.5",
     "pandas>=2.0.3",
+    "pytest>=8.4.2",
     "scipy>=1.10.1",
 ]

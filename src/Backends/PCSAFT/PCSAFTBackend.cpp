@@ -1731,6 +1731,12 @@ void PCSAFTBackend::post_update(bool optional_checks) {
 }
 
 void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Refuse a quality outside [0,1] (NaN included) before clear() or any
+    // SatL/SatV/_phase write, so a rejected input leaves the state intact
+    // (#2195).  Covers the pure-fluid Qmass pairs, which mass_to_molar_inputs
+    // would otherwise rewrite without looking at the quality.
+    check_input_quality(input_pair, value1, value2);
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
@@ -1804,7 +1810,6 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             SatL->_T = value2;
             SatV->_T = value2;
             _phase = iphase_twophase;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             if (water_present) {
                 components[water_idx].calc_water_sigma(_T);
                 SatL->components[water_idx].calc_water_sigma(_T);
@@ -1824,9 +1829,6 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             SatL->_Q = value2;
             SatV->_Q = value2;
             _phase = iphase_twophase;
-            if ((_Q < 0) || (_Q > 1)) {
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
-            }
             flash_PQ(*this);
             break;
         case DmolarT_INPUTS:

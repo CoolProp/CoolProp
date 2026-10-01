@@ -132,7 +132,16 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         return reducing;
     };
     CoolPropDbl calc_rhomolar_max_bound() override {
-        return 0.9 / get_cubic()->bm_term(mole_fractions);
+        // The repulsive term -ln(1 - (b_m - c_m)*rho) has its pole at rho = 1/(b_m - c_m), not at
+        // 1/b_m.  Both signs of the translation occur in practice and both break the untranslated
+        // bound: a sufficiently negative c puts 0.9/b_m PAST the pole (where p, h and cp return
+        // finite nonsense rather than NaN), and a positive c puts it BELOW real saturated-liquid
+        // densities.
+        const double bmc = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term(mole_fractions);
+        if (!(bmc > 0)) {
+            throw ValueError(format("Volume translation is too large: b_m - c_m = %g m^3/mol must be positive", bmc));
+        }
+        return 0.9 / bmc;
     };
     CoolPropDbl calc_reduced_density() override {
         return _rhomolar / get_cubic()->get_rhor();
@@ -167,7 +176,12 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         if (is_pure_or_pseudopure) {
             // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
             double v_c_Lmol = 2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514;  // [L/mol]
-            return 1 / (v_c_Lmol / 1000.0);
+            // A volume translation leaves Tc and pc alone but moves the critical volume by -c.
+            const double v_c = v_c_Lmol / 1000.0 - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
+            if (!(v_c > 0)) {
+                throw ValueError(format("Volume translation is too large: the translated critical molar volume (%g m^3/mol) is not positive", v_c));
+            }
+            return 1 / v_c;
         } else {
             return HelmholtzEOSMixtureBackend::calc_rhomolar_critical();
         }
@@ -320,6 +334,14 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     // Copy the entire kij matrix from another instance in one shot
     void copy_k(AbstractCubicBackend* donor);
 
+    /// Copy the volume-translation parameter from another instance.
+    ///
+    /// get_copy() constructs a brand-new AbstractCubic from Tc/pc/acentric/R_u, whose constructor
+    /// zeroes the translation.  copy_internals() replays only the kij matrix and the components
+    /// vector, so without this the copy silently reverts to an untranslated EOS -- which would leave
+    /// TPD_state, critical_state and transient_pure_state disagreeing with their parent.
+    void copy_cm(AbstractCubicBackend* donor);
+
     //
     void copy_all_alpha_functions(AbstractCubicBackend* donor);
 
@@ -339,6 +361,22 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Derived classes (SRKBackend, PengRobinsonBackend) override this.
     virtual int get_superanc_eos_code() const {
         return CubicSuperAncillary::UNKNOWN_CODE;
+    }
+
+    /// Map a reduced superancillary density \f$\tilde\rho = \rho_{\rm EOS} b_m\f$ back to a real
+    /// molar density, applying the volume translation.
+    ///
+    /// The Chebyshev superancillary tables describe the UNTRANSLATED cubic, so the volume they
+    /// imply is \f$v_{\rm EOS} = b_m/\tilde\rho\f$ and the physical volume is
+    /// \f$v = v_{\rm EOS} - c_m\f$.  Without this correction every saturation density returned for
+    /// a translated fluid is the untranslated one, which then misclassifies states in
+    /// update_DmolarT().
+    double untranslate_superanc_rho(double rho_tilde, double bm) {
+        const double v = bm / rho_tilde - get_cubic()->cm_term(mole_fractions);
+        if (!(v > 0)) {
+            throw ValueError(format("Volume translation is too large: the translated saturation molar volume (%g m^3/mol) is not positive", v));
+        }
+        return 1.0 / v;
     }
 
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value) override;

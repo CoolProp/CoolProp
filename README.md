@@ -6,13 +6,13 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! [![license](https://img.shields.io/github/license/CoolProp/CoolProp.svg)](https://github.com/CoolProp/CoolProp/blob/master/LICENSE)
 
-* For Python, get the latest release via `pip install coolprop` [![PyPI downloads](https://img.shields.io/pypi/dm/CoolProp.svg?label=PyPI-downloads)](http://pypi.python.org/pypi/CoolProp/) [![PyPI version](https://img.shields.io/pypi/v/coolprop.svg?label=PyPI-binaries)](http://pypi.python.org/pypi/CoolProp/)
+* For Python, get the latest release via `pip install coolprop` [![PyPI downloads](https://img.shields.io/pypi/dm/CoolProp.svg?label=PyPI-downloads)](https://pypi.org/project/CoolProp/) [![PyPI version](https://img.shields.io/pypi/v/coolprop.svg?label=PyPI-binaries)](https://pypi.org/project/CoolProp/)
 
-* ... other binaries are available from [SourceForge](http://sourceforge.net/projects/coolprop/files) [![sourceforge downloads](https://img.shields.io/sourceforge/dm/CoolProp.svg?label=SF-downloads)](http://sourceforge.net/projects/coolprop/files) ![CoolProp version tag](https://img.shields.io/github/release/CoolProp/CoolProp.svg?label=SF-binaries)
+* ... other binaries are available from [SourceForge](https://sourceforge.net/projects/coolprop/files) [![sourceforge downloads](https://img.shields.io/sourceforge/dm/CoolProp.svg?label=SF-downloads)](https://sourceforge.net/projects/coolprop/files) ![CoolProp version tag](https://img.shields.io/github/release/CoolProp/CoolProp.svg?label=SF-binaries)
 
-* There is also a bleeding edge nightly build of the [development version](http://sourceforge.net/projects/coolprop/files/CoolProp/nightly).
+* There is also a bleeding edge nightly build of the [development version](https://sourceforge.net/projects/coolprop/files/CoolProp/nightly).
 
-* The documentation is available for the [latest release](http://www.coolprop.org) and the [development version](https://coolprop.github.io/devdocs/)
+* The documentation is available for the [latest release](https://www.coolprop.org) and the [development version](https://coolprop.github.io/devdocs/)
 
 * For any kind of question regarding CoolProp and its usage, you can ask the [CoolProp Discussions](https://github.com/CoolProp/CoolProp/discussions)
 
@@ -23,6 +23,64 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 * [Contributions](https://github.com/CoolProp/CoolProp/blob/master/.github/CONTRIBUTING.md) to this project are welcomed and encouraged! If you wish to [contribute](https://github.com/CoolProp/CoolProp/blob/master/.github/CONTRIBUTING.md) bug fixes, patches, or new features, wrappers, or material properties, please submit a Pull Request with your code.
 
 * If you are new to Git and Github, please see the [CoolProp Wiki](https://github.com/CoolProp/CoolProp/wiki) for guidance on becoming a contributor to the project.
+
+## CMake package
+
+CoolProp can build and install static and shared libraries independently or in
+the same build:
+
+```sh
+cmake -S . -B build \
+  -DCOOLPROP_STATIC_LIBRARY=ON \
+  -DCOOLPROP_SHARED_LIBRARY=ON
+cmake --build build --config Release
+cmake --install build --config Release --prefix /path/to/prefix
+```
+
+An installed package is consumed through imported targets, without manually
+adding include directories or platform libraries:
+
+```cmake
+find_package(CoolProp 8 CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
+```
+
+When CoolProp is configured with both variants, the producer-side
+`COOLPROP_DEFAULT_LIBRARY` cache setting chooses which variant is exported
+through `CoolProp::CoolProp` (`SHARED` by default). This choice is recorded in
+the installed package and cannot be changed by a package consumer. Consumers
+that require explicit linkage should use `CoolProp::Static` or
+`CoolProp::Shared`. Separate consumer targets may select different variants,
+but one final binary must not link both variants.
+On Windows, the portable shared-library interface is the C API from
+`CoolProp/CoolPropLib.h`; use the static target for the complete C++ API.
+
+Source-tree consumers can use the same canonical target:
+
+```cmake
+set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+add_subdirectory(externals/CoolProp)
+target_link_libraries(my_app PRIVATE CoolProp::CoolProp)
+```
+
+Nested builds add no CoolProp install rules by default. A parent project that
+intentionally packages CoolProp can enable `COOLPROP_INSTALL_CMAKE_PACKAGE`
+and/or `COOLPROP_INSTALL_LEGACY_LAYOUT` before calling `add_subdirectory`.
+
+By default, `COOLPROP_VENDOR_THIRD_PARTY=ON` bundles the pinned Eigen and fmt
+headers and licenses into the relocatable package. Their sources are fetched
+even with `CPM_USE_LOCAL_PACKAGES=ON`, because installed packages may not supply
+the source files required for vendoring. Explicit `CPM_Eigen_SOURCE` and
+`CPM_fmt_SOURCE` source-directory overrides remain supported; they must point at
+complete source trees, including the upstream license files. Distributors can set
+`COOLPROP_VENDOR_THIRD_PARTY=OFF` to use installed `Eigen3` and `fmt` CMake
+packages instead (Eigen 3.4 or newer); downstream consumers must then provide
+those packages too.
+This option concerns Eigen/fmt only, not CoolProp's other build dependencies.
+
+Use `CMAKE_INSTALL_PREFIX` (or `cmake --install --prefix`) to choose the install
+location. The legacy `COOLPROP_INSTALL_PREFIX` override must not be empty and
+is ignored in nested builds, which retain their parent's install prefix.
 
 ## Sponsors
 

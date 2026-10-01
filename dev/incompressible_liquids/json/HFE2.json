@@ -1,101 +1,143 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 2.651200e+02, 
-  "Tmax": 3.374200e+02, 
-  "Tmin": 1.928200e+02, 
-  "TminPsat": 3.374200e+02, 
+  },
+  "Tbase": 265.12,
+  "Tmax": 337.42,
+  "Tmin": 192.82,
+  "TminPsat": 337.42,
   "conductivity": {
-    "NRMS": 1.045884e-08, 
+    "NRMS": 1.045884e-08,
     "coeffs": [
       [
-        7.528370e-02
-      ], 
+        0.0752837
+      ],
       [
-        -1.954800e-04
-      ], 
+        -0.00019548
+      ],
       [
         -2.465231e-14
-      ], 
+      ],
       [
-        6.920734e-16
+        6.920579e-16
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 1.861395e-13, 
+    "NRMS": 4.537808e-14,
     "coeffs": [
       [
-        1.556520e+03
-      ], 
+        1556.52
+      ],
       [
-        -2.269000e+00
-      ], 
+        -2.269
+      ],
       [
-        6.106227e-16
-      ], 
+        1.908769e-16
+      ],
       [
-        0.000000e+00
+        -1.681865e-16
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "HFE-7100, Hydrofluoroether", 
+  },
+  "density_cheb": {
+    "NRMS": 6.745231e-16,
+    "Trange": [
+      192.82,
+      337.42
+    ],
+    "coeffs": [
+      [
+        1556.52
+      ],
+      [
+        -164.0487
+      ],
+      [
+        -1.713584e-13
+      ],
+      [
+        1.290971e-13
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "HFE-7100, Hydrofluoroether",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "HFE2", 
-  "reference": "3M2007,Skovrup2013", 
+  },
+  "name": "HFE2",
+  "reference": "3M2007,Skovrup2013",
   "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 9.208281e-14, 
+    "NRMS": 5.979174e-14,
     "coeffs": [
       [
-        1.116940e+03
-      ], 
+        1116.94
+      ],
       [
-        2.000000e+00
-      ], 
+        2.0
+      ],
       [
-        -8.326673e-17
-      ], 
+        -3.916414e-16
+      ],
       [
-        -2.220446e-16
+        -9.133334e-18
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 7.870470e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 1.059436e-15,
+    "Trange": [
+      192.82,
+      337.42
+    ],
     "coeffs": [
-      4.475374e+02, 
-      -9.321610e+01, 
-      1.008144e+01
-    ], 
+      [
+        1116.94
+      ],
+      [
+        144.6
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.00787047,
+    "coeffs": [
+      447.5374,
+      -93.2161,
+      10.08144
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

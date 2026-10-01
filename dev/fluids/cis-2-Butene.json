@@ -4136,7 +4136,22 @@
     "INCHI_STRING": "InChI=1S/C4H8/c1-3-4-2/h3-4H,1-2H3/b4-3-",
     "NAME": "cis-2-Butene",
     "REFPROP_NAME": "C2BUTENE",
-    "SMILES": "C/C=C\\C"
+    "SMILES": "C/C=C\\C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "590-18-1*0",
+        "source": "ATcT",
+        "uncertainty": 380.0,
+        "units": "J/mol",
+        "value": -6850.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

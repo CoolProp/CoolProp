@@ -68,7 +68,7 @@ high_level_interface = [
     "",
     {
         "type": "comment",
-        "comment": "See http://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function for a list of inputs to high-level interface",
+        "comment": "See https://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function for a list of inputs to high-level interface",
         "EOL": True
     },
     {
@@ -930,7 +930,7 @@ class Java(BaseParser):
         return l
 
     def header(self):
-        return 'public class Example {\n    static {\n        System.loadLibrary("CoolPropJava");\n    }\n\n    public static void main(String argv[]){\n'
+        return 'import org.coolprop.*;\n\npublic class Example {\n    static {\n        System.loadLibrary("CoolPropJava");\n    }\n\n    public static void main(String argv[]){\n'
 
     def footer(self):
         return '\n    }\n}'

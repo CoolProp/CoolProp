@@ -65,6 +65,7 @@ class VTPRBackend : public PengRobinsonBackend
         AbstractCubicBackend* ACB =
           new VTPRBackend(calc_fluid_names(), cubic->get_Tc(), cubic->get_pc(), cubic->get_acentric(), cubic->get_R_u(), generate_SatL_and_SatV);
         ACB->copy_k(this);
+        ACB->copy_cm(this);
         ACB->copy_all_alpha_functions(this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }

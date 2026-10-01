@@ -4158,7 +4158,22 @@
     "INCHI_STRING": "InChI=1S/C3H6O/c1-3(2)4/h1-2H3",
     "NAME": "Acetone",
     "REFPROP_NAME": "ACETONE",
-    "SMILES": "CC(=O)C"
+    "SMILES": "CC(=O)C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "67-64-1*0",
+        "source": "ATcT",
+        "uncertainty": 260.0,
+        "units": "J/mol",
+        "value": -216870.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

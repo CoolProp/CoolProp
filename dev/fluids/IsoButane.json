@@ -4317,7 +4317,22 @@
     "INCHI_STRING": "InChI=1S/C4H10/c1-4(2)3/h4H,1-3H3",
     "NAME": "IsoButane",
     "REFPROP_NAME": "ISOBUTAN",
-    "SMILES": "CC(C)C"
+    "SMILES": "CC(C)C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-28-5*0",
+        "source": "ATcT",
+        "uncertainty": 270.0,
+        "units": "J/mol",
+        "value": -134480.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

@@ -4056,7 +4056,22 @@
     "INCHI_STRING": "InChI=1S/F2/c1-2",
     "NAME": "Fluorine",
     "REFPROP_NAME": "FLUORINE",
-    "SMILES": "FF"
+    "SMILES": "FF",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7782-41-4*0",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 0.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

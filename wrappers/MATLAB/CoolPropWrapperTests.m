@@ -33,7 +33,7 @@ classdef CoolPropWrapperTests < matlab.unittest.TestCase
       % If the above fails, try reinstalling numpy.
       testCase.fatalAssertClass(py.importlib.import_module('CoolProp.CoolProp'),'py.module');
       % If the above fails, try installing the nightly release from:
-      % http://www.coolprop.org/dev/coolprop/wrappers/Python/index.html#automatic-installation
+      % https://www.coolprop.org/dev/coolprop/wrappers/Python/index.html#automatic-installation
     end % testPythonSetup
     
     %% Smoke tests:

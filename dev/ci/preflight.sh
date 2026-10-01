@@ -15,6 +15,9 @@
 #   ./dev/ci/preflight.sh --skip=cppcheck,clang-tidy   # subset
 #   ./dev/ci/preflight.sh --skip=json-symbols          # subset
 #   ./dev/ci/preflight.sh --skip=install-headers        # subset
+#   ./dev/ci/preflight.sh --skip=incomp-sanity          # subset
+#   ./dev/ci/preflight.sh --skip=shellcheck,actionlint  # subset
+#   ./dev/ci/preflight.sh --jobs=4       # cap parallelism (default: all cores)
 #
 # Tools resolved at runtime:
 #   - clang-format     : uvx clang-format@<version-from-.pre-commit-config>
@@ -23,8 +26,13 @@
 #                         (which already graceful-skips when clang-tidy or
 #                          compile_commands.json isn't around)
 #   - semgrep          : uvx semgrep with p/cpp + p/security-audit rulesets
+#   - shellcheck       : uvx shellcheck-py, changed *.sh only, warning+
+#   - actionlint       : uvx actionlint-py + shellcheck-py, changed
+#                         .github/workflows/*.yml only
 #   - Catch2 tests     : ./build_catch/CatchTestRunner with tag scope
-#                        auto-selected from the changed paths
+#                        auto-selected from the changed paths, sharded
+#                        across --jobs cores by dev/ci/run-catch-sharded.sh;
+#                        BENCHMARK bodies run once, as in CI
 #
 # Exit codes: 0 = all checks passed (or were skipped intentionally),
 # non-zero = at least one check failed.  When invoked as a pre-push hook
@@ -37,16 +45,25 @@ set -euo pipefail
 
 BASE_REF="origin/master"
 SKIP_CHECKS=""
+JOBS=""
+JOBS_GIVEN=0
 for arg in "$@"; do
     case "$arg" in
         --base=*) BASE_REF="${arg#*=}" ;;
-        --skip=*) SKIP_CHECKS="${arg#*=}" ;;
+        # Append rather than assign: a repeated --skip= used to overwrite the
+        # earlier one, so `--skip=a --skip=b` silently skipped only b and ran a.
+        # Both forms now work -- CSV in one flag, or the flag repeated.
+        --skip=*) SKIP_CHECKS="${SKIP_CHECKS:+$SKIP_CHECKS,}${arg#*=}" ;;
+        --jobs=*) JOBS="${arg#*=}"; JOBS_GIVEN=1 ;;
         --help|-h)
-            sed -n '2,30p' "$0"
+            # Print the header comment block, stopping at the first
+            # non-comment line. A hardcoded end line silently truncated this
+            # mid-sentence every time a usage line was added to the header.
+            sed -n '2,${/^#/!q;p;}' "$0"
             exit 0
             ;;
         *)
-            echo "preflight: unknown arg '$arg' (use --base=<ref> or --skip=<csv>)" >&2
+            echo "preflight: unknown arg '$arg' (use --base=<ref>, --skip=<csv> or --jobs=<n>)" >&2
             exit 2
             ;;
     esac
@@ -55,6 +72,40 @@ done
 skip_check() {
     [[ ",$SKIP_CHECKS," == *",$1,"* ]]
 }
+
+# Parallelism for the builds, the sharded test run and clang-tidy.
+# The all-cores default applies only when --jobs is absent; an explicit
+# `--jobs=` falls through to the validation below and is rejected.
+if [ "$JOBS_GIVEN" = 0 ]; then
+    JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+fi
+# Leading zeros are rejected, not stripped: bash arithmetic reads 010 as
+# octal 8 and 08 as an error, while xargs -P reads them as decimal.
+case "$JOBS" in '' | *[!0-9]* | 0*)
+    echo "preflight: --jobs must be a positive integer without leading zeros, got '$JOBS'" >&2
+    exit 2
+    ;;
+esac
+
+# Share CPM dependency downloads across worktrees.  cmake/dependencies.cmake
+# already defaults the cache to <worktree>/.cpm_cache, so build dirs WITHIN a
+# worktree share it -- but every new worktree still re-clones all of the
+# dependencies on its first configure, which was most of the 19 s that
+# configure took.  CPM stores the value as a cache variable per build dir, so
+# this only affects build dirs configured from here on; existing ones keep
+# what they have.  CPM takes a file lock per package, so concurrent worktrees
+# can share one cache.  `-` rather than `:-`: an explicitly empty
+# CPM_SOURCE_CACHE is an opt-out and is respected.
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE-$HOME/.cache/CPM}"
+
+# Ninja when available: it is what CI uses, and it schedules the build better
+# than Unix Makefiles.  Only applied when preflight configures a build dir
+# itself (the dir does not exist yet), so it can never clash with the
+# generator an existing CMakeCache.txt records.
+CMAKE_GEN_ARGS=()
+if command -v ninja >/dev/null 2>&1; then
+    CMAKE_GEN_ARGS=(-G Ninja)
+fi
 
 # ---------- locate repo + cd to root ---------------------------------
 
@@ -67,15 +118,59 @@ cd "$REPO_ROOT"
 # C-family checks care about.  Filters out deleted files (.cpp.cpp at
 # the same path would otherwise be checked even though it no longer
 # exists on disk).
+# --diff-filter=ACMR drops deletions from each diff on its own, but the range
+# diff and the working-tree diff are unioned below, and that union can still
+# name a file that is gone.  A file added in a commit and then deleted in the
+# working tree is "Added" in the range diff, so it survives, while the
+# working-tree diff that would have called it deleted has already filtered it
+# out.  Deleting a workflow file used to break the actionlint gate exactly that
+# way: actionlint was handed a path that no longer existed and refused to run,
+# which fails the gate for a reason that has nothing to do with the workflows.
+keep_existing() {
+    local f dropped=0
+    # "|| [[ -n $f ]]" so a final line with no trailing newline is not eaten.
+    # Every caller below pipes through sort and grep, which always terminate
+    # their output, so this cannot bite today; it bites the first time somebody
+    # reorders the pipeline or calls this directly.
+    while IFS= read -r f || [[ -n "$f" ]]; do
+        if [[ -n "$f" && -e "$f" ]]; then
+            printf '%s\n' "$f"
+        elif [[ -n "$f" ]]; then
+            dropped=$(( dropped + 1 ))
+            printf 'preflight: skipping %s (no longer on disk)\n' "$f" >&2
+        fi
+    done
+    # Dropping paths silently would make a bad cwd or a mangled checkout look
+    # like "no files in diff", and every gate would then skip and report green
+    # while checking nothing.  Saying so on stderr costs nothing and makes that
+    # loud.
+    if (( dropped > 0 )); then
+        printf 'preflight: %d path(s) in the diff no longer exist\n' "$dropped" >&2
+    fi
+    return 0
+}
+
 CHANGED_CPP="$(git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
 # Also pick up uncommitted changes in the working tree — preflight is
 # meant to gate pushes, but agents often run it mid-edit too.
-UNSTAGED_CPP="$(git diff --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
-ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' || true)"
+UNSTAGED_CPP="$(git diff HEAD --name-only --diff-filter=ACMR -- '*.cpp' '*.h' '*.hpp' '*.cc' '*.cxx' || true)"
+ALL_CPP="$(printf '%s\n%s\n' "$CHANGED_CPP" "$UNSTAGED_CPP" | sort -u | grep -v '^$' | keep_existing || true)"
 
 # All paths changed (any extension) — used for tag auto-selection.
 ALL_PATHS="$(git diff --name-only "$BASE_REF"...HEAD; git diff --name-only)"
 ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
+
+# Shell scripts and GitHub Actions workflows, same ACMR filtering as the C++
+# set above.  Every C-family check below skips when a diff carries no .cpp/.h,
+# which left a branch made entirely of shell, CMake and YAML (a packaging or
+# CI change, exactly the shape that breaks quietly) reporting
+# "0 passed / 0 failed" and gating nothing.
+CHANGED_SH="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '*.sh' '*.bash'
+                 git diff HEAD --name-only --diff-filter=ACMR -- '*.sh' '*.bash'; } \
+               | sort -u | grep -v '^$' | keep_existing || true)"
+CHANGED_WORKFLOWS="$( { git diff --name-only --diff-filter=ACMR "$BASE_REF"...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml'
+                        git diff HEAD --name-only --diff-filter=ACMR -- '.github/workflows/*.yml' '.github/workflows/*.yaml'; } \
+                      | sort -u | grep -v '^$' | keep_existing || true)"
 
 # ---------- pretty helpers -------------------------------------------
 
@@ -119,11 +214,33 @@ else
         CF_VER="18.1.8"
     fi
     # uvx caches the binary; first invocation downloads, subsequent are
-    # ~instant.  --dry-run --Werror returns non-zero on any reformatting.
-    if uvx clang-format@"$CF_VER" --dry-run --Werror $ALL_CPP 2>&1 | grep -q .; then
+    # ~instant.  --dry-run --Werror prints one diagnostic per violation AND
+    # exits non-zero.
+    #
+    # Capture the output and test that, rather than piping into `grep -q`:
+    # under `set -o pipefail` (line 35) the pipeline inherits clang-format's
+    # non-zero exit, so `if <pipeline>` was false exactly when violations
+    # existed and the gate reported PASS.  With no violations clang-format
+    # exits 0 but grep finds nothing and exits 1 -- also false, also PASS.
+    # Both branches led to PASS, so the gate could never fail.
+    # ALL_CPP is a newline-separated scalar; read it into an array so paths
+    # containing spaces or glob characters survive as single arguments.
+    CF_FILES=()
+    while IFS= read -r _f; do
+        [ -n "$_f" ] && CF_FILES+=("$_f")
+    done <<< "$ALL_CPP"
+
+    # Branch on clang-format's EXIT STATUS, not on whether it printed
+    # anything.  uvx writes progress to stderr on a cold cache
+    # ("Downloading clang-format (1.3MiB)"), which 2>&1 captures, so a
+    # non-empty-output test reports a formatting failure on a clean tree
+    # the first time preflight runs on any machine.
+    CF_OUT="$(uvx clang-format@"$CF_VER" --dry-run --Werror "${CF_FILES[@]}" 2>&1)" && CF_RC=0 || CF_RC=$?
+    if [ "$CF_RC" -ne 0 ]; then
+        printf '%s\n' "$CF_OUT" | head -20
         fail "clang-format (run: uvx clang-format@$CF_VER -i <files>)"
     else
-        ok "clang-format ($CF_VER, $(printf '%s\n' "$ALL_CPP" | wc -l | tr -d ' ') file(s))"
+        ok "clang-format ($CF_VER, ${#CF_FILES[@]} file(s))"
     fi
 fi
 
@@ -133,16 +250,25 @@ step "build CatchTestRunner"
 if skip_check build; then
     skip "build" "--skip=build"
 elif [ ! -d build_catch ]; then
-    # Auto-configure on first run.  Same flags as CI.
-    cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON >/dev/null 2>&1 || {
-        fail "build (cmake configure failed; run cmake -B build_catch -S . -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON manually)"
+    # Auto-configure on first run.  Release is not optional: CoolProp sets no
+    # default CMAKE_BUILD_TYPE, so without it the runner is built unoptimized
+    # and every test stage after this is several times slower.
+    cmake -B build_catch -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release >/dev/null 2>&1 || {
+        fail "build (cmake configure failed; rm -rf build_catch, then run cmake -B build_catch -S . ${CMAKE_GEN_ARGS[*]-} -DCOOLPROP_CATCH_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release manually)"
     }
 fi
 if ! skip_check build && [ -d build_catch ]; then
-    if cmake --build build_catch --target CatchTestRunner -j8 2>&1 | tee /tmp/preflight-build.log | tail -5 | grep -qE "error:|FAILED"; then
-        fail "build (see /tmp/preflight-build.log)"
-    else
+    # Test cmake's own exit status.  The previous form piped the build log
+    # through `tee | tail -5 | grep -qE "error:|FAILED"` under `set -o
+    # pipefail`: a failing build made the pipeline non-zero, so `if
+    # <pipeline>` was false and the gate reported the build as PASSING.
+    # Grepping the last 5 lines was independently unreliable -- a link
+    # error, an OOM kill or a cmake usage error need not print "error:".
+    if cmake --build build_catch --target CatchTestRunner -j"$JOBS" >/tmp/preflight-build.log 2>&1; then
         ok "build CatchTestRunner"
+    else
+        tail -20 /tmp/preflight-build.log
+        fail "build (see /tmp/preflight-build.log)"
     fi
 fi
 
@@ -168,12 +294,12 @@ else
     # through --skip=json-symbols (handled above), not through swallowed errors.
     SHARED_OK=1
     if [ ! -d build_shared ]; then
-        if ! cmake -B build_shared -S . -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
+        if ! cmake -B build_shared -S . ${CMAKE_GEN_ARGS[@]+"${CMAKE_GEN_ARGS[@]}"} -DCOOLPROP_SHARED_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release >/tmp/preflight-shared-build.log 2>&1; then
             fail "json-symbols (shared configure failed; see /tmp/preflight-shared-build.log)"
             SHARED_OK=0
         fi
     fi
-    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j8 >/tmp/preflight-shared-build.log 2>&1; then
+    if [ "$SHARED_OK" = 1 ] && ! cmake --build build_shared -j"$JOBS" >/tmp/preflight-shared-build.log 2>&1; then
         fail "json-symbols (shared build failed; see /tmp/preflight-shared-build.log)"
         SHARED_OK=0
     fi
@@ -221,26 +347,155 @@ elif [ ! -x ./build_catch/CatchTestRunner ]; then
 else
     # Tag scope selection.  Path -> tag mapping mirrors how CI's broad
     # workflow runs the full suite, but skips the expensive `[slow]`
-    # tests by default for fast local feedback.  Pass --slow to include.
+    # tests by default for fast local feedback.  (There is no --slow flag;
+    # run `./build_catch/CatchTestRunner "[slow]"` directly for those.)
+    # Catch2 filter syntax, since three of these were wrong before:
+    #   ~[tag]   EXCLUDES a tag.  `[!slow]` does NOT exclude -- it selects a
+    #            literal tag named "!slow", which no test carries, so
+    #            `[!slow][!benchmark]` matched 0 test cases and this gate
+    #            passed while running NOTHING.
+    #   ,        inside one spec is OR.
+    #   [!benchmark] is a real Catch2 tag, but benchmarks are HIDDEN from the
+    #            default set already (`~[!benchmark]` and no filter both list
+    #            468).  So appending `,[!benchmark]` to an OR-list ADDED the
+    #            benchmarks instead of excluding them.  No benchmark term is
+    #            needed; --benchmark-samples stays a CI concern.
+    # Separate argv specs are AND-ed (intersected), not OR-ed, so an OR-list
+    # must be one comma-separated argument.
     TAG_FILTER=""
-    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/)"; then
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/SBTL/|include/CoolProp/sbtl/|src/Backends/SVDSBTL/|src/Region/|src/SVD/|include/CoolProp/region/|include/CoolProp/svd/|dev/fluids/|dev/mixtures/)"; then
         # SBTL/SVDSBTL surface area touched — run the umbrella tags.
         # [SBTL] catches the adapter-layer tests (serializer round-trip,
         # multi-fluid PH preset) that [SVDSBTL] alone misses.
-        TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region],[!benchmark]"
+        #
+        # dev/fluids and dev/mixtures are in this list because the SVD tables are
+        # SAMPLED from that data: change a fluid and the cached table for it is
+        # stale, but nothing on the load path notices (the cache filename hashes
+        # build options, not fluid data, and the serializer kRevision check only
+        # sees format changes).  The tests that compare a table against HEOS are
+        # tagged [slow], so without this a fluid-data-only change selects
+        # "~[slow]" and never runs them.  PR #3352 shipped a new R-32 viscosity
+        # and CI caught the 8 % table/HEOS mismatch that preflight had missed.
+        TAG_FILTER="[SBTL],[SVDSBTL],[SVDComponents],[region]"
     elif printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/Backends/Helmholtz/|src/Backends/REFPROP/)"; then
-        # HEOS / REFPROP path touched — broader sweep including transport
-        # and flash routines.
-        TAG_FILTER="[Helmholtz],[REFPROP],[!benchmark]"
+        # HEOS / REFPROP path touched — broader sweep including the flash
+        # routines.  ([transport], [viscosity] and [conductivity] are real
+        # tags and are NOT in this list; the older wording claimed they were.)
+        #
+        # [flash],[mixture] are NOT optional here.  Without them this branch
+        # narrowed a Helmholtz-backend diff to 19 cases and ran NEITHER the
+        # PT-flash two-phase residual test nor the all_deltaonly agreement
+        # test — the two that sat red on master until #3323, because only a
+        # manual ~[slow] sweep ever reached them (bd CoolProp-n2qs).  Cost is
+        # 6 s (69 cases, 7.1 s total vs 0.9 s before; 13 [REFPROP] cases skip
+        # in this worktree, so budget more where REFPROP resolves).  The hole
+        # it closed is the flash surface this branch exists to cover.  Note this branch (like the SBTL one) carries no ~[slow]
+        # exclusion, so 6 [slow]-tagged cases are in scope — but they came in
+        # with [REFPROP] already, not with this widening.
+        TAG_FILTER="[Helmholtz],[REFPROP],[flash],[mixture]"
+    elif printf '%s\n' "$ALL_PATHS" | grep -qE "^src/Backends/Cubics/"; then
+        # Cubic backends touched.  [cubic] is the umbrella (every [cubic_*]
+        # test now carries it too — Catch2 tags are exact-match, not prefix).
+        # [mixture_derivs2] is the composition-derivative gate: DerivativeFixture
+        # is instantiated for PengRobinsonBackend and SRKBackend and finite-
+        # differences the whole fugacity chain, so it is where a wrong
+        # composition derivative shows up.
+        #
+        # [helmholtz] is NOT optional, and neither is it covered by the rest of
+        # this list: GeneralizedCubic is not reached only through the cubic
+        # backends.  HelmholtzConsistencyFixture builds a
+        # ResidualHelmholtzGeneralizedCubic over both SRK and PengRobinson and
+        # finite-differences all 14 derivatives, including the third- and
+        # fourth-order delta terms -- psi_minus/psi_plus cases 3 and 4, which feed
+        # d3alphar_ddelta3 / d4alphar_ddelta4 and hence the critical-point and
+        # stability routines.  Nothing else here reaches them: [mixture_derivs2]
+        # stops at d2alphar_dDelta2, and [change_EOS] only asserts that
+        # change_EOS(0,"SRK") does not throw -- it never evaluates a property
+        # afterwards, so it cannot see a wrong alphar.  Nor does anything in the
+        # suite evaluate a thermodynamic property through the "-SRK" /
+        # "-PengRobinson" fluid endings; the one test that names them reads molar
+        # mass.  [GERG] and [json_validation] stay for the cubic JSON payload and
+        # change_EOS surfaces they do cover.
+        TAG_FILTER="[cubic],[volume_translation],[mixture_derivs2],[michelsen],[change_EOS],[GERG],[json_validation],[helmholtz]"
     else
         # Default: run everything fast (skip the [slow] long tests).
-        TAG_FILTER="[!slow][!benchmark]"
+        TAG_FILTER="~[slow]"
+    fi
+    # The expression-DSL surface is ORTHOGONAL to the branches above, so it has to
+    # be OR-ed in rather than being another elif.  Its parse branch and dispatch arm
+    # live under src/Backends/Helmholtz/, so any change to them selects
+    # "[Helmholtz],[REFPROP]" -- which contains ZERO [expression] test cases.  Before
+    # this, a branch touching the DSL, its tests and shipped fluid data reported a
+    # green preflight having run none of them.
+    if printf '%s\n' "$ALL_PATHS" | grep -qE "^(src/expression/|include/CoolProp/expression/|src/Backends/Helmholtz/|src/Tests/CoolProp-Tests-Expression\.cpp|dev/fluids/)"; then
+        case "$TAG_FILTER" in
+            "~[slow]") : ;;  # already runs everything except [slow]
+            *) TAG_FILTER="${TAG_FILTER},[expression]" ;;
+        esac
     fi
     echo "  tag filter: $TAG_FILTER"
-    if ./build_catch/CatchTestRunner $TAG_FILTER 2>&1 | tee /tmp/preflight-tests.log | tail -3 | grep -qE "failed|Errors:"; then
-        fail "tests (see /tmp/preflight-tests.log)"
+    # Gate on the runner's EXIT CODE, not on grepping its output.  The old
+    # form piped into `grep -qE "failed|Errors:"`, so the `if` saw grep's
+    # status and the runner's was discarded -- a zero-match run (exit 2,
+    # "No tests ran") contains neither word and was reported as a pass.
+    # Also require a non-zero test count, so a filter that stops matching
+    # after a rename fails loudly instead of silently testing nothing.  That
+    # count alone only catches a TOTALLY stale filter, though: rename one tag
+    # out of the comma-separated OR-lists below and the rest still match, so
+    # the gate would pass while testing less.  `--warn UnmatchedTestSpec` on
+    # the run closes that -- Catch2 then exits 3 (UnmatchedTestSpecExitCode)
+    # if any single term matched nothing.  Verified: "[cbor],[NoSuchTag]"
+    # exits 3 on a run.  Note it does NOT work on --list-tests (exits 0
+    # there), which is why it is on the run and not the listing.
+    #
+    # Count the cases via `--list-tests --verbosity quiet`, which prints one
+    # test name per line and nothing else.  Deliberately NOT parsing the
+    # human-readable "N matching test cases" summary: that string is a
+    # presentation detail that a Catch2 upgrade can reword, and if it ever
+    # stopped matching, the count would silently read 0.  Line counting also
+    # lets the listing's own exit status stay meaningful -- a non-zero exit
+    # here means the listing itself failed (missing/broken runner), which is
+    # distinct from a filter that legitimately matches nothing (exit 0, no
+    # lines).  No `2>/dev/null` and no `|| echo 0`: swallowing either the
+    # stderr or the status is what lets a gate fail open.
+    test_logdir="$(mktemp -d "${TMPDIR:-/tmp}/preflight-tests.XXXXXX")"
+    if ! listed_tests=$(./build_catch/CatchTestRunner "$TAG_FILTER" \
+                            --list-tests --verbosity quiet); then
+        fail "tests (could not list cases for filter '$TAG_FILTER' -- is the runner intact?)"
     else
-        ok "tests ($TAG_FILTER)"
+        matched=$(printf '%s\n' "$listed_tests" | awk 'NF { c++ } END { print c + 0 }')
+        if [ "$matched" -eq 0 ]; then
+            fail "tests (filter '$TAG_FILTER' matched 0 test cases -- filter is stale, not a pass)"
+        # Sharded across $JOBS cores (see dev/ci/run-catch-sharded.sh for the
+        # load-balancing and fail-closed argument).  The runner's own summary
+        # goes to the log dir, not the terminal: streaming ~560 cases here
+        # would bury the cppcheck/clang-tidy/semgrep results and the summary
+        # below it.  Beyond its exit status, the sharded runner checks that
+        # the cases that ran add up to $matched, so a shard that crashed or
+        # silently ran nothing fails rather than shrinking the gate.
+        #
+        # BENCHMARK flags: the same one-sample settings CI uses.  Catch2's
+        # defaults take 100 samples plus analysis, which made
+        # [superanc],[caching] alone 25.9 s.  --skip-benchmarks would be
+        # faster still but is NOT safe: a BENCHMARK body that throws fails its
+        # test case, and some bodies are the only place a code path runs
+        # ("Performance regression for TS; on/off" [2438] is the only
+        # update(SmolarT_INPUTS) call in its case; the #2773 update_with_guesses
+        # paths in [caching] run only inside BENCHMARK).  Running each body
+        # once costs ~1 s over skipping them once the run is sharded.
+        elif mkdir "$test_logdir/shards" \
+             && ./dev/ci/run-catch-sharded.sh ./build_catch/CatchTestRunner "$TAG_FILTER" "$matched" "$JOBS" "$test_logdir/shards" \
+                 --warn UnmatchedTestSpec \
+                 --benchmark-samples 1 --benchmark-no-analysis --benchmark-warmup-time 0 \
+                 >"$test_logdir/summary.txt" 2>&1; then
+            ok "tests ($TAG_FILTER, $matched cases, sharded over $JOBS jobs)"
+        else
+            # `|| true` guards the DISPLAY only: without it a failed cat
+            # would abort the script under `set -e` before `fail` records the
+            # result.  It cannot mask the gate -- `fail` runs unconditionally.
+            cat "$test_logdir/summary.txt" || true
+            fail "tests ($TAG_FILTER; per-shard logs: $test_logdir/shards)"
+        fi
     fi
 fi
 
@@ -323,17 +578,41 @@ else
     if [ -z "$CPP_ONLY" ]; then
         skip "clang-tidy" "no .cpp files in diff (headers covered transitively)"
     else
-        COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh $CPP_ONLY >/tmp/preflight-clang-tidy.log 2>&1 || true
+        # One clang-tidy per file, $JOBS at a time.  It was one process over
+        # every file, which analyses them serially at ~47 s each (parsing is
+        # only ~5 s of that; the rest is the ~200 enabled checks), so a
+        # five-file diff sat in this step for four minutes on one core.
+        # Each file logs to its own zero-padded file and the logs are joined
+        # in order afterwards, so parallel writers never interleave lines and
+        # the combined log reads exactly as the serial one did.  The `|| true`
+        # per file is the pre-existing contract of this step (the verdict
+        # comes from the grep below, not from clang-tidy's exit status).
+        CT_LOGDIR="$(mktemp -d "${TMPDIR:-/tmp}/preflight-clang-tidy.XXXXXX")"
+        ct_i=0
+        while IFS= read -r ct_f; do
+            [ -n "$ct_f" ] || continue
+            printf '%04d\0%s\0' "$ct_i" "$ct_f"
+            ct_i=$((ct_i + 1))
+        done <<< "$CPP_ONLY" \
+            | xargs -0 -n 2 -P "$JOBS" bash -c \
+                'COOLPROP_BUILD_DIR=build_catch ./dev/ci/run-clang-tidy-staged.sh "$2" >"$0/$1.log" 2>&1 || true' \
+                "$CT_LOGDIR"
+        cat "$CT_LOGDIR"/*.log >/tmp/preflight-clang-tidy.log
         if grep -q "^warning:.*skipping" /tmp/preflight-clang-tidy.log; then
             skip "clang-tidy" "$(grep -m1 '^warning:' /tmp/preflight-clang-tidy.log | sed 's/^warning: //')"
         else
-            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || echo 0)"
+            # `|| echo 0` appended a second line (grep -c prints 0 then exits
+            # 1).  Harmless here, but the same construct on SIGNAL_COUNT below
+            # fed a numeric test and errored on every clean run.
+            RAW="$(grep -cE 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null | head -1 || true)"
+            [ -n "$RAW" ] || RAW=0
             # Each finding line ends with `[<check-name>,-warnings-as-errors]`
             # or `[<check-name>]`.  Match the bracketed check name and
             # exclude any line whose name is in NOISE_PATTERN.
             SIGNAL_LINES="$(grep -E 'warning: |error: ' /tmp/preflight-clang-tidy.log 2>/dev/null \
                 | grep -vE "\\[($NOISE_PATTERN)(,|\\])" || true)"
-            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || echo 0)"
+            SIGNAL_COUNT="$(printf '%s\n' "$SIGNAL_LINES" | grep -c . || true)"
+            [ -n "$SIGNAL_COUNT" ] || SIGNAL_COUNT=0
             if [ "$SIGNAL_COUNT" -gt 0 ]; then
                 printf '\n--- signal findings (noise-filtered, see #2926) ---\n'
                 printf '%s\n' "$SIGNAL_LINES" | head -30
@@ -373,6 +652,85 @@ else
     fi
 fi
 
+# ---------- check 6b: shellcheck (changed shell scripts) -------------
+#
+# Scoped to changed files on purpose: a handful of legacy scripts carry
+# pre-existing findings (two missing shebangs, and broken `[` test expressions
+# in wrappers/Fluent/), and blocking an unrelated push on those helps nobody.
+# --severity=warning keeps style and info out of the way for the same reason;
+# drop it once the tree is clean if you want SC2086 enforced too.
+step "shellcheck (changed shell scripts)"
+if skip_check shellcheck; then
+    skip "shellcheck" "--skip=shellcheck"
+elif [ -z "$CHANGED_SH" ]; then
+    skip "shellcheck" "no shell scripts in diff"
+elif ! command -v uvx >/dev/null 2>&1; then
+    skip "shellcheck" "uvx not on PATH"
+else
+    # Unquoted on purpose, as with $ALL_CPP above: the file list has to split.
+    # shellcheck disable=SC2086
+    if ! uvx --from shellcheck-py shellcheck --severity=warning $CHANGED_SH \
+         > /tmp/preflight-shellcheck.log 2>&1; then
+        cat /tmp/preflight-shellcheck.log
+        fail "shellcheck (see /tmp/preflight-shellcheck.log)"
+    else
+        ok "shellcheck ($(printf '%s\n' "$CHANGED_SH" | wc -l | tr -d ' ') file(s))"
+    fi
+fi
+
+# ---------- check 6c: actionlint (changed workflows) -----------------
+#
+# Catches the GitHub Actions mistakes that only show up as a red run: bad
+# `needs:` references, unknown contexts, deprecated runner images, and broken
+# shell inside `run:` blocks (through shellcheck, see below).
+#
+# Note for anyone editing the comments here: a line starting with the word
+# "shellcheck" after the # is parsed as a shellcheck directive, and an
+# unparseable one is an SC1073 error. Keep the word off the start of a comment.
+step "actionlint (changed workflows)"
+if skip_check actionlint; then
+    skip "actionlint" "--skip=actionlint"
+elif [ -z "$CHANGED_WORKFLOWS" ]; then
+    skip "actionlint" "no workflow files in diff"
+elif ! command -v uvx >/dev/null 2>&1; then
+    skip "actionlint" "uvx not on PATH"
+else
+    # --with shellcheck-py is load-bearing, not a nicety.  actionlint shells out
+    # to a shellcheck BINARY to lint `run:` blocks, and silently lints none of
+    # them when there is no such binary on PATH: a workflow whose shell is
+    # plainly broken then exits 0.  Verified both ways before relying on it.
+    #
+    # SHELLCHECK_OPTS matches the severity floor of the check above, so touching
+    # a workflow does not fail on style findings in steps you did not write.
+    # Confirmed it filters rather than disables: a warning-level bug in a `run:`
+    # block still fails with it set.  (Some warnings legitimately disappear
+    # regardless, because actionlint prepends `set -e` as Actions does, under
+    # which SC2164 and friends are dropped by design.)
+    # Prove the binary is really there before trusting the run.  Everything
+    # above rides on uv happening to expose shellcheck on PATH inside the
+    # ephemeral environment, and NOTHING in the lint itself says whether it
+    # did: with no binary, actionlint lints zero `run:` blocks and exits 0, so
+    # the step would report a pass while gating nothing.  That is the
+    # fail-open shape CLAUDE.md calls out, and it would arrive silently - a uv
+    # change to `--with` entry points, a platform with no shellcheck-py wheel,
+    # or somebody "simplifying" the flag away.  Fail the step instead.
+    if ! uvx --with shellcheck-py --from actionlint-py \
+         sh -c 'command -v shellcheck' > /tmp/preflight-actionlint-probe.log 2>&1; then
+        cat /tmp/preflight-actionlint-probe.log
+        fail "actionlint (no shellcheck binary in the uvx environment; run: blocks would not be linted)"
+    else
+        # shellcheck disable=SC2086
+        if ! SHELLCHECK_OPTS="--severity=warning" \
+             uvx --with shellcheck-py --from actionlint-py actionlint $CHANGED_WORKFLOWS \
+             > /tmp/preflight-actionlint.log 2>&1; then
+            cat /tmp/preflight-actionlint.log
+            fail "actionlint (see /tmp/preflight-actionlint.log)"
+        else
+            ok "actionlint ($(printf '%s\n' "$CHANGED_WORKFLOWS" | wc -l | tr -d ' ') file(s), shell linting confirmed active)"
+        fi
+    fi
+fi
+
 # ---------- check 7: fluid-data schema validation --------------------
 #
 # Build-time correctness gate for embedded fluid data (RapidJSON->nlohmann
@@ -399,10 +757,81 @@ else
         echo "no uvx or python3 on PATH" >"$SCHEMA_LOG"
     fi
     if [ "$SCHEMA_RC" -eq 0 ]; then
-        ok "schema-validate ($(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || echo 0) data file(s) validated)"
+        SCHEMA_N="$(grep -c '^OK' "$SCHEMA_LOG" 2>/dev/null || true)"
+        [ -n "$SCHEMA_N" ] || SCHEMA_N=0
+        ok "schema-validate ($SCHEMA_N data file(s) validated)"
     else
         tail -30 "$SCHEMA_LOG"
         fail "schema-validate (see $SCHEMA_LOG)"
+    fi
+fi
+
+# ---------- check 8: incompressible JSON sanity -----------------------
+#
+# Guards the committed json/*.json against unfitted placeholders, all-zero
+# templates, non-numeric or non-finite values, and blocks the C++ loader would
+# reject; also the grid-axis ordering contract and the golden-master refit.
+# Nothing ran any of it before this check.  Scoped to runs touching the
+# incompressible data or its writer.  The pytest path runs the whole directory;
+# the fallback below runs only test_json_sanity.py, the one module that needs
+# neither numpy nor scipy.
+step "incompressible JSON sanity"
+if skip_check incomp-sanity; then
+    skip "incomp-sanity" "--skip=incomp-sanity"
+elif ! printf '%s\n' "$ALL_PATHS" | grep -qE '^dev/incompressible_liquids/'; then
+    skip "incomp-sanity" "no dev/incompressible_liquids/ files in diff"
+else
+    INCOMP_LOG=/tmp/preflight-incomp-sanity.log
+    INCOMP_RC=0
+    if ! command -v python3 >/dev/null 2>&1; then
+        INCOMP_RC=127
+        echo "no python3 on PATH" >"$INCOMP_LOG"
+    elif python3 -c 'import pytest' >/dev/null 2>&1; then
+        # --color=no is load-bearing: with PY_COLORS/FORCE_COLOR set pytest
+        # emits ANSI even when redirected, so the count grep below scores 0 and
+        # a passing run is reported as "verified nothing".
+        python3 -m pytest dev/incompressible_liquids/ -q --color=no >"$INCOMP_LOG" 2>&1 || INCOMP_RC=$?
+    else
+        # pytest is not required: the checks are plain asserts, so call them
+        # directly rather than skip the gate.  Exiting non-zero on an empty or
+        # renamed module matters, else it would report a clean pass.
+        python3 - >"$INCOMP_LOG" 2>&1 <<'PY' || INCOMP_RC=$?
+import importlib.util, inspect, pathlib, sys
+
+path = pathlib.Path("dev/incompressible_liquids/test_json_sanity.py")
+spec = importlib.util.spec_from_file_location("test_json_sanity", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+names = sorted(n for n in dir(module) if n.startswith("test_"))
+if not names:
+    sys.exit("no test_* functions found in {0}".format(path))
+for name in names:
+    func = getattr(module, name)
+    # Calling a generator function only builds a generator; no assert runs.
+    # pytest errors on yield-tests, so match that instead of passing green.
+    if inspect.isgeneratorfunction(func):
+        sys.exit("{0} is a generator function; its asserts would never run".format(name))
+    result = func()
+    if result is not None:
+        sys.exit("{0} returned {1!r}, expected None".format(name, result))
+    print("OK", name)
+PY
+    fi
+    if [ "$INCOMP_RC" -eq 0 ]; then
+        # grep -c prints 0 and returns 1, so `|| true` (not `|| echo 0`) keeps
+        # one line.  The count gates the pass: pytest exits 0 when every test is
+        # skipped, and a green "0 check group(s)" would be a fail-open.
+        INCOMP_N="$(grep -cE '^(OK|[0-9]+ passed)' "$INCOMP_LOG" 2>/dev/null || true)"
+        [ -n "$INCOMP_N" ] || INCOMP_N=0
+        if [ "$INCOMP_N" -gt 0 ]; then
+            ok "incomp-sanity ($INCOMP_N check group(s))"
+        else
+            tail -30 "$INCOMP_LOG"
+            fail "incomp-sanity (ran but verified nothing; all tests skipped?)"
+        fi
+    else
+        tail -30 "$INCOMP_LOG"
+        fail "incomp-sanity (see $INCOMP_LOG)"
     fi
 fi
 

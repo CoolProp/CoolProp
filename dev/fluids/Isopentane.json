@@ -4456,7 +4456,22 @@
     "INCHI_STRING": "InChI=1S/C5H12/c1-4-5(2)3/h5H,4H2,1-3H3",
     "NAME": "Isopentane",
     "REFPROP_NAME": "IPENTANE",
-    "SMILES": "CCC(C)C"
+    "SMILES": "CCC(C)C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "78-78-4*0",
+        "source": "ATcT",
+        "uncertainty": 390.0,
+        "units": "J/mol",
+        "value": -152960.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

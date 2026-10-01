@@ -7,6 +7,7 @@
 #    include "CoolProp/DataStructures.h"
 #    include "CoolProp/numerics/numerics.h"  // ValidNumber: scalar PropsSI/HAPropsSI raise on non-finite (Cython parity)
 #    include "CoolProp/detail/state_capi.h"
+#    include "CoolProp/expression/ExpressionBlock.h"
 #    include "CoolProp/superancillary/superancillary.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
@@ -475,6 +476,7 @@ void init_CoolProp(nb::module_& m) {
       .value("iP_max", parameters::iP_max)
       .value("iP_min", parameters::iP_min)
       .value("idipole_moment", parameters::idipole_moment)
+      .value("iHmolar_formation", parameters::iHmolar_formation)
       .value("iT", parameters::iT)
       .value("iP", parameters::iP)
       .value("iQ", parameters::iQ)
@@ -1188,6 +1190,34 @@ void init_CoolProp(nb::module_& m) {
             throw std::invalid_argument("Invalid number of inputs to set_reference_state");
         }
     });
+
+    // Runtime transport-property expression DSL.  Lets you compile the exact
+    // `"type": "expression"` block you would paste into a fluid JSON file and
+    // evaluate it at a state -- correlation authoring and doc examples without a
+    // rebuild or a fluid-file edit.
+    nb::class_<expression::ExpressionBlock>(m, "Expression",
+                                            "A compiled transport-property expression block.\n\n"
+                                            "Construct from the JSON text of a `\"type\": \"expression\"` block\n"
+                                            "({\"formula\": ..., \"state_variables\": [...], \"constants\": {...},\n"
+                                            " \"arrays\": {...}}), then evaluate it at a state.\n\n"
+                                            "`state_variables` lists the thermodynamic quantities the formula reads,\n"
+                                            "in CoolProp's own spelling (\"T\", \"P\", \"Dmolar\", \"Smolar_residual\",\n"
+                                            "...).  It is opt-in: a name not declared there is never state, so a\n"
+                                            "block that does not ask for pressure keeps `p` for its own coefficients.\n"
+                                            "Raises ValueError on a bad formula, on reading an undeclared quantity,\n"
+                                            "or on declaring one that cannot be honoured (a transport output, which\n"
+                                            "would re-enter the correlation; or the configuration-dependent critical\n"
+                                            "point and reducing state).")
+      .def(nb::init<const std::string&>(), nb::arg("json_block"))
+      .def("required_inputs", &expression::ExpressionBlock::required_inputs,
+           "The declared state variables the formula actually reads, in first-reference order\n"
+           "(the order the formula mentions them, NOT the order they were declared).")
+      .def("evaluate", &expression::ExpressionBlock::evaluate, nb::arg("AS"),
+           "Evaluate at the state `AS` (an AbstractState) is currently sitting at.\n"
+           "Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --\n"
+           "so any input pair, backend, or mixture composition works.\n"
+           "Raises ValueError if an input reads back non-finite (an AbstractState\n"
+           "that was never update()d).");
 
     // Chebyshev rootfinding + SuperAncillary saturation evaluator classes.
     init_superancillary(m);

@@ -1,0 +1,139 @@
+# ATcT version,1.220,page sha256,1ed3dbef841779fd2c053cc038d8e64c13fc6722f4c668d04630490301786d53
+coolprop_fluid,state,atct_id,phase,hmolar_formation_J_per_mol,uncertainty_J_per_mol,reason
+1-Butene,matched,106-98-9*0,(g),280.0,330.0,
+Acetone,matched,67-64-1*0,(g),-216870.0,260.0,
+Ammonia,matched,7664-41-7*0,(g),-45554.0,29.0,
+Argon,matched,7440-37-1*0,(g),0.0,0.0,
+Benzene,matched,71-43-2*0,(g),83180.0,210.0,
+CarbonDioxide,matched,124-38-9*0,(g),-393477.0,15.0,
+CarbonMonoxide,matched,630-08-0*0,(g),-110519.0,25.0,
+CarbonylSulfide,matched,463-58-1*0,(g),-139950.0,320.0,
+Chlorine,matched,7782-50-5*0,(g),0.0,0.0,
+CycloHexane,matched,110-82-7*0,(g),-122780.0,290.0,
+CycloPropane,matched,75-19-4*0,(g),53930.0,320.0,
+Cyclopentane,matched,287-92-3*0,(g),-75950.0,380.0,
+Deuterium,matched,7782-39-0*0,(g),0.0,0.0,
+Dichloroethane,matched,107-06-2*0,(g),-130450.0,530.0,
+DiethylEther,matched,60-29-7*0,(g),-250200.0,750.0,
+DimethylCarbonate,matched,616-38-6*0,(g),-570460.0,370.0,
+DimethylEther,matched,115-10-6*0,(g),-183900.0,350.0,
+Ethane,matched,74-84-0*0,(g),-84020.0,120.0,
+Ethanol,matched,64-17-5*0,(g),-234900.0,200.0,
+EthylBenzene,matched,100-41-4*0,(g),29960.0,520.0,
+Ethylene,matched,74-85-1*0,(g),52390.0,110.0,
+EthyleneOxide,matched,75-21-8*0,(g),-52280.0,330.0,
+Fluorine,matched,7782-41-4*0,(g),0.0,0.0,
+Helium,matched,7440-59-7*0,(g),0.0,0.0,
+Hydrogen,matched,1333-74-0*0,(g),0.0,0.0,
+HydrogenChloride,matched,7647-01-0*0,(g),-92172.0,6.2,
+HydrogenSulfide,matched,7783-06-4*0,(g),-20300.0,180.0,
+IsoButane,matched,75-28-5*0,(g),-134480.0,270.0,
+IsoButene,matched,115-11-7*0,(g),-16760.0,320.0,
+Isohexane,matched,107-83-5*0,(g),-173720.0,730.0,
+Isopentane,matched,78-78-4*0,(g),-152960.0,390.0,
+Krypton,matched,7439-90-9*0,(g),0.0,0.0,
+Methane,matched,74-82-8*0,(g),-74513.0,43.0,
+Methanol,matched,67-56-1*0,(g),-200850.0,140.0,
+Neon,matched,7440-01-9*0,(g),0.0,0.0,
+Neopentane,matched,463-82-1*0,(g),-167140.0,380.0,
+Nitrogen,matched,7727-37-9*0,(g),0.0,0.0,
+NitrousOxide,matched,10024-97-2*0,(g),82593.0,96.0,
+OrthoHydrogen,matched,1333-74-0*1,"(g, ortho)",19.0,0.0,
+Oxygen,matched,7782-44-7*0,(g),0.0,0.0,
+ParaHydrogen,matched,1333-74-0*2,"(g, para)",-58.0,0.0,
+Propylene,matched,115-07-1*0,(g),20060.0,180.0,
+Propyne,matched,74-99-7*0,(g),185560.0,200.0,
+R11,matched,75-69-4*0,(g),-286380.0,760.0,
+R1123,matched,359-11-5*0,(g),-498500.0,1400.0,
+R1130(E),matched,156-60-5*0,"(g, trans)",220.0,550.0,
+R1132(E),matched,1630-78-0*0,"(g, trans)",-306170.0,830.0,
+R1132a,matched,75-38-7*0,(g),-350660.0,630.0,
+R116,matched,76-16-4*0,(g),-1342350.0,800.0,
+R12,matched,75-71-8*0,(g),-493060.0,440.0,
+R13,matched,75-72-9*0,(g),-709370.0,560.0,
+R13I1,matched,2314-97-8*0,(g),-589090.0,450.0,
+R14,matched,75-73-0*0,(g),-933600.0,230.0,
+R152A,matched,75-37-6*0,(g),-502730.0,530.0,
+R161,matched,353-36-6*0,(g),-272110.0,350.0,
+R21,matched,75-43-4*0,(g),-283080.0,900.0,
+R22,matched,75-45-6*0,(g),-481770.0,990.0,
+R23,matched,75-46-7*0,(g),-696230.0,400.0,
+R32,matched,75-10-5*0,(g),-450930.0,350.0,
+R40,matched,74-87-3*0,(g),-82580.0,170.0,
+R41,matched,593-53-3*0,(g),-235470.0,240.0,
+SulfurDioxide,matched,7446-09-5*0,(g),-296750.0,130.0,
+Toluene,matched,108-88-3*0,(g),50070.0,310.0,
+VinylChloride,matched,75-01-4*0,(g),21810.0,270.0,
+Water,matched,7732-18-5*0,(g),-241808.0,22.0,
+Xenon,matched,7440-63-3*0,(g),0.0,0.0,
+cis-2-Butene,matched,590-18-1*0,"(g, cis)",-6850.0,380.0,
+n-Butane,matched,106-97-8*0,(g),-125550.0,180.0,
+n-Decane,matched,124-18-5*0,(g),-249040.0,750.0,
+n-Heptane,matched,142-82-5*0,(g),-187270.0,440.0,
+n-Hexane,matched,110-54-3*0,(g),-166770.0,320.0,
+n-Nonane,matched,111-84-2*0,(g),-228060.0,480.0,
+n-Octane,matched,111-65-9*0,(g),-207890.0,510.0,
+n-Pentane,matched,109-66-0*0,(g),-146050.0,290.0,
+n-Propane,matched,74-98-6*0,(g),-105000.0,150.0,
+trans-2-Butene,matched,624-64-6*0,"(g, trans)",-10890.0,280.0,
+Air,absent,,,,,no ATcT species for CAS AIR.PPF
+D4,absent,,,,,no ATcT species for CAS 556-67-2
+D5,absent,,,,,no ATcT species for CAS 541-02-6
+D6,absent,,,,,no ATcT species for CAS 540-97-6
+HFE143m,absent,,,,,no ATcT species for CAS 421-14-7
+HeavyWater,absent,,,,,no ATcT species for CAS 7789-20-0
+MD2M,absent,,,,,no ATcT species for CAS 141-62-8
+MD3M,absent,,,,,no ATcT species for CAS 141-63-9
+MD4M,absent,,,,,no ATcT species for CAS 107-52-8
+MDM,absent,,,,,no ATcT species for CAS 107-51-7
+MM,absent,,,,,no ATcT species for CAS 107-46-0
+MethylLinoleate,absent,,,,,no ATcT species for CAS 112-63-0
+MethylLinolenate,absent,,,,,no ATcT species for CAS 301-00-8
+MethylOleate,absent,,,,,no ATcT species for CAS 112-62-9
+MethylPalmitate,absent,,,,,no ATcT species for CAS 112-39-0
+MethylStearate,absent,,,,,no ATcT species for CAS 112-61-8
+Novec649,absent,,,,,no ATcT species for CAS 756-13-8
+OrthoDeuterium,absent,,,,,no gas-phase ATcT row for CAS 7782-39-0 with qualifier ortho
+ParaDeuterium,absent,,,,,no gas-phase ATcT row for CAS 7782-39-0 with qualifier para
+PropyleneGlycol,absent,,,,,no ATcT species for CAS 57-55-6
+R113,absent,,,,,no ATcT species for CAS 76-13-1
+R114,absent,,,,,no ATcT species for CAS 76-14-2
+R115,absent,,,,,no ATcT species for CAS 76-15-3
+R1224YDZ,absent,,,,,no ATcT species for CAS 111512-60-8
+R123,absent,,,,,no ATcT species for CAS 306-83-2
+R1233zd(E),absent,,,,,no ATcT species for CAS 102687-65-0
+R1234yf,absent,,,,,no ATcT species for CAS 754-12-1
+R1234ze(E),absent,,,,,no ATcT species for CAS 29118-24-9
+R1234ze(Z),absent,,,,,no ATcT species for CAS 29118-25-0
+R124,absent,,,,,no ATcT species for CAS 2837-89-0
+R1243zf,absent,,,,,no ATcT species for CAS 677-21-4
+R125,absent,,,,,no ATcT species for CAS 354-33-6
+R1336mzz(E),absent,,,,,no ATcT species for CAS 66711-86-2
+R1336mzz(Z),absent,,,,,no ATcT species for CAS 692-49-9
+R134a,absent,,,,,no ATcT species for CAS 811-97-2
+R141b,absent,,,,,no ATcT species for CAS 1717-00-6
+R142b,absent,,,,,no ATcT species for CAS 75-68-3
+R143a,absent,,,,,no ATcT species for CAS 420-46-2
+R218,absent,,,,,no ATcT species for CAS 76-19-7
+R227EA,absent,,,,,no ATcT species for CAS 431-89-0
+R236EA,absent,,,,,no ATcT species for CAS 431-63-0
+R236FA,absent,,,,,no ATcT species for CAS 690-39-1
+R245ca,absent,,,,,no ATcT species for CAS 679-86-7
+R245fa,absent,,,,,no ATcT species for CAS 460-73-1
+R365MFC,absent,,,,,no ATcT species for CAS 406-58-6
+R404A,absent,,,,,no ATcT species for CAS R404A.PPF
+R407C,absent,,,,,no ATcT species for CAS R407C.PPF
+R410A,absent,,,,,no ATcT species for CAS R410A.PPF
+R507A,absent,,,,,no ATcT species for CAS R507A.PPF
+RC318,absent,,,,,no ATcT species for CAS 115-25-3
+SES36,absent,,,,,no ATcT species for CAS SES36.ppf
+SulfurHexafluoride,absent,,,,,no ATcT species for CAS 2551-62-4
+Tetrahydrofuran,absent,,,,,no ATcT species for CAS 109-99-9
+m-Xylene,absent,,,,,no ATcT species for CAS 108-38-3
+n-Dodecane,absent,,,,,no ATcT species for CAS 112-40-3
+n-Perfluorobutane,absent,,,,,no ATcT species for CAS 355-25-9
+n-Perfluorohexane,absent,,,,,no ATcT species for CAS 355-42-0
+n-Perfluoropentane,absent,,,,,no ATcT species for CAS 678-26-2
+n-Undecane,absent,,,,,no ATcT species for CAS 1120-21-4
+o-Xylene,absent,,,,,no ATcT species for CAS 95-47-6
+p-Xylene,absent,,,,,no ATcT species for CAS 106-42-3

@@ -4278,7 +4278,22 @@
     "INCHI_STRING": "InChI=1S/CHClF2/c2-1(3)4/h1H",
     "NAME": "R22",
     "REFPROP_NAME": "R22",
-    "SMILES": "C(F)(F)Cl"
+    "SMILES": "C(F)(F)Cl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-45-6*0",
+        "source": "ATcT",
+        "uncertainty": 990.0,
+        "units": "J/mol",
+        "value": -481770.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

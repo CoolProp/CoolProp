@@ -13,6 +13,7 @@ The following is a set of guidelines for contributing to CoolProp, which is host
   * [Suggesting Enhancements](#suggesting-enhancements)
   * [Your First Code Contribution](#your-first-code-contribution)
   * [Pull Requests](#pull-requests-prs)
+  * [AI-Assisted Contributions](#ai-assisted-contributions)
 
 [Styleguides](#styleguides)
   * [Git Commit Messages](#git-commit-messages)
@@ -25,7 +26,7 @@ The following is a set of guidelines for contributing to CoolProp, which is host
 We have an official Google Group, where the community chimes in with helpful advice if you have questions, and a fairly detailed set of on-line documentation.
 
 * [Discuss, the official CoolProp User Group](https://goo.gl/Pa7FBT)
-* CoolProp documentation: [Release Version](http://www.coolprop.org) and [Development Version](http://www.coolprop.org/dev)
+* CoolProp documentation: [Release Version](https://www.coolprop.org) and [Development Version](https://www.coolprop.org/dev)
 
 ## How Can I Contribute?
 
@@ -40,7 +41,7 @@ Before creating bug reports, please check [this list](#before-submitting-a-bug-r
 #### Before Submitting A Bug Report
 
 * **Check the [FAQs file](https://github.com/CoolProp/CoolProp/blob/master/FAQ.md)** for a list of common questions and problems.
-* **Check the [release](http://www.CoolProp.org) and [development](http://www.CoolProp.org) CoolProp documentation**.
+* **Check the [release](https://www.coolprop.org) and [development](https://www.coolprop.org/dev) CoolProp documentation**.
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3ACoolProp)** to see if the problem has already been reported. If it has **and the issue is still open**, add a comment to the existing issue instead of opening a new one.
 
 #### How Do I Submit A (Good) Issue Report?
@@ -79,7 +80,7 @@ Before creating enhancement suggestions, please check [this list](#before-submit
 
 #### Before Submitting An Enhancement Suggestion
 
-* **Check the [development documentation](http://www.coolprop.org/dev)** — you might discover that the enhancement is already available or planned for the next official release. Most importantly, check if you're using [the latest version of CoolProp](http://www.coolprop.org/dev/coolprop/changelog.html) and if you can get the desired behavior by updating CoolProp.  
+* **Check the [development documentation](https://www.coolprop.org/dev)** — you might discover that the enhancement is already available or planned for the next official release. Most importantly, check if you're using [the latest version of CoolProp](https://www.coolprop.org/dev/coolprop/changelog.html) and if you can get the desired behavior by updating CoolProp.  
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+label%3Awishlist+user%3ACoolProp)** to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 
 #### How Do I Submit A (Good) Enhancement Suggestion?
@@ -117,6 +118,30 @@ CoolProp can be developed locally on your machine.  Once code changes are comple
 * Document new code based on the Documentation Styleguide
 * Avoid platform-dependent code 
 
+### AI-Assisted Contributions
+
+**AI assistance is permitted. Attribution is required.**
+
+If an AI coding assistant **generated or materially shaped** any part of your
+contribution — source code, comments, documentation, test cases, fluid data,
+build/CI configuration, or the commit and PR text itself — you must disclose it
+in two places:
+
+1. A `Co-authored-by:` trailer on each affected commit, naming the tool:
+
+   ```
+   Co-authored-by: Claude Opus 5 <noreply@anthropic.com>
+   ```
+
+2. A brief note in the pull request description saying what the assistant did
+   and what you verified yourself.
+
+Attribution is a disclosure, not a disclaimer — you remain the author of record
+and are responsible for the correctness, testing, and licensing of everything
+you submit. The full policy, including where the line falls between "materially
+shaped" and ordinary editor autocomplete, is in
+[`AGENTS.md`](../AGENTS.md#ai-assistance-and-attribution).
+
 ## Styleguides
 
 ### C++ formatting (clang-format)
@@ -152,6 +177,7 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 * Limit the first line to 72 characters or less
 * Reference issues and pull requests liberally after the first line
 * When only changing documentation (i.e. no actual code), include `[ci skip]` in the commit title
+* If an AI assistant generated or materially shaped the change, add a `Co-authored-by:` trailer naming it (see [AI-Assisted Contributions](#ai-assisted-contributions))
 
 
 [beginner]:https://github.com/search?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3Abeginner+user%3Acoolprop

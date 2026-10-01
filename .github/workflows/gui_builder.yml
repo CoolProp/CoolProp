@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
@@ -167,6 +167,17 @@ jobs:
           fi
           echo "macOS signing: APPLE_* env forwarded to subsequent steps."
 
+      # build.rs configures CoolProp via cmake/dependencies.cmake (CPM), which
+      # fetches Eigen/msgpack-c/nlohmann_json/valijson/etc. from network with
+      # no cache of its own. rust-cache above covers target/, not this path.
+      - name: Cache CPM packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.cpm_cache
+          key: cpm-${{ runner.os }}-${{ hashFiles('cmake/dependencies.cmake') }}
+          restore-keys: |
+            cpm-${{ runner.os }}-
+
       # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
       # links the Rust crate, and produces native bundles under
       # wrappers/GUI/src-tauri/target/release/bundle/. tauri-action picks up
@@ -178,15 +189,27 @@ jobs:
       # to be hand-merged. The dedicated `release` job below downloads each
       # OS's uploaded bundle artifact and creates a single consolidated
       # release in one shot.
-      - name: Build Tauri bundle
-        uses: tauri-apps/tauri-action@v0
+      # Pull requests, especially those from forks, cannot access updater
+      # signing secrets. Build the normal installers without requesting updater
+      # artifacts, which require a private signing key.
+      - name: Build Tauri bundle (pull request)
+        if: github.event_name == 'pull_request'
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tauri auto-updater signing — when present, tauri-action signs the
-          # update artifacts and emits latest.json next to each platform
-          # bundle. Without these the build still succeeds; the updater
-          # plugin just won't accept the signatures, so updates won't work
-          # for that release. Activate by adding both repo secrets.
+        with:
+          projectPath: wrappers/GUI
+          tauriScript: npm run tauri
+          args: >-
+            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Build Tauri bundle (trusted ref)
+        if: github.event_name != 'pull_request'
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Trusted refs create signed updater artifacts, so both repository
+          # secrets are required by Tauri's createUpdaterArtifacts setting.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
@@ -406,7 +429,7 @@ jobs:
 
       - name: Sign Windows installers via SignPath
         if: matrix.os == 'windows-latest' && steps.signpath_check.outputs.enabled == 'true'
-        uses: signpath/github-action-submit-signing-request@v2
+        uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: e6ed0285-8cc0-431c-b527-6502f5b77e94

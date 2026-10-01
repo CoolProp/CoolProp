@@ -15,7 +15,7 @@
 
 using namespace CoolProp;
 
-TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cubic_alpha]") {
+TEST_CASE("calc_all_terms matches term() for non-default alpha functions", "[cubic][cubic_alpha]") {
     const std::vector<double> tau_vals = {0.5, 0.7, 1.0, 1.3, 2.0};
 
     SECTION("BasicMathiasCopemanAlphaFunction") {

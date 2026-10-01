@@ -4030,7 +4030,22 @@
     "INCHI_STRING": "InChI=1S/CClF3/c2-1(3,4)5",
     "NAME": "R13",
     "REFPROP_NAME": "R13",
-    "SMILES": "C(F)(F)(F)Cl"
+    "SMILES": "C(F)(F)(F)Cl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-72-9*0",
+        "source": "ATcT",
+        "uncertainty": 560.0,
+        "units": "J/mol",
+        "value": -709370.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

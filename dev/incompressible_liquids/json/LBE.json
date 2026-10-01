@@ -1,0 +1,162 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 750.0,
+  "Tmax": 1100.0,
+  "Tmin": 400.0,
+  "TminPsat": 400.0,
+  "conductivity": {
+    "NRMS": 0.0003078228,
+    "coeffs": [
+      [
+        14.11534
+      ],
+      [
+        0.012717
+      ],
+      [
+        -2.321168e-06
+      ],
+      [
+        -1.952153e-11
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 3.305233e-05,
+    "coeffs": [
+      [
+        10095.25
+      ],
+      [
+        -1.292994
+      ],
+      [
+        4.943765e-08
+      ],
+      [
+        4.056447e-11
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density_cheb": {
+    "NRMS": 3.312267e-05,
+    "Trange": [
+      400.0,
+      1100.0
+    ],
+    "coeffs": [
+      [
+        10095.25
+      ],
+      [
+        -452.5469
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Lead-Bismuth Eutectic Alloy",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "LBE",
+  "reference": "Fazio2015",
+  "saturation_pressure": {
+    "NRMS": 0.005010689,
+    "coeffs": [
+      [
+        -6.659834
+      ],
+      [
+        0.03938427
+      ],
+      [
+        -6.667116e-05
+      ],
+      [
+        9.476804e-08
+      ]
+    ],
+    "type": "exppolynomial"
+  },
+  "specific_heat": {
+    "NRMS": 0.002556356,
+    "coeffs": [
+      [
+        141.4935
+      ],
+      [
+        -0.01866872
+      ],
+      [
+        6.216431e-06
+      ],
+      [
+        1.226434e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.00159342,
+    "Trange": [
+      400.0,
+      1100.0
+    ],
+    "coeffs": [
+      [
+        141.8703
+      ],
+      [
+        -6.138521
+      ],
+      [
+        0.3693643
+      ],
+      [
+        0.1340739
+      ],
+      [
+        -0.03339729
+      ],
+      [
+        0.009611964
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.0001687345,
+    "coeffs": [
+      754.0044,
+      0.01085627,
+      7.612775
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

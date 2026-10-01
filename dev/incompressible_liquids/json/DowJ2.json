@@ -1,101 +1,173 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 3.941500e+02, 
-  "Tmax": 5.881500e+02, 
-  "Tmin": 2.001500e+02, 
-  "TminPsat": 5.881500e+02, 
+  },
+  "Tbase": 394.15,
+  "Tmax": 588.15,
+  "Tmin": 200.15,
+  "TminPsat": 588.15,
   "conductivity": {
-    "NRMS": 9.343322e-03, 
+    "NRMS": 0.009343322,
     "coeffs": [
       [
-        1.244832e-01
-      ], 
+        0.1244832
+      ],
       [
         -8.228663e-05
-      ], 
+      ],
       [
         -4.623924e-10
-      ], 
+      ],
       [
         1.312176e-11
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 2.450629e-03, 
+    "NRMS": 0.002450629,
     "coeffs": [
       [
-        7.844671e+02
-      ], 
+        784.4671
+      ],
       [
-        -8.449387e-01
-      ], 
+        -0.8449387
+      ],
       [
-        -8.673233e-04
-      ], 
+        -0.0008673233
+      ],
       [
         -2.163211e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Dowtherm J, Diethylbenzene mixture", 
-  "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "name": "DowJ2", 
-  "reference": "Dow1997,Skovrup2013", 
-  "saturation_pressure": {
-    "NRMS": null, 
-    "coeffs": "null", 
-    "type": "notdefined"
-  }, 
-  "specific_heat": {
-    "NRMS": 3.754365e-03, 
+  },
+  "density_cheb": {
+    "NRMS": 0.0007957981,
+    "Trange": [
+      200.15,
+      588.15
+    ],
     "coeffs": [
       [
-        2.166752e+03
-      ], 
+        767.8917
+      ],
       [
-        3.623602e+00
-      ], 
+        -175.9431
+      ],
       [
-        3.145896e-03
-      ], 
+        -16.92921
+      ],
+      [
+        -4.167071
+      ],
+      [
+        -1.276935
+      ],
+      [
+        -0.4337134
+      ],
+      [
+        -0.1497229
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "Dowtherm J, Diethylbenzene mixture",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "DowJ2",
+  "reference": "Dow1997,Skovrup2013",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": 0.003754365,
+    "coeffs": [
+      [
+        2166.752
+      ],
+      [
+        3.623602
+      ],
+      [
+        0.003145896
+      ],
       [
         2.114289e-08
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "viscosity": {
-    "NRMS": 4.084423e-03, 
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.0006457636,
+    "Trange": [
+      200.15,
+      588.15
+    ],
     "coeffs": [
-      6.576327e+02, 
-      -7.405196e+01, 
-      1.000835e+01
-    ], 
+      [
+        2227.515
+      ],
+      [
+        705.0068
+      ],
+      [
+        62.88606
+      ],
+      [
+        2.495376
+      ],
+      [
+        7.212886
+      ],
+      [
+        5.058053
+      ],
+      [
+        3.321902
+      ],
+      [
+        1.792591
+      ],
+      [
+        0.3275653
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.004084423,
+    "coeffs": [
+      657.6327,
+      -74.05196,
+      10.00835
+    ],
     "type": "exponential"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }

@@ -3927,7 +3927,22 @@
     "INCHI_STRING": "InChI=1S/C2H2F2/c1-2(3)4/h1H2",
     "NAME": "R1132a",
     "REFPROP_NAME": "N/A",
-    "SMILES": "C=C(F)F"
+    "SMILES": "C=C(F)F",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-38-7*0",
+        "source": "ATcT",
+        "uncertainty": 630.0,
+        "units": "J/mol",
+        "value": -350660.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

@@ -1,0 +1,550 @@
+{
+  "1-Butene": {
+    "atct_id": "106-98-9*0",
+    "state": "matched"
+  },
+  "Acetone": {
+    "atct_id": "67-64-1*0",
+    "state": "matched"
+  },
+  "Air": {
+    "reason": "no ATcT species for CAS AIR.PPF",
+    "state": "absent"
+  },
+  "Ammonia": {
+    "atct_id": "7664-41-7*0",
+    "state": "matched"
+  },
+  "Argon": {
+    "atct_id": "7440-37-1*0",
+    "state": "matched"
+  },
+  "Benzene": {
+    "atct_id": "71-43-2*0",
+    "state": "matched"
+  },
+  "CarbonDioxide": {
+    "atct_id": "124-38-9*0",
+    "state": "matched"
+  },
+  "CarbonMonoxide": {
+    "atct_id": "630-08-0*0",
+    "state": "matched"
+  },
+  "CarbonylSulfide": {
+    "atct_id": "463-58-1*0",
+    "state": "matched"
+  },
+  "Chlorine": {
+    "atct_id": "7782-50-5*0",
+    "state": "matched"
+  },
+  "CycloHexane": {
+    "atct_id": "110-82-7*0",
+    "state": "matched"
+  },
+  "CycloPropane": {
+    "atct_id": "75-19-4*0",
+    "state": "matched"
+  },
+  "Cyclopentane": {
+    "atct_id": "287-92-3*0",
+    "state": "matched"
+  },
+  "D4": {
+    "reason": "no ATcT species for CAS 556-67-2",
+    "state": "absent"
+  },
+  "D5": {
+    "reason": "no ATcT species for CAS 541-02-6",
+    "state": "absent"
+  },
+  "D6": {
+    "reason": "no ATcT species for CAS 540-97-6",
+    "state": "absent"
+  },
+  "Deuterium": {
+    "atct_id": "7782-39-0*0",
+    "state": "matched"
+  },
+  "Dichloroethane": {
+    "atct_id": "107-06-2*0",
+    "state": "matched"
+  },
+  "DiethylEther": {
+    "atct_id": "60-29-7*0",
+    "state": "matched"
+  },
+  "DimethylCarbonate": {
+    "atct_id": "616-38-6*0",
+    "state": "matched"
+  },
+  "DimethylEther": {
+    "atct_id": "115-10-6*0",
+    "state": "matched"
+  },
+  "Ethane": {
+    "atct_id": "74-84-0*0",
+    "state": "matched"
+  },
+  "Ethanol": {
+    "atct_id": "64-17-5*0",
+    "state": "matched"
+  },
+  "EthylBenzene": {
+    "atct_id": "100-41-4*0",
+    "state": "matched"
+  },
+  "Ethylene": {
+    "atct_id": "74-85-1*0",
+    "state": "matched"
+  },
+  "EthyleneOxide": {
+    "atct_id": "75-21-8*0",
+    "state": "matched"
+  },
+  "Fluorine": {
+    "atct_id": "7782-41-4*0",
+    "state": "matched"
+  },
+  "HFE143m": {
+    "reason": "no ATcT species for CAS 421-14-7",
+    "state": "absent"
+  },
+  "HeavyWater": {
+    "reason": "no ATcT species for CAS 7789-20-0",
+    "state": "absent"
+  },
+  "Helium": {
+    "atct_id": "7440-59-7*0",
+    "state": "matched"
+  },
+  "Hydrogen": {
+    "atct_id": "1333-74-0*0",
+    "state": "matched"
+  },
+  "HydrogenChloride": {
+    "atct_id": "7647-01-0*0",
+    "state": "matched"
+  },
+  "HydrogenSulfide": {
+    "atct_id": "7783-06-4*0",
+    "state": "matched"
+  },
+  "IsoButane": {
+    "atct_id": "75-28-5*0",
+    "state": "matched"
+  },
+  "IsoButene": {
+    "atct_id": "115-11-7*0",
+    "state": "matched"
+  },
+  "Isohexane": {
+    "atct_id": "107-83-5*0",
+    "state": "matched"
+  },
+  "Isopentane": {
+    "atct_id": "78-78-4*0",
+    "state": "matched"
+  },
+  "Krypton": {
+    "atct_id": "7439-90-9*0",
+    "state": "matched"
+  },
+  "MD2M": {
+    "reason": "no ATcT species for CAS 141-62-8",
+    "state": "absent"
+  },
+  "MD3M": {
+    "reason": "no ATcT species for CAS 141-63-9",
+    "state": "absent"
+  },
+  "MD4M": {
+    "reason": "no ATcT species for CAS 107-52-8",
+    "state": "absent"
+  },
+  "MDM": {
+    "reason": "no ATcT species for CAS 107-51-7",
+    "state": "absent"
+  },
+  "MM": {
+    "reason": "no ATcT species for CAS 107-46-0",
+    "state": "absent"
+  },
+  "Methane": {
+    "atct_id": "74-82-8*0",
+    "state": "matched"
+  },
+  "Methanol": {
+    "atct_id": "67-56-1*0",
+    "state": "matched"
+  },
+  "MethylLinoleate": {
+    "reason": "no ATcT species for CAS 112-63-0",
+    "state": "absent"
+  },
+  "MethylLinolenate": {
+    "reason": "no ATcT species for CAS 301-00-8",
+    "state": "absent"
+  },
+  "MethylOleate": {
+    "reason": "no ATcT species for CAS 112-62-9",
+    "state": "absent"
+  },
+  "MethylPalmitate": {
+    "reason": "no ATcT species for CAS 112-39-0",
+    "state": "absent"
+  },
+  "MethylStearate": {
+    "reason": "no ATcT species for CAS 112-61-8",
+    "state": "absent"
+  },
+  "Neon": {
+    "atct_id": "7440-01-9*0",
+    "state": "matched"
+  },
+  "Neopentane": {
+    "atct_id": "463-82-1*0",
+    "state": "matched"
+  },
+  "Nitrogen": {
+    "atct_id": "7727-37-9*0",
+    "state": "matched"
+  },
+  "NitrousOxide": {
+    "atct_id": "10024-97-2*0",
+    "state": "matched"
+  },
+  "Novec649": {
+    "reason": "no ATcT species for CAS 756-13-8",
+    "state": "absent"
+  },
+  "OrthoDeuterium": {
+    "reason": "no gas-phase ATcT row for CAS 7782-39-0 with qualifier ortho",
+    "state": "absent"
+  },
+  "OrthoHydrogen": {
+    "atct_id": "1333-74-0*1",
+    "state": "matched"
+  },
+  "Oxygen": {
+    "atct_id": "7782-44-7*0",
+    "state": "matched"
+  },
+  "ParaDeuterium": {
+    "reason": "no gas-phase ATcT row for CAS 7782-39-0 with qualifier para",
+    "state": "absent"
+  },
+  "ParaHydrogen": {
+    "atct_id": "1333-74-0*2",
+    "state": "matched"
+  },
+  "Propylene": {
+    "atct_id": "115-07-1*0",
+    "state": "matched"
+  },
+  "PropyleneGlycol": {
+    "reason": "no ATcT species for CAS 57-55-6",
+    "state": "absent"
+  },
+  "Propyne": {
+    "atct_id": "74-99-7*0",
+    "state": "matched"
+  },
+  "R11": {
+    "atct_id": "75-69-4*0",
+    "state": "matched"
+  },
+  "R1123": {
+    "atct_id": "359-11-5*0",
+    "state": "matched"
+  },
+  "R113": {
+    "reason": "no ATcT species for CAS 76-13-1",
+    "state": "absent"
+  },
+  "R1130(E)": {
+    "atct_id": "156-60-5*0",
+    "state": "matched"
+  },
+  "R1132(E)": {
+    "atct_id": "1630-78-0*0",
+    "state": "matched"
+  },
+  "R1132a": {
+    "atct_id": "75-38-7*0",
+    "state": "matched"
+  },
+  "R114": {
+    "reason": "no ATcT species for CAS 76-14-2",
+    "state": "absent"
+  },
+  "R115": {
+    "reason": "no ATcT species for CAS 76-15-3",
+    "state": "absent"
+  },
+  "R116": {
+    "atct_id": "76-16-4*0",
+    "state": "matched"
+  },
+  "R12": {
+    "atct_id": "75-71-8*0",
+    "state": "matched"
+  },
+  "R1224YDZ": {
+    "reason": "no ATcT species for CAS 111512-60-8",
+    "state": "absent"
+  },
+  "R123": {
+    "reason": "no ATcT species for CAS 306-83-2",
+    "state": "absent"
+  },
+  "R1233zd(E)": {
+    "reason": "no ATcT species for CAS 102687-65-0",
+    "state": "absent"
+  },
+  "R1234yf": {
+    "reason": "no ATcT species for CAS 754-12-1",
+    "state": "absent"
+  },
+  "R1234ze(E)": {
+    "reason": "no ATcT species for CAS 29118-24-9",
+    "state": "absent"
+  },
+  "R1234ze(Z)": {
+    "reason": "no ATcT species for CAS 29118-25-0",
+    "state": "absent"
+  },
+  "R124": {
+    "reason": "no ATcT species for CAS 2837-89-0",
+    "state": "absent"
+  },
+  "R1243zf": {
+    "reason": "no ATcT species for CAS 677-21-4",
+    "state": "absent"
+  },
+  "R125": {
+    "reason": "no ATcT species for CAS 354-33-6",
+    "state": "absent"
+  },
+  "R13": {
+    "atct_id": "75-72-9*0",
+    "state": "matched"
+  },
+  "R1336mzz(E)": {
+    "reason": "no ATcT species for CAS 66711-86-2",
+    "state": "absent"
+  },
+  "R1336mzz(Z)": {
+    "reason": "no ATcT species for CAS 692-49-9",
+    "state": "absent"
+  },
+  "R134a": {
+    "reason": "no ATcT species for CAS 811-97-2",
+    "state": "absent"
+  },
+  "R13I1": {
+    "atct_id": "2314-97-8*0",
+    "state": "matched"
+  },
+  "R14": {
+    "atct_id": "75-73-0*0",
+    "state": "matched"
+  },
+  "R141b": {
+    "reason": "no ATcT species for CAS 1717-00-6",
+    "state": "absent"
+  },
+  "R142b": {
+    "reason": "no ATcT species for CAS 75-68-3",
+    "state": "absent"
+  },
+  "R143a": {
+    "reason": "no ATcT species for CAS 420-46-2",
+    "state": "absent"
+  },
+  "R152A": {
+    "atct_id": "75-37-6*0",
+    "state": "matched"
+  },
+  "R161": {
+    "atct_id": "353-36-6*0",
+    "state": "matched"
+  },
+  "R21": {
+    "atct_id": "75-43-4*0",
+    "state": "matched"
+  },
+  "R218": {
+    "reason": "no ATcT species for CAS 76-19-7",
+    "state": "absent"
+  },
+  "R22": {
+    "atct_id": "75-45-6*0",
+    "state": "matched"
+  },
+  "R227EA": {
+    "reason": "no ATcT species for CAS 431-89-0",
+    "state": "absent"
+  },
+  "R23": {
+    "atct_id": "75-46-7*0",
+    "state": "matched"
+  },
+  "R236EA": {
+    "reason": "no ATcT species for CAS 431-63-0",
+    "state": "absent"
+  },
+  "R236FA": {
+    "reason": "no ATcT species for CAS 690-39-1",
+    "state": "absent"
+  },
+  "R245ca": {
+    "reason": "no ATcT species for CAS 679-86-7",
+    "state": "absent"
+  },
+  "R245fa": {
+    "reason": "no ATcT species for CAS 460-73-1",
+    "state": "absent"
+  },
+  "R32": {
+    "atct_id": "75-10-5*0",
+    "state": "matched"
+  },
+  "R365MFC": {
+    "reason": "no ATcT species for CAS 406-58-6",
+    "state": "absent"
+  },
+  "R40": {
+    "atct_id": "74-87-3*0",
+    "state": "matched"
+  },
+  "R404A": {
+    "reason": "no ATcT species for CAS R404A.PPF",
+    "state": "absent"
+  },
+  "R407C": {
+    "reason": "no ATcT species for CAS R407C.PPF",
+    "state": "absent"
+  },
+  "R41": {
+    "atct_id": "593-53-3*0",
+    "state": "matched"
+  },
+  "R410A": {
+    "reason": "no ATcT species for CAS R410A.PPF",
+    "state": "absent"
+  },
+  "R507A": {
+    "reason": "no ATcT species for CAS R507A.PPF",
+    "state": "absent"
+  },
+  "RC318": {
+    "reason": "no ATcT species for CAS 115-25-3",
+    "state": "absent"
+  },
+  "SES36": {
+    "reason": "no ATcT species for CAS SES36.ppf",
+    "state": "absent"
+  },
+  "SulfurDioxide": {
+    "atct_id": "7446-09-5*0",
+    "state": "matched"
+  },
+  "SulfurHexafluoride": {
+    "reason": "no ATcT species for CAS 2551-62-4",
+    "state": "absent"
+  },
+  "Tetrahydrofuran": {
+    "reason": "no ATcT species for CAS 109-99-9",
+    "state": "absent"
+  },
+  "Toluene": {
+    "atct_id": "108-88-3*0",
+    "state": "matched"
+  },
+  "VinylChloride": {
+    "atct_id": "75-01-4*0",
+    "state": "matched"
+  },
+  "Water": {
+    "atct_id": "7732-18-5*0",
+    "state": "matched"
+  },
+  "Xenon": {
+    "atct_id": "7440-63-3*0",
+    "state": "matched"
+  },
+  "cis-2-Butene": {
+    "atct_id": "590-18-1*0",
+    "state": "matched"
+  },
+  "m-Xylene": {
+    "reason": "no ATcT species for CAS 108-38-3",
+    "state": "absent"
+  },
+  "n-Butane": {
+    "atct_id": "106-97-8*0",
+    "state": "matched"
+  },
+  "n-Decane": {
+    "atct_id": "124-18-5*0",
+    "state": "matched"
+  },
+  "n-Dodecane": {
+    "reason": "no ATcT species for CAS 112-40-3",
+    "state": "absent"
+  },
+  "n-Heptane": {
+    "atct_id": "142-82-5*0",
+    "state": "matched"
+  },
+  "n-Hexane": {
+    "atct_id": "110-54-3*0",
+    "state": "matched"
+  },
+  "n-Nonane": {
+    "atct_id": "111-84-2*0",
+    "state": "matched"
+  },
+  "n-Octane": {
+    "atct_id": "111-65-9*0",
+    "state": "matched"
+  },
+  "n-Pentane": {
+    "atct_id": "109-66-0*0",
+    "state": "matched"
+  },
+  "n-Perfluorobutane": {
+    "reason": "no ATcT species for CAS 355-25-9",
+    "state": "absent"
+  },
+  "n-Perfluorohexane": {
+    "reason": "no ATcT species for CAS 355-42-0",
+    "state": "absent"
+  },
+  "n-Perfluoropentane": {
+    "reason": "no ATcT species for CAS 678-26-2",
+    "state": "absent"
+  },
+  "n-Propane": {
+    "atct_id": "74-98-6*0",
+    "state": "matched"
+  },
+  "n-Undecane": {
+    "reason": "no ATcT species for CAS 1120-21-4",
+    "state": "absent"
+  },
+  "o-Xylene": {
+    "reason": "no ATcT species for CAS 95-47-6",
+    "state": "absent"
+  },
+  "p-Xylene": {
+    "reason": "no ATcT species for CAS 106-42-3",
+    "state": "absent"
+  },
+  "trans-2-Butene": {
+    "atct_id": "624-64-6*0",
+    "state": "matched"
+  }
+}

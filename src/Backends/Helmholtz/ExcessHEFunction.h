@@ -42,6 +42,10 @@ class DepartureFunction
     void calc_nocache(double tau, double delta, HelmholtzDerivatives& _derivs) {
         phi.all(tau, delta, _derivs);
     }
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only the delta-fields of _derivs are valid.
+    void calc_nocache_deltaonly(double tau, double delta, HelmholtzDerivatives& _derivs) {
+        phi.all_deltaonly(tau, delta, _derivs);
+    }
 
     double alphar() {
         return derivs.alphar;
@@ -108,6 +112,13 @@ class GERG2008DepartureFunction : public DepartureFunction
     GERG2008DepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                               const std::vector<double>& eta, const std::vector<double>& epsilon, const std::vector<double>& beta,
                               const std::vector<double>& gamma, std::size_t Npower) {
+        // Every vector is sliced at Npower below, so check lengths before touching any
+        CoolProp::check_coefficient_lengths("GERG2008DepartureFunction",
+                                            {n.size(), d.size(), t.size(), eta.size(), epsilon.size(), beta.size(), gamma.size()});
+        if (Npower > n.size()) {
+            throw CoolProp::ValueError(format("GERG2008DepartureFunction: Npower (%d) exceeds the number of terms (%d)", static_cast<int>(Npower),
+                                              static_cast<int>(n.size())));
+        }
         /// Break up into power and gaussian terms
         {
             std::vector<CoolPropDbl> _n(n.begin(), n.begin() + Npower);
@@ -147,6 +158,13 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
     GaussianExponentialDepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                                          const std::vector<double>& l, const std::vector<double>& eta, const std::vector<double>& epsilon,
                                          const std::vector<double>& beta, const std::vector<double>& gamma, std::size_t Npower) {
+        // Every vector is sliced at Npower below, so check lengths before touching any
+        CoolProp::check_coefficient_lengths("GaussianExponentialDepartureFunction",
+                                            {n.size(), d.size(), t.size(), l.size(), eta.size(), epsilon.size(), beta.size(), gamma.size()});
+        if (Npower > n.size()) {
+            throw CoolProp::ValueError(format("GaussianExponentialDepartureFunction: Npower (%d) exceeds the number of terms (%d)",
+                                              static_cast<int>(Npower), static_cast<int>(n.size())));
+        }
         /// Break up into power and gaussian terms
         {
             std::vector<CoolPropDbl> _n(n.begin(), n.begin() + Npower);
@@ -298,6 +316,24 @@ class ExcessTerm
             }
         }
         return summer;
+    }
+    /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only the delta-fields of the result are valid.
+    HelmholtzDerivatives get_deriv_nocomp_notcached_deltaonly(const std::vector<CoolPropDbl>& x, double tau, double delta) const {
+        HelmholtzDerivatives summer;
+        if (N == 0) {
+            return summer;
+        }
+        for (std::size_t i = 0; i < N - 1; i++) {
+            for (std::size_t j = i + 1; j < N; j++) {
+                HelmholtzDerivatives term;
+                DepartureFunctionMatrix[i][j]->calc_nocache_deltaonly(tau, delta, term);
+                summer = summer + term * x[i] * x[j] * F[i][j];
+            }
+        }
+        return summer;
+    }
+    HelmholtzDerivatives all_deltaonly(double tau, double delta, const std::vector<CoolPropDbl>& x) {
+        return get_deriv_nocomp_notcached_deltaonly(x, tau, delta);
     }
     double get_deriv_nocomp_cached(const std::vector<CoolPropDbl>& x, std::size_t itau, std::size_t idelta) {
         // If Excess term is not being used, return zero
