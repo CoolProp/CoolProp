@@ -829,7 +829,23 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     return initial_density + residual;
 }
 
+/// Transport properties are only defined for a single phase.  Inside the two-phase
+/// region the saturated liquid and vapor have different values and there is no
+/// meaningful bulk value, so refuse rather than evaluate a single-phase correlation
+/// at the overall density (#3446).  Q = 0 and Q = 1 are the saturated phases; the
+/// tolerance admits a (T, rho) input that sits on the saturation boundary to within
+/// roundoff, where the bulk density is the saturated one.  A metastable value can
+/// still be had by imposing the phase with specify_phase().
+static void check_transport_property_defined(HelmholtzEOSMixtureBackend& HEOS, const char* property) {
+    const double Q_tol = 1e-10;
+    if (HEOS.phase() == iphase_twophase && std::abs(HEOS.Q()) > Q_tol && std::abs(HEOS.Q() - 1) > Q_tol) {
+        throw ValueError(format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead",
+                                property, HEOS.Q()));
+    }
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
+    check_transport_property_defined(*this, "Viscosity");
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_viscosity_contributions(dilute, initial_density, residual, critical);
@@ -839,6 +855,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
+            // The mixture's (T, rho) may fall inside the pure component's dome; impose a
+            // homogeneous phase so the correlation is evaluated there regardless (#3446)
+            HEOS->specify_phase(iphase_gas);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
             summer += mole_fractions[i] * log(HEOS->viscosity());
         }
@@ -847,6 +866,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
 }
 void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
                                                               CoolPropDbl& critical) {
+    check_transport_property_defined(*this, "Viscosity");
     if (is_pure_or_pseudopure) {
         // Reset the variables
         dilute = 0;
@@ -946,6 +966,7 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
 }
 void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
                                                                  CoolPropDbl& critical) {
+    check_transport_property_defined(*this, "Thermal conductivity");
     if (is_pure_or_pseudopure) {
         // Reset the variables
         dilute = 0;
@@ -1090,6 +1111,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
     return lambda_residual;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
+    check_transport_property_defined(*this, "Thermal conductivity");
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_conductivity_contributions(dilute, initial_density, residual, critical);
@@ -1099,6 +1121,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
+            // The mixture's (T, rho) may fall inside the pure component's dome; impose a
+            // homogeneous phase so the correlation is evaluated there regardless (#3446)
+            HEOS->specify_phase(iphase_gas);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
             summer += mole_fractions[i] * HEOS->conductivity();
         }

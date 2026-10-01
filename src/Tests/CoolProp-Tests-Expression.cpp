@@ -848,11 +848,15 @@ TEST_CASE("expression end-to-end: JSON load + dispatch round-trip (dilute viscos
 
     // Compare viscosity of the expression-backed fluid vs the original over a
     // (T,rho) grid -- exercising the VISCOSITY_DILUTE_EXPRESSION dispatch arm.
+    // Half the grid is inside R123's dome, where viscosity now refuses to evaluate
+    // (#3446); impose a single phase so the correlation is still evaluated at (T, rho).
+    const double rhoc = CoolProp::PropsSI("rhomolar_critical", "", 0, "", 0, "R123");
     int checks = 0;
     for (double T : {250.0, 300.0, 400.0, 500.0}) {
         for (double rho : {0.1, 100.0, 5000.0}) {
-            double v_expr = CoolProp::PropsSI("V", "T", T, "Dmolar", rho, "R123_EXPR_E2E");
-            double v_orig = CoolProp::PropsSI("V", "T", T, "Dmolar", rho, "R123");
+            const std::string Dkey = rho > rhoc ? "Dmolar|liquid" : "Dmolar|gas";
+            double v_expr = CoolProp::PropsSI("V", "T", T, Dkey, rho, "R123_EXPR_E2E");
+            double v_orig = CoolProp::PropsSI("V", "T", T, Dkey, rho, "R123");
             CAPTURE(T, rho, v_expr, v_orig);
             REQUIRE(ValidNumber(v_expr));
             REQUIRE(ValidNumber(v_orig));
