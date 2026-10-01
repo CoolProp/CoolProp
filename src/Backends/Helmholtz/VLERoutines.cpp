@@ -1897,9 +1897,10 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
     // (Wilson) K-factor estimate; if that collapses to the trivial (single-phase) root -- as it does
     // for a wide-boiling mixture whose incipient phase is small and nearly pure -- it falls back to a
     // near-pure seed (see Strategy 2 below).  Returns false when neither seed yields a non-trivial
-    // split or a phase density cannot be obtained.  May also throw from the underlying density solver;
-    // the blind-flash caller treats any throw as "not two-phase" and falls back to the single-phase
-    // path.  Used to recover a genuinely two-phase state that the TPD stability test reported as
+    // split or a phase density cannot be obtained.  Density-solver failures (CoolPropBaseError) on a
+    // seed are caught here and only fail that seed; anything else -- e.g. from Wilson_lnK_factor --
+    // may still throw, and the blind-flash caller treats any throw as "not two-phase" and falls back
+    // to the single-phase path.  Used to recover a genuinely two-phase state that the TPD stability test reported as
     // single-phase, e.g. cubic mixtures at high vapor fraction near the dew point (CoolProp-zgpy), or
     // near-pure water condensing out of a CO2-rich gas (GitHub: flash-trial-compositions).
     const std::size_t N = z.size();
@@ -1994,8 +1995,9 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
     // the refinement diverged.  g1 >= 0 puts the feed at or above its ideal dew point (vapor-like) ->
     // a liquid is incipient; g0 <= 0 puts it at or below its ideal bubble point (liquid-like) -> a
     // vapor is incipient.  Since g1 - g0 = sum z_i (2 - K_i - 1/K_i) <= 0, the two cannot both hold
-    // strictly; only when the ideal estimate brackets (and Strategy 1 nonetheless collapsed) does the
-    // |ln K| extremity break the tie.  If the first seed fails, the other is tried.
+    // strictly; only when the ideal estimate brackets (and Strategy 1 nonetheless collapsed or its
+    // density solve threw) does the |ln K| extremity break the tie.  If the first seed fails, the
+    // other is tried.
     if (Kmax > 0 && Kmin < HUGE_VAL && imin != imax && Kmax / Kmin > 1e3) {
         bool heavy_first;
         if (g1 >= 0) {
@@ -2023,7 +2025,16 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
                 HEOS.SatL->set_mole_fractions(x);
                 rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
                 HEOS.SatV->set_mole_fractions(y);
-                rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+                try {
+                    rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    // The global search scans up to calc_rhomolar_max_bound and throws when it meets a
+                    // single stationary point there -- e.g. a near-pure H2 vapor seed at 300 K (~9 Tc),
+                    // whose isotherm has no van der Waals loop at all (H2/n-decane bubble side).  The
+                    // vapor root is then the only physical one and lies near ideal gas, so solve from
+                    // the ideal-gas density instead.  The flash caller still verifies the split.
+                    rhomolar_vap = HEOS.SatV->solver_rho_Tp(T, p, p / (HEOS.SatV->gas_constant() * T));
+                }
             } catch (const CoolProp::CoolPropBaseError&) {
                 continue;
             }
