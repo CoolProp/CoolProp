@@ -1,6 +1,7 @@
 #ifndef COOLPROP_SPLINE_TENSOR_BSPLINE_2D_H
 #define COOLPROP_SPLINE_TENSOR_BSPLINE_2D_H
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <string>
@@ -47,6 +48,8 @@ class TensorBSpline2D
     [[nodiscard]] double eval(double x, double y, unsigned dx = 0, unsigned dy = 0) const;
 
    private:
+    using BasisOut = std::array<double, kMaxOrder>;
+
     // Throws ValueError unless (order, knots) describe a usable axis:
     // order in [1, kMaxOrder], enough knots that n = size - order is at
     // least 1, and a finite non-decreasing knot sequence.
@@ -71,7 +74,7 @@ class TensorBSpline2D
     // out[0 .. order-1] and corresponding to coefficients
     // span-p .. span  (p = order - 1).  Cox-de Boor recurrence in the
     // triangular form of Piegl & Tiller, The NURBS Book, Alg. A2.2.
-    static void basis_funs(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, double* out);
+    static void basis_funs(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, BasisOut& out);
 
     // The `nd`-th derivatives of those same `order` basis functions,
     // written to out[0 .. order-1].  Piegl & Tiller, Alg. A2.3
@@ -80,7 +83,7 @@ class TensorBSpline2D
     // Signed arithmetic throughout: the book's recurrence indexes
     // r - k, which goes negative, and doing that in std::size_t would
     // wrap to a huge value and read out of bounds.
-    static void basis_ders(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, unsigned nd, double* out);
+    static void basis_ders(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, unsigned nd, BasisOut& out);
 
     std::vector<double> kx_;
     std::vector<double> ky_;
@@ -211,7 +214,7 @@ inline std::size_t TensorBSpline2D::find_span(const std::vector<double>& knots, 
     return mid;
 }
 
-inline void TensorBSpline2D::basis_funs(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, double* out) {
+inline void TensorBSpline2D::basis_funs(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, BasisOut& out) {
     const std::size_t p = order - 1;
     double left[kMaxOrder];
     double right[kMaxOrder];
@@ -229,7 +232,7 @@ inline void TensorBSpline2D::basis_funs(const std::vector<double>& knots, std::s
     }
 }
 
-inline void TensorBSpline2D::basis_ders(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, unsigned nd, double* out) {
+inline void TensorBSpline2D::basis_ders(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, unsigned nd, BasisOut& out) {
     const int p = static_cast<int>(order) - 1;
     const int s = static_cast<int>(span);
 
@@ -352,8 +355,7 @@ inline double TensorBSpline2D::eval(double x, double y, unsigned dx, unsigned dy
     check_in_domain(ky_, oy_, ny_, y, "y");
     const std::size_t sx = find_span(kx_, ox_, nx_, x);
     const std::size_t sy = find_span(ky_, oy_, ny_, y);
-    double bx[kMaxOrder];
-    double by[kMaxOrder];
+    BasisOut bx, by;
     if (dx == 0) {
         basis_funs(kx_, ox_, sx, x, bx);
     } else {
