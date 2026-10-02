@@ -187,7 +187,7 @@ void successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vec
  */
 bool guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y, CoolPropDbl& rhomolar_liq,
                              CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, CoolPropDbl T, CoolPropDbl p, int num_steps,
-                             bool require_bracket = true);
+                             bool require_bracket = true, const std::vector<CoolPropDbl>* feed_ln_f = nullptr);
 
 /*! A wrapper function around the residual to find the initial guess for the bubble point temperature
     \f[
@@ -676,6 +676,9 @@ class StabilityEvaluationClass
     std::vector<double> lnK, K, K0, x, y, xL, xH;
     const std::vector<double>& z;
     double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
+    /// ln z_i + ln phi_i(z) on the feed's stable root, as evaluated by check_stability_michelsen
+    /// (empty when the legacy test ran); handed to guess_split_from_wilson so it need not re-solve it
+    std::vector<CoolPropDbl> feed_ln_f;
     double m_T,  ///< The temperature to be used (if specified, otherwise that from HEOS)
       m_p;       ///< The pressure to be used (if specified, otherwise that from HEOS)
 
@@ -755,6 +758,10 @@ class StabilityEvaluationClass
 
     /** \brief Return best estimate for the stability of the point
          */
+    /// Feed ln z_i + ln phi_i(z) from the last Michelsen stability test; empty if unavailable
+    const std::vector<CoolPropDbl>& get_feed_ln_f() const {
+        return feed_ln_f;
+    }
     bool is_stable() {
         if (!use_michelsen) {
             // Legacy path needs trial compositions and a few SS steps

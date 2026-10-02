@@ -266,8 +266,9 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         if (!do_twophase) {
             const bool uncertain = stability_tester.is_uncertain();
             try {
+                const std::vector<CoolPropDbl>& feed_ln_f = stability_tester.get_feed_ln_f();
                 if (CoolProp::SaturationSolvers::guess_split_from_wilson(HEOS, o.x, o.y, o.rhomolar_liq, o.rhomolar_vap, o.z, HEOS.T(), HEOS.p(), 10,
-                                                                         !uncertain)) {
+                                                                         !uncertain, feed_ln_f.empty() ? nullptr : &feed_ln_f)) {
                     do_twophase = true;
                     wilson_seeded = true;
                 }

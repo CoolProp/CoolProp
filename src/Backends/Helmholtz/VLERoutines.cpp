@@ -1978,9 +1978,12 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
     }
 }
 
+static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm, bool strict = false);
+
 bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
                                                 CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
-                                                CoolPropDbl T, CoolPropDbl p, int num_steps, bool require_bracket) {
+                                                CoolPropDbl T, CoolPropDbl p, int num_steps, bool require_bracket,
+                                                const std::vector<CoolPropDbl>* feed_ln_f) {
     // Seed a two-phase guess and refine it by successive substitution.  Tries first the ideal
     // (Wilson) K-factor estimate; if that collapses to the trivial (single-phase) root -- as it does
     // for a wide-boiling mixture whose incipient phase is small and nearly pure -- it falls back to a
@@ -2095,6 +2098,152 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
         } else {
             heavy_first = std::abs(std::log(Kmin)) >= std::abs(std::log(Kmax));
         }
+        // Cheap tangent-plane gate (COO-120).  A wide-boiling mixture (Kmax/Kmin > 1e3: also natural gas
+        // at low T, N2 vs n-hexane) reaches this point at most of its genuinely single-phase states.  The
+        // refinement below costs two global density solves per seed (~1 ms each for ten components) plus
+        // up to 80 two-phase SS steps, and an unconverged collapse can leave a spread >= 1e-6 that sends
+        // the caller into a full two-phase solve its verify then rejects -- together this doubled the PT
+        // flash there.  So first test the near-pure seed as a Michelsen trial phase against the feed,
+        // with local (warm Newton) density solves: tm(w) = sum w_i (ln w_i + ln phi_i(w) - d_i) < 0 at ANY
+        // iterate is sufficient for instability.  All near-pure trials stable -> skip the refinement; any
+        // unstable or undecided -> refine exactly as before, so no recovery is lost.  d_i = ln z_i +
+        // ln phi_i(z) comes from the stability test when the caller passes it (feed_ln_f), otherwise from
+        // one global solve here.
+        std::vector<CoolPropDbl> d;
+        bool d_ready = false, d_failed = false;
+        auto feed_d = [&]() -> bool {
+            if (d_ready || d_failed) return d_ready;
+            if (feed_ln_f != nullptr && feed_ln_f->size() == N) {
+                d = *feed_ln_f;
+            } else {
+                try {
+                    HEOS.SatV->set_mole_fractions(z);
+                    const CoolPropDbl rz = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+                    HEOS.SatV->update_DmolarT_direct(rz, T);
+                    d.assign(N, -1e30);
+                    for (std::size_t i = 0; i < N; ++i)
+                        if (z[i] > 0) d[i] = log(z[i]) + log(HEOS.SatV->fugacity_coefficient(i));
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    d_failed = true;
+                    return false;
+                }
+            }
+            for (std::size_t i = 0; i < N; ++i)
+                if (z[i] > 0 && !ValidNumber(d[i])) d_failed = true;
+            d_ready = !d_failed;
+            return d_ready;
+        };
+        // -1: the near-pure trial is clearly stable; +1: the feed is unstable; 0: undecided
+        auto near_pure_trial = [&](std::vector<CoolPropDbl> w, bool heavy, std::size_t iext) -> int {
+            if (!feed_d()) return 0;
+            // The dedicated tangent-plane scratch state, never SatL/SatV: the refinement below starts from
+            // those, and state the trial leaves behind on them (stored phase, last root) changed its outcome.
+            HelmholtzEOSMixtureBackend& ph = HEOS.get_TPD_state();
+            // Density guesses come from the SRK root of the trial's own phase type (liquid-like for the
+            // heavy seed, gas-like for the light one): an analytic cubic, so effectively free.
+            const phases trial_phase = heavy ? iphase_liquid : iphase_gas;
+            auto srk_guess = [&]() -> CoolPropDbl {
+                try {
+                    const CoolPropDbl r = ph.solver_rho_Tp_SRK(T, p, trial_phase);
+                    if (ValidNumber(r) && r > 0) return r;
+                } catch (...) {  // NOLINT(bugprone-empty-catch) -- fall back to the ideal gas
+                }
+                return p / (HEOS.gas_constant() * T);
+            };
+            CoolPropDbl rho_warm = -1;
+            CoolPropDbl tm_prev = HUGE_VAL;
+            for (int it = 0; it < 50; ++it) {
+                try {
+                    ph.set_mole_fractions(w);
+                    // Local Newton from the previous root (from the SRK guess on the first step).  The trial
+                    // follows its own branch as its composition moves -- the heavy near-pure liquid takes up
+                    // a lot of light gas in the first steps, so its density can change by more than the 2x
+                    // that solve_trial_rho_warm treats as a branch jump, and that guard would send nearly
+                    // every gate call through a ~1 ms global solve.  The liquid-type SRK guess keeps the heavy
+                    // trial on the liquid-like branch, the incipient phase this seed stands for; a global
+                    // solve is used only when Newton fails from both the previous root and the SRK root.
+                    auto newton_from = [&](CoolPropDbl guess) -> bool {
+                        if (!(guess > 0)) return false;
+                        try {
+                            // Impose the trial's own phase type for this local solve.  solver_rho_Tp otherwise
+                            // re-solves on whatever branch the scratch state last stored, which for the light
+                            // (gas-like) trial need not have a root; the imposed type also keeps the heavy trial
+                            // on its liquid-like root.  Un-imposing leaves the stored phase at the trial's type,
+                            // which the fugacity evaluation below requires (a fresh scratch state's "unknown"
+                            // makes fugacity_coefficient throw).
+                            ph.specify_phase(trial_phase);
+                            struct Unimpose
+                            {
+                                HelmholtzEOSMixtureBackend& b;
+                                ~Unimpose() {
+                                    b.unspecify_phase();
+                                }
+                            } unimpose{ph};
+                            ph.update_TP_guessrho(T, p, guess);
+                            const CoolPropDbl r = ph.rhomolar();
+                            if (ValidNumber(r) && r > 0) {
+                                rho_warm = r;
+                                return true;
+                            }
+                        } catch (...) {  // NOLINT(bugprone-empty-catch) -- caller tries the next guess
+                        }
+                        return false;
+                    };
+                    // previous root, then the SRK root for the current composition, then a global solve
+                    bool solved = newton_from(rho_warm) || newton_from(srk_guess());
+                    if (!solved) {
+                        rho_warm = -1;
+                        solve_trial_rho_warm(ph, T, p, rho_warm);
+                    }
+                } catch (...) {
+                    return 0;
+                }
+                CoolPropDbl tm = 0, sumW = 0, dw = 0, dz = 0;
+                std::vector<CoolPropDbl> W(N, 0.0);
+                try {
+                    for (std::size_t i = 0; i < N; ++i) {
+                        if (!(z[i] > 0)) continue;
+                        const CoolPropDbl ln_phi = log(ph.fugacity_coefficient(i));
+                        tm += w[i] * (log(w[i]) + ln_phi - d[i]);
+                        W[i] = exp(d[i] - ln_phi);
+                        sumW += W[i];
+                    }
+                } catch (...) {
+                    return 0;  // undecided: the refinement below decides, as before
+                }
+                if (!ValidNumber(tm) || !ValidNumber(sumW) || sumW <= 0) return 0;
+                if (tm < -1e-10) return +1;  // sufficient: the feed is unstable
+                for (std::size_t i = 0; i < N; ++i) {
+                    const CoolPropDbl wn = W[i] / sumW;
+                    dw = std::max(dw, std::abs(wn - w[i]));
+                    dz = std::max(dz, std::abs(wn - z[i]));
+                    w[i] = wn;
+                }
+                if (dz < 1e-4) return -1;  // collapsed onto the feed
+                // Stationary.  Only a clearly positive tm is a stable verdict: right at a phase boundary
+                // (e.g. Q = 0.9999 at a dew point) the minimum tm is ~0, and the refinement below must decide.
+                if (dw < 1e-10 || std::abs(tm - tm_prev) < 1e-12) return tm > 1e-8 ? -1 : 0;
+                tm_prev = tm;
+            }
+            return 0;
+        };
+        // The gate decides whether to run the near-pure refinement at all, not which seed to refine: once any
+        // trial shows the feed unstable (or cannot decide), both seeds are refined exactly as before -- the
+        // split solve from either seed can land on the true split (e.g. the near-pure light-vapor seed finds
+        // a near-pure water liquid that the heavy seed's stiff refinement misses).  Only when every near-pure
+        // trial is clearly stable is the refinement skipped.
+        bool all_stable = true;
+        for (const bool heavy : {heavy_first, !heavy_first}) {
+            const std::size_t iext = heavy ? imin : imax;
+            std::vector<CoolPropDbl> near_pure(N, 1e-6);
+            near_pure[iext] = 1.0;
+            normalize_vector(near_pure);
+            if (near_pure_trial(near_pure, heavy, iext) >= 0) {
+                all_stable = false;
+                break;
+            }
+        }
+        if (all_stable) return false;
         for (const bool heavy : {heavy_first, !heavy_first}) {
             const std::size_t iext = heavy ? imin : imax;
             std::vector<CoolPropDbl> near_pure(N, 1e-6);
@@ -2284,14 +2433,15 @@ static bool fugacity_coefficients_finite(HelmholtzEOSMixtureBackend& phase) {
 // spurious splits converge (supercritical humid air at 20-30 MPa), and in the stability test
 // rejecting these roots changes verdicts that the legacy single-phase fallback depends on.
 // SPIKE (TPD speed): per-flash counters, read by the benchmark driver
-long spike_counts[16] = {0};  // 0 trial solves, 1 warm accepted, 2 global, 3 kernel-direct, 4 SS steps(stab), 5 tpd iters, 6 split SS, 7 split gibbs iters
+long spike_counts[16] = {
+  0};  // 0 trial solves, 1 warm accepted, 2 global, 3 kernel-direct, 4 SS steps(stab), 5 tpd iters, 6 split SS, 7 split gibbs iters
 static bool spike_env(const char* k) {
     static std::map<std::string, bool> m;
     auto it = m.find(k);
     if (it != m.end()) return it->second;
     return m[k] = std::getenv(k) != nullptr;
 }
-static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm, bool strict = false) {
+static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm, bool strict) {
     ++spike_counts[0];
     if (spike_env("SPIKE_KDIRECT")) {  // SPIKE: kernel root directly, no warm Newton
         const CoolPropDbl rc = phase.solver_rho_Tp_cheb(T, p);
@@ -2363,6 +2513,7 @@ static bool trial_moles_finite(const std::vector<CoolPropDbl>& Y) {
 
 void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     const std::size_t N = z.size();
+    feed_ln_f.clear();
     CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
     CoolPropDbl the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
     _stable = true;
@@ -2390,6 +2541,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         else
             ln_f_z[i] = -1e30;  // Effectively -inf for absent components
     }
+    feed_ln_f = ln_f_z;  // reused by guess_split_from_wilson's near-pure gate (COO-120)
 
     // Build two trial compositions from Wilson K-factors ([Michelsen1982a] Eq. 28):
     //   K_i = (Pc_i/P) * exp(5.373*(1+omega_i)*(1-Tc_i/T))
@@ -2652,8 +2804,11 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
         }
 
         if (spike_env("SPIKE_ITER")) {
-            double dz = 0; for (std::size_t i = 0; i < N; ++i) dz = std::max(dz, std::abs(y_norm[i] - z[i]));
-            std::fprintf(stderr, "  it=%d sumY=%.12g max|y-z|=%.3g tm=%.3g maxgrad=%.3g trust=%.3g shift=%.3g\n", iter, (double)sumY, dz, obj_old, max_gradient, trust_radius, diagonal_shift);
+            double dz = 0;
+            for (std::size_t i = 0; i < N; ++i)
+                dz = std::max(dz, std::abs(y_norm[i] - z[i]));
+            std::fprintf(stderr, "  it=%d sumY=%.12g max|y-z|=%.3g tm=%.3g maxgrad=%.3g trust=%.3g shift=%.3g\n", iter, (double)sumY, dz, obj_old,
+                         max_gradient, trust_radius, diagonal_shift);
         }
         // Converged?
         if (max_gradient < cntol) {
@@ -2806,7 +2961,13 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
             return false;
         }
     }
-    ++spike_counts[13]; if (spike_env("SPIKE_DUMP")) { std::fprintf(stderr, "MAXIT T=%g p=%g obj?", (double)the_T, (double)the_p); for (std::size_t i=0;i<N;++i) std::fprintf(stderr," y%zu=%.4g/z=%.4g", i, (double)(Y[i]), (double)z[i]); std::fprintf(stderr,"\n"); }
+    ++spike_counts[13];
+    if (spike_env("SPIKE_DUMP")) {
+        std::fprintf(stderr, "MAXIT T=%g p=%g obj?", (double)the_T, (double)the_p);
+        for (std::size_t i = 0; i < N; ++i)
+            std::fprintf(stderr, " y%zu=%.4g/z=%.4g", i, (double)(Y[i]), (double)z[i]);
+        std::fprintf(stderr, "\n");
+    }
     return false;  // Reached max iterations without convergence -> non-conclusive (caller decides)
 }
 

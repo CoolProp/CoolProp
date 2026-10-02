@@ -172,6 +172,13 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return AbstractState::clear();
     };
 
+    /// Scratch backend for tangent-plane trial phases, created on first use (shares this backend's model).
+    /// For callers outside the friend classes, e.g. SaturationSolvers::guess_split_from_wilson (COO-120).
+    HelmholtzEOSMixtureBackend& get_TPD_state() {
+        add_TPD_state();
+        return *TPD_state;
+    }
+
     friend class
       FlashRoutines;  // Allows the static methods in the FlashRoutines class to have access to all the protected members and methods of this class
     friend class
