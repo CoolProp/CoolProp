@@ -276,6 +276,23 @@ def version_to_file(root_dir):
     print('version written to hidden file: ' + hidden_file_name + " for use in builders that don't use git repo")
 
 
+def gitrev_from_file(root_dir):
+    """
+    Read the revision from dev/gitrevision.txt, the fallback used when git
+    cannot supply one.  Returns None when the file is absent.
+
+    Release tarballs carry this file precisely because a distribution build
+    chroot has neither a .git directory nor, usually, git itself installed.
+    """
+
+    gitrevision_path = os.path.join(root_dir, 'dev', 'gitrevision.txt')
+    if os.path.exists(gitrevision_path):
+        with open(gitrevision_path, 'r') as f:
+            return f.read().strip()
+    print(f'tried to get git revision from {gitrevision_path}, but could not; root_dir is: {root_dir}')
+    return None
+
+
 def gitrev_to_file(root_dir):
     """
     If a git repo, use git to update the gitrevision.  If not a git repo, read
@@ -300,11 +317,8 @@ def gitrev_to_file(root_dir):
             if p.returncode != 0:
                 print('tried to get git revision from git, but could not (building from zip file?)')
                 print(f'return code: {p.returncode}; stderr: {stderr};  stdout: {stdout}')
-                gitrevision_path = os.path.join(root_dir, 'dev', 'gitrevision.txt')
-                if os.path.exists(gitrevision_path):
-                    gitrev = open(gitrevision_path, 'r').read().strip()
-                else:
-                    print(f'tried to get git revision from {gitrevision_path}, but could not; root_dir is: {root_dir}')
+                gitrev = gitrev_from_file(root_dir)
+                if gitrev is None:
                     gitrev = '???'
             else:
                 gitrev = stdout.strip()
@@ -315,8 +329,15 @@ def gitrev_to_file(root_dir):
                     raise ValueError('No hash returned from call to git, got ' + rev + ' instead')
 
         except subprocess.CalledProcessError:
+            # git is not installed at all, which is the normal situation in a
+            # distribution build chroot (sbuild, mock, OBS).  That is exactly
+            # when the shipped gitrevision.txt has to be consulted; before, this
+            # branch went straight to '???' and the file was only ever read when
+            # git happened to be present but there was no repository.
             print('git was not found')
-            gitrev = '???'
+            gitrev = gitrev_from_file(root_dir)
+            if gitrev is None:
+                gitrev = '???'
 
         # Include path relative to the root
         include_dir = os.path.join(root_dir, 'include')

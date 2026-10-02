@@ -358,6 +358,8 @@ class TransportPropertyData
         VISCOSITY_HARDCODED_M_XYLENE,    ///< Use \ref TransportRoutines::viscosity_m_xylene_hardcoded
         VISCOSITY_HARDCODED_O_XYLENE,    ///< Use \ref TransportRoutines::viscosity_o_xylene_hardcoded
         VISCOSITY_HARDCODED_P_XYLENE,    ///< Use \ref TransportRoutines::viscosity_p_xylene_hardcoded
+        /// Use \ref TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded
+        VISCOSITY_HARDCODED_HEAVYWATER_IAPWS2020,
         VISCOSITY_NOT_HARDCODED
     };
     enum ConductivityHardcodedEnum
@@ -367,6 +369,8 @@ class TransportPropertyData
         CONDUCTIVITY_HARDCODED_R23,         ///< Use \ref TransportRoutines::conductivity_hardcoded_R23
         CONDUCTIVITY_HARDCODED_HELIUM,      ///< Use \ref TransportRoutines::conductivity_hardcoded_helium
         CONDUCTIVITY_HARDCODED_METHANE,     ///< Use \ref TransportRoutines::conductivity_hardcoded_methane
+        /// Use \ref TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021
+        CONDUCTIVITY_HARDCODED_HEAVYWATER_IAPWS2021,
         CONDUCTIVITY_NOT_HARDCODED
     };
     ViscosityDiluteVariables viscosity_dilute;

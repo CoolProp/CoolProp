@@ -1,0 +1,12 @@
+# actionlint configuration (picked up automatically from the repo root; used
+# by dev/ci/preflight.sh).
+paths:
+  .github/workflows/docs_devdocs-run.yml:
+    ignore:
+      # actionlint <= 1.7.12 bundles stale metadata for
+      # actions/create-github-app-token@v3: it still lists `app-id` as
+      # required and does not know `client-id`, which v3 added and prefers
+      # (`app-id` is deprecated there).  Drop these once actionlint's
+      # popular_actions.go catches up.
+      - 'input "client-id" is not defined in action "actions/create-github-app-token@v3"'
+      - 'missing input "app-id" which is required by action "actions/create-github-app-token@v3"'

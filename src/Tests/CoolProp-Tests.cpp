@@ -10,6 +10,7 @@
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
 #include "../Backends/Tabular/TabularBackends.h"
 #include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "../Backends/Helmholtz/TransportRoutines.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
@@ -450,10 +451,14 @@ vel viscosity_validation_data[] = {
   vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-10, "V", 8.3705e-6, 1e-5),
   vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "V", 589.3956e-6, 1e-5),
 
-  // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 12.0604912273 * 55.2651e-6, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 1.6561616211 * 55.2651e-6, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 0.7651099154 * 55.2651e-6, 1e-5),
+  // Heavy Water, IAPWS R17-20 (2020), Table 4, near-critical points of the full formulation, Eq. (10),
+  // including mu2 (checked separately below, with the Table 3 points, which set mu2 = 1)
+  vel("HeavyWater", "T", 644.101, "Dmass", 145, "V", 26.640959e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 245, "V", 32.119967e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 295, "V", 36.828275e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 345, "V", 43.225017e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 395, "V", 47.193530e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 445, "V", 50.241640e-6, 1e-6),
 
   // Toluene, Avgeri, JPCRD, 2015
   vel("Toluene", "T", 300, "Dmass", 1e-10, "V", 7.023e-6, 1e-4),
@@ -897,10 +902,21 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)   (TRNS_TCX.FOR, TK3)
   vel("Xenon", "T", 300, "Dmass", 2725.0, "L", 63.673176997097902e-3, 1e-6),
 
-  // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 259.605241187 * 0.742128e-3, 1e-5),
+  // Heavy Water, IAPWS R18-21 (2021), Table 3 (lambda2 = 0).  Tolerance: 1e-6 or half a unit in the
+  // last printed digit, whichever is looser.
+  vel("HeavyWater", "T", 298.15, "Dmass", 1e-10, "L", 17.7498e-3, 2.9e-6),
+  vel("HeavyWater", "T", 298.15, "Dmass", 1104.5, "L", 599.557e-3, 1e-6),
+  vel("HeavyWater", "T", 298.15, "Dmass", 1200, "L", 690.421e-3, 1e-6),
+  vel("HeavyWater", "T", 825.00, "Dmass", 1e-10, "L", 76.4492e-3, 1e-6),
+  // Heavy Water, IAPWS R18-21 (2021), Table 4, T = 644.10 K, including lambda2 (checked separately below)
+  vel("HeavyWater", "T", 644.10, "Dmass", 1, "L", 52.4527e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 106, "L", 103.342e-3, 4.9e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 256, "L", 394.612e-3, 1.3e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 306, "L", 801.382e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 356, "L", 1278.423e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 406, "L", 670.833e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 456, "L", 423.603e-3, 1.2e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 750, "L", 454.846e-3, 1.1e-6),
 
   // Vassiliou, JPCRD, 2015
   vel("Cyclopentane", "T", 512, "Dmass", 1e-12, "L", 37.042e-3, 1e-5),
@@ -1005,11 +1021,103 @@ TEST_CASE("The first entry of a transport model list is the one loaded", "[condu
       // first, Lemmon & Jacobsen (2004) kept for both
       {"Nitrogen", "BibTeX-CONDUCTIVITY", "Sotiriadou-IJT-2025-nitrogen"},
       {"Nitrogen", "BibTeX-VISCOSITY", "Huber-IJT-2024-nitrogen"},
+      // HeavyWater: IAPWS R18-21 conductivity and IAPWS R17-20 viscosity first, the IAPWS 2007
+      // formulations kept for both
+      {"HeavyWater", "BibTeX-CONDUCTIVITY", "IAPWS-D2O-2021-ThermalConductivity"},
+      {"HeavyWater", "BibTeX-VISCOSITY", "IAPWS-D2O-2020-Viscosity"},
     };
     for (const auto& m : models) {
         CAPTURE(m.fluid);
         CAPTURE(m.parameter);
         CHECK(CoolProp::get_fluid_param_string(m.fluid, m.parameter) == m.bibtex);
+    }
+}
+
+// IAPWS R17-20, Table 4 also tabulates the correlation length xi and the enhancement factor mu2;
+// IAPWS R18-21, Table 4 tabulates lambda1 and lambda2 (lambda0(644.10 K) = 52.14966).  These are the
+// points that exercise the critical enhancements, so check each contribution, and that it is not trivial.
+TEST_CASE("HeavyWater IAPWS R17-20 / R18-21 critical enhancements match the release check points", "[viscosity],[conductivity],[transport]") {
+    HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, "HeavyWater"));
+    SECTION("viscosity: Table 3, simplified formulation with mu2 = 1 (Eq. 22)") {
+        struct Pt
+        {
+            double T, rho, mu_uPas;
+        };
+        // At 775 K and 400 kg/m^3 the full formulation's mu2 is 1.000129, so these points are
+        // compared with mu/mu2, not with the default (full) viscosity
+        const std::vector<Pt> pts = {{298.15, 1e-10, 10.035938}, {298.15, 1105, 1092.6424}, {298.15, 1130, 1088.3626}, {373.15, 1064, 326.63791},
+                                     {775.00, 1, 29.639474},     {775.00, 100, 31.930085},  {775.00, 400, 53.324172}};
+        for (const auto& p : pts) {
+            CAPTURE(p.T);
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, p.T);
+            const double mu_background =
+              TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(HEOS) / TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HEOS);
+            CAPTURE(mu_background * 1e6);
+            CHECK(std::abs(mu_background * 1e6 / p.mu_uPas - 1) < 1e-6);
+        }
+    }
+    SECTION("viscosity: xi and mu2") {
+        struct Pt
+        {
+            double rho, xi_nm, mu2;
+        };
+        // T = 644.101 K; xi to +/-1e-6 nm (release footnote), mu2 to 7 significant digits
+        const std::vector<Pt> pts = {{145, 0.358588, 1.000359},  {245, 1.612131, 1.014771}, {295, 5.034205, 1.050059},
+                                     {345, 15.100542, 1.106000}, {395, 9.678686, 1.080915}, {445, 2.903437, 1.030066}};
+        for (const auto& p : pts) {
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, 644.101);
+            const double xi_nm = TransportRoutines::correlation_length_heavywater_IAPWS2020(HEOS) * 1e9;
+            const double mu2 = TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HEOS);
+            CAPTURE(xi_nm);
+            CAPTURE(mu2);
+            CHECK(std::abs(xi_nm - p.xi_nm) < 1.5e-6);
+            CHECK(std::abs(mu2 - p.mu2) < 0.5e-6);
+            CHECK(mu2 > 1.0003);
+        }
+    }
+    SECTION("thermal conductivity: lambda1 and lambda2") {
+        struct Pt
+        {
+            double rho, lambda1, lambda2;  // lambda2 in mW/(m K)
+        };
+        const std::vector<Pt> pts = {{1, 1.0058076, 0.0001332},    {106, 1.7915649, 9.9127567},  {256, 3.3907043, 217.787846},
+                                     {306, 3.9639587, 594.662792}, {356, 4.5186821, 1042.77541}, {406, 5.0414590, 407.922272},
+                                     {456, 5.5295123, 135.240705}, {750, 8.5982461, 6.4500781}};
+        const double lambda0 = 52.14966;  // mW/(m K), printed to 7 significant digits
+        for (const auto& p : pts) {
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, 644.10);
+            const double lambda2 = TransportRoutines::conductivity_critical_heavywater_IAPWS2021(HEOS) * 1e3;
+            const double lambda = TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(HEOS) * 1e3;
+            const double lambda1 = (lambda - lambda2) / lambda0;
+            CAPTURE(lambda2);
+            CAPTURE(lambda1);
+            CHECK(lambda2 > 0);
+            // half a unit in the last printed digit, or 1e-6 relative, whichever is looser
+            CHECK(std::abs(lambda2 - p.lambda2) < std::max(1e-6 * p.lambda2, 0.5e-7));
+            CHECK(std::abs(lambda1 / p.lambda1 - 1) < 1e-6);
+        }
+    }
+}
+
+// The IAPWS 2007 heavy-water transport formulations (IAPWS R4-84(2007)) are no longer the default but
+// are kept as a backup model; evaluate the routines directly against their own check values
+// (reduced by T* = 643.847 K, rho* = 358 kg/m^3, mu* = 55.2651 uPa s, lambda* = 0.742128 mW/(m K)).
+TEST_CASE("HeavyWater IAPWS 2007 transport routines are kept", "[viscosity],[conductivity],[transport]") {
+    HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, "HeavyWater"));
+    struct Pt
+    {
+        double Tbar, rhobar, mubar, lambdabar;
+    };
+    const std::vector<Pt> pts = {
+      {0.5, 3.07, 12.0604912273, 835.786416818}, {0.9, 2.16, 1.6561616211, 627.777590127}, {1.2, 0.8, 0.7651099154, 259.605241187}};
+    for (const auto& p : pts) {
+        CAPTURE(p.Tbar);
+        HEOS.update(DmassT_INPUTS, p.rhobar * 358, p.Tbar * 643.847);
+        CHECK(std::abs(TransportRoutines::viscosity_heavywater_hardcoded(HEOS) / (p.mubar * 55.2651e-6) - 1) < 1e-5);
+        CHECK(std::abs(TransportRoutines::conductivity_hardcoded_heavywater(HEOS) / (p.lambdabar * 0.742128e-3) - 1) < 1e-5);
     }
 }
 
@@ -8849,7 +8957,15 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
 
-    // Build the phase envelope so SatL/SatV pick up some non-trivial state
+    // Build the phase envelope so SatL/SatV pick up some non-trivial state.
+    //
+    // NOTE: for this mixture build_phase_envelope() returns without throwing but leaves
+    // built == 0, so the PQ flash below runs on the BLIND branch.  That is fine here — this
+    // test is about the mole_fractions_liquid/vapor accessors, not about the envelope — but it
+    // means this cannot be counted as envelope-branch coverage, which is what it looks like at
+    // a glance.  Envelope-branch coverage lives in CoolProp-Tests-Michelsen.cpp, guarded by
+    // REQUIRE(get_phase_envelope_data().built) so it cannot silently degrade the same way
+    // (GH #3372).
     AS->build_phase_envelope("");
 
     // Single-phase point: T well above the dew curve at 1.5 bar

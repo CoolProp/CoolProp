@@ -40,6 +40,17 @@ option(COOLPROP_INSTALL_CMAKE_PACKAGE
 option(COOLPROP_INSTALL_LEGACY_LAYOUT
        "Install the historical static_library/shared_library release layout"
        ${_coolprop_top_level_install_default})
+# The flat headers at the root of include/ are deprecation shims (GH #1280,
+# to be removed at v9) that forward to the canonical <CoolProp/*.h>.  Shipping
+# them is right for an SDK-style install, which is why this defaults to ON and
+# nothing changes for an existing consumer.  A distribution build turns it off:
+# names like Solvers.h, Exceptions.h, MatrixMath.h and Ice.h are far too
+# generic to share /usr/include with every other package, and because the
+# packaging recipes ship only %{_includedir}/CoolProp/, rpmbuild would abort on
+# the leftovers with "Installed (but unpackaged) files found".
+option(COOLPROP_INSTALL_FLAT_HEADERS
+       "Install the deprecated flat compatibility headers into the include root"
+       ON)
 set(COOLPROP_INSTALL_CMAKEDIR
     "${CMAKE_INSTALL_LIBDIR}/cmake/CoolProp"
     CACHE STRING "CoolProp CMake package installation directory")
@@ -149,10 +160,14 @@ function(_coolprop_configure_core_target target linkage)
     target_compile_definitions("${target}" PUBLIC EXTERNC)
   endif()
 
-  if(NOT MSVC AND NOT BITNESS STREQUAL "NATIVE")
-    target_compile_options("${target}" PRIVATE "-m${BITNESS}")
+  # COOLPROP_BITNESS_FLAG is decided once in the top-level CMakeLists.txt by
+  # asking the compiler whether it accepts -m32/-m64, and is empty on the
+  # architectures that reject the flag.  Empty means "do not pass anything",
+  # not "pass an empty argument", hence the guard.
+  if(COOLPROP_BITNESS_FLAG)
+    target_compile_options("${target}" PRIVATE "${COOLPROP_BITNESS_FLAG}")
     if(NOT linkage STREQUAL "OBJECT")
-      target_link_options("${target}" PRIVATE "-m${BITNESS}")
+      target_link_options("${target}" PRIVATE "${COOLPROP_BITNESS_FLAG}")
     endif()
   endif()
 
@@ -211,17 +226,19 @@ function(_coolprop_install_standard_headers)
     FILES_MATCHING
     PATTERN "*.h"
     REGEX "detail/(json|msgpack)\\.h$" EXCLUDE)
-  install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-    FILES_MATCHING
-    PATTERN "*.h"
-    PATTERN "CoolProp" EXCLUDE
-    PATTERN "*_JSON*.h" EXCLUDE
-    PATTERN "*_CBOR*.h" EXCLUDE
-    PATTERN "CPmsgpack.h" EXCLUDE
-    PATTERN "gitrevision.h" EXCLUDE
-    PATTERN "cpversion.h" EXCLUDE)
+  if(COOLPROP_INSTALL_FLAT_HEADERS)
+    install(
+      DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      FILES_MATCHING
+      PATTERN "*.h"
+      PATTERN "CoolProp" EXCLUDE
+      PATTERN "*_JSON*.h" EXCLUDE
+      PATTERN "*_CBOR*.h" EXCLUDE
+      PATTERN "CPmsgpack.h" EXCLUDE
+      PATTERN "gitrevision.h" EXCLUDE
+      PATTERN "cpversion.h" EXCLUDE)
+  endif()
 
   if(NOT COOLPROP_VENDOR_THIRD_PARTY)
     return()
@@ -519,6 +536,87 @@ function(coolprop_add_library_targets)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolPropConfig.cmake"
                   "${CMAKE_CURRENT_BINARY_DIR}/CoolPropConfigVersion.cmake"
             DESTINATION "${COOLPROP_INSTALL_CMAKEDIR}")
+
+    # pkg-config, GH #3388 step 1.  A -dev package that find_package() can
+    # locate but pkg-config cannot is half a package, and plenty of consumers
+    # (autotools, meson, plain Makefiles) only speak pkg-config.
+    #
+    # libdir and includedir are written as ${prefix}-relative where they sit
+    # under the prefix, so the file stays relocatable the same way the CMake
+    # package is; GNUInstallDirs allows an absolute CMAKE_INSTALL_LIBDIR (the
+    # openSUSE %cmake macro passes /usr/lib64), so handle that case too.
+    foreach(_pcdir LIBDIR INCLUDEDIR)
+      if(IS_ABSOLUTE "${CMAKE_INSTALL_${_pcdir}}")
+        set(COOLPROP_PC_${_pcdir} "${CMAKE_INSTALL_${_pcdir}}")
+      else()
+        set(COOLPROP_PC_${_pcdir} "\${prefix}/${CMAKE_INSTALL_${_pcdir}}")
+      endif()
+    endforeach()
+
+    # The installed C++ headers are not self-contained: they include
+    # <Eigen/Dense>, and <fmt/format.h> unless the consumer defines NO_FMTLIB.
+    # A consumer using pkg-config has to be given those include paths, or the
+    # C++ API simply does not compile for them.  Where they come from depends
+    # on COOLPROP_VENDOR_THIRD_PARTY, so the two cases are answered
+    # differently, and a -DCOOLPROP_PC_REQUIRES=... override still wins.
+    if(NOT DEFINED COOLPROP_PC_REQUIRES)
+      if(COOLPROP_VENDOR_THIRD_PARTY)
+        # The bundled copies are installed under the CoolProp include tree and
+        # named in Cflags below, so nothing external is required.
+        set(COOLPROP_PC_REQUIRES "")
+      else()
+        # The build resolved these with find_package, so the consumer compiles
+        # against the same system copies and needs their flags.  The recipes
+        # that pass COOLPROP_VENDOR_THIRD_PARTY=OFF already depend on the
+        # matching -dev packages, so these .pc files are present.
+        set(COOLPROP_PC_REQUIRES "eigen3 fmt")
+      endif()
+    endif()
+
+    # fmt is used header-only, and fmt::fmt-header-only carries
+    # FMT_HEADER_ONLY=1 as an interface definition.  A pkg-config consumer gets
+    # no such thing from the imported target, so without this it would compile
+    # CoolProp's installed headers in a different fmt mode than both the
+    # library and a find_package consumer, and then fail to link libfmt.
+    set(COOLPROP_PC_CFLAGS "-DFMT_HEADER_ONLY=1 -I\${includedir}")
+    if(COOLPROP_VENDOR_THIRD_PARTY)
+      # Mirrors the INSTALL_INTERFACE include directories of the
+      # coolprop_eigen_headers and coolprop_fmt_headers targets, so a
+      # pkg-config consumer and a find_package consumer see the same headers.
+      string(APPEND COOLPROP_PC_CFLAGS
+             " -I\${includedir}/CoolProp/third_party/eigen"
+             " -I\${includedir}/CoolProp/third_party/fmt")
+    endif()
+
+    # Libs.private is what `pkg-config --static` adds.  It has to be emitted
+    # whenever a static archive is installed, not only when the archive is the
+    # only artifact: a package carrying both still lets a consumer ask for the
+    # static one.  CMAKE_DL_LIBS is a list of library NAMES ("dl" on Linux,
+    # empty on platforms where dlopen is in libc), so each entry needs turning
+    # into a linker flag; passing a bare "dl" through would make pkg-config
+    # hand the compiler a filename.
+    set(COOLPROP_PC_LIBS_PRIVATE "")
+    if(_static_target)
+      # -lpthread is a UNIX spelling; a Windows static build has no such
+      # library and naming it would hand the linker a file that is not there.
+      set(_pc_private "")
+      if(UNIX)
+        set(_pc_private "-lpthread")
+      endif()
+      foreach(_dl_lib IN LISTS CMAKE_DL_LIBS)
+        if(_dl_lib MATCHES "^-")
+          string(APPEND _pc_private " ${_dl_lib}")
+        else()
+          string(APPEND _pc_private " -l${_dl_lib}")
+        endif()
+      endforeach()
+      string(STRIP "${_pc_private}" COOLPROP_PC_LIBS_PRIVATE)
+    endif()
+
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/coolprop.pc.in"
+                   "${CMAKE_CURRENT_BINARY_DIR}/coolprop.pc" @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/coolprop.pc"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
   endif()
 
   message(STATUS "CoolProp library targets:")

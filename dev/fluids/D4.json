@@ -181,7 +181,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "",
-      "BibTeX_EOS": "Thol-THESIS-2015",
+      "BibTeX_EOS": "Thol-JCED-2016-D4",
       "STATES": {
         "hs_anchor": {
           "T": 645.1500000000001,
@@ -3864,7 +3864,7 @@
           "gas_constant / J/mol/K": 8.3144621,
           "rhocrittrue / mol/m^3": 1043.5965854894314
         },
-        "source_eos_hash": "1a50cbdfec677079",
+        "source_eos_hash": "3d3a3cfaf8ba35f4",
         "check_points": [
           {
             "T / K": 293.5075347395619,

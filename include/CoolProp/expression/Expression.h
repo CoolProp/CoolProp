@@ -15,26 +15,21 @@ namespace expression {
 /// Thermodynamic quantities a formula may reference are keyed by the existing
 /// CoolProp::parameters enum -- one bucket, no DSL-private enum.  Whatever a
 /// program asks for, the host fills by calling AbstractState::keyed_output() with
-/// that key.  Some keys are free (T, rhomolar) and some cost an EOS call (p); the
+/// that key.  Some keys are free (T, Dmolar) and some cost an EOS call (P); the
 /// evaluator does not care, and Program itself stays EOS-free -- it only reports
 /// which keys it needs and reads back the values the host supplies.
 ///
-/// The DSL spellings that resolve to a thermodynamic input, paired with the
-/// CoolProp::parameters key each binds to, in name-resolution order.
-///
 /// Resolve `name` as a state variable a correlation may declare.
 ///
-/// The DSL does NOT maintain its own list of thermodynamic quantities.  A name is
-/// resolved by CoolProp::is_valid_parameter(), so the DSL's vocabulary IS CoolProp's
-/// vocabulary -- every quantity keyed_output() can produce is reachable, and adding
-/// a new one never requires touching this library.  The spellings are CoolProp's
-/// canonical ones (`P`, `Dmolar`, `Dmass`); the DSL invents no aliases of its own,
-/// because an invented lowercase `p` is precisely what once collided with the
-/// exponent array every viscosity paper calls p_i.
+/// A name is accepted only if it is on the short allowlist in Expression.cpp
+/// (allowedStateVariables()), and is then resolved by CoolProp::is_valid_parameter().
+/// The spellings are CoolProp's canonical ones (`P`, `Dmolar`, `Dmass`); the DSL
+/// invents no aliases of its own, because an invented lowercase `p` is precisely
+/// what once collided with the exponent array every viscosity paper calls p_i.
 ///
 /// Returns true and sets `key` when `name` is resolvable and permitted.  Otherwise
-/// returns false and sets `reason` to a message fit for a compile error.  Two
-/// classes are refused even though CoolProp resolves them:
+/// returns false and sets `reason` to a message fit for a compile error.  Among the
+/// quantities CoolProp resolves but the allowlist deliberately leaves out:
 ///
 ///  * transport outputs (`V`, `L`, `Prandtl`, ...) -- keyed_output() for these
 ///    re-enters the very correlation being defined;

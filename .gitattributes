@@ -16,6 +16,17 @@
 *.csproj text eol=crlf
 *.cs text eol=crlf
 
+# Linux build tooling: always LF, never the checkout platform's native ending.
+#
+# These files are consumed only by Linux build systems -- rpmbuild, dpkg,
+# OBS -- and a CR is fatal there rather than cosmetic.  With only the
+# "* text=auto" above, a Windows checkout gives coolprop.spec CRLF, rpmbuild
+# writes the %prep body into a shell script, and the stray CR becomes a
+# command: "/var/tmp/rpm-tmp.XXXX: line 46: $'\r': command not found".  That
+# is a real OBS failure that was hit, not a hypothetical one.
+dev/packaging/** text eol=lf
+dev/ci/** text eol=lf
+
 # Denote all files that are truly binary and should not be modified.
 *.png binary
 *.jpg binary

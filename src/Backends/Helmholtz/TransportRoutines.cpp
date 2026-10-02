@@ -302,6 +302,73 @@ CoolPropDbl TransportRoutines::viscosity_water_hardcoded(HelmholtzEOSMixtureBack
 
     return (mubar_0 * mubar_1 * mubar_2) / 1e6;
 }
+// IAPWS R17-20 (2020): viscosity of heavy water; Assael et al., J. Phys. Chem. Ref. Data 50:033102 (2021).
+// The reducing constants are the release's own (Eqs. 1-4); rho* = 356.0 kg/m^3 is the rounded critical density of
+// the Herrig et al. (2018) EOS (355.99997 kg/m^3), which is used only for the density derivatives of Eq. (21).
+CoolPropDbl TransportRoutines::correlation_length_heavywater_IAPWS2020(HelmholtzEOSMixtureBackend& HEOS) {
+    // Table 2 of IAPWS R17-20; the same procedure and constants are prescribed by IAPWS R18-21, Eqs. (22)-(24)
+    const double nu = 0.630, gamma = 1.239, xi_0 = 0.13e-9 /* m */, Gamma_0 = 0.06, Tbar_R = 1.5;
+    const double Tstar = 643.847, rhostar = 356.0, pstar = 21.6618e6;  // [K], [kg/m^3], [Pa]
+    const double R = HEOS.gas_constant() / HEOS.molar_mass();          // [J/kg/K], of the EOS
+    const double Tbar = HEOS.T() / Tstar, rhobar = HEOS.rhomass() / rhostar, delta = HEOS.delta();
+    // (d rho/d p)_T at T and at T_R = 1.5 T*, both at the given density
+    const double drhodp = 1 / (R * HEOS.T() * (1 + 2 * delta * HEOS.dalphar_dDelta() + delta * delta * HEOS.d2alphar_dDelta2()));
+    const double T_R = Tbar_R * Tstar, tau_R = HEOS.T_reducing() / T_R;
+    const double drhodp_R = 1
+                            / (R * T_R
+                               * (1 + 2 * delta * HEOS.calc_alphar_deriv_nocache(0, 1, HEOS.mole_fractions, tau_R, delta)
+                                  + delta * delta * HEOS.calc_alphar_deriv_nocache(0, 2, HEOS.mole_fractions, tau_R, delta)));
+    // Eq. (21) in reduced form; a negative value is set to zero (NaN propagates)
+    double DeltaChibar = rhobar * pstar / rhostar * (drhodp - drhodp_R * Tbar_R / Tbar);
+    if (DeltaChibar < 0) DeltaChibar = 0;
+    return xi_0 * pow(DeltaChibar / Gamma_0, nu / gamma);  // Eq. (20)
+}
+CoolPropDbl TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HelmholtzEOSMixtureBackend& HEOS) {
+    // Table 2 of IAPWS R17-20, lengths in nm
+    const double x_mu = 0.068, qc = 1 / 1.9, qd = 1 / 0.4;
+    const double xi = correlation_length_heavywater_IAPWS2020(HEOS) * 1e9;  // [nm]
+    double Y = NAN;
+    if (xi <= 0.03021806692) {
+        // Eq. (15)
+        Y = 1.0 / 5.0 * qc * xi * powInt(qd * xi, 5) * (1 - qc * xi + powInt(qc * xi, 2) - 765.0 / 504.0 * powInt(qd * xi, 2));
+    } else {
+        // Eqs. (16)-(19)
+        const double psi_D = acos(pow(1 + powInt(qd * xi, 2), -1.0 / 2.0));
+        const double w = sqrt(std::abs((qc * xi - 1) / (qc * xi + 1))) * tan(psi_D / 2.0);
+        const double L = (qc * xi > 1) ? log((1 + w) / (1 - w)) : 2 * atan(std::abs(w));
+        Y = 1.0 / 12.0 * sin(3 * psi_D) - 1 / (4 * qc * xi) * sin(2 * psi_D)
+            + 1.0 / powInt(qc * xi, 2) * (1 - 5.0 / 4.0 * powInt(qc * xi, 2)) * sin(psi_D)
+            - 1.0 / powInt(qc * xi, 3) * ((1 - 3.0 / 2.0 * powInt(qc * xi, 2)) * psi_D - pow(std::abs(powInt(qc * xi, 2) - 1), 3.0 / 2.0) * L);
+    }
+    return exp(x_mu * Y);  // Eq. (14)
+}
+CoolPropDbl TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(HelmholtzEOSMixtureBackend& HEOS) {
+    const double Tstar = 643.847, rhostar = 356.0, mustar = 1e-6;  // [K], [kg/m^3], [Pa s]
+    const double Tbar = HEOS.T() / Tstar, rhobar = HEOS.rhomass() / rhostar;
+    // Eq. (11), dilute gas
+    const double mubar_0 = sqrt(Tbar) * (0.889754 + 61.22217 * Tbar - 44.8866 * POW2(Tbar) + 111.5812 * POW3(Tbar) + 3.547412 * POW4(Tbar))
+                           / (0.79637 + 2.38127 * Tbar - 0.33463 * POW2(Tbar) + 2.669 * POW3(Tbar) + 0.000211366 * POW4(Tbar));
+    // Eq. (12) with Table 1; H[i][j], omitted coefficients are zero
+    const double H[7][7] = {{0.510953, 0.275847, -0.228148, 0.0661035, -0.00481265, 0, 0},
+                            {0, 0.762957, -0.321497, 0.0449393, 0, 0, 0},
+                            {-0.558947, 0, 0, 1.466670, -1.545710, 0.553080, -0.0650201},
+                            {-2.718820, 1.760340, 0, 0, -0.0570938, 0, 0},
+                            {0.480990, 0.0819086, 0, 0, 0, 0, 0},
+                            {2.404510, 0, -2.302500, 0.938984, -0.0753783, 0, 0},
+                            {-1.824320, 1.417750, 0, -0.108354, 0, 0, 0}};
+    double sum = 0;
+    for (int i = 0; i <= 6; i++) {
+        double sumj = 0;
+        for (int j = 0; j <= 6; j++) {
+            sumj += H[i][j] * powInt(rhobar - 1, j);
+        }
+        sum += powInt(1 / Tbar - 1, i) * sumj;
+    }
+    const double mubar_1 = exp(rhobar * sum);
+    // Eqs. (14)-(21), critical enhancement
+    const double mubar_2 = viscosity_critical_heavywater_IAPWS2020(HEOS);
+    return mubar_0 * mubar_1 * mubar_2 * mustar;  // Eq. (10)
+}
 CoolPropDbl TransportRoutines::viscosity_toluene_higher_order_hardcoded(HelmholtzEOSMixtureBackend& HEOS) {
     CoolPropDbl Tr = HEOS.T() / 591.75, rhor = HEOS.keyed_output(CoolProp::iDmass) / 291.987;
     CoolPropDbl c[] = {19.919216, -2.6557905, -135.904211, -7.9962719, -11.014795, -10.113817};
@@ -877,6 +944,49 @@ CoolPropDbl TransportRoutines::conductivity_hardcoded_heavywater(HelmholtzEOSMix
     double DELTAlambda_L = -741.112 * pow(f_1, 1.2) * (1 - exp(-pow(rhobar / 2.5, 10)));
     double lambdabar = lambda0 + DELTAlambda + DELTAlambda_c + DELTAlambda_L;
     return lambdabar * 0.742128e-3;
+}
+
+// IAPWS R18-21 (2021): thermal conductivity of heavy water; Huber et al., J. Phys. Chem. Ref. Data 51:013102 (2022).
+// Reducing constants are the release's own (Eqs. 1-6).
+CoolPropDbl TransportRoutines::conductivity_critical_heavywater_IAPWS2021(HelmholtzEOSMixtureBackend& HEOS) {
+    // Table 2 of IAPWS R18-21
+    const double Lambda = 175.9870, qd = 1 / 0.36e-9;  // [-], [1/m]
+    const double Tstar = 643.847, rhostar = 356.0, lambdastar = 1e-3, mustar = 1e-6;
+    const double R = 415.15199;  // [J/kg/K], Eq. (6), reduces cp
+    const double Tbar = HEOS.T() / Tstar, rhobar = HEOS.rhomass() / rhostar;
+    // Eqs. (20), (22)-(24): the correlation length is that of IAPWS R17-20
+    const double y = qd * correlation_length_heavywater_IAPWS2020(HEOS);
+    if (y < 1.2e-7) return 0;  // Eq. (21)
+    const double cp = HEOS.cpmass(), kappa = cp / HEOS.cvmass();
+    // Eq. (19)
+    const double Z = 2 / (M_PI * y) * ((1 - 1 / kappa) * atan(y) + y / kappa - (1 - exp(-1 / (1 / y + y * y / 3 / rhobar / rhobar))));
+    // Eq. (18), with the full viscosity of IAPWS R17-20 (general and scientific use)
+    const double mubar = viscosity_heavywater_IAPWS2020_hardcoded(HEOS) / mustar;
+    return Lambda * rhobar * (cp / R) * Tbar / mubar * Z * lambdastar;
+}
+CoolPropDbl TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(HelmholtzEOSMixtureBackend& HEOS) {
+    const double Tstar = 643.847, rhostar = 356.0, lambdastar = 1e-3;  // [K], [kg/m^3], [W/m/K]
+    const double Tbar = HEOS.T() / Tstar, rhobar = HEOS.rhomass() / rhostar;
+    // Eq. (16), dilute gas
+    const double lambdabar_0 = sqrt(Tbar) * (1 + 3.3620798 * Tbar - 1.0191198 * POW2(Tbar) + 2.8518117 * POW3(Tbar))
+                               / (0.10779213 - 0.034637234 * Tbar + 0.036603464 * POW2(Tbar) + 0.0091018912 * POW3(Tbar));
+    // Eq. (17) with Table 1, L[i][j]
+    const double L[5][6] = {{1.50933576, -0.65831078, 0.111174263, 0.140185152, -0.0656227722, 0.00785155213},
+                            {2.8414715, -2.9826577, 1.34357932, -0.599233641, 0.28116337, -0.0533292833},
+                            {4.86095723, -6.19784468, 2.20941867, 0.224691518, -0.322191265, 0.0596204654},
+                            {2.06156007, -3.48612456, 1.47962309, 0.625101458, -0.56123225, 0.0974446139},
+                            {-2.06105687, 0.416240028, 2.92524513, -2.81703583, 1.00551476, -0.127884416}};
+    double sum = 0;
+    for (int i = 0; i <= 4; i++) {
+        double sumj = 0;
+        for (int j = 0; j <= 5; j++) {
+            sumj += L[i][j] * powInt(rhobar - 1, j);
+        }
+        sum += powInt(1 / Tbar - 1, i) * sumj;
+    }
+    const double lambdabar_1 = exp(rhobar * sum);
+    // Eq. (15)
+    return lambdabar_0 * lambdabar_1 * lambdastar + conductivity_critical_heavywater_IAPWS2021(HEOS);
 }
 
 CoolPropDbl TransportRoutines::conductivity_hardcoded_water(HelmholtzEOSMixtureBackend& HEOS) {
