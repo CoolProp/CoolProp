@@ -336,7 +336,7 @@ for further details on the usage of Pyodide.
             const micropip = pyodide.pyimport("micropip");
 
             // Use micropip to install the latest CoolProp
-            await micropip.install("CoolProp>=8.0.1");
+            await micropip.install("CoolProp>=8.1.0");
             
             // Run the Python code, the expression on the last line is returned to javascript
             results = pyodide.runPython(`
@@ -365,9 +365,9 @@ Historically, the Pyodide project has bundled CoolProp as part of the Pyodide di
 bundled with Pyodide. Versions of Pyodide 0.28.x and later are able to load compiled Python 
 packages from `PyPI <https://pypi.org/>`_ as part of the implementation of 
 `PEP 783 <https://peps.python.org/pep-0783/>`_. Starting with 
-CoolProp 8.0.1, CoolProp WebAssembly wheels are provided on PyPI. However, for versions 
+CoolProp 8.1.0, CoolProp WebAssembly wheels are provided on PyPI. However, for versions 
 of Pyodide that bundle CoolProp, the version of CoolProp needs to be specified as 
-``>=8.0.1`` in the ``micropip`` call to get the latest CoolProp version since Pyodide 
+``>=8.1.0`` in the ``micropip`` call to get the latest CoolProp version since Pyodide 
 will use its bundled version first, if available (CoolProp 7.2.0 with Pyodide 314.0.2, 
 for example). Future versions of Pyodide will stop including CoolProp as part of the PEP 783 
 rollout making it no longer necessary to specify the CoolProp version to get the latest version.
