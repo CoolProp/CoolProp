@@ -1324,6 +1324,11 @@ TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[vi
         CHECK(fresh->phase() == CoolProp::iphase_twophase);
         CHECK_THROWS_AS(fresh->viscosity(), CoolProp::ValueError);
         CHECK_THROWS_AS(fresh->conductivity(), CoolProp::ValueError);
+        // A failed update the caller ignored leaves an out-of-range Q and invalid saturation
+        // indices; that must be a clean error, not an out-of-bounds table read
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, p, 1.5));
+        CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no valid state"));
         // The saturated phases still have values.  Not compared with HEOS: a locally cached
         // table built before a transport-model change would carry the old values.
         AS->update(CoolProp::PQ_INPUTS, p, 0);

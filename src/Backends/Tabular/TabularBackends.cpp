@@ -587,13 +587,18 @@ CoolPropDbl CoolProp::TabularBackend::calc_cvmolar() {
 
 /// As for HEOS (#3446): transport properties are undefined for a two-phase state, so
 /// refuse 0 < Q < 1 rather than interpolate between the saturated phases.  Q = 0 and
-/// Q = 1 (to 1e-9) are the saturated phases.  Written so that a NaN quality throws.
-/// Called only on the saturation path (not using a single-phase table), where every
-/// update branch has set Q in [0, 1]; it keys on Q alone rather than on _phase, which
-/// update() does not reset and so can be stale.
+/// Q = 1 (to 1e-9) are the saturated phases.  Called only on the saturation path (not
+/// using a single-phase table), where every update branch that returns normally has
+/// set Q in [0, 1]; it keys on Q alone rather than on _phase, which update() does not
+/// reset and so can be stale.  A Q outside [0, 1] (or NaN) means the last update threw
+/// or none was made, and the saturation indices are not valid: refuse that as well.
+/// That bound is exact, matching the strict is_in_closed_range(0, 1) in update().
 static void check_transport_property_defined(double Q, const char* property) {
     const double Q_tol = 1e-9;
-    if (!(Q <= Q_tol || Q >= 1 - Q_tol)) {
+    if (!(Q >= 0 && Q <= 1)) {  // exact: update() range-checks Q strictly
+        throw CoolProp::ValueError(format("%s cannot be evaluated: no valid state (Q = %g); the last update failed or none was made", property, Q));
+    }
+    if (Q > Q_tol && Q < 1 - Q_tol) {
         throw CoolProp::ValueError(
           format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead", property, Q));
     }
