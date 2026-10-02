@@ -828,12 +828,27 @@ struct Solver
                 RootOut ro[MAXROOTS];
                 const int nr = bern_roots(d, 1e-13 * sa, ro);
                 for (int k = 0; k < nr; ++k) {
-                    const double D = edges[pc] + (edges[pc + 1] - edges[pc]) * (ro[k].u + 1) / 2, h = 1e-7 * D;
-                    double G, dl, dr, sc;
-                    true_G(S, D - h, 0, G, dl, sc);
-                    true_G(S, D + h, 0, G, dr, sc);
-                    if (dl > 0 && dr < 0) ex.push_back({D, +1});
-                    if (dl < 0 && dr > 0) ex.push_back({D, -1});
+                    const double D = edges[pc] + (edges[pc + 1] - edges[pc]) * (ro[k].u + 1) / 2;
+                    // Classify by the TRUE slope on either side.  The table's derivative root can sit well away
+                    // from the true one where F is flat (|dF/ddelta| ~ 1e-7 near a spinodal: 8e-5 off for CO2/water
+                    // at 291 K), so a fixed 1e-7 * delta probe saw the same sign on both sides and dropped the
+                    // vapor spinodal maximum; the first maximum then became the critical-region wiggle near
+                    // delta = 1 and the vapor root lost to a liquid-like one.  Widen the probe geometrically,
+                    // staying within the piece, until the two sides differ.
+                    const double hmax = 0.5 * (edges[pc + 1] - edges[pc]);
+                    for (double h = 1e-7 * D; h <= hmax; h *= 8) {
+                        double G, dl, dr, sc;
+                        true_G(S, D - h, 0, G, dl, sc);
+                        true_G(S, D + h, 0, G, dr, sc);
+                        if (dl > 0 && dr < 0) {
+                            ex.push_back({D, +1});
+                            break;
+                        }
+                        if (dl < 0 && dr > 0) {
+                            ex.push_back({D, -1});
+                            break;
+                        }
+                    }
                 }
             }
             std::sort(ex.begin(), ex.end());
