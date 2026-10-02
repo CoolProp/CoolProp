@@ -834,7 +834,7 @@ to how it was written here:
 `dev/packaging/obs/_service` itself is still there. It is what an
 `osc service manualrun` uses, and it is one of the four files whose version
 `check-build-deps.py` keeps in agreement, so removing it is a separate job from
-removing the trigger. It still carries the v8.0.1 placeholder and an all-zero
+removing the trigger. It still carries a placeholder release URL and an all-zero
 checksum, which is why it fails closed rather than fetching something unchecked.
 
 If you set up the OBS token and webhook earlier, **remove them on OBS**. They
