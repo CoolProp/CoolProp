@@ -2212,8 +2212,8 @@ CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBac
     // true value; for the FEED it is not guaranteed to be the global minimum (if the lowest root's solve
     // throws, a metastable one may be kept), though it is never the unstable-branch root used before.
     const CoolPropDbl r = (best > 0) ? best : rg;
-    if (replaced && best > 0) *replaced = true;
     phase.update_DmolarT_direct(r, T);
+    if (replaced && best > 0) *replaced = true;  // only once the replacement root is actually loaded
     return r;
 }
 

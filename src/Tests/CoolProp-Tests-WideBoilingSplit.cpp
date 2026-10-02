@@ -496,8 +496,9 @@ TEST_CASE("Wide-boiling split: the stability test's density solve never returns 
         bool replaced = false;
         const double rho = SaturationSolvers::solve_rho_Tp_global_stable(H, T, p, &replaced);
         H.update_DmolarT_direct(rho, T);
-        // While #3448 is open the plain global solver returns the unstable root here, so the guard must have
-        // replaced it; once #3448 is fixed this INFO documents that the guard is no longer exercised.
+        // While #3448 is open the plain global solver returns the unstable root here, so the guard replaces
+        // it.  Not asserted, so this test keeps passing once #3448 is fixed; the INFO is reported only when a
+        // check below fails.
         INFO("guard replaced the global root: " << replaced);
         CHECK(H.first_partial_deriv(iP, iDmolar, iT) > 0);
         CHECK(rho == Catch::Approx(rho_liquid).epsilon(1e-6));
