@@ -163,15 +163,6 @@ void successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl
 void x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl>& K, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& x,
                     std::vector<CoolPropDbl>& y);
 
-/** \brief Refine a two-phase guess (x, y, rhomolar_liq, rhomolar_vap) in place by
- * successive substitution at fixed (T, p): re-solve each phase density near its
- * current guess, recompute the K-factors from the fugacity-coefficient ratio, and
- * re-split via Rachford-Rice.  Stops early when max |Δln K| across components falls
- * below tol.  Used to seed the second-order (Michelsen) PT phase-split solver from a
- * cheap estimate.  (Adapted from jakobreichert's PR #2720.)
- * @param num_steps Maximum number of successive-substitution steps
- * @param tol Early-exit tolerance on max |Δln K|
- */
 /** \brief Imposes `ph` on `state` for its lifetime and restores the previously imposed phase on exit,
  * also when unwinding.  `ph == iphase_not_imposed` lifts any imposed phase for the scope; `active == false`
  * makes it a no-op, so a scope can be imposed conditionally.
@@ -214,6 +205,15 @@ struct ScopedImposedPhase
  */
 CoolPropDbl solve_rho_Tp_global_stable(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, bool* replaced = nullptr);
 
+/** \brief Refine a two-phase guess (x, y, rhomolar_liq, rhomolar_vap) in place by
+ * successive substitution at fixed (T, p): re-solve each phase density near its
+ * current guess, recompute the K-factors from the fugacity-coefficient ratio, and
+ * re-split via Rachford-Rice.  Stops early when max |Δln K| across components falls
+ * below tol.  Used to seed the second-order (Michelsen) PT phase-split solver from a
+ * cheap estimate.  (Adapted from jakobreichert's PR #2720.)
+ * @param num_steps Maximum number of successive-substitution steps
+ * @param tol Early-exit tolerance on max |Δln K|
+ */
 void successive_substitution_guessrho(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
                                       CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z, int num_steps,
                                       double tol = 1e-6);
@@ -732,9 +732,11 @@ class StabilityEvaluationClass
 
    private:
     bool _stable;
-    bool _uncertain;       ///< stability verdict was non-conclusive (minimize_tpd could not decide)
-    bool _near_pure;       ///< the instability (if any) was found by a near-pure trial phase
-    bool _guard_replaced;  ///< a density root was replaced by the mechanical-stability guard (#3448) in this test
+    bool _uncertain;             ///< stability verdict was non-conclusive (minimize_tpd could not decide)
+    bool _near_pure;             ///< the instability (if any) was found by a near-pure trial phase
+    bool _guard_replaced;        ///< the instability (if any) relied on a root the #3448 guard replaced (feed or that trial)
+    bool _feed_guard_replaced;   ///< the guard replaced the feed's density root in this test
+    bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
     bool debug;
     bool use_michelsen;
 
@@ -754,6 +756,8 @@ class StabilityEvaluationClass
         _uncertain(false),
         _near_pure(false),
         _guard_replaced(false),
+        _feed_guard_replaced(false),
+        _trial_guard_replaced(false),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -833,9 +837,10 @@ class StabilityEvaluationClass
         return !_stable && _near_pure;
     }
     /// True when an instability was found that the stability test would not have reached before the
-    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or in a test
-    /// where the guard replaced a density root.  The flash treats a split-solver failure on such an
-    /// EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
+    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or relying on a
+    /// density root the guard replaced -- the feed's, or one of the trial that found the instability
+    /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
+    /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
     bool unstable_beyond_baseline() const {
         return !_stable && (_near_pure || _guard_replaced);
     }

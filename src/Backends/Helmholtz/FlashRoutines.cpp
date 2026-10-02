@@ -393,9 +393,10 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 } catch (const CoolProp::CoolPropBaseError&) {
                     // An instability the stability test only reaches through the near-pure trials or the #3448
                     // density guard is an EXTRA verdict; if the split solver cannot follow it (e.g. "lost a
-                    // phase density solve" for Amarillo natural gas at ~180 K, 5-10 MPa, or humid air at
-                    // ~388 K, 20-27 MPa), treat it like a non-converged split -- recover or fall back to
-                    // single phase -- rather than throw where the flash used to answer.
+                    // phase density solve" for Amarillo natural gas at ~180 K, 5-10 MPa), treat it like a
+                    // non-converged split -- recover or fall back to single phase -- rather than throw where
+                    // the flash used to answer.  Only the feed's root or that of the trial which found the
+                    // instability counts as guard-dependent; any other split-solver failure still throws.
                     if (!o.nonconvergence && !stability_tester.unstable_beyond_baseline()) {
                         throw;
                     }

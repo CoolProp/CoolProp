@@ -2207,7 +2207,10 @@ CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBac
     // trial at 80 K): keep the global root, exactly as before this guard existed.  Throwing here instead
     // would turn the trial non-conclusive and flip a clean "stable" verdict to "uncertain" -- which forces
     // a speculative split attempt in the flash (seen: HEOS N2/C1/C2/C3 subcooled liquid at 80 K, 1 bar,
-    // published as two-phase).  The guard may only ever replace the root with a better one.
+    // published as two-phase).  The guard replaces a root only with a mechanically stable one of lower
+    // Gibbs energy among the roots it could solve.  For a TRIAL phase that can only lower tm towards its
+    // true value; for the FEED it is not guaranteed to be the global minimum (if the lowest root's solve
+    // throws, a metastable one may be kept), though it is never the unstable-branch root used before.
     const CoolPropDbl r = (best > 0) ? best : rg;
     if (replaced && best > 0) *replaced = true;
     phase.update_DmolarT_direct(r, T);
@@ -2263,13 +2266,14 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     _uncertain = false;
     _near_pure = false;
     _guard_replaced = false;
+    _feed_guard_replaced = false;
     bool any_uncertain = false;  // a trial's minimize_tpd was non-conclusive (step/density fail, max-iter)
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
     HEOS.SatL->set_mole_fractions(z);
     CoolPropDbl rho_b;
     try {
-        rho_b = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, the_T, the_p, &_guard_replaced);
+        rho_b = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, the_T, the_p, &_feed_guard_replaced);
     } catch (...) {
         // solver_rho_Tp_global can fail for multiparameter mixtures when the pressure
         // lies between the spinodal pressures.  Fall back to SRK-seeded solver.  Scoped, so SatL gets its
@@ -2345,6 +2349,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 
     for (std::size_t t = 0; t < trials.size(); ++t) {
         auto& Y = trials[t].Y;
+        _trial_guard_replaced = false;  // per trial: only the trial that finds an instability counts
         // Warm-start density root for this trial's composition trajectory.  Reset per trial:
         // the vapor-like and liquid-like trials live on different density branches.  A near-pure
         // LIGHT trial starts from the ideal-gas density (set once its composition is loaded below):
@@ -2402,7 +2407,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                     }
                 }
                 try {
-                    solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_guard_replaced);
+                    solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_trial_guard_replaced);
                 } catch (...) {
                     ss_decided = true;
                     break;
@@ -2433,6 +2438,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 if (tm < -cntol) {
                     _stable = false;
                     _near_pure = trials[t].near_pure;
+                    _guard_replaced = _feed_guard_replaced || _trial_guard_replaced;
                     CoolPropDbl sY = 0;
                     for (std::size_t i = 0; i < N; ++i)
                         sY += Y[i];
@@ -2445,7 +2451,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                         this->x = y_norm;
                         this->y = z;
                     }
-                    // Record this trial's (guarded) density root and the feed's for the caller: the flash
+                    // Record the trial's last (guarded) density root -- at its composition BEFORE this SS update,
+                    // so only a seed for the updated composition stored above -- and the feed's root for the caller: the flash
                     // passes them to the split solver as warm starts when a near-pure trial found the
                     // instability, and its recovery path uses them in place of an unguarded cold solve.
                     rhomolar_vap = trials[t].vapor_like ? rho_warm : rho_b;
@@ -2522,7 +2529,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         if (trial_ok) {
             if (trial_unstable) {
                 _stable = false;
-                _near_pure = trials[t].near_pure;
+                _guard_replaced = _feed_guard_replaced || _trial_guard_replaced;  // near-pure trials skip the minimizer
                 CoolPropDbl sY = 0;
                 for (std::size_t i = 0; i < N; ++i)
                     sY += Y[i];
@@ -2590,7 +2597,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
 
         HEOS.SatV->set_mole_fractions(y_norm);
         try {
-            solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_guard_replaced);
+            solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_trial_guard_replaced);
         } catch (...) {
             return false;  // Density solve failed
         }
@@ -2703,7 +2710,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
 
             HEOS.SatV->set_mole_fractions(y_norm);
             try {
-                solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_guard_replaced);
+                solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_trial_guard_replaced);
             } catch (...) {
                 // Density solve failed, shrink trust region
                 trust_radius = step_size / 3.0;

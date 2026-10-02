@@ -381,6 +381,9 @@ TEST_CASE("Wide-boiling split: PT flash leaves the SatL / SatV imposed phases un
     SECTION("GERG-2008 N2/C1/C2/nC4/nC5, including a flash that throws inside the stability test") {
         std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", N2MIX_FLUIDS));
         AS->set_mole_fractions(N2MIX_Z);
+        // On the reference platform (Linux, GCC) this flash throws inside the stability test's feed-density
+        // fallback, the path that used to leak; elsewhere it may not throw, in which case this section only
+        // checks the normal path (the ScopedImposedPhase test above covers the unwinding contract directly).
         flash_ignoring_errors(*AS, N2MIX_THROWER.T, N2MIX_THROWER.p);
         check_sub_backend_phases(as_heos(*AS));
         for (const auto& s : N2MIX_SPLITS) {
@@ -397,6 +400,45 @@ TEST_CASE("Wide-boiling split: PT flash leaves the SatL / SatV imposed phases un
             CAPTURE(s.T, s.p);
             check_sub_backend_phases(as_heos(*AS));
         }
+    }
+}
+
+TEST_CASE("Wide-boiling split: ScopedImposedPhase restores the imposed phase, also when unwinding", "[flash][mixture]") {
+    // The exception-safety contract the stability test and the flash rely on, tested directly (the flash-level
+    // tests below depend on a particular state actually throwing, which can vary across platforms).
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Methane&Ethane"));
+    auto& H = as_heos(*AS);
+    REQUIRE(H.SatL);
+    HelmholtzEOSMixtureBackend& L = *H.SatL;
+    REQUIRE(L.imposed_phase() == iphase_liquid);
+    SECTION("normal exit") {
+        {
+            const ScopedImposedPhase gas(L, iphase_gas);
+            CHECK(L.imposed_phase() == iphase_gas);
+        }
+        CHECK(L.imposed_phase() == iphase_liquid);
+    }
+    SECTION("exit by exception") {
+        try {
+            const ScopedImposedPhase gas(L, iphase_gas);
+            throw CoolProp::ValueError("simulated density-solve failure");
+        } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+        }
+        CHECK(L.imposed_phase() == iphase_liquid);
+    }
+    SECTION("lifting the imposed phase, nested scopes, inactive scope") {
+        {
+            const ScopedImposedPhase none(L, iphase_not_imposed);
+            CHECK(L.imposed_phase() == iphase_not_imposed);
+            {
+                const ScopedImposedPhase gas(L, iphase_gas);
+                CHECK(L.imposed_phase() == iphase_gas);
+            }
+            CHECK(L.imposed_phase() == iphase_not_imposed);
+            const ScopedImposedPhase inactive(L, iphase_gas, false);
+            CHECK(L.imposed_phase() == iphase_not_imposed);
+        }
+        CHECK(L.imposed_phase() == iphase_liquid);
     }
 }
 
@@ -451,8 +493,12 @@ TEST_CASE("Wide-boiling split: the stability test's density solve never returns 
     for (const phases imposed : {iphase_liquid, iphase_gas}) {
         CAPTURE(imposed);
         const ScopedImposedPhase scope(H, imposed);
-        const double rho = SaturationSolvers::solve_rho_Tp_global_stable(H, T, p);
+        bool replaced = false;
+        const double rho = SaturationSolvers::solve_rho_Tp_global_stable(H, T, p, &replaced);
         H.update_DmolarT_direct(rho, T);
+        // While #3448 is open the plain global solver returns the unstable root here, so the guard must have
+        // replaced it; once #3448 is fixed this INFO documents that the guard is no longer exercised.
+        INFO("guard replaced the global root: " << replaced);
         CHECK(H.first_partial_deriv(iP, iDmolar, iT) > 0);
         CHECK(rho == Catch::Approx(rho_liquid).epsilon(1e-6));
         CHECK(H.imposed_phase() == imposed);
