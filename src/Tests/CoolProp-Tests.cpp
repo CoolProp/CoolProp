@@ -1303,6 +1303,39 @@ TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[vi
         AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);
         CHECK(ValidNumber(AS->viscosity()));
     }
+    SECTION("tabular backends refuse interior quality too") {
+        // TTSE/BICUBIC used to return a quality-weighted blend of the saturated values
+        const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+        CAPTURE(backend);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        const double p = 2e5;
+        AS->update(CoolProp::PQ_INPUTS, p, 0.5);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        // Through (h, p) and (T, rho) as well.  The (T, rho) state goes to a fresh object:
+        // that branch used to leave _phase unset, so only a stale label could trip a check.
+        const double h = AS->hmolar(), T = AS->T(), rho = AS->rhomolar();
+        AS->update(CoolProp::HmolarP_INPUTS, h, p);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        fresh->update(CoolProp::DmolarT_INPUTS, rho, T);
+        CHECK(fresh->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(fresh->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(fresh->conductivity(), CoolProp::ValueError);
+        // The saturated phases still have values.  Not compared with HEOS: a locally cached
+        // table built before a transport-model change would carry the old values.
+        AS->update(CoolProp::PQ_INPUTS, p, 0);
+        const double etaL = AS->viscosity(), lambdaL = AS->conductivity();
+        AS->update(CoolProp::PQ_INPUTS, p, 1);
+        const double etaV = AS->viscosity(), lambdaV = AS->conductivity();
+        CAPTURE(etaL, etaV, lambdaL, lambdaV);
+        CHECK(ValidNumber(etaV));
+        CHECK(ValidNumber(lambdaV));
+        CHECK(etaL > 10 * etaV);
+        CHECK(lambdaL > 10 * lambdaV);
+    }
     SECTION("mixtures") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
         AS->set_mole_fractions({0.5, 0.5});
