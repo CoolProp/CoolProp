@@ -1980,23 +1980,20 @@ void SaturationSolvers::successive_substitution_guessrho(HelmholtzEOSMixtureBack
 bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS, std::vector<CoolPropDbl>& x, std::vector<CoolPropDbl>& y,
                                                 CoolPropDbl& rhomolar_liq, CoolPropDbl& rhomolar_vap, const std::vector<CoolPropDbl>& z,
                                                 CoolPropDbl T, CoolPropDbl p, int num_steps, bool require_bracket) {
-    // Seed a two-phase guess and refine it by successive substitution.  Tries first the ideal
-    // (Wilson) K-factor estimate; if that collapses to the trivial (single-phase) root -- as it does
-    // for a wide-boiling mixture whose incipient phase is small and nearly pure -- it falls back to a
-    // near-pure seed (see Strategy 2 below).  Returns false when neither seed yields a non-trivial
-    // split or a phase density cannot be obtained.  Density-solver failures (CoolPropBaseError) on a
-    // seed are caught here and only fail that seed; anything else -- e.g. from Wilson_lnK_factor --
-    // may still throw, and the blind-flash caller treats any throw as "not two-phase" and falls back
-    // to the single-phase path.  Used to recover a genuinely two-phase state that the TPD stability test reported as
-    // single-phase, e.g. cubic mixtures at high vapor fraction near the dew point (CoolProp-zgpy), or
-    // near-pure water condensing out of a CO2-rich gas (GitHub: flash-trial-compositions).
+    // Seed a two-phase guess from the ideal (Wilson) K-factor estimate and refine it by successive
+    // substitution.  Returns false when the Wilson estimate does not bracket a two-phase Rachford-Rice
+    // root (the feed is outside its ideal bubble/dew points; skipped when require_bracket is false),
+    // when a phase density cannot be obtained, or when the refinement collapses to the trivial
+    // (x == y) root.  May still throw from Wilson_lnK_factor; the blind-flash caller treats any throw
+    // as "not two-phase" and falls back to the single-phase path.  Used to cross-check a "stable"
+    // stability verdict near a phase boundary, e.g. cubic mixtures at high vapor fraction near the
+    // dew point (CoolProp-zgpy).  Wide-boiling mixtures whose incipient phase is small and nearly pure
+    // are handled by the stability test's near-pure trial phases instead (check_stability_michelsen),
+    // not here: a speculative near-pure split attempt on every "stable" state doubled the PT-flash
+    // time of natural gas (Kmax/Kmin > 1e3 at low T) for no benefit at genuinely single-phase states.
     const std::size_t N = z.size();
     std::vector<CoolPropDbl> K(N), lnK(N);
     CoolPropDbl g0 = 0, g1 = 0;
-    std::size_t imin = 0, imax = 0;  // least / most volatile components, for the near-pure fallback
-    // Keep the extrema in CoolPropDbl (K/lnK are CoolPropDbl): a double would truncate K[i] in a
-    // long-double build.  HUGE_VAL is the "unset" sentinel, matched by the Kmin < HUGE_VAL gate below.
-    CoolPropDbl Kmin = HUGE_VAL, Kmax = 0;
     for (std::size_t i = 0; i < N; ++i) {
         lnK[i] = Wilson_lnK_factor(HEOS, T, p, i);
         if (!ValidNumber(lnK[i])) return false;
@@ -2004,16 +2001,6 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
         if (!ValidNumber(K[i])) return false;  // exp overflow at an extreme lnK -> no usable estimate
         g0 += z[i] * (K[i] - 1.0);             // Rachford-Rice residual at beta = 0
         g1 += z[i] * (1.0 - 1.0 / K[i]);       // Rachford-Rice residual at beta = 1
-        if (z[i] > 0) {
-            if (K[i] < Kmin) {
-                Kmin = K[i];
-                imin = i;
-            }
-            if (K[i] > Kmax) {
-                Kmax = K[i];
-                imax = i;
-            }
-        }
     }
     // Two-phase iff the residual changes sign on (0, 1): g0 > 0 (z above its bubble
     // point) AND g1 < 0 (z below its dew point).  When require_bracket is false the
@@ -2021,126 +2008,40 @@ bool SaturationSolvers::guess_split_from_wilson(HelmholtzEOSMixtureBackend& HEOS
     // IDEAL Wilson estimate places the feed outside (0, 1); the EOS-based SS refinement
     // below then decides, and the flash's verify/fallback rejects it if it does not
     // converge to a genuine equilibrium split.
-    bool bracketed = (g0 > 0 && g1 < 0);
+    const bool bracketed = (g0 > 0 && g1 < 0);
+    if (require_bracket && !bracketed) return false;
 
+    CoolPropDbl beta = bracketed ? rachford_rice_beta_bisect(z, K) : 0.5;
     x.resize(N);
     y.resize(N);
+    x_and_y_from_K(beta, K, z, x, y);
+    normalize_vector(x);
+    normalize_vector(y);
 
-    // Refine a seeded (x, y) split at fixed (T, p) and report whether it stayed a genuine two-phase
-    // split (non-trivial composition spread) rather than collapsing to the trivial x == y == z root.
-    // The flash caller additionally verifies fugacity equality on whatever is returned.
-    auto refine_nontrivial = [&](int steps, double tol) -> bool {
-        try {
-            successive_substitution_guessrho(HEOS, x, y, rhomolar_liq, rhomolar_vap, z, steps, tol);
-        } catch (const std::exception&) {
-            return false;  // a throwing SS refinement -> this seed failed; let the caller try the next
-        }
-        CoolPropDbl spread = 0;
-        for (std::size_t i = 0; i < N; ++i)
-            spread = std::max(spread, std::abs(x[i] - y[i]));
-        return ValidNumber(spread) && spread >= 1e-6;
-    };
-
-    // Strategy 1: the ideal (Wilson) K-factor seed.  Skipped only when the caller requires a bracket
-    // and the ideal estimate does not provide one.
-    if (bracketed || !require_bracket) {
-        CoolPropDbl beta = bracketed ? rachford_rice_beta_bisect(z, K) : 0.5;
-        x_and_y_from_K(beta, K, z, x, y);
-        normalize_vector(x);
-        normalize_vector(y);
-        // Density guesses at the (heavy-rich) liquid and (light-rich) vapor compositions -- NOT the
-        // feed, whose single (vapor) root at high vapor fraction would collapse the split to trivial.
-        // The global density solver can THROW when it cannot bracket a root for a poor ideal-Wilson
-        // seed (common for a wide-boiling mixture).  Catch it so Strategy 1 fails softly and the
-        // near-pure Strategy 2 below is still attempted -- letting the throw propagate would send the
-        // caller straight to the single-phase path, skipping the very recovery this routine exists for.
-        try {
-            HEOS.SatL->set_mole_fractions(x);
-            rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
-            HEOS.SatV->set_mole_fractions(y);
-            rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
-            if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
-                if (refine_nontrivial(num_steps, 1e-6)) return true;
-            }
-        } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
-            // Strategy 1 density solve failed; fall through to the near-pure fallback (Strategy 2).
-        }
+    // Density guesses at the (heavy-rich) liquid and (light-rich) vapor compositions -- NOT the
+    // feed, whose single (vapor) root at high vapor fraction would collapse the split to the
+    // trivial solution.  A density-solver failure means no usable seed: report "no split".
+    try {
+        HEOS.SatL->set_mole_fractions(x);
+        rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
+        HEOS.SatV->set_mole_fractions(y);
+        rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
+    } catch (const CoolProp::CoolPropBaseError&) {
+        return false;
     }
+    if (!ValidNumber(rhomolar_liq) || rhomolar_liq <= 0 || !ValidNumber(rhomolar_vap) || rhomolar_vap <= 0) return false;
 
-    // Strategy 2: near-pure seed for a WIDE-BOILING mixture (GitHub: flash-trial-compositions).  When
-    // the incipient phase is small and nearly pure -- e.g. a near-pure WATER liquid condensing out of
-    // a CO2-rich gas, or a near-pure light-gas VAPOR out of a CO2-rich liquid -- the ideal Wilson seed
-    // above collapses to the trivial root.  Seed one extreme component as its own phase (least
-    // volatile -> incipient liquid, most volatile -> incipient vapor) with the feed as the other
-    // phase.  Component-agnostic (selected by Wilson K, not identity), minimal-cost (only for a wide
-    // Wilson-K spread, so ordinary mixtures are untouched), and the flash caller still verifies
-    // fugacity equality on whatever is returned.
-    //
-    // Which incipient phase to try first comes from the side of the Wilson Rachford-Rice bracket the
-    // feed falls on, not from comparing |ln Kmin| with |ln Kmax|: for CO2/water at 298 K those are
-    // 3.5 vs 3.7, so the extremity rule picked the wrong (near-pure CO2 vapor) seed on a near-tie and
-    // the refinement diverged.  g1 >= 0 puts the feed at or above its ideal dew point (vapor-like) ->
-    // a liquid is incipient; g0 <= 0 puts it at or below its ideal bubble point (liquid-like) -> a
-    // vapor is incipient.  Since g1 - g0 = sum z_i (2 - K_i - 1/K_i) <= 0, the two cannot both hold
-    // strictly; only when the ideal estimate brackets (and Strategy 1 nonetheless collapsed or its
-    // density solve threw) does the |ln K| extremity break the tie.  If the first seed fails, the
-    // other is tried.
-    if (Kmax > 0 && Kmin < HUGE_VAL && imin != imax && Kmax / Kmin > 1e3) {
-        bool heavy_first;
-        if (g1 >= 0) {
-            heavy_first = true;
-        } else if (g0 <= 0) {
-            heavy_first = false;
-        } else {
-            heavy_first = std::abs(std::log(Kmin)) >= std::abs(std::log(Kmax));
-        }
-        for (const bool heavy : {heavy_first, !heavy_first}) {
-            const std::size_t iext = heavy ? imin : imax;
-            std::vector<CoolPropDbl> near_pure(N, 1e-6);
-            near_pure[iext] = 1.0;
-            normalize_vector(near_pure);
-            if (heavy) {  // near-pure least-volatile component is the incipient liquid; feed is the vapor
-                x = near_pure;
-                y = z;
-            } else {  // near-pure most-volatile component is the incipient vapor; feed is the liquid
-                x = z;
-                y = near_pure;
-            }
-            // Global (lowest-Gibbs) density root for each seed phase; no phase is forced.  A throw here
-            // fails only this seed, so the other incipient phase is still attempted.
-            try {
-                HEOS.SatL->set_mole_fractions(x);
-                rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, HEOS.SatL->calc_rhomolar_max_bound());
-                HEOS.SatV->set_mole_fractions(y);
-                try {
-                    rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, HEOS.SatV->calc_rhomolar_max_bound());
-                } catch (const CoolProp::CoolPropBaseError&) {
-                    // Only for the near-pure LIGHT vapor seed (heavy == false); with the heavy seed SatV
-                    // holds the feed, which may well be liquid-like, so its failure just fails the seed.
-                    // The global search scans up to calc_rhomolar_max_bound and throws when it meets a
-                    // single stationary point there -- e.g. near-pure H2 at 300 K (~9 Tc), whose isotherm
-                    // has no van der Waals loop at all (H2/n-decane bubble side).  A near-pure light gas
-                    // far above its critical temperature is close to ideal, so solve from the ideal-gas
-                    // density.  The flash caller still verifies the split (spread, material balance,
-                    // phase pressures, fugacities) and rejects a root that is not a genuine equilibrium.
-                    // The near-pure heavy LIQUID seed gets no such fallback: it is far subcritical, so
-                    // the global search sees its loop; no case so far has needed one.
-                    if (heavy) throw;
-                    rhomolar_vap = HEOS.SatV->solver_rho_Tp(T, p, p / (HEOS.SatV->gas_constant() * T));
-                }
-            } catch (const CoolProp::CoolPropBaseError&) {
-                continue;
-            }
-            // The near-pure split is stiff (extreme fugacity ratios); refine it as tightly as the SS can
-            // (its fixed point sits at ~1e-5 for these splits) so the flash's Newton two-phase solver
-            // starts essentially at the solution, or -- when that solver overshoots -- the flash accepts
-            // this mass-balanced seed directly within its recovery tolerance.
-            if (ValidNumber(rhomolar_liq) && rhomolar_liq > 0 && ValidNumber(rhomolar_vap) && rhomolar_vap > 0) {
-                if (refine_nontrivial(std::max(num_steps, 80), 1e-11)) return true;
-            }
-        }
+    try {
+        successive_substitution_guessrho(HEOS, x, y, rhomolar_liq, rhomolar_vap, z, num_steps);
+    } catch (const CoolProp::CoolPropBaseError&) {
+        return false;
     }
-    return false;
+    // A refinement that collapsed to the trivial x == y == z root is no split; reject it here
+    // rather than leave it to the flash's (more expensive) verify.
+    CoolPropDbl spread = 0;
+    for (std::size_t i = 0; i < N; ++i)
+        spread = std::max(spread, std::abs(x[i] - y[i]));
+    return ValidNumber(spread) && spread >= 1e-6;
 }
 
 void StabilityRoutines::StabilityEvaluationClass::trial_compositions() {
@@ -2262,7 +2163,61 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability() {
 // first call (rho_warm <= 0), or if the warm solve fails or returns a non-physical root,
 // so the stable-root contract is preserved and the throw-on-total-failure contract (which
 // callers rely on) is unchanged.  Updates the backend state and rho_warm to the new root.
-static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm) {
+// True when the state currently loaded in `phase` sits on a mechanically stable branch (dp/drho > 0).
+static bool mechanically_stable(HelmholtzEOSMixtureBackend& phase) {
+    const CoolPropDbl dpdrho = phase.first_partial_deriv(iP, iDmolar, iT);
+    return ValidNumber(dpdrho) && dpdrho > 0;
+}
+
+// solver_rho_Tp_global, guarded for the stability test (GitHub #3448 -- remove once the global solver
+// itself only returns lowest-Gibbs, mechanically stable roots): it can return the mechanically UNSTABLE middle
+// root (dp/drho < 0) when calc_rhomolar_max_bound sits below the true liquid density -- e.g. near-pure
+// water at 298 K, 1.6 bar, where the bound is ~42.6 kmol/m3 but liquid water is ~55.3 kmol/m3 and the
+// "global" root is ~47.8 kmol/m3 on the unstable branch.  Fugacities evaluated there are meaningless
+// (the near-pure water trial then reports tm = +0.11, "stable", for a feed that is two-phase).  In that
+// case solve both phase-specified roots and keep the mechanically stable one with the lower Gibbs
+// energy (the lowest-Gibbs-root contract the global solver is meant to honour).  Throws only where the
+// global solver itself throws; with no better alternative it returns the global root unchanged.  Leaves
+// `phase` at the returned root.
+CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, bool* replaced) {
+    const CoolPropDbl rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
+    phase.update_DmolarT_direct(rg, T);
+    if (mechanically_stable(phase)) return rg;
+    CoolPropDbl best = -1, g_best = HUGE_VAL;
+    for (const phases ph : {iphase_liquid, iphase_gas}) {
+        try {
+            CoolPropDbl r;
+            {
+                const ScopedImposedPhase imposed(phase, ph);
+                r = phase.solver_rho_Tp(T, p);
+            }
+            if (!ValidNumber(r) || r <= 0) continue;
+            phase.update_DmolarT_direct(r, T);
+            if (!mechanically_stable(phase) || std::abs(phase.p() / p - 1.0) > 1e-6) continue;
+            const CoolPropDbl g = phase.gibbsmolar();
+            if (ValidNumber(g) && g < g_best) {
+                g_best = g;
+                best = r;
+            }
+        } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+            // this phase-specified root is unavailable; the other is still tried
+        }
+    }
+    // No mechanically stable alternative found (e.g. both phase-specified solves fail for a liquid-like
+    // trial at 80 K): keep the global root, exactly as before this guard existed.  Throwing here instead
+    // would turn the trial non-conclusive and flip a clean "stable" verdict to "uncertain" -- which forces
+    // a speculative split attempt in the flash (seen: HEOS N2/C1/C2/C3 subcooled liquid at 80 K, 1 bar,
+    // published as two-phase).  The guard may only ever replace the root with a better one.
+    const CoolPropDbl r = (best > 0) ? best : rg;
+    if (replaced && best > 0) *replaced = true;
+    phase.update_DmolarT_direct(r, T);
+    return r;
+}
+
+// guard_unstable_branch (stability-test callers): also reject a mechanically unstable root, warm or global;
+// see solve_rho_Tp_global_stable.  The two-phase flash callers keep the unguarded behaviour.
+static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm,
+                                        bool guard_unstable_branch = false, bool* guard_replaced = nullptr) {
     if (rho_warm > 0) {
         CoolPropDbl r = -1;
         bool warm_ok = false;
@@ -2276,7 +2231,9 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             // Newton landing on the OTHER, now-metastable branch after a spinodal crossing.
             // (Near the critical point the two branches merge, so a sub-2x change there is
             // genuinely the same root.)
-            warm_ok = ValidNumber(r) && r > 0 && r < 2.0 * rho_warm && r > 0.5 * rho_warm;
+            // The local root must also be mechanically stable: a warm start on (or Newton drifting
+            // onto) the unstable middle branch would otherwise be carried along the trajectory.
+            warm_ok = ValidNumber(r) && r > 0 && r < 2.0 * rho_warm && r > 0.5 * rho_warm && (!guard_unstable_branch || mechanically_stable(phase));
         } catch (...) {
             warm_ok = false;  // warm solve threw -> fall back to the global solver below
         }
@@ -2287,8 +2244,13 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
     }
     // Cold start, branch jump, or warm-solve failure: re-confirm with the global,
     // lowest-Gibbs solver so a metastable root is never silently accepted.
-    CoolPropDbl rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
-    phase.update_DmolarT_direct(rg, T);
+    CoolPropDbl rg;
+    if (guard_unstable_branch) {
+        rg = SaturationSolvers::solve_rho_Tp_global_stable(phase, T, p, guard_replaced);
+    } else {
+        rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
+        phase.update_DmolarT_direct(rg, T);
+    }
     rho_warm = rg;
     return rg;
 }
@@ -2299,19 +2261,23 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     CoolPropDbl the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
     _stable = true;
     _uncertain = false;
+    _near_pure = false;
+    _guard_replaced = false;
     bool any_uncertain = false;  // a trial's minimize_tpd was non-conclusive (step/density fail, max-iter)
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
     HEOS.SatL->set_mole_fractions(z);
     CoolPropDbl rho_b;
     try {
-        rho_b = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, HEOS.SatL->calc_rhomolar_max_bound());
+        rho_b = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, the_T, the_p, &_guard_replaced);
     } catch (...) {
         // solver_rho_Tp_global can fail for multiparameter mixtures when the pressure
-        // lies between the spinodal pressures.  Fall back to SRK-seeded solver.
-        HEOS.SatL->specify_phase(iphase_gas);
+        // lies between the spinodal pressures.  Fall back to SRK-seeded solver.  Scoped, so SatL gets its
+        // construction-time LIQUID phase back even when this solve throws: a bare specify/unspecify pair
+        // left SatL with a GAS (on a throw) or no imposed phase, changing every later flash on this
+        // backend (N2/C1/C2/nC4/nC5: two-phase states published single-phase after one such throw).
+        const ScopedImposedPhase gas_feed(*HEOS.SatL, iphase_gas);
         rho_b = HEOS.SatL->solver_rho_Tp(the_T, the_p);
-        HEOS.SatL->unspecify_phase();
     }
     HEOS.SatL->update_DmolarT_direct(rho_b, the_T);
 
@@ -2326,24 +2292,85 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     // Build two trial compositions from Wilson K-factors ([Michelsen1982a] Eq. 28):
     //   K_i = (Pc_i/P) * exp(5.373*(1+omega_i)*(1-Tc_i/T))
     std::vector<CoolPropDbl> yV(N), xL(N);
+    std::size_t imin = 0, imax = 0;  // least / most volatile present components (Wilson K)
+    CoolPropDbl Kmin = HUGE_VAL, Kmax = 0, g0 = 0, g1 = 0;
     for (std::size_t i = 0; i < N; ++i) {
         double Ki = std::exp(SaturationSolvers::Wilson_lnK_factor(HEOS, the_T, the_p, i));
         yV[i] = z[i] * Ki;
         xL[i] = z[i] / Ki;
+        if (z[i] > 0 && ValidNumber(Ki) && Ki > 0) {
+            if (Ki < Kmin) {
+                Kmin = Ki;
+                imin = i;
+            }
+            if (Ki > Kmax) {
+                Kmax = Ki;
+                imax = i;
+            }
+            g0 += z[i] * (Ki - 1.0);        // Rachford-Rice residual at beta = 0
+            g1 += z[i] * (1.0 - 1.0 / Ki);  // Rachford-Rice residual at beta = 1
+        }
     }
 
-    // Test both trial directions (vapor-like and liquid-like)
-    std::vector<std::vector<CoolPropDbl>> trials = {yV, xL};
+    // Trial phases: the two Wilson trials (vapor-like z*K, liquid-like z/K), plus -- for a WIDE-BOILING
+    // feed (Kmax/Kmin > 1e3) -- one near-pure trial of an extreme component: the least volatile as an
+    // incipient liquid or the most volatile as an incipient vapor (see below).  Michelsen's standard advice
+    // ([Michelsen1982a]; [M&M2007] Ch. 9) is to include pure-component trials; they matter when the
+    // incipient phase is small and nearly pure (water condensing out of CO2, H2 evaporating from
+    // n-decane), where the Wilson trial collapses to the trivial solution before reaching it.
+    struct Trial
+    {
+        std::vector<CoolPropDbl> Y;
+        bool vapor_like;  // the trial is the incipient vapor (y), the feed the liquid (x) -- else reversed
+        bool near_pure;
+    };
+    std::vector<Trial> trials = {{yV, true, false}, {xL, false, false}};
+    if (imin != imax && Kmin < HUGE_VAL && Kmax / Kmin > 1e3) {
+        auto near_pure = [&](std::size_t iext) {
+            std::vector<CoolPropDbl> Y(N, 0.0);
+            for (std::size_t i = 0; i < N; ++i)
+                Y[i] = (i == iext) ? 1.0 : (z[i] > 0 ? 1e-6 : 0.0);
+            return Y;
+        };
+        // Only the incipient phase the ideal Rachford-Rice side points to is probed: g0 <= 0 puts the feed
+        // at or below its ideal bubble point (liquid-like) -> a near-pure light VAPOR is incipient;
+        // otherwise a near-pure heavy LIQUID.  Every detection in the wide-boiling regression set is on
+        // that side, and probing both doubled the cost on stable natural-gas states for nothing.
+        if (g0 <= 0) {
+            trials.push_back({near_pure(imax), true, true});
+        } else {
+            trials.push_back({near_pure(imin), false, true});
+        }
+    }
+
     for (std::size_t t = 0; t < trials.size(); ++t) {
-        auto& Y = trials[t];
+        auto& Y = trials[t].Y;
         // Warm-start density root for this trial's composition trajectory.  Reset per trial:
-        // the vapor-like and liquid-like trials live on different density branches.
+        // the vapor-like and liquid-like trials live on different density branches.  A near-pure
+        // LIGHT trial starts from the ideal-gas density (set once its composition is loaded below):
+        // far above its critical temperature (H2 at 300 K, ~9 Tc) the isotherm has no loop and the
+        // global density search throws, while the warm local solve from ideal gas converges.
+        // A near-pure HEAVY trial starts on the liquid branch instead (a phase-specified solve): the
+        // global search can hand it a metastable vapor-like root (SRK near-pure water at 298 K, 5 bar:
+        // ~225 mol/m3), whose fugacities pull the trial straight back to the feed.  Evaluating a
+        // trial at a root other than its lowest-Gibbs one can only RAISE tm, so this start can at
+        // worst miss an instability (the vapor-like trials cover that side), never invent one.
         CoolPropDbl rho_warm = -1;
+        const bool ideal_gas_start = trials[t].near_pure && trials[t].vapor_like;
+        const bool liquid_start = trials[t].near_pure && !trials[t].vapor_like;
+        // ...and keeps the liquid phase imposed on SatV for its whole trajectory (SatV normally carries
+        // an imposed GAS phase, under which the warm solves would drift back to the vapor root and the
+        // trial would collapse to the feed).  Restored when the trial ends, including on early return.
+        const ScopedImposedPhase liquid_trial(*HEOS.SatV, iphase_liquid, liquid_start);
 
         // --- Phase 1: Successive substitution with GDEM acceleration ---
         // Fixed-point map: ln(Y_i^new) = d_i - ln(phi_i(y_norm))
         // See [Michelsen1982a] Eq. 19 and [M&M2007] Ch. 12, Sec. 12.6
-        const int max_ss_loops = 4;  // Each loop does 2 SS steps + 1 GDEM step
+        // Each loop does 2 SS steps + 1 GDEM step.  A near-pure trial gets ONE loop of ONE step: its
+        // detections come on the first SS step (all 12 in the wide-boiling regression set), while further
+        // steps on a stable wide-boiling feed -- e.g. every low-temperature natural-gas state -- only add
+        // density solves.
+        const int max_ss_loops = trials[t].near_pure ? 1 : 4;
         const double cntol = 1e-7;
         bool ss_decided = false;
         bool ss_stable = false;  // SS concluded this trial is stable (stationary point with tm >= 0, or trivial solution)
@@ -2352,7 +2379,9 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             std::array<double, 2> esq_pair = {0, 0};
             std::vector<CoolPropDbl> err(N);
 
-            for (int kk = 0; kk < 2 && !ss_decided; ++kk) {
+            // A near-pure trial takes a single SS step: its detections all come on the first step.
+            const int ss_steps = trials[t].near_pure ? 1 : 2;
+            for (int kk = 0; kk < ss_steps && !ss_decided; ++kk) {
                 // Normalize Y to get trial composition
                 CoolPropDbl sumY = 0;
                 for (std::size_t i = 0; i < N; ++i)
@@ -2363,8 +2392,17 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 
                 // Evaluate fugacity coefficients at trial composition
                 HEOS.SatV->set_mole_fractions(y_norm);
+                if (ideal_gas_start && rho_warm < 0) rho_warm = the_p / (HEOS.SatV->gas_constant() * the_T);
+                if (liquid_start && rho_warm < 0) {
+                    try {
+                        const CoolPropDbl rl = HEOS.SatV->solver_rho_Tp(the_T, the_p);  // liquid imposed above
+                        if (ValidNumber(rl) && rl > 0) rho_warm = rl;
+                    } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                        // no liquid root: fall back to the guarded global solve below
+                    }
+                }
                 try {
-                    solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm);
+                    solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_guard_replaced);
                 } catch (...) {
                     ss_decided = true;
                     break;
@@ -2394,18 +2432,24 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 // Early exit: tm < 0 means unstable
                 if (tm < -cntol) {
                     _stable = false;
+                    _near_pure = trials[t].near_pure;
                     CoolPropDbl sY = 0;
                     for (std::size_t i = 0; i < N; ++i)
                         sY += Y[i];
                     for (std::size_t i = 0; i < N; ++i)
                         y_norm[i] = Y[i] / sY;
-                    if (t == 0) {
+                    if (trials[t].vapor_like) {
                         this->y = y_norm;
                         this->x = z;
                     } else {
                         this->x = y_norm;
                         this->y = z;
                     }
+                    // Record this trial's (guarded) density root and the feed's for the caller: the flash
+                    // passes them to the split solver as warm starts when a near-pure trial found the
+                    // instability, and its recovery path uses them in place of an unguarded cold solve.
+                    rhomolar_vap = trials[t].vapor_like ? rho_warm : rho_b;
+                    rhomolar_liq = trials[t].vapor_like ? rho_b : rho_warm;
                     return;
                 }
 
@@ -2465,19 +2509,27 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // iterations (each an N x N Hessian of composition derivatives) and ~5 trial-density
         // solves per trial, most of the cost of a PT flash.
         if (ss_stable) continue;
+        // Near-pure trials are an EXTRA probe for wide-boiling feeds and run successive substitution
+        // only: one that SS did not decide (or whose density solve failed) is dropped -- no second-order
+        // minimizer, and no "uncertain" flag, since an undecided extra probe is no evidence either way.
+        // Their detections are SS early exits (tm < 0 within a few steps); on a 10-component natural gas
+        // the minimizer runs they would otherwise trigger cost about as much as both Wilson trials while
+        // finding almost nothing (Amarillo, 2000 states: 284 minimizer runs, 6 instabilities in 2310 trials).
+        if (trials[t].near_pure) continue;
         bool trial_unstable = false;
         bool trial_ok = minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable);
         if (!trial_ok) any_uncertain = true;  // could not conclude this trial -> not a clean "stable"
         if (trial_ok) {
             if (trial_unstable) {
                 _stable = false;
+                _near_pure = trials[t].near_pure;
                 CoolPropDbl sY = 0;
                 for (std::size_t i = 0; i < N; ++i)
                     sY += Y[i];
                 std::vector<CoolPropDbl> y_norm(N);
                 for (std::size_t i = 0; i < N; ++i)
                     y_norm[i] = Y[i] / sY;
-                if (t == 0) {
+                if (trials[t].vapor_like) {
                     this->y = y_norm;
                     this->x = z;
                 } else {
@@ -2538,7 +2590,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
 
         HEOS.SatV->set_mole_fractions(y_norm);
         try {
-            solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm);
+            solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_guard_replaced);
         } catch (...) {
             return false;  // Density solve failed
         }
@@ -2651,7 +2703,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
 
             HEOS.SatV->set_mole_fractions(y_norm);
             try {
-                solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm);
+                solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rho_warm, true, &_guard_replaced);
             } catch (...) {
                 // Density solve failed, shrink trust region
                 trust_radius = step_size / 3.0;
@@ -2923,7 +2975,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     IO.nonconvergence = false;
     // Warm-start density roots for the liquid/vapor phases (tracked across SS + Newton
     // iterations; first solve per phase falls back to the global solver inside the helper).
-    CoolPropDbl rho_warm_L = -1, rho_warm_V = -1;
+    // Optional caller-supplied warm starts (PTflash_twophase_options::rho_warm_*_seed; -1 = cold start).
+    CoolPropDbl rho_warm_L = IO.rho_warm_liq_seed, rho_warm_V = IO.rho_warm_vap_seed;
 
     // Store K-factors in log space to prevent overflow for wide-boiling mixtures.
     // lnK[i] = ln(phi_i^L / phi_i^V) = ln(K_i).  See [Michelsen1982b] Eq. 5.
@@ -3746,11 +3799,9 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     const phases fl = (which == 0) ? iphase_gas : iphase_liquid;
                     CoolPropDbl rz = -1;
                     try {
-                        HEOS.SatL->specify_phase(fl);
+                        const ScopedImposedPhase imposed(*HEOS.SatL, fl);  // restores SatL's own phase on exit
                         rz = HEOS.SatL->solver_rho_Tp(IO.T, IO.p);
-                        HEOS.SatL->unspecify_phase();
                     } catch (...) {
-                        HEOS.SatL->unspecify_phase();
                         rz = -1;
                     }
                     G_single = std::min(G_single, feed_gibbs(rz));
