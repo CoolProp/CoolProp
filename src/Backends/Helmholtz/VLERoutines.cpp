@@ -2219,8 +2219,9 @@ CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBac
 
 // guard_unstable_branch (stability-test callers): also reject a mechanically unstable root, warm or global;
 // see solve_rho_Tp_global_stable.  The two-phase flash callers keep the unguarded behaviour.
+// max_jump: the largest relative density change still accepted as the SAME branch for the warm root.
 static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm,
-                                        bool guard_unstable_branch = false, bool* guard_replaced = nullptr) {
+                                        bool guard_unstable_branch = false, bool* guard_replaced = nullptr, double max_jump = 2.0) {
     if (rho_warm > 0) {
         CoolPropDbl r = -1;
         bool warm_ok = false;
@@ -2236,7 +2237,8 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             // genuinely the same root.)
             // The local root must also be mechanically stable: a warm start on (or Newton drifting
             // onto) the unstable middle branch would otherwise be carried along the trajectory.
-            warm_ok = ValidNumber(r) && r > 0 && r < 2.0 * rho_warm && r > 0.5 * rho_warm && (!guard_unstable_branch || mechanically_stable(phase));
+            warm_ok =
+              ValidNumber(r) && r > 0 && r < max_jump * rho_warm && r > rho_warm / max_jump && (!guard_unstable_branch || mechanically_stable(phase));
         } catch (...) {
             warm_ok = false;  // warm solve threw -> fall back to the global solver below
         }
@@ -3057,17 +3059,24 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
         normalize_vector(IO.y);
     };
 
-    // Helper: evaluate phase densities and fugacities
+    // Helper: evaluate phase densities and fugacities.
+    // Each phase's root is tracked from the previous iterate, but accepted only if it is mechanically
+    // stable and within 1.5x of it; otherwise it is re-solved with the guarded lowest-Gibbs solve
+    // (Michelsen: with several roots, take the lower-Gibbs one).  The plain 2x window let the dense
+    // CO2-rich "vapor" of a CO2/water liquid-liquid split (~21.7 kmol/m3 at 272.7 K, 6.1 MPa) drop onto
+    // a ~11 kmol/m3 root -- SatV carries an imposed GAS phase -- after which lnK blew up and the split
+    // collapsed onto the feed.
+    constexpr double split_max_jump = 1.5;
     auto evaluate_phases = [&]() -> bool {
         HEOS.SatL->set_mole_fractions(IO.x);
         try {
-            IO.rhomolar_liq = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rho_warm_L);
+            IO.rhomolar_liq = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rho_warm_L, true, nullptr, split_max_jump);
         } catch (...) {
             return false;
         }
         HEOS.SatV->set_mole_fractions(IO.y);
         try {
-            IO.rhomolar_vap = solve_trial_rho_warm(*HEOS.SatV, IO.T, IO.p, rho_warm_V);
+            IO.rhomolar_vap = solve_trial_rho_warm(*HEOS.SatV, IO.T, IO.p, rho_warm_V, true, nullptr, split_max_jump);
         } catch (...) {
             return false;
         }
@@ -3335,10 +3344,13 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
 
                 bool eval_ok = false;
                 try {
+                    // Guarded (mechanically stable, lowest-Gibbs) roots, as in evaluate_phases: the plain
+                    // global solver can return the unstable middle root for a water-rich liquid (#3448) and
+                    // follows SatV's imposed gas phase for a dense CO2-rich phase.
                     HEOS.SatL->set_mole_fractions(x_trial);
-                    CoolPropDbl rL = HEOS.SatL->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatL->calc_rhomolar_max_bound());
+                    CoolPropDbl rL = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, IO.T, IO.p);
                     HEOS.SatV->set_mole_fractions(y_trial);
-                    CoolPropDbl rV = HEOS.SatV->solver_rho_Tp_global(IO.T, IO.p, HEOS.SatV->calc_rhomolar_max_bound());
+                    CoolPropDbl rV = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatV, IO.T, IO.p);
                     if (ValidNumber(rL) && ValidNumber(rV) && rL > 0 && rV > 0) {
                         HEOS.SatL->update_DmolarT_direct(rL, IO.T);
                         HEOS.SatV->update_DmolarT_direct(rV, IO.T);
