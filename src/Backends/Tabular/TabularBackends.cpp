@@ -585,6 +585,25 @@ CoolPropDbl CoolProp::TabularBackend::calc_cvmolar() {
     }
 }
 
+/// As for HEOS (#3446): transport properties are undefined for a two-phase state, so
+/// refuse 0 < Q < 1 rather than interpolate between the saturated phases.  Q = 0 and
+/// Q = 1 (to 1e-9) are the saturated phases.  Called only on the saturation path (not
+/// using a single-phase table), where every update branch that returns normally has
+/// set Q in [0, 1]; it keys on Q alone rather than on _phase, which update() does not
+/// reset and so can be stale.  A Q outside [0, 1] (or NaN) means the last update threw
+/// or none was made, and the saturation indices are not valid: refuse that as well.
+/// That bound is exact, matching the strict is_in_closed_range(0, 1) in update().
+static void check_transport_property_defined(double Q, const char* property) {
+    const double Q_tol = 1e-9;
+    if (!(Q >= 0 && Q <= 1)) {  // exact: update() range-checks Q strictly
+        throw CoolProp::ValueError(format("%s cannot be evaluated: no valid state (Q = %g); the last update failed or none was made", property, Q));
+    }
+    if (Q > Q_tol && Q < 1 - Q_tol) {
+        throw CoolProp::ValueError(
+          format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead", property, Q));
+    }
+}
+
 CoolPropDbl CoolProp::TabularBackend::calc_viscosity() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
@@ -599,6 +618,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity() {
         }
         return _HUGE;  // not needed, will never be hit, just to make compiler happy
     } else {
+        check_transport_property_defined(_Q, "Viscosity");
         if (is_mixture) {
             return phase_envelope_sat(phase_envelope, iviscosity, iP, _p);
         } else {
@@ -620,6 +640,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity() {
         }
         return _HUGE;  // not needed, will never be hit, just to make compiler happy
     } else {
+        check_transport_property_defined(_Q, "Thermal conductivity");
         if (is_mixture) {
             return phase_envelope_sat(phase_envelope, iconductivity, iP, _p);
         } else {
@@ -1412,7 +1433,9 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))) {
                     throw ValueError(format("vapor quality is not in (0,1) for %s: %g T: %g", get_parameter_information(otherkey, "short").c_str(),
                                             otherval, static_cast<double>(_T)));
-                } else if (!is_mixture) {
+                }
+                _phase = iphase_twophase;
+                if (!is_mixture) {
                     cached_saturation_iL = iL;
                     cached_saturation_iV = iV;
                     _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);

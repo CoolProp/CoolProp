@@ -489,6 +489,16 @@ class TransportValidationFixture
         parameters iin2 = CoolProp::get_parameter_index(in2);
         CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
+        // Published check values are the correlation evaluated at (T, rho), and some
+        // sit inside the EOS's dome (metastable, or just inside it because the paper
+        // used a different EOS).  Transport properties refuse two-phase states (#3446),
+        // so impose the single phase the paper meant and re-flash, which puts the EOS
+        // pressure at (T, rho) rather than psat in p().  Only interior qualities: a
+        // saturated row (Q = 0 or 1) is left as flashed.
+        if (pState->phase() == CoolProp::iphase_twophase && pState->Q() > 0 && pState->Q() < 1) {
+            pState->specify_phase(pState->rhomolar() > pState->rhomolar_critical() ? CoolProp::iphase_liquid : CoolProp::iphase_gas);
+            pState->update(pair, o1, o2);
+        }
     }
     void get_value(parameters key) {
         actual = pState->keyed_output(key);
@@ -1238,6 +1248,140 @@ TEST_CASE("Nitrogen and xenon conductivity contributions match their papers", "[
 // consciously rather than absorb silently -- in particular rhosr_critical must
 // be recomputed from the new EOS and C refitted on top of it, since the two are
 // coupled through x = rho*s_r/rhosr_critical.
+TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[viscosity],[conductivity],[transport],[3446]") {
+    // A two-phase pure-fluid state has a liquid and a vapor phase in equilibrium with
+    // different transport properties; there is no single value to return.  These used
+    // to evaluate the single-phase correlation at the overall (T, rho) -- or, for
+    // methane's hardcoded conductivity, fail with "PropsSI failed ungracefully".
+    SECTION("interior quality throws; Q = 0 and Q = 1 give the saturated-phase values") {
+        const std::string fluid = GENERATE(as<std::string>{}, "Methane", "Nitrogen", "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        const double T = 0.8 * AS->T_critical();
+        AS->update(CoolProp::QT_INPUTS, 0.5, T);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        // The same state reached through (T, rho) rather than (Q, T)
+        AS->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        for (const double Q : {0.0, 1.0}) {
+            CAPTURE(Q);
+            AS->update(CoolProp::QT_INPUTS, Q, T);
+            const double lambda = AS->conductivity(), eta = AS->viscosity();
+            const double lambda_sat =
+              (Q == 0.0) ? AS->saturated_liquid_keyed_output(CoolProp::iconductivity) : AS->saturated_vapor_keyed_output(CoolProp::iconductivity);
+            const double eta_sat =
+              (Q == 0.0) ? AS->saturated_liquid_keyed_output(CoolProp::iviscosity) : AS->saturated_vapor_keyed_output(CoolProp::iviscosity);
+            CHECK(lambda == Catch::Approx(lambda_sat).epsilon(1e-12));
+            CHECK(eta == Catch::Approx(eta_sat).epsilon(1e-12));
+        }
+    }
+    SECTION("states on the saturation curve to within roundoff are not refused") {
+        // The pure-fluid flashes label |Q| <= 1e-9 (and |Q - 1| <= 1e-9) two-phase, keeping
+        // the slightly negative or slightly-above-one Q; those must not throw.
+        const std::string fluid = GENERATE(as<std::string>{}, "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        AS->update(CoolProp::QT_INPUTS, 0, 0.9 * AS->T_critical());
+        const double p = AS->p(), hL = AS->saturated_liquid_keyed_output(CoolProp::iHmolar), hV = AS->saturated_vapor_keyed_output(CoolProp::iHmolar);
+        for (const double h : {hL - 1e-10 * std::abs(hL), hV + 1e-10 * std::abs(hV)}) {
+            AS->update(CoolProp::HmolarP_INPUTS, h, p);
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == CoolProp::iphase_twophase);  // premise: labelled two-phase, Q just outside [0, 1]
+            CHECK_NOTHROW(AS->viscosity());
+            CHECK_NOTHROW(AS->conductivity());
+        }
+    }
+    SECTION("imposing a phase still gives the metastable value at (T, rho)") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane"));
+        AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);  // the state from the bug report
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        AS->specify_phase(CoolProp::iphase_gas);
+        AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);
+        CHECK(ValidNumber(AS->viscosity()));
+    }
+    SECTION("tabular backends refuse interior quality too") {
+        // TTSE/BICUBIC used to return a quality-weighted blend of the saturated values
+        const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+        CAPTURE(backend);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        const double p = 2e5;
+        AS->update(CoolProp::PQ_INPUTS, p, 0.5);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        // Through (h, p) and (T, rho) as well.  The (T, rho) state goes to a fresh object:
+        // that branch used to leave _phase unset, so only a stale label could trip a check.
+        const double h = AS->hmolar(), T = AS->T(), rho = AS->rhomolar();
+        AS->update(CoolProp::HmolarP_INPUTS, h, p);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        fresh->update(CoolProp::DmolarT_INPUTS, rho, T);
+        CHECK(fresh->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(fresh->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(fresh->conductivity(), CoolProp::ValueError);
+        // A failed update the caller ignored leaves an out-of-range Q and invalid saturation
+        // indices; that must be a clean error, not an out-of-bounds table read
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, p, 1.5));
+        CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        // The saturated phases still have values.  Not compared with HEOS: a locally cached
+        // table built before a transport-model change would carry the old values.
+        AS->update(CoolProp::PQ_INPUTS, p, 0);
+        const double etaL = AS->viscosity(), lambdaL = AS->conductivity();
+        AS->update(CoolProp::PQ_INPUTS, p, 1);
+        const double etaV = AS->viscosity(), lambdaV = AS->conductivity();
+        CAPTURE(etaL, etaV, lambdaL, lambdaV);
+        CHECK(ValidNumber(etaV));
+        CHECK(ValidNumber(lambdaV));
+        CHECK(etaL > 10 * etaV);
+        CHECK(lambdaL > 10 * lambdaV);
+    }
+    SECTION("mixtures") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions({0.5, 0.5});
+        SECTION("a single-phase mixture whose (T, rho) is inside a component's dome still has a value") {
+            // The approximate mixing rule evaluates each pure fluid at the mixture's (T, rho)
+            AS->update(CoolProp::PT_INPUTS, 2e6, 250.0);
+            REQUIRE(AS->phase() == CoolProp::iphase_gas);
+            shared_ptr<CoolProp::AbstractState> ethane(CoolProp::AbstractState::factory("HEOS", "Ethane"));
+            ethane->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), AS->T());
+            REQUIRE(ethane->phase() == CoolProp::iphase_twophase);  // premise of the test
+            CHECK(ValidNumber(AS->viscosity()));
+            CHECK(ValidNumber(AS->conductivity()));
+        }
+        SECTION("component states keep psat in p(), so friction-theory viscosity is unchanged") {
+            // H2S viscosity is friction theory, which reads p(); at these single-phase mixture
+            // states the H2S component evaluated at the mixture's (T, rho) is inside its dome.
+            // Re-flashing it with an imposed phase would swap psat for the EOS pressure and
+            // move these by up to 7%.  Values are master (3f16d5fbb) before #3446.
+            struct row
+            {
+                double T, p, eta;
+            };
+            const row rows[] = {{255, 2e6, 1.0158842386870101e-05}, {230, 10e6, 5.2617732506557792e-05}, {280, 2e6, 1.0882970508098438e-05}};
+            for (const auto& r : rows) {
+                CAPTURE(r.T, r.p);
+                CHECK(CoolProp::PropsSI("V", "T", r.T, "P", r.p, "Methane[0.9]&HydrogenSulfide[0.1]") == Catch::Approx(r.eta).epsilon(1e-9));
+            }
+        }
+        SECTION("interior quality throws") {
+            AS->update(CoolProp::PQ_INPUTS, 1e6, 0.5);
+            CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+            CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        }
+    }
+    SECTION("the state from the bug report gives a clear error through PropsSI") {
+        const double lambda = CoolProp::PropsSI("conductivity", "T", 120, "D", 50, "CH4");
+        CHECK(!ValidNumber(lambda));
+        CHECK(CoolProp::get_global_param_string("errstring").find("two-phase") != std::string::npos);
+    }
+}
+
 TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[3330]") {
     SECTION("the state from the bug report is finite") {
         const double eta = CoolProp::PropsSI("V", "T", 273.15, "Q", 0, "R1233zd(E)");
