@@ -289,7 +289,8 @@ void isolate(const Coeffs<N>& c, const Coeffs<N>& b, double ua, double ub, int d
     // eps/2 * 2 (bmax + e), halved exactly -- or, in the subnormal range where rounding is absolute, by at most
     // denorm_min/2.  Averaging does not amplify the errors carried in, so the children carry
     // e + N * (eps/2 * (bmax + e) + denorm_min/2).
-    const double e_child = e + N * 0.5 * (DBL_EPSILON * (bmax + e) + std::numeric_limits<double>::denorm_min());
+    // (N * denorm_min rather than N/2: an exact multiple, so it cannot round down when the eps term underflows)
+    const double e_child = e + N * 0.5 * DBL_EPSILON * (bmax + e) + N * std::numeric_limits<double>::denorm_min();
     const double um = 0.5 * (ua + ub);
     isolate<N>(c, L, ua, um, depth + 1, e_child, s, out);
     isolate<N>(c, R, um, ub, depth + 1, e_child, s, out);
