@@ -6,4 +6,9 @@
 //
 // Living in src/expression/ means every build that globs CoolProp's sources
 // (the main CMakeLists.txt and wrappers/Python/CMakeLists.txt) picks it up.
+//
+// BOOST_CHARCONV_SOURCE is what Boost's own build defines when compiling this
+// file.  Without it, boost/charconv/config.hpp makes MSVC auto-link a
+// boost_charconv .lib that CoolProp does not ship, and the link fails.
+#define BOOST_CHARCONV_SOURCE
 #include "libs/charconv/src/from_chars.cpp"  // NOLINT(bugprone-suspicious-include)

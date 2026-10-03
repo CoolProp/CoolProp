@@ -101,7 +101,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME boost_headers
   GIT_REPOSITORY https://github.com/CoolProp/boost-headers.git
-  GIT_TAG        af7ec08f8bd8f3d1c4a2ab084abee84da5161cbc
+  GIT_TAG        bb87178a4c27171ed91bfa9f314c0a71a8abcb8f
   DOWNLOAD_ONLY  YES
 )
 
