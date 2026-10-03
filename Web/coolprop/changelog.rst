@@ -56,6 +56,15 @@ Highlights:
   superheated vapor.  (`#3334 <https://github.com/CoolProp/CoolProp/pull/3334>`_, `#3352 <https://github.com/CoolProp/CoolProp/pull/3352>`_, `#3399 <https://github.com/CoolProp/CoolProp/pull/3399>`_, `#3402 <https://github.com/CoolProp/CoolProp/pull/3402>`_, `#3403 <https://github.com/CoolProp/CoolProp/pull/3403>`_,
   `#3404 <https://github.com/CoolProp/CoolProp/pull/3404>`_, `#3406 <https://github.com/CoolProp/CoolProp/pull/3406>`_, `#3428 <https://github.com/CoolProp/CoolProp/pull/3428>`_)
 
+* **Bollengier liquid-water backend** (``BOLLENGIER::Water``).  Gibbs-explicit
+  equation of state of Bollengier, Brown and Shaw, *J. Chem. Phys.* **151**\ :054501
+  (2019), covering 240-500 K to 2300 MPa -- including the cold high-pressure
+  region where IAPWS-95 refuses below the melting line.  Reproduces the paper's
+  own tabulated densities, heat capacities and sound speeds to 5e-6.
+  ``PT_INPUTS`` only, liquid only.  A cold high-pressure box
+  (p >= 1500 MPa and T <= 255 K), where the published surface is not usable,
+  is refused rather than returned.
+
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared
   CoolProp libraries can now be built and installed in one build. Installation

@@ -469,6 +469,7 @@ include_directories("${boost_headers_SOURCE_DIR}")
 set(COOLPROP_ENABLED_BACKENDS
     Cubics
     IF97
+    Bollengier
     Helmholtz
     REFPROP
     Incompressible
@@ -2308,6 +2309,8 @@ if(COOLPROP_CATCH_MODULE)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SVDComponents.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-TensorBSpline.cpp")
+  list(APPEND APP_SOURCES
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-Bollengier.cpp")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests-SBTLAdapter.cpp")
   list(APPEND APP_SOURCES

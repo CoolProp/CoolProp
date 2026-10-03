@@ -17,6 +17,7 @@
 #include "CoolProp/DataStructures.h"
 #include "qmass_conversions.h"
 #include "Backends/IF97/IF97Backend.h"
+#include "Backends/Bollengier/BollengierBackend.h"
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
@@ -106,6 +107,23 @@ class IF97BackendGenerator : public AbstractStateGenerator
 // but is out of this PR's scope.
 // NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<IF97BackendGenerator> if97_gen(IF97_BACKEND_FAMILY);
+
+class BollengierBackendGenerator : public AbstractStateGenerator
+{
+   public:
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
+        if (fluid_names.size() != 1) {
+            throw ValueError(format("The Bollengier backend does not support mixtures, only Water"));
+        }
+        const std::string& str = fluid_names[0];
+        if ((upper(str) == "WATER") || (upper(str) == "H2O")) {
+            return new BollengierBackend();
+        }
+        throw ValueError(format("The Bollengier backend returns Water props only; fluid name [%s] not allowed", fluid_names[0].c_str()));
+    };
+};
+// NOLINTNEXTLINE(cert-err58-cpp)
+static GeneratorInitializer<BollengierBackendGenerator> bollengier_gen(BOLLENGIER_BACKEND_FAMILY);
 class SRKGenerator : public AbstractStateGenerator
 {
    public:
