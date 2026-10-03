@@ -96,7 +96,9 @@ class TensorBSpline2D
     std::vector<double> ky_;
     std::size_t ox_;
     std::size_t oy_;
+    // NOLINTNEXTLINE(cppcoreguidelines-use-default-member-init,modernize-use-default-member-init)
     std::size_t nx_;
+    // NOLINTNEXTLINE(cppcoreguidelines-use-default-member-init,modernize-use-default-member-init)
     std::size_t ny_;
     std::vector<double> coefs_;  // row-major (nx_, ny_)
 };
@@ -176,11 +178,23 @@ inline TensorBSpline2D::TensorBSpline2D(std::vector<double> knots_x, std::vector
     //
     // clang-tidy asks for these in the member-init list
     // (cppcoreguidelines-prefer-member-initializer) and for `= 0` on the
-    // declarations (modernize-use-default-member-init).  The second is
-    // inert.  The first is declined to keep the ordering above.
+    // declarations (modernize-use-default-member-init).  Both are
+    // NOLINT-suppressed at their sites, which preflight gates on since
+    // PR #3444 made clang-tidy actually see headers.
+    //
+    // Suppressed rather than applied, although applying them is provably
+    // safe today: the derivation would move ahead of validate_axis and
+    // wrap on a knot vector shorter than its order, but validate_axis
+    // throws on every such input before anything reads the wrapped
+    // value, so the fix-it would change no behaviour.  It is declined
+    // because the safety would then rest entirely on that one size
+    // check, where now it rests on the check AND on the derivation being
+    // unreachable until the check has run.
     validate_axis(kx_, ox_, "x");
     validate_axis(ky_, oy_, "y");
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
     nx_ = kx_.size() - ox_;
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
     ny_ = ky_.size() - oy_;
     if (coefs_.size() != nx_ * ny_) {
         throw ValueError("TensorBSpline2D: expected " + std::to_string(nx_) + " x " + std::to_string(ny_) + " = " + std::to_string(nx_ * ny_)
