@@ -357,6 +357,7 @@ TEST_CASE("With tol > 0, every root of a function within tol is covered", "[cheb
     std::mt19937_64 gen(4242);
     std::uniform_real_distribution<double> U(-1, 1);
     const double tol = 1e-4;
+    long n_certified = 0;
     for (int trial = 0; trial < 200; ++trial) {
         std::vector<double> roots(5);
         for (auto& r : roots)
@@ -371,15 +372,19 @@ TEST_CASE("With tol > 0, every root of a function within tol is covered", "[cheb
         for (int i = 1; i <= M; ++i) {
             const double u = -1 + 2.0 * i / M, v = gfun(u);
             if ((v < 0) != (prev < 0)) {
-                const double um = u - 1.0 / M;  // a root of g lies in [u - 2/M, u]
-                CAPTURE(trial, um);
-                CHECK(std::any_of(out.begin(), out.end(), [&](const CB::Root& e) { return e.ua - 2.0 / M <= um && um <= e.ub + 2.0 / M; }));
+                CAPTURE(trial, u);  // a root of g lies in [u - 2/M, u]
+                CHECK(std::any_of(out.begin(), out.end(),
+                                  [&](const CB::Root& e) { return e.ua <= u && u - 2.0 / M <= e.ub; }));  // bracket [u - 2/M, u] meets the interval
             }
             prev = v;
         }
         for (const auto& e : out)
-            if (e.certified) CHECK((gfun(e.ua) < 0) != (gfun(e.ub) < 0));
+            if (e.certified) {
+                ++n_certified;
+                CHECK((gfun(e.ua) < 0) != (gfun(e.ub) < 0));
+            }
     }
+    CHECK(n_certified > 50);  // the test must exercise certified intervals, not only coverage by wide unresolved ones
 }
 
 #endif  // ENABLE_CATCH

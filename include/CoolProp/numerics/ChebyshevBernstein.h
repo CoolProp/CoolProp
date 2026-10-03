@@ -245,7 +245,8 @@ void report_unresolved(const Coeffs<N>& c, const Coeffs<N>& b, double tol, Isola
 template <int N>
 void isolate(const Coeffs<N>& c, const Coeffs<N>& b, double ua, double ub, int depth, double e, IsolationState& s, std::vector<Root>& out) {
     ++s.st.nodes;
-    const double tol = s.tol + e;
+    // rounded up, so that e cannot be absorbed when it is below half an ulp of s.tol
+    const double tol = (s.tol + e) * (1 + DBL_EPSILON);
     bool amb = false, anypos = false, anyneg = false;
     int V = 0, last = 0;
     double bmax = 0;
@@ -285,9 +286,10 @@ void isolate(const Coeffs<N>& c, const Coeffs<N>& b, double ua, double ub, int d
         R[N - r] = t[N - r];
     }
     // Each of the N rounds forms 0.5*(x + y) of values bounded by bmax + e: the sum rounds by at most
-    // eps/2 * 2 (bmax + e), halved exactly.  Averaging does not amplify the errors carried in, so the children
-    // carry e + N * eps/2 * (bmax + e).
-    const double e_child = e + N * 0.5 * DBL_EPSILON * (bmax + e);
+    // eps/2 * 2 (bmax + e), halved exactly -- or, in the subnormal range where rounding is absolute, by at most
+    // denorm_min/2.  Averaging does not amplify the errors carried in, so the children carry
+    // e + N * (eps/2 * (bmax + e) + denorm_min/2).
+    const double e_child = e + N * 0.5 * (DBL_EPSILON * (bmax + e) + std::numeric_limits<double>::denorm_min());
     const double um = 0.5 * (ua + ub);
     isolate<N>(c, L, ua, um, depth + 1, e_child, s, out);
     isolate<N>(c, R, um, ub, depth + 1, e_child, s, out);
