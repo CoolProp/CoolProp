@@ -4,6 +4,9 @@
 #include <cfloat>
 #include <cmath>
 #include <limits>
+#include <iterator>
+#include <mutex>
+#include <map>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -319,7 +322,203 @@ constexpr std::size_t MAX_PIECES = 4096;
 constexpr int NA_GRADING_LEVELS = 10;  // pieces graded toward delta = 1 down to a width of 2^-10 (see build)
 // the |1 - tau| ladder of the non-analytic bounds (see build)
 constexpr double NA_DTAU_RUNGS[] = {1e-6, 1e-5, 1e-4, 1e-3, 3e-3, 1e-2, 3e-2, 0.1, 0.3, 1.0};
-constexpr int NA_TABLE_TAU_LEVELS = 16;  // tau-cells of the 2-D non-analytic tables graded toward tau = 1 (see build_na_tables)
+constexpr int NA_TABLE_TAU_LEVELS = 16;  // tau-cells of the 2-D non-analytic tables graded toward tau = 1 (see NATable)
+}  // namespace
+
+// ------------------------------------------------------------------ shared 2-D tables of the non-analytic terms
+
+// The non-analytic terms depend on (tau, delta) only -- not on the mixture -- so instead of fitting them on every piece
+// at every assemble() (~10^2 us near tau = 1), each fluid's terms are tabulated once per process, on a (tau, delta) grid
+// of their own: per distinct D, the smooth part g_D = chi / exp(-D (tau-1)^2) (the Gaussian in tau is steep, D ~
+// 300-800, and is multiplied back exactly), as degree-NQ x NQ Lobatto interpolants on tau-cells x delta-cells.
+//  - delta-cells: quarters of [0, 8], graded toward delta = 1 like the pieces (1 +- 2^-k), cut back to where the terms
+//    are not negligible; a mixture's pieces include these edges, so each piece lies in one cell;
+//  - tau-cells: the band where the terms are not negligible, graded toward tau = 1;
+//  - a cell keeps its table only if its error, measured on the 16 x 16 grid between its nodes, is negligible against
+//    the table tolerance; elsewhere -- where the valley Delta ~ 0 along tau - 1 = A |delta - 1|^(1/beta) crosses the
+//    cell, for tau > 1 only -- assemble() fits at the actual tau.
+struct NATable
+{
+    std::vector<double> Dg;                            ///< the distinct D
+    std::vector<std::vector<NonAnalyticTerm>> gterms;  ///< the terms with each D, with D set to 0
+    std::vector<double> tau_edges;                     ///< tau-cells (empty: the terms are negligible everywhere)
+    std::vector<double> delta_edges;                   ///< delta-cells
+    std::vector<int> cell;                             ///< [q * n_delta + d]: index of the stored table, -1: fit at assemble, -2: negligible
+    std::vector<double> cell_err;                      ///< measured error of the table in chi (incl. the largest Gaussian factor on the cell)
+    std::vector<double> cell_parts;                    ///< roundoff scale of chi on the cell
+    std::vector<double> coef;                          ///< stored tables, each Dg.size() x (NQ+1) x (NQ+1): [g][m (tau)][k (delta)]
+    [[nodiscard]] std::size_t n_delta() const {
+        return delta_edges.empty() ? 0 : delta_edges.size() - 1;
+    }
+};
+
+namespace {
+
+// sum over the terms of their bound on [lo, hi] for |1 - tau| <= dt, with the Gaussian factor taken at |1 - tau| = dte
+double na_bound(const std::vector<NonAnalyticTerm>& terms, double lo, double hi, double dt, double dte) {
+    double b = 0;
+    for (const auto& tm : terms)
+        b += tm.bound_factor(lo, hi, dt) * std::exp(-tm.D * dte * dte);
+    return b;
+}
+
+std::shared_ptr<NATable> build_nonanalytic_table(const std::vector<NonAnalyticTerm>& terms, double tol) {
+    auto t = std::make_shared<NATable>();
+    const double negligible = 1e-3 * tol;
+    for (const auto& tm : terms) {
+        auto it = std::find(t->Dg.begin(), t->Dg.end(), tm.D);
+        if (it == t->Dg.end()) {
+            t->Dg.push_back(tm.D);
+            t->gterms.emplace_back();
+            it = t->Dg.end() - 1;
+        }
+        NonAnalyticTerm g = tm;
+        g.D = 0;
+        t->gterms[static_cast<std::size_t>(it - t->Dg.begin())].push_back(g);
+    }
+    const std::size_t NGd = t->Dg.size();
+    std::vector<double> de;
+    for (int m = 0; m <= 32; ++m)
+        de.push_back(0.25 * m);
+    de.push_back(1.0);
+    for (int k = 1; k <= NA_GRADING_LEVELS; ++k) {
+        de.push_back(1.0 - std::ldexp(1.0, -k));
+        de.push_back(1.0 + std::ldexp(1.0, -k));
+    }
+    std::sort(de.begin(), de.end());
+    de.erase(std::unique(de.begin(), de.end()), de.end());
+    // tau band half-width w: the largest |1 - tau| (geometric grid from 4 down) where the bound is not negligible on
+    // some cell
+    double w = 0;
+    for (int it = 0; it < 1200 && w == 0; ++it) {
+        const double dt = 4.0 * std::pow(0.97, it);
+        for (std::size_t d = 0; d + 1 < de.size() && w == 0; ++d)
+            if (!(na_bound(terms, de[d], de[d + 1], dt, dt) < negligible)) w = dt / 0.97;
+    }
+    if (w == 0) return t;  // negligible everywhere
+    // delta range: up to the last cell where the bound over the band is not negligible
+    std::size_t last = 1;
+    for (std::size_t d = 0; d + 1 < de.size(); ++d)
+        if (!(na_bound(terms, de[d], de[d + 1], w, 0.0) < negligible)) last = d + 1;
+    de.resize(last + 1);
+    t->delta_edges = de;
+    const double tlo = std::max(1 - w, 1e-9), thi = 1 + w;
+    std::vector<double> te = {tlo, thi, 1.0};
+    for (int k = 1; k <= NA_TABLE_TAU_LEVELS; ++k) {
+        te.push_back(1 - w * std::ldexp(1.0, -k));
+        te.push_back(1 + w * std::ldexp(1.0, -k));
+    }
+    for (double v : te)
+        if (v >= tlo && v <= thi) t->tau_edges.push_back(v);
+    std::sort(t->tau_edges.begin(), t->tau_edges.end());
+    t->tau_edges.erase(std::unique(t->tau_edges.begin(), t->tau_edges.end()), t->tau_edges.end());
+    const int Q = static_cast<int>(t->tau_edges.size()) - 1;
+    const int Pd = static_cast<int>(t->n_delta());
+    t->cell.assign(static_cast<std::size_t>(Q) * Pd, -2);
+    t->cell_err.assign(static_cast<std::size_t>(Q) * Pd, 0.0);
+    t->cell_parts.assign(static_cast<std::size_t>(Q) * Pd, 0.0);
+    const auto& ul = lobatto_points();
+    const auto& um = lobatto_midpoints();
+    const auto& M = lobatto_matrix<NQ>();
+    constexpr int N1 = NQ + 1;
+    std::vector<double> tab(NGd * N1 * N1);
+    for (int qc = 0; qc < Q; ++qc) {
+        const double tl = t->tau_edges[qc], th = t->tau_edges[qc + 1];
+        const double dtmin = (tl <= 1 && th >= 1) ? 0.0 : std::min(std::abs(tl - 1), std::abs(th - 1));
+        const double dtmax = std::max(std::abs(tl - 1), std::abs(th - 1));
+        for (int d = 0; d < Pd; ++d) {
+            const double dl = de[d], dh = de[d + 1];
+            if (na_bound(terms, dl, dh, dtmax, dtmin) < negligible) continue;  // -2: negligible on the whole cell
+            double err = 0, parts = 0;
+            bool finite = true;
+            for (std::size_t gi = 0; gi < NGd; ++gi) {
+                const double emax = std::exp(-t->Dg[gi] * dtmin * dtmin);  // largest Gaussian factor on the cell
+                double F[N1][N1], G[N1][N1];
+                for (int i = 0; i < N1; ++i)
+                    for (int j = 0; j < N1; ++j) {
+                        const auto v = eval_nonanalytic(t->gterms[gi], tl + (th - tl) * (ul[i] + 1) / 2, dl + (dh - dl) * (ul[j] + 1) / 2);
+                        F[i][j] = v.chi;
+                        finite = finite && std::isfinite(v.chi) && std::isfinite(v.parts);
+                        parts = std::max(parts, emax * v.parts);
+                    }
+                for (int i = 0; i < N1; ++i)  // delta direction
+                    for (int k = 0; k < N1; ++k) {
+                        double sum = 0;
+                        for (int j = 0; j < N1; ++j)
+                            sum += M[k][j] * F[i][j];
+                        G[i][k] = sum;
+                    }
+                double* C = &tab[gi * N1 * N1];
+                for (int m = 0; m < N1; ++m)  // tau direction
+                    for (int k = 0; k < N1; ++k) {
+                        double sum = 0;
+                        for (int i = 0; i < N1; ++i)
+                            sum += M[m][i] * G[i][k];
+                        C[m * N1 + k] = sum;
+                    }
+                double eg = 0;
+                for (double ut : um)
+                    for (double ud : um) {
+                        CoeffsQ dc{};
+                        for (int k = 0; k < N1; ++k) {
+                            CoeffsQ tc{};
+                            for (int m = 0; m < N1; ++m)
+                                tc[m] = C[m * N1 + k];
+                            dc[k] = ChebyshevBernstein::clenshaw<NQ>(tc, ut);
+                        }
+                        const auto v = eval_nonanalytic(t->gterms[gi], tl + (th - tl) * (ut + 1) / 2, dl + (dh - dl) * (ud + 1) / 2);
+                        const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(dc, ud) - v.chi);
+                        finite = finite && std::isfinite(e) && std::isfinite(v.parts);
+                        eg = std::max(eg, e);
+                        parts = std::max(parts, emax * v.parts);
+                    }
+                err += emax * eg;
+            }
+            if (!finite) return nullptr;
+            const std::size_t at = static_cast<std::size_t>(qc) * Pd + d;
+            t->cell_err[at] = err;
+            t->cell_parts[at] = parts;
+            if (10 * err <= negligible) {
+                t->cell[at] = static_cast<int>(t->coef.size() / (NGd * N1 * N1));
+                t->coef.insert(t->coef.end(), tab.begin(), tab.end());
+            } else {
+                t->cell[at] = -1;
+            }
+        }
+    }
+    return t;
+}
+
+// The fluid's table, from a process-wide cache keyed on the exact term coefficients and the tolerance (compared
+// exactly, so two fluids share a table only if their terms are identical, and a changed EOS gets a new one).  Entries
+// are weak: a table is freed when no Tables uses it.  Built outside the lock; a racing duplicate build is only waste.
+std::shared_ptr<const NATable> get_nonanalytic_table(const std::vector<NonAnalyticTerm>& terms, double tol) {
+    std::vector<double> key = {tol, double(NQ), double(NA_GRADING_LEVELS), double(NA_TABLE_TAU_LEVELS)};
+    for (const auto& tm : terms)
+        key.insert(key.end(), {tm.n, tm.a, tm.b, tm.beta, tm.A, tm.B, tm.C, tm.D});
+    bool cacheable = true;
+    for (double v : key)
+        cacheable = cacheable && std::isfinite(v);  // NaN would break the map's ordering
+    if (!cacheable) return build_nonanalytic_table(terms, tol);
+    static std::mutex mtx;
+    static std::map<std::vector<double>, std::weak_ptr<const NATable>> cache;
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        const auto it = cache.find(key);
+        if (it != cache.end())
+            if (auto sp = it->second.lock()) return sp;
+    }
+    std::shared_ptr<const NATable> built = build_nonanalytic_table(terms, tol);
+    if (!built) return nullptr;
+    std::lock_guard<std::mutex> lock(mtx);
+    for (auto it = cache.begin(); it != cache.end();)  // drop expired entries
+        it = it->second.expired() ? cache.erase(it) : std::next(it);
+    auto& slot = cache[key];
+    if (auto sp = slot.lock()) return sp;  // another thread built it meanwhile
+    slot = built;
+    return built;
+}
+
 }  // namespace
 
 std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, const BuildOptions& opt, std::string* reason) {
@@ -402,6 +601,10 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
 
     const std::string bad = T->verify(HEOS);
     if (!bad.empty()) return decline(bad);
+    for (auto& c : T->m_na) {  // the fluids' 2-D tables of their non-analytic terms: shared, built on first use
+        c.table = get_nonanalytic_table(c.terms, opt.tol);
+        if (!c.table) return decline("non-finite non-analytic table");
+    }
 
     // Largest |W_g| over the tau range (x factors are at most 1, departure terms weighted by |F_ij|).  Used only to
     // steer the piece splitting; the margins in assemble() use the actual weights.
@@ -478,12 +681,14 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
         // top of it), so Chebyshev fits on a piece ending there converge only algebraically.  Make delta = 1 an edge and
         // grade the pieces geometrically toward it, 1 +- 2^-k: each graded piece is then at a distance from the
         // singular point comparable to its width (geometric convergence), and on the last ones the terms are small.
-        // (These edges are added after the MAX_PIECES check: at most 2 NA_GRADING_LEVELS + 1 more pieces.)
+        // (These edges are added after the MAX_PIECES check: the grading and the tables' cell edges, a few dozen.)
         std::vector<double> extra = {1.0};
         for (int k = 1; k <= NA_GRADING_LEVELS; ++k) {
             extra.push_back(1.0 - std::ldexp(1.0, -k));
             extra.push_back(1.0 + std::ldexp(1.0, -k));
         }
+        for (const auto& c : T->m_na)  // and the edges of the 2-D tables' delta-cells, so no piece straddles two cells
+            extra.insert(extra.end(), c.table->delta_edges.begin(), c.table->delta_edges.end());
         for (double e : extra)
             if (e > 0 && e < opt.delta_max) T->m_edges.push_back(e);
         std::sort(T->m_edges.begin(), T->m_edges.end());
@@ -539,140 +744,46 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
                         c.K[(p * nk + k) * R + r] = c.terms[k].bound_factor(T->m_edges[p], T->m_edges[p + 1], T->m_na_dtau[r]);
         }
     }
-    // 2-D tables of the non-analytic terms, see build_na_tables
-    for (auto& c : T->m_na)
-        if (!T->build_na_tables(c)) return decline("non-finite non-analytic table");
-    return T;
-}
-
-// 2-D tables of the non-analytic terms.  chi_NA depends on (tau, delta) only, not on x, so instead of fitting it on
-// every piece at every assemble() (~10^2 us near tau = 1), it is tabulated once: per distinct D, the smooth part
-// g_D = chi / exp(-D (tau-1)^2) -- the Gaussian in tau is steep (D ~ 300-800) and is multiplied back exactly -- as
-// degree-NQ x NQ Lobatto interpolants on tau-cells x the delta-pieces.  The tau-cells cover the band where the terms are
-// not negligible and are graded toward tau = 1, like the pieces toward delta = 1.  A cell keeps its table only if its
-// error, measured on the 16 x 16 grid between the nodes, is negligible against the table tolerance; elsewhere -- where
-// the valley Delta ~ 0 along tau - 1 = A |delta - 1|^(1/beta) crosses the cell, which happens for tau > 1 only --
-// assemble() fits at the actual tau as before.
-bool Tables::build_na_tables(NAComp& c) const {
-    const int P = n_pieces();
-    const std::size_t nk = c.terms.size(), R = m_na_dtau.size();
-    const double negligible = 1e-3 * m_opt.tol;
-    for (const auto& tm : c.terms) {
-        auto it = std::find(c.Dg.begin(), c.Dg.end(), tm.D);
-        if (it == c.Dg.end()) {
-            c.Dg.push_back(tm.D);
-            c.gterms.emplace_back();
-            it = c.Dg.end() - 1;
-        }
-        NonAnalyticTerm g = tm;
-        g.D = 0;
-        c.gterms[static_cast<std::size_t>(it - c.Dg.begin())].push_back(g);
-    }
-    const std::size_t NGd = c.Dg.size();
-    // the bound assemble() applies: rung at or above |1 - tau|, Gaussian factor at |1 - tau|
-    auto bound_at = [&](int p, double dt_rung, double dt_exp) {
-        std::size_t r = 0;
-        while (r + 1 < R && m_na_dtau[r] < dt_rung)
-            ++r;
-        double b = 0;
-        for (std::size_t k = 0; k < nk; ++k)
-            b += c.K[(p * nk + k) * R + r] * std::exp(-c.terms[k].D * dt_exp * dt_exp);
-        return b;
-    };
-    // band half-width: the largest |1 - tau| (on a geometric grid) where that bound is not negligible on some piece
-    const double dtau_max = m_na_dtau.back();
-    double w = 0;
-    for (int it = 0; it < 1000 && w == 0; ++it) {  // dt = dtau_max 0.97^it, down to ~1e-13 dtau_max
-        const double dt = dtau_max * std::pow(0.97, it);
-        for (int p = 0; p < P && w == 0; ++p)
-            if (!(bound_at(p, dt, dt) < negligible)) w = std::min(dtau_max, dt / 0.97);
-    }
-    if (w == 0) return true;  // negligible everywhere: no tables, assemble() always skips
-    const double tlo = std::max({m_opt.tau_min, 1 - w, 1e-9}), thi = std::min(m_opt.tau_max, 1 + w);
-    if (!(thi > tlo)) return true;
-    std::vector<double> e = {tlo, thi, 1.0};
-    for (int k = 1; k <= NA_TABLE_TAU_LEVELS; ++k) {
-        e.push_back(1 - w * std::ldexp(1.0, -k));
-        e.push_back(1 + w * std::ldexp(1.0, -k));
-    }
-    for (double v : e)
-        if (v >= tlo && v <= thi) c.tau_edges.push_back(v);
-    std::sort(c.tau_edges.begin(), c.tau_edges.end());
-    c.tau_edges.erase(std::unique(c.tau_edges.begin(), c.tau_edges.end()), c.tau_edges.end());
-    const int Q = static_cast<int>(c.tau_edges.size()) - 1;
-    c.cell.assign(static_cast<std::size_t>(Q) * P, -2);
-    c.cell_err.assign(static_cast<std::size_t>(Q) * P, 0.0);
-    c.cell_parts.assign(static_cast<std::size_t>(Q) * P, 0.0);
-    const auto& ul = lobatto_points();
-    const auto& um = lobatto_midpoints();
-    const auto& M = lobatto_matrix<NQ>();
-    constexpr int N1 = NQ + 1;
-    std::vector<double> tab(NGd * N1 * N1);
-    for (int qc = 0; qc < Q; ++qc) {
-        const double tl = c.tau_edges[qc], th = c.tau_edges[qc + 1];
-        const double dtmin = (tl <= 1 && th >= 1) ? 0.0 : std::min(std::abs(tl - 1), std::abs(th - 1));
-        const double dtmax = std::max(std::abs(tl - 1), std::abs(th - 1));
+    // where each piece sits in its fluid's 2-D table: the cell, and the re-expansion onto the piece when it is only part
+    // of the cell (the pieces' edges include the cells' edges, so a piece never straddles two cells)
+    for (auto& c : T->m_na) {
+        if (!c.table) continue;
+        constexpr int N1 = NQ + 1;
+        const auto& de = c.table->delta_edges;
+        const auto& ul = lobatto_points();
+        const auto& Ml = lobatto_matrix<NQ>();
+        c.table_cell.assign(P, -1);
+        c.table_identity.assign(P, 0);
+        c.table_reexpand.assign(static_cast<std::size_t>(P) * N1 * N1, 0.0);
         for (int p = 0; p < P; ++p) {
-            if (bound_at(p, dtmax, dtmin) < negligible) continue;  // -2: assemble()'s own bound skips every tau here
-            const double dl = m_edges[p], dh = m_edges[p + 1];
-            double err = 0, parts = 0;
-            bool finite = true;
-            for (std::size_t gi = 0; gi < NGd; ++gi) {
-                const double emax = std::exp(-c.Dg[gi] * dtmin * dtmin);  // largest Gaussian factor on the cell
-                double F[N1][N1], G[N1][N1];
-                for (int i = 0; i < N1; ++i)
-                    for (int j = 0; j < N1; ++j) {
-                        const auto v = eval_nonanalytic(c.gterms[gi], tl + (th - tl) * (ul[i] + 1) / 2, dl + (dh - dl) * (ul[j] + 1) / 2);
-                        F[i][j] = v.chi;
-                        finite = finite && std::isfinite(v.chi) && std::isfinite(v.parts);
-                        parts = std::max(parts, emax * v.parts);
-                    }
-                for (int i = 0; i < N1; ++i)  // delta direction
-                    for (int k = 0; k < N1; ++k) {
-                        double sum = 0;
-                        for (int j = 0; j < N1; ++j)
-                            sum += M[k][j] * F[i][j];
-                        G[i][k] = sum;
-                    }
-                double* C = &tab[gi * N1 * N1];
-                for (int m = 0; m < N1; ++m)  // tau direction
-                    for (int k = 0; k < N1; ++k) {
-                        double sum = 0;
-                        for (int i = 0; i < N1; ++i)
-                            sum += M[m][i] * G[i][k];
-                        C[m * N1 + k] = sum;
-                    }
-                double eg = 0;
-                for (double ut : um)
-                    for (double ud : um) {
-                        CoeffsQ dc{};
-                        for (int k = 0; k < N1; ++k) {
-                            CoeffsQ tc{};
-                            for (int m = 0; m < N1; ++m)
-                                tc[m] = C[m * N1 + k];
-                            dc[k] = ChebyshevBernstein::clenshaw<NQ>(tc, ut);
-                        }
-                        const auto v = eval_nonanalytic(c.gterms[gi], tl + (th - tl) * (ut + 1) / 2, dl + (dh - dl) * (ud + 1) / 2);
-                        const double d = std::abs(ChebyshevBernstein::clenshaw<NQ>(dc, ud) - v.chi);
-                        finite = finite && std::isfinite(d) && std::isfinite(v.parts);
-                        eg = std::max(eg, d);
-                        parts = std::max(parts, emax * v.parts);
-                    }
-                err += emax * eg;
+            const double lo = T->m_edges[p], hi = T->m_edges[p + 1];
+            const int pd = static_cast<int>(std::upper_bound(de.begin(), de.end(), lo) - de.begin()) - 1;
+            if (pd < 0 || pd + 1 >= static_cast<int>(de.size()) || hi > de[pd + 1]) continue;  // outside the table
+            c.table_cell[p] = pd;
+            if (lo == de[pd] && hi == de[pd + 1]) {
+                c.table_identity[p] = 1;
+                continue;
             }
-            if (!finite) return false;
-            const std::size_t at = static_cast<std::size_t>(qc) * P + p;
-            c.cell_err[at] = err;
-            c.cell_parts[at] = parts;
-            if (10 * err <= negligible) {
-                c.cell[at] = static_cast<int>(c.coef.size() / (NGd * N1 * N1));
-                c.coef.insert(c.coef.end(), tab.begin(), tab.end());
-            } else {
-                c.cell[at] = -1;
+            // piece coefficients = M (V cell coefficients), V[j][k] = T_k(cell coordinate of the piece's Lobatto node j)
+            double V[N1][N1];
+            for (int j = 0; j < N1; ++j) {
+                const double x = lo + (hi - lo) * (ul[j] + 1) / 2, uc = 2 * (x - de[pd]) / (de[pd + 1] - de[pd]) - 1;
+                V[j][0] = 1;
+                V[j][1] = uc;
+                for (int k = 2; k < N1; ++k)
+                    V[j][k] = 2 * uc * V[j][k - 1] - V[j][k - 2];
             }
+            double* Rp = &c.table_reexpand[static_cast<std::size_t>(p) * N1 * N1];
+            for (int a = 0; a < N1; ++a)
+                for (int k = 0; k < N1; ++k) {
+                    double sum = 0;
+                    for (int j = 0; j < N1; ++j)
+                        sum += Ml[a][j] * V[j][k];
+                    Rp[a * N1 + k] = sum;
+                }
         }
     }
-    return true;
+    return T;
 }
 
 // The regrouped model must reproduce the backend's alphar and delta d(alphar)/d(delta): every pure component, and the
@@ -782,7 +893,8 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
     std::vector<NATau> nat(m_na.size());
     for (std::size_t ci = 0; ci < m_na.size(); ++ci) {
         const NAComp& c = m_na[ci];
-        const auto& te = c.tau_edges;
+        if (!c.table) continue;
+        const auto& te = c.table->tau_edges;
         if (te.size() < 2 || tau < te.front() || tau > te.back()) continue;
         int qc = static_cast<int>(std::upper_bound(te.begin(), te.end(), tau) - te.begin()) - 1;
         qc = std::min(std::max(qc, 0), static_cast<int>(te.size()) - 2);
@@ -793,7 +905,7 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
         nt.Tm[1] = ut;
         for (int m = 2; m <= NQ; ++m)
             nt.Tm[m] = 2 * ut * nt.Tm[m - 1] - nt.Tm[m - 2];
-        for (double Dv : c.Dg)
+        for (double Dv : c.table->Dg)
             nt.ef.push_back(std::exp(-Dv * (tau - 1) * (tau - 1)));
     }
     S.na_table = 0;
@@ -831,21 +943,32 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                 fiterr += bound;
                 continue;
             }
-            if (nt.q >= 0) {  // from the 2-D table, if this cell has one
-                const std::size_t at = static_cast<std::size_t>(nt.q) * P + p;
-                const int idx = c.cell[at];
+            if (nt.q >= 0 && c.table_cell[p] >= 0) {  // from the 2-D table, if this cell has one
+                const NATable& tb = *c.table;
+                const std::size_t at = static_cast<std::size_t>(nt.q) * tb.n_delta() + c.table_cell[p];
+                const int idx = tb.cell[at];
                 if (idx >= 0) {
                     constexpr int N1 = NQ + 1;
-                    const std::size_t NGd = c.Dg.size();
-                    const double* C = &c.coef[static_cast<std::size_t>(idx) * NGd * N1 * N1];
-                    CoeffsQ cf{};
+                    const std::size_t NGd = tb.Dg.size();
+                    const double* C = &tb.coef[static_cast<std::size_t>(idx) * NGd * N1 * N1];
+                    CoeffsQ cc{};  // on the cell
                     for (std::size_t gi = 0; gi < NGd; ++gi) {
                         const double fac = xi * nt.ef[gi];
                         const double* Cg = C + gi * N1 * N1;
                         for (int m = 0; m < N1; ++m) {
                             const double tm = fac * nt.Tm[m];
                             for (int k = 0; k < N1; ++k)
-                                cf[k] += tm * Cg[m * N1 + k];
+                                cc[k] += tm * Cg[m * N1 + k];
+                        }
+                    }
+                    CoeffsQ cf = cc;  // on the piece
+                    if (!c.table_identity[p]) {
+                        const double* Rp = &c.table_reexpand[static_cast<std::size_t>(p) * N1 * N1];
+                        for (int a = 0; a < N1; ++a) {
+                            double sum = 0;
+                            for (int k = 0; k < N1; ++k)
+                                sum += Rp[a * N1 + k] * cc[k];
+                            cf[a] = sum;
                         }
                     }
                     double s1 = 0;
@@ -853,8 +976,10 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                         q[k] += cf[k];
                         s1 += std::abs(cf[k]);
                     }
-                    scale += s1 + std::abs(xi) * c.cell_parts[at];
-                    fiterr += 10 * std::abs(xi) * c.cell_err[at];
+                    // the cell's error and roundoff scale bound the piece (part of the cell); re-expansion roundoff
+                    // is covered by the scale term
+                    scale += s1 + std::abs(xi) * tb.cell_parts[at];
+                    fiterr += 10 * std::abs(xi) * tb.cell_err[at];
                     ++S.na_table;
                     continue;
                 }
@@ -947,6 +1072,10 @@ void Tables::true_G(const State& S, double D, double t, double& G, double& dG, d
     G = D * Z - t;
     dG = Z + D * dZ;
     scale = D * (1 + a) + std::abs(t);
+}
+
+const void* Tables::nonanalytic_table(std::size_t k) const {
+    return k < m_na.size() ? m_na[k].table.get() : nullptr;
 }
 
 double Tables::alphar(const State& S, double D) const {

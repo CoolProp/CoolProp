@@ -23,12 +23,14 @@
  *    ChebyshevBernstein::real_roots, using the margin as the sign tolerance.
  *
  * The non-analytic critical-region terms of IAPWS-95 and Span-Wagner type, n Delta^b delta psi, do not factor.  They
- * depend on (tau, delta) only, though, so per component they are tabulated at build as 2-D Chebyshev tables on
- * tau-cells x the delta-pieces (the steep Gaussian exp(-D (tau-1)^2) factored out and multiplied back exactly), and
- * assemble() contracts the table at its tau.  Per piece, in order:
+ * depend on (tau, delta) only, though -- not on the mixture -- so each fluid's terms are tabulated once per process
+ * as 2-D Chebyshev tables on a (tau, delta) grid of their own (the steep Gaussian exp(-D (tau-1)^2) factored out and
+ * multiplied back exactly), shared by every Tables whose components include that fluid; a mixture's pieces include the
+ * tables' delta-cell edges, and assemble() contracts the table at its tau (re-expanded onto the piece where the piece
+ * is part of a cell).  Per piece, in order:
  *  - a rigorous bound on their size (NonAnalyticTerm::bound_factor) shows them negligible: left out, the bound into
  *    the margin;
- *  - the cell's table, kept at build only where its measured error is negligible: contracted, error into the margin;
+ *  - the cell's table, kept only where its measured error is negligible: contracted, its error into the margin;
  *  - otherwise (where Delta ~ 0 along tau - 1 = A |delta - 1|^(1/beta) crosses the cell, a few pieces for tau > 1):
  *    fit at the actual tau by degree-NQ Lobatto interpolation with a measured error.
  * The pieces have an edge at delta = 1, where these terms are not analytic, and are graded geometrically toward it
@@ -46,7 +48,8 @@
  * allowance is empirical; neither is proven.
  *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
- * function, no pointers into the backend that built it), so it may be shared across threads and across backends
+ * function, no pointers into the backend that built it; the shared non-analytic tables are immutable and held by
+ * shared_ptr, from a mutex-guarded cache), so it may be shared across threads and across backends
  * with the SAME model.  It is a snapshot: interaction parameters changed on the backend afterwards (F_ij, the
  * reducing function, departure terms) or a change of NORMALIZE_GAS_CONSTANTS / R_U_CODATA are not seen; a cache of
  * tables must be keyed on (or invalidated by) them.
@@ -115,6 +118,9 @@ struct NonAnalyticTerm
     /// range the bound is derived for (beta in (0, 1], b >= 1/2, 2 a b >= 1, a >= 1/2, A, C >= 0, B > 0).
     [[nodiscard]] double bound_factor(double lo, double hi, double dtau_max) const;
 };
+
+/// 2-D tables of the non-analytic terms of one fluid, shared process-wide (see get_nonanalytic_table)
+struct NATable;
 
 /// Sum of non-analytic terms at (tau, delta), evaluated as ResidualHelmholtzNonAnalytic does (same expressions and the
 /// same offset away from tau = 1 and delta = 1)
@@ -190,6 +196,8 @@ class Tables
     [[nodiscard]] std::size_t n_components() const {
         return static_cast<std::size_t>(m_N);
     }
+    /// Identity of the shared 2-D table of the k-th component with non-analytic terms (for tests: shared, not rebuilt)
+    [[nodiscard]] const void* nonanalytic_table(std::size_t k) const;
     [[nodiscard]] bool has_nonanalytic() const {
         return !m_na.empty();
     }
@@ -200,8 +208,6 @@ class Tables
    private:
     Tables() = default;
     [[nodiscard]] std::string verify(HelmholtzEOSMixtureBackend& HEOS) const;
-    struct NAComp;
-    [[nodiscard]] bool build_na_tables(NAComp& c) const;
 
     BuildOptions m_opt;
     int m_N = 0;
@@ -215,17 +221,13 @@ class Tables
     std::vector<double> m_Cp;     ///< roundoff scale of evaluating chi_g on the piece (see Term::parts)
     struct NAComp
     {
-        int i = 0;                           ///< component
-        std::vector<NonAnalyticTerm> terms;  ///< owned copy of its non-analytic terms
-        std::vector<double> K;               ///< bound factor of term k on piece p, rung r: [(p * terms.size() + k) * rungs + r]
-        // 2-D tables of chi_NA(tau, delta) / exp(-D (tau-1)^2) per distinct D, on tau-cells x the delta-pieces (see build)
-        std::vector<double> Dg;                            ///< the distinct D
-        std::vector<std::vector<NonAnalyticTerm>> gterms;  ///< the terms with each D, with D set to 0
-        std::vector<double> tau_edges;                     ///< tau-cells (empty: no tables)
-        std::vector<int> cell;                             ///< [q * P + p]: index of the stored table, -1: fit at assemble, -2: negligible
-        std::vector<double> cell_err;                      ///< [q * P + p]: measured error of the table in chi (incl. max exp factor)
-        std::vector<double> cell_parts;                    ///< [q * P + p]: roundoff scale of chi on the cell
-        std::vector<double> coef;                          ///< stored tables, each Dg.size() x (NQ+1) x (NQ+1): [g][m (tau)][k (delta)]
+        int i = 0;                             ///< component
+        std::vector<NonAnalyticTerm> terms;    ///< owned copy of its non-analytic terms
+        std::vector<double> K;                 ///< bound factor of term k on piece p, rung r: [(p * terms.size() + k) * rungs + r]
+        std::shared_ptr<const NATable> table;  ///< the fluid's 2-D tables, shared process-wide (null: none needed)
+        std::vector<int> table_cell;           ///< [p]: the table's delta-cell containing piece p, -1: none
+        std::vector<char> table_identity;      ///< [p]: piece p is that whole cell
+        std::vector<double> table_reexpand;    ///< [p]: (NQ+1)^2 matrix from cell to piece coefficients (if not identity)
     };
     std::vector<NAComp> m_na;
     std::vector<double> m_na_dtau;            ///< the |1 - tau| ladder of the bounds (increasing; last = max over the tau range)

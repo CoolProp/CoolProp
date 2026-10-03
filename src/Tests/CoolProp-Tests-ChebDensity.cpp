@@ -485,7 +485,8 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
             REQUIRE(tab->assemble(Tc / 1.01, {1.0}, S));
             CHECK(S.na_table > 0);
             CHECK(S.na_fits > 0);
-            CHECK(S.na_fits < S.na_table);               // a few (2 today); the exact count depends on rounding near the acceptance
+            CHECK(S.na_fits < S.na_table);
+            CHECK(S.na_fits <= 8);                       // a few (2 today); the exact count depends on rounding near the acceptance
             REQUIRE(tab->assemble(Tc / 3.0, {1.0}, S));  // tau = 3: exp(-D (tau-1)^2) is negligible
             CHECK(S.na_fits == 0);
             CHECK(S.na_table == 0);
@@ -529,6 +530,41 @@ TEST_CASE("ChebDensity: tables outlive the backend that built them", "[cheb_dens
         tab->true_G(S, D, 0, G, dG, sc);
         CHECK(G == ref_G[k++]);  // same object, same inputs: bit-identical
     }
+}
+
+TEST_CASE("ChebDensity: non-analytic tables are shared across mixtures", "[cheb_density]") {
+    // the 2-D tables depend only on a fluid's non-analytic terms and the tolerance: built once per process, shared
+    auto make = [](const std::string& f, const std::vector<double>& x, double tol) {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", f));
+        AS->set_mole_fractions(x);
+        CD::BuildOptions o;
+        o.tau_min = 0.3;
+        o.tau_max = 3.4;
+        o.tol = tol;
+        auto t = CD::Tables::build(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get()), o);
+        REQUIRE(t != nullptr);
+        return t;
+    };
+    const auto co2w = make("CarbonDioxide&Water", {0.9, 0.1}, 1e-6);                      // non-analytic: CO2 (0), water (1)
+    const auto air = make("Nitrogen&Oxygen&Argon&Water", {0.77, 0.2, 0.01, 0.02}, 1e-6);  // water (0)
+    const auto co2 = make("CarbonDioxide", {1.0}, 1e-6);
+    REQUIRE(co2w->nonanalytic_table(0) != nullptr);
+    REQUIRE(co2w->nonanalytic_table(1) != nullptr);
+    CHECK(co2w->nonanalytic_table(0) != co2w->nonanalytic_table(1));
+    CHECK(air->nonanalytic_table(0) == co2w->nonanalytic_table(1));  // water's
+    CHECK(co2->nonanalytic_table(0) == co2w->nonanalytic_table(0));  // CO2's
+    CHECK(air->nonanalytic_table(1) == nullptr);
+    // a different tolerance is a different table
+    const auto co2_loose = make("CarbonDioxide", {1.0}, 1e-4);
+    CHECK(co2_loose->nonanalytic_table(0) != co2->nonanalytic_table(0));
+    // and the shared table gives the same answer in each: CO2 at the same (T, x) through both
+    CD::Tables::State S1, S2;
+    REQUIRE(co2->assemble(300.0, {1.0}, S1));
+    REQUIRE(co2w->assemble(300.0, {1.0, 0.0}, S2));
+    double G1, G2, dG, sc;
+    co2->true_G(S1, 1.2, 0, G1, dG, sc);
+    co2w->true_G(S2, 1.2, 0, G2, dG, sc);
+    CHECK(std::abs(G1 - G2) <= 1e-12 * sc);
 }
 
 #endif
