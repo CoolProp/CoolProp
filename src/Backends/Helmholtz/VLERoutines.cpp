@@ -2269,6 +2269,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     _near_pure = false;
     _guard_replaced = false;
     _feed_guard_replaced = false;
+    _flash_first = false;
     bool any_uncertain = false;  // a trial's minimize_tpd was non-conclusive (step/density fail, max-iter)
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
@@ -2297,11 +2298,12 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 
     // Build two trial compositions from Wilson K-factors ([Michelsen1982a] Eq. 28):
     //   K_i = (Pc_i/P) * exp(5.373*(1+omega_i)*(1-Tc_i/T))
-    std::vector<CoolPropDbl> yV(N), xL(N);
+    std::vector<CoolPropDbl> yV(N), xL(N), K_wilson(N);
     std::size_t imin = 0, imax = 0;  // least / most volatile present components (Wilson K)
     CoolPropDbl Kmin = HUGE_VAL, Kmax = 0, g0 = 0, g1 = 0;
     for (std::size_t i = 0; i < N; ++i) {
         double Ki = std::exp(SaturationSolvers::Wilson_lnK_factor(HEOS, the_T, the_p, i));
+        K_wilson[i] = Ki;
         yV[i] = z[i] * Ki;
         xL[i] = z[i] / Ki;
         if (z[i] > 0 && ValidNumber(Ki) && Ki > 0) {
@@ -2315,6 +2317,80 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             }
             g0 += z[i] * (Ki - 1.0);        // Rachford-Rice residual at beta = 0
             g1 += z[i] * (1.0 - 1.0 / Ki);  // Rachford-Rice residual at beta = 1
+        }
+    }
+
+    // --- Flash first: a few successive-substitution steps of the two-phase flash before the trial search ---
+    // [Michelsen1982b]; Gernert, Jaeger & Span, FPE 375 (2014) Sec. 3.1, steps 1-3; ThermoPack's
+    // twoPhaseTPflash.  When the ideal (Wilson) estimate brackets a two-phase root, iterate the split
+    // itself: solve Rachford-Rice, evaluate the liquid on SatL (liquid imposed) and the vapor on SatV
+    // (gas imposed) with the guarded density solves, and update K from the fugacity-coefficient ratio.
+    // If, after these steps, the split lowers the Gibbs energy -- dG/nRT = (1-beta) tpd(x) + beta tpd(y)
+    // < 0 -- or either phase alone has a negative tangent plane distance, the feed is proven unstable
+    // (a negative tpd at ANY composition is sufficient), and the split itself is a much better start
+    // for the phase-split solver than a trial phase against the feed.  Otherwise the trial search
+    // below runs exactly as before.
+    if (g0 > 0 && g1 < 0 && Kmin < HUGE_VAL) {
+        constexpr int n_flash_first_steps = 3;
+        constexpr double ff_tol = 1e-7;
+        constexpr double ff_max_jump = 1.5;  // same branch window as the phase-split solver
+        std::vector<CoolPropDbl> K = K_wilson, xs(N), ys(N), lnphiL(N), lnphiV(N);
+        CoolPropDbl rhoL = -1, rhoV = -1, beta_ss = -1;
+        bool ff_guard = false, ok = true;
+        for (int step = 0; step < n_flash_first_steps && ok; ++step) {
+            CoolPropDbl rg0 = 0, rg1 = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                if (!(z[i] > 0)) continue;
+                if (!ValidNumber(K[i]) || !(K[i] > 0)) {
+                    ok = false;
+                    break;
+                }
+                rg0 += z[i] * (K[i] - 1.0);
+                rg1 += z[i] * (1.0 - 1.0 / K[i]);
+            }
+            if (!ok || !(rg0 > 0 && rg1 < 0)) {
+                ok = false;  // the split's K-factors no longer bracket a two-phase root: leave it to the trials
+                break;
+            }
+            beta_ss = rachford_rice_beta_bisect(z, K);
+            SaturationSolvers::x_and_y_from_K(beta_ss, K, z, xs, ys);
+            normalize_vector(xs);
+            normalize_vector(ys);
+            try {
+                HEOS.SatL->set_mole_fractions(xs);
+                solve_trial_rho_warm(*HEOS.SatL, the_T, the_p, rhoL, true, &ff_guard, ff_max_jump);
+                HEOS.SatV->set_mole_fractions(ys);
+                solve_trial_rho_warm(*HEOS.SatV, the_T, the_p, rhoV, true, &ff_guard, ff_max_jump);
+                for (std::size_t i = 0; i < N; ++i) {
+                    lnphiL[i] = std::log(HEOS.SatL->fugacity_coefficient(i));
+                    lnphiV[i] = std::log(HEOS.SatV->fugacity_coefficient(i));
+                    K[i] = std::exp(lnphiL[i] - lnphiV[i]);
+                }
+            } catch (const CoolProp::CoolPropBaseError&) {
+                ok = false;  // a phase density could not be solved: no verdict from the flash
+            }
+        }
+        if (ok && beta_ss > 0 && beta_ss < 1) {
+            // Tangent plane distances of the current split phases (at the compositions the fugacity
+            // coefficients above were evaluated at) against the feed, and the Gibbs energy change.
+            CoolPropDbl tpdL = 0, tpdV = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                if (!(z[i] > 0)) continue;
+                if (xs[i] > 0) tpdL += xs[i] * (std::log(xs[i]) + lnphiL[i] - ln_f_z[i]);
+                if (ys[i] > 0) tpdV += ys[i] * (std::log(ys[i]) + lnphiV[i] - ln_f_z[i]);
+            }
+            const CoolPropDbl dG = (1.0 - beta_ss) * tpdL + beta_ss * tpdV;
+            if (ValidNumber(dG) && ValidNumber(tpdL) && ValidNumber(tpdV) && (dG < -ff_tol || tpdL < -ff_tol || tpdV < -ff_tol)) {
+                _stable = false;
+                _flash_first = true;
+                _guard_replaced = _feed_guard_replaced || ff_guard;
+                this->x.assign(xs.begin(), xs.end());
+                this->y.assign(ys.begin(), ys.end());
+                rhomolar_liq = rhoL;
+                rhomolar_vap = rhoV;
+                beta = beta_ss;
+                return;
+            }
         }
     }
 

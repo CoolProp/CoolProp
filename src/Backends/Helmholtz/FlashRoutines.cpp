@@ -274,7 +274,13 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             if (!wilson_seeded) {
                 stability_tester.get_liq(o.x, o.rhomolar_liq);
                 stability_tester.get_vap(o.y, o.rhomolar_vap);
-                if (stability_tester.unstable_by_near_pure_trial()) {
+                if (stability_tester.unstable_by_flash_first()) {
+                    // The flash-first SS found the split: start the solver from the split itself (phases,
+                    // vapor fraction and both density roots) instead of a trial phase against the feed.
+                    o.beta = stability_tester.get_beta();
+                    o.rho_warm_liq_seed = o.rhomolar_liq;
+                    o.rho_warm_vap_seed = o.rhomolar_vap;
+                } else if (stability_tester.unstable_by_near_pure_trial()) {
                     // A near-pure trial found the split: start the solver's density solves from the trial's
                     // and the feed's roots rather than a cold global search, which can throw for a
                     // near-pure supercritical vapor (H2 at 300 K over n-decane).

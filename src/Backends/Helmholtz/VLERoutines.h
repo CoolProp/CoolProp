@@ -737,6 +737,7 @@ class StabilityEvaluationClass
     bool _guard_replaced;        ///< the instability (if any) relied on a root the #3448 guard replaced (feed or that trial)
     bool _feed_guard_replaced;   ///< the guard replaced the feed's density root in this test
     bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
+    bool _flash_first;           ///< the instability was found by the flash-first successive substitution
     bool debug;
     bool use_michelsen;
 
@@ -758,6 +759,7 @@ class StabilityEvaluationClass
         _guard_replaced(false),
         _feed_guard_replaced(false),
         _trial_guard_replaced(false),
+        _flash_first(false),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -841,6 +843,15 @@ class StabilityEvaluationClass
     /// density root the guard replaced -- the feed's, or one of the trial that found the instability
     /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
     /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
+    /// True when the instability was found by the flash-first successive substitution (before the trial
+    /// search): get_liq / get_vap then return the split phases, with their densities, and get_beta() the
+    /// split's vapor fraction -- a better start for the phase-split solver than a trial phase.
+    bool unstable_by_flash_first() const {
+        return !_stable && _flash_first;
+    }
+    double get_beta() const {
+        return beta;
+    }
     bool unstable_beyond_baseline() const {
         return !_stable && (_near_pure || _guard_replaced);
     }
