@@ -648,9 +648,10 @@ struct PTflash_twophase_options
      *  evaluate", and fall back to single-phase only in the former case. */
     bool nonconvergence;
     /** Optional warm-start densities for the solver's first liquid / vapor density solves (<= 0:
-     *  cold start through the global solver, the default).  Set from the stability test when a
-     *  near-pure trial found the instability: the global density search can throw for a near-pure
-     *  supercritical vapor (H2 at 300 K) that the stability trial already solved from ideal gas. */
+     *  cold start through the global solver, the default).  PT_flash_mixtures sets them from the
+     *  densities the stability test recorded (trial and feed roots, or the flash-first split): the cold
+     *  global search can throw for an ordinary single-root phase, e.g. a near-pure supercritical vapor
+     *  (H2 at 300 K) or humid air at 360-400 K ("One stationary point"). */
     CoolPropDbl rho_warm_liq_seed, rho_warm_vap_seed;
     PTflash_twophase_options()
       : Nstep_max(30),

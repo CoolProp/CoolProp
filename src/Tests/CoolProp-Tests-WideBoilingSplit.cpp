@@ -383,7 +383,7 @@ TEST_CASE("Wide-boiling split: PT flash leaves the SatL / SatV imposed phases un
         AS->set_mole_fractions(N2MIX_Z);
         // On the reference platform (Linux, GCC) this flash throws inside the stability test's feed-density
         // fallback, the path that used to leak; elsewhere it may not throw, in which case this section only
-        // checks the normal path (the ScopedImposedPhase test above covers the unwinding contract directly).
+        // checks the normal path (the ScopedImposedPhase test below covers the unwinding contract directly).
         flash_ignoring_errors(*AS, N2MIX_THROWER.T, N2MIX_THROWER.p);
         check_sub_backend_phases(as_heos(*AS));
         for (const auto& s : N2MIX_SPLITS) {
