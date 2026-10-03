@@ -1,5 +1,5 @@
 # Hide nlohmann/valijson symbols, and Boost.CharConv's (compiled in by
-# src/expression/boost_charconv.cpp), from a shared product's dynamic export table at
+# src/boost_charconv.cpp), from a shared product's dynamic export table at
 # LINK time (replaces the compile-time visibility pragma; see CoolProp-xa8w.6).
 # ELF: --version-script hide-list; Mach-O: -unexported_symbols_list. MSVC: no-op
 # (exports are opt-in via src/CoolPropLib.def).

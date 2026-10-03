@@ -8,8 +8,9 @@
 
 #    include <catch2/catch_all.hpp>
 
+#    include "LocaleGuard.h"
+
 #    include <chrono>
-#    include <clocale>
 #    include <cmath>
 #    include <cstdlib>
 #    include <cstddef>
@@ -104,46 +105,6 @@ TEST_CASE("DSL scientific-notation evaluates; pow two-arg; trig", "[expression]"
     CHECK(compile("1e3 + 1", {}, {}).evaluate({}) == Catch::Approx(1001.0));
     CHECK(compile("pow(2, 10)", {}, {}).evaluate({}) == Catch::Approx(1024.0));
     CHECK(compile("sqrt(2)^2", {}, {}).evaluate({}) == Catch::Approx(2.0));
-}
-
-// Switches LC_NUMERIC for the lifetime of the guard and restores the previous
-// setting on scope exit, including when a REQUIRE throws.  `active()` is false
-// when the host has no such locale installed; callers SKIP in that case.
-class NumericLocaleGuard
-{
-    static std::string current() {
-        const char* cur = std::setlocale(LC_NUMERIC, nullptr);
-        return (cur != nullptr) ? cur : "C";
-    }
-    // Declaration order matters: saved_ is captured before active_ switches.
-    std::string saved_;
-    bool active_;
-
-   public:
-    explicit NumericLocaleGuard(const char* name) : saved_(current()), active_(std::setlocale(LC_NUMERIC, name) != nullptr) {}
-    ~NumericLocaleGuard() {
-        (void)std::setlocale(LC_NUMERIC, saved_.c_str());
-    }
-    NumericLocaleGuard(const NumericLocaleGuard&) = delete;
-    NumericLocaleGuard& operator=(const NumericLocaleGuard&) = delete;
-    NumericLocaleGuard(NumericLocaleGuard&&) = delete;
-    NumericLocaleGuard& operator=(NumericLocaleGuard&&) = delete;
-    [[nodiscard]] bool active() const {
-        return active_;
-    }
-};
-
-// CI installs de_DE.UTF-8 and sets COOLPROP_REQUIRE_LOCALE_TESTS=1, so a missing
-// locale there is a failure, not a silent SKIP that would let a regression through.
-// Catch2's SKIP/FAIL/REQUIRE throw, so they end the calling test from here too.
-static void require_decimal_comma_locale(const NumericLocaleGuard& guard) {
-    if (!guard.active()) {
-        if (std::getenv("COOLPROP_REQUIRE_LOCALE_TESTS") != nullptr) {
-            FAIL("de_DE.UTF-8 locale required (COOLPROP_REQUIRE_LOCALE_TESTS) but absent");
-        }
-        SKIP("de_DE.UTF-8 locale not installed");
-    }
-    REQUIRE(std::localeconv()->decimal_point[0] == ',');
 }
 
 // A host program (Python, EES, Mathcad, ...) that calls setlocale() with a
