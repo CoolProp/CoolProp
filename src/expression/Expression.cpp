@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <system_error>
 #include <functional>
 #include <algorithm>
 #include <map>
@@ -15,6 +16,14 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+// Boost.CharConv's floating-point from_chars is compiled into CoolProp by
+// src/expression/boost_charconv.cpp, so suppress MSVC's auto-link to a
+// separately built boost_charconv library.
+#ifndef BOOST_CHARCONV_NO_LIB
+#    define BOOST_CHARCONV_NO_LIB
+#endif
+#include <boost/charconv/from_chars.hpp>
 
 namespace CoolProp {
 namespace expression {
@@ -427,13 +436,21 @@ std::vector<Token> lex(const std::string& s) {
             continue;
         }
         if (std::isdigit(static_cast<unsigned char>(c)) != 0 || c == '.') {
-            const char* start = s.c_str() + i;
-            char* end = nullptr;
-            double v = std::strtod(start, &end);
-            if (end == start) throw ValueError(format("malformed number at col %d", (int)col(i)));
-            Token tk{TokenType::Number, v, "", col(i)};
-            i += static_cast<std::size_t>(end - start);
-            out.push_back(tk);
+            // from_chars, unlike strtod, ignores the C locale: a host that calls
+            // setlocale(LC_NUMERIC, "de_DE") would otherwise make strtod stop at the
+            // '.', and fluid files would fail to load.  It accepts
+            //     digits [ '.' digits ] [ (e|E) [+|-] digits ]
+            // and stops before an exponent marker with no digits ("2e" is 2 then the
+            // identifier e) or a hex prefix ("0x10" is 0 then the identifier x10).
+            double v = 0.0;
+            const char* const first = s.data() + i;
+            const boost::charconv::from_chars_result r = boost::charconv::from_chars(first, s.data() + n, v);
+            if (r.ec == std::errc::result_out_of_range) {
+                throw ValueError(format("number '%s' at col %d is out of range for a double", std::string(first, r.ptr).c_str(), (int)col(i)));
+            }
+            if (r.ec != std::errc()) throw ValueError(format("malformed number at col %d", (int)col(i)));
+            out.push_back({TokenType::Number, v, "", col(i)});
+            i += static_cast<std::size_t>(r.ptr - first);
             continue;
         }
         if (std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_') {

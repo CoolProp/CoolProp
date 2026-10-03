@@ -90,6 +90,12 @@ jobs:
         # -j$(nproc): every other build job already parallelises; the ASan job
         # historically did not, leaving the compile serial on the multi-vCPU runner.
         run: cmake --build build --config Asan -j$(nproc)
+      # The [locale] tests load fluids under a decimal-comma LC_NUMERIC; the runner
+      # image ships no such locale, and without it those tests would SKIP green.
+      - name: Generate de_DE.UTF-8 locale for the [locale] tests
+        run: |
+          sudo locale-gen de_DE.UTF-8
+          locale -a | grep -qi '^de_DE\.utf-\?8$'
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
         # (CoolProp-xuu).  With REFPROP present — which CI builds — the 6
@@ -202,6 +208,7 @@ jobs:
           set +e
           timeout --signal=INT --kill-after=60 "$budget" \
             env ASAN_OPTIONS=detect_odr_violation=1 \
+                COOLPROP_REQUIRE_LOCALE_TESTS=1 \
                 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
                 ./CatchTestRunner "~[slow]" --benchmark-samples 1
           rc=$?
