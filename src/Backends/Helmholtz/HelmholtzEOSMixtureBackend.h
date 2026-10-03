@@ -145,6 +145,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return get_backend_string(HEOS_BACKEND_MIX);
     }
     shared_ptr<ReducingFunction> Reducing;
+    /// n*d(rho_r)/dn_i and n*d(T_r)/dn_i for every component, computed once per (reducing function and
+    /// its version, x_N flag, composition) and shared by every MixtureDerivatives call on this state.
+    /// Each entry was recomputed from scratch at ~20 call sites -- for the GERG-type reducing function
+    /// O(N^3) per entry (rho_r(x) re-evaluated inside the sum), so O(N^4) per fugacity vector.  The
+    /// entries come from ReducingFunction::nd*dni__constnj itself, so results are unchanged bit for bit.
+    struct ReducingNDerivs
+    {
+        const ReducingFunction* red = nullptr;
+        std::size_t version = 0;
+        int flag = -1;
+        std::vector<CoolPropDbl> x, ndrhor, ndTr;
+    };
+    ReducingNDerivs reducing_nderivs[2];
+    const ReducingNDerivs& get_reducing_nderivs(x_N_dependency_flag xN_flag);
     shared_ptr<ResidualHelmholtz> residual_helmholtz;
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;

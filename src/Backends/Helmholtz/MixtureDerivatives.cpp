@@ -231,8 +231,8 @@ CoolPropDbl MixtureDerivatives::ndpdV__constT_n(HelmholtzEOSMixtureBackend& HEOS
 CoolPropDbl MixtureDerivatives::ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
     // Eqn 7.64 and 7.63
     CoolPropDbl R_u = HEOS.gas_constant();
-    double ndrhorbar_dni__constnj = HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag);
-    double ndTr_dni__constnj = HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double ndrhorbar_dni__constnj = ndrhorbardni__constnj(HEOS, i, xN_flag);
+    double ndTr_dni__constnj = ndTrdni__constnj(HEOS, i, xN_flag);
     double summer = 0;
     std::size_t kmax = HEOS.mole_fractions.size();
     if (xN_flag == XN_DEPENDENT) {
@@ -250,9 +250,8 @@ CoolPropDbl MixtureDerivatives::ndpdni__constT_V_nj(HelmholtzEOSMixtureBackend& 
 }
 
 CoolPropDbl MixtureDerivatives::ndalphar_dni__constT_V_nj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    double term1 = HEOS._delta.pt() * HEOS.dalphar_dDelta()
-                   * (1 - 1 / HEOS._reducing.rhomolar * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
-    double term2 = HEOS._tau.pt() * HEOS.dalphar_dTau() * (1 / HEOS._reducing.T) * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double term1 = HEOS._delta.pt() * HEOS.dalphar_dDelta() * (1 - 1 / HEOS._reducing.rhomolar * ndrhorbardni__constnj(HEOS, i, xN_flag));
+    double term2 = HEOS._tau.pt() * HEOS.dalphar_dTau() * (1 / HEOS._reducing.T) * ndTrdni__constnj(HEOS, i, xN_flag);
 
     double s = 0;
     std::size_t kmax = HEOS.mole_fractions.size();
@@ -272,18 +271,17 @@ CoolPropDbl MixtureDerivatives::ndln_fugacity_coefficient_dnj__constT_p(Helmholt
            - partial_molar_volume(HEOS, j, xN_flag) / (R_u * HEOS._T) * ndpdni__constT_V_nj(HEOS, i, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::nddeltadni__constT_V_nj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    return HEOS._delta.pt() - HEOS._delta.pt() / HEOS._reducing.rhomolar * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag);
+    return HEOS._delta.pt() - HEOS._delta.pt() / HEOS._reducing.rhomolar * ndrhorbardni__constnj(HEOS, i, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::d_nddeltadni_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    return 1 - 1 / HEOS._reducing.rhomolar * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag);
+    return 1 - 1 / HEOS._reducing.rhomolar * ndrhorbardni__constnj(HEOS, i, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::d_nddeltadni_dxj__constdelta_tau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                                                  x_N_dependency_flag xN_flag) {
     double rhor = HEOS._reducing.rhomolar;
     return -HEOS.delta() / rhor
            * (HEOS.Reducing->d_ndrhorbardni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)
-              - 1 / rhor * HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, j, xN_flag)
-                  * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+              - 1 / rhor * HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, j, xN_flag) * ndrhorbardni__constnj(HEOS, i, xN_flag));
 }
 CoolPropDbl MixtureDerivatives::d2_nddeltadni_dxj_dDelta__consttau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                                                    x_N_dependency_flag xN_flag) {
@@ -291,19 +289,18 @@ CoolPropDbl MixtureDerivatives::d2_nddeltadni_dxj_dDelta__consttau(HelmholtzEOSM
 }
 
 CoolPropDbl MixtureDerivatives::ndtaudni__constT_V_nj(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    return HEOS._tau.pt() / HEOS._reducing.T * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    return HEOS._tau.pt() / HEOS._reducing.T * ndTrdni__constnj(HEOS, i, xN_flag);
 }
 
 CoolPropDbl MixtureDerivatives::d_ndtaudni_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
-    return 1 / HEOS._reducing.T * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    return 1 / HEOS._reducing.T * ndTrdni__constnj(HEOS, i, xN_flag);
 }
 CoolPropDbl MixtureDerivatives::d_ndtaudni_dxj__constdelta_tau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                                                x_N_dependency_flag xN_flag) {
     double Tr = HEOS._reducing.T;
     return HEOS.tau() / Tr
            * (HEOS.Reducing->d_ndTrdni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)
-              - 1 / Tr * HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag)
-                  * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag));
+              - 1 / Tr * HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag) * ndTrdni__constnj(HEOS, i, xN_flag));
 }
 CoolPropDbl MixtureDerivatives::d2_ndtaudni_dxj_dTau__constdelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                                                  x_N_dependency_flag xN_flag) {
@@ -312,17 +309,16 @@ CoolPropDbl MixtureDerivatives::d2_ndtaudni_dxj_dTau__constdelta(HelmholtzEOSMix
 CoolPropDbl MixtureDerivatives::d_ndalphardni_dxj__constdelta_tau_xi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                                                      x_N_dependency_flag xN_flag) {
     double line1 = HEOS._delta.pt() * HEOS.residual_helmholtz->d2alphar_dxi_dDelta(HEOS, j, xN_flag)
-                   * (1 - 1 / HEOS._reducing.rhomolar * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
-    double line3 = HEOS._tau.pt() * HEOS.residual_helmholtz->d2alphar_dxi_dTau(HEOS, j, xN_flag) * (1 / HEOS._reducing.T)
-                   * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+                   * (1 - 1 / HEOS._reducing.rhomolar * ndrhorbardni__constnj(HEOS, i, xN_flag));
+    double line3 =
+      HEOS._tau.pt() * HEOS.residual_helmholtz->d2alphar_dxi_dTau(HEOS, j, xN_flag) * (1 / HEOS._reducing.T) * ndTrdni__constnj(HEOS, i, xN_flag);
     double line2 = -HEOS._delta.pt() * HEOS.dalphar_dDelta() * (1 / HEOS._reducing.rhomolar)
                    * (HEOS.Reducing->d_ndrhorbardni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)
                       - 1 / HEOS._reducing.rhomolar * HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, j, xN_flag)
-                          * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+                          * ndrhorbardni__constnj(HEOS, i, xN_flag));
     double line4 = HEOS._tau.pt() * HEOS.dalphar_dTau() * (1 / HEOS._reducing.T)
                    * (HEOS.Reducing->d_ndTrdni_dxj__constxi(HEOS.mole_fractions, i, j, xN_flag)
-                      - 1 / HEOS._reducing.T * HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag)
-                          * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag));
+                      - 1 / HEOS._reducing.T * HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag) * ndTrdni__constnj(HEOS, i, xN_flag));
 
     double s = 0;
     std::size_t kmax = HEOS.mole_fractions.size();
@@ -501,11 +497,10 @@ CoolPropDbl MixtureDerivatives::d2_nd_ndalphardni_dnj_dxk_dDelta__consttau(Helmh
 CoolPropDbl MixtureDerivatives::d_ndalphardni_dDelta(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
     // The first line
     double term1 = (HEOS._delta.pt() * HEOS.d2alphar_dDelta2() + HEOS.dalphar_dDelta())
-                   * (1 - 1 / HEOS._reducing.rhomolar * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+                   * (1 - 1 / HEOS._reducing.rhomolar * ndrhorbardni__constnj(HEOS, i, xN_flag));
 
     // The second line
-    double term2 =
-      HEOS._tau.pt() * HEOS.d2alphar_dDelta_dTau() * (1 / HEOS._reducing.T) * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double term2 = HEOS._tau.pt() * HEOS.d2alphar_dDelta_dTau() * (1 / HEOS._reducing.T) * ndTrdni__constnj(HEOS, i, xN_flag);
 
     // The third line
     double term3 = HEOS.residual_helmholtz->d2alphar_dxi_dDelta(HEOS, i, xN_flag);
@@ -723,12 +718,10 @@ CoolPropDbl MixtureDerivatives::d3_ndalphardni_dxj_dDelta_dTau__constxi(Helmholt
 
 CoolPropDbl MixtureDerivatives::d_ndalphardni_dTau(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
     // The first line
-    double term1 = HEOS._delta.pt() * HEOS.d2alphar_dDelta_dTau()
-                   * (1 - 1 / HEOS._reducing.rhomolar * HEOS.Reducing->ndrhorbardni__constnj(HEOS.mole_fractions, i, xN_flag));
+    double term1 = HEOS._delta.pt() * HEOS.d2alphar_dDelta_dTau() * (1 - 1 / HEOS._reducing.rhomolar * ndrhorbardni__constnj(HEOS, i, xN_flag));
 
     // The second line
-    double term2 = (HEOS._tau.pt() * HEOS.d2alphar_dTau2() + HEOS.dalphar_dTau()) * (1 / HEOS._reducing.T)
-                   * HEOS.Reducing->ndTrdni__constnj(HEOS.mole_fractions, i, xN_flag);
+    double term2 = (HEOS._tau.pt() * HEOS.d2alphar_dTau2() + HEOS.dalphar_dTau()) * (1 / HEOS._reducing.T) * ndTrdni__constnj(HEOS, i, xN_flag);
 
     // The third line
     double term3 = HEOS.residual_helmholtz->d2alphar_dxi_dTau(HEOS, i, xN_flag);
