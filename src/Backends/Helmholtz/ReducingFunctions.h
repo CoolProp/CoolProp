@@ -35,6 +35,10 @@ class ReducingFunction
     std::size_t N;
 
    public:
+    /// Bumped by every parameter setter.  Caches of reducing-function values (e.g. the per-backend
+    /// composition derivatives in HelmholtzEOSMixtureBackend::get_reducing_nderivs) key on it, because
+    /// linked states share this object and a setter changes it in place.
+    std::size_t version = 0;
     ReducingFunction() : N(0) {};
     virtual ~ReducingFunction() = default;
 
@@ -185,6 +189,7 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /// Set all beta and gamma values in one shot
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, double betaT, double gammaT, double betaV, double gammaV) {
+        ++version;
         // bound-check indices
         if (i >= N) {
             if (j >= N) {
@@ -207,6 +212,7 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /// Set a parameter
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) override {
+        ++version;
         // bound-check indices
         if (i >= N) {
             if (j >= N) {
@@ -556,6 +562,7 @@ class ConstantReducingFunction : public ReducingFunction
     };
 
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) override {
+        ++version;
         return;
     }
     double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) const override {
