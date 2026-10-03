@@ -216,7 +216,7 @@ Dictionary& PCSAFTLibraryClass::find_binary_pair(const std::string& CAS1, const 
     return it->second[0];
 }
 
-double PCSAFTLibraryClass::get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& key) {
+double PCSAFTLibraryClass::get_binary_interaction_number(const std::string& CAS1, const std::string& CAS2, const std::string& key) {
     Dictionary& pair = find_binary_pair(CAS1, CAS2);
     if (key == "kij" && pair.has_number("kij")) {
         return pair.get_double("kij");
@@ -230,7 +230,7 @@ double PCSAFTLibraryClass::get_binary_interaction_double(const std::string& CAS1
 
 std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& key) {
     if (key == "kij" || key == "kijT") {
-        return format("%0.16g", get_binary_interaction_double(CAS1, CAS2, key));
+        return format("%0.16g", get_binary_interaction_number(CAS1, CAS2, key));
     }
     Dictionary& pair = find_binary_pair(CAS1, CAS2);
     if (key == "name1" || key == "name2" || key == "BibTeX") {

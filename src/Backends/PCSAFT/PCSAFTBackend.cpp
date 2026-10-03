@@ -97,8 +97,8 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
                     // Read as doubles: the text form went through atof, which follows the C
                     // locale, so a decimal-comma host read kij = 0.0123 as 0.
                     auto& library = PCSAFTLibrary::get_library();
-                    k_ij[i * N + j] = library.get_binary_interaction_double(components[i].getCAS(), components[j].getCAS(), "kij");
-                    k_ijT[i * N + j] = library.get_binary_interaction_double(components[i].getCAS(), components[j].getCAS(), "kijT");
+                    k_ij[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kij");
+                    k_ijT[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kijT");
                 }
             }
         }
@@ -162,8 +162,8 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
                     // Read as doubles: the text form went through atof, which follows the C
                     // locale, so a decimal-comma host read kij = 0.0123 as 0.
                     auto& library = PCSAFTLibrary::get_library();
-                    k_ij[i * N + j] = library.get_binary_interaction_double(components[i].getCAS(), components[j].getCAS(), "kij");
-                    k_ijT[i * N + j] = library.get_binary_interaction_double(components[i].getCAS(), components[j].getCAS(), "kijT");
+                    k_ij[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kij");
+                    k_ijT[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kijT");
                 }
             }
         }

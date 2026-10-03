@@ -185,27 +185,29 @@ TEST_CASE("PC-SAFT binary interaction parameters ignore the C locale", "[locale]
     auto& library = CoolProp::PCSAFTLibrary::get_library();
     const std::string CAS_methane = "74-82-8", CAS_benzene = "71-43-2", CAS_water = "7732-18-5", CAS_K = "24203-36-9";
     const std::string mix = "PCSAFT::METHANE[0.0252]&BENZENE[0.9748]";
+    // Pin the reference to the published value (Lin et al., J. Chem. Eng. Data 24 (1979) 146), which needs
+    // kij = 0.037, so a locale leaked from another test can't make both sides wrong together.
     const double p_ref = CoolProp::PropsSI("P", "T", 421.05, "Q", 0, mix);
-    REQUIRE(std::isfinite(p_ref));
+    REQUIRE(std::abs(p_ref / 1816840.45112607 - 1) < 1e-3);
 
     double p_de = 0.0;
     {
         NumericLocaleGuard guard("de_DE.UTF-8");
         require_decimal_comma_locale(guard);
-        CHECK(library.get_binary_interaction_double(CAS_methane, CAS_benzene, "kij") == 0.037);
-        CHECK(library.get_binary_interaction_double(CAS_benzene, CAS_methane, "kij") == 0.037);  // either CAS order
-        CHECK(library.get_binary_interaction_double(CAS_methane, CAS_benzene, "kijT") == 0.0);   // absent means 0
-        CHECK(library.get_binary_interaction_double(CAS_water, CAS_K, "kijT") == -0.004012);
+        CHECK(library.get_binary_interaction_number(CAS_methane, CAS_benzene, "kij") == 0.037);
+        CHECK(library.get_binary_interaction_number(CAS_benzene, CAS_methane, "kij") == 0.037);  // either CAS order
+        CHECK(library.get_binary_interaction_number(CAS_methane, CAS_benzene, "kijT") == 0.0);   // absent means 0
+        CHECK(library.get_binary_interaction_number(CAS_water, CAS_K, "kijT") == -0.004012);
         p_de = CoolProp::PropsSI("P", "T", 421.05, "Q", 0, mix);
+        // The public text API is unchanged and writes '.' under any locale
+        CHECK(CoolProp::get_mixture_binary_pair_pcsaft(CAS_methane, CAS_benzene, "kij") == "0.037");
     }
     CHECK(p_de == p_ref);
 
-    // The public text API is unchanged
-    CHECK(CoolProp::get_mixture_binary_pair_pcsaft(CAS_methane, CAS_benzene, "kij") == "0.037");
     CHECK(CoolProp::get_mixture_binary_pair_pcsaft(CAS_methane, CAS_benzene, "kijT") == "0");
     CHECK(CoolProp::get_mixture_binary_pair_pcsaft(CAS_methane, CAS_benzene, "name1") == "BENZENE");  // pairs are stored sorted by CAS
-    CHECK_THROWS_AS(library.get_binary_interaction_double(CAS_methane, CAS_benzene, "name1"), CoolProp::ValueError);
-    CHECK_THROWS_AS(library.get_binary_interaction_double(CAS_methane, "0-00-0", "kij"), CoolProp::ValueError);
+    CHECK_THROWS_AS(library.get_binary_interaction_number(CAS_methane, CAS_benzene, "name1"), CoolProp::ValueError);
+    CHECK_THROWS_AS(library.get_binary_interaction_number(CAS_methane, "0-00-0", "kij"), CoolProp::ValueError);
     CHECK_THROWS_AS(CoolProp::get_mixture_binary_pair_pcsaft(CAS_methane, CAS_benzene, "nonsense"), CoolProp::ValueError);
 }
 
