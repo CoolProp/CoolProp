@@ -402,19 +402,17 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     // CO2), and the solver started there may collapse onto the feed.  Retry once the way the
                     // flash worked before flash-first: rerun the trial search and start the solver from its
                     // trial phase.  If that retry also fails, or the trial search finds no instability, the
-                    // handling below applies (in the latter case to the flash-first split and verdict).
+                    // handling below applies (in the latter case to the flash-first split, softly).
                     bool retried_ok = false;
-                    // The flash-first verdict already PROVED instability.  Keep its split and its guard verdict:
-                    // if the trial search below finds no instability, the handling further down must still treat
-                    // the state as unstable, recovering from this split (deliberately, not from whatever the
-                    // tester happens to hold) and gating on the flash-first verdict.
-                    bool use_flash_first_split = false, flash_first_beyond_baseline = false;
+                    // The flash-first verdict already PROVED instability.  Keep its split: if the trial search
+                    // below finds no instability, the handling further down recovers from this split
+                    // (deliberately, not from whatever the tester happens to hold).
+                    bool use_flash_first_split = false;
                     std::vector<double> ff_x, ff_y;
                     double ff_rhoL = -1, ff_rhoV = -1;
                     if (stability_tester.unstable_by_flash_first()) {
                         stability_tester.get_liq(ff_x, ff_rhoL);
                         stability_tester.get_vap(ff_y, ff_rhoV);
-                        flash_first_beyond_baseline = stability_tester.unstable_beyond_baseline();
                         stability_tester.set_flash_first_enabled(false);
                         if (stability_tester.is_stable()) {
                             use_flash_first_split = true;
@@ -443,9 +441,11 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         // non-converged split -- recover or fall back to single phase -- rather than throw where
                         // the flash used to answer.  Only the feed's root or that of the trial which found the
                         // instability counts as guard-dependent; any other split-solver failure still throws.
-                        // o.nonconvergence is that of the last solve attempted (the retry when one ran).
-                        const bool beyond_baseline =
-                          use_flash_first_split ? flash_first_beyond_baseline : stability_tester.unstable_beyond_baseline();
+                        // A flash-first instability the trial search cannot reproduce is EXTRA as well: without
+                        // flash-first the flash would have answered single phase here, so recover or fall back
+                        // rather than throw.  o.nonconvergence is that of the last solve attempted (the retry
+                        // when one ran).
+                        const bool beyond_baseline = use_flash_first_split || stability_tester.unstable_beyond_baseline();
                         if (!o.nonconvergence && !beyond_baseline) {
                             throw;
                         }
