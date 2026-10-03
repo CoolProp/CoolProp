@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -274,10 +275,13 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
         for (std::size_t k = 0; k < T->m_terms.size(); ++k) {
             const Term& tm = T->m_terms[k];
             double km = 0;
+            bool finite = true;
             for (int s = 0; s <= 400; ++s) {
-                const double tau = tlo + (opt.tau_max - tlo) * s / 400.0;
-                km = std::max(km, std::abs(tm.kappa(tau, std::log(tau))));
+                const double tau = tlo + (opt.tau_max - tlo) * s / 400.0, v = std::abs(tm.kappa(tau, std::log(tau)));
+                finite = finite && std::isfinite(v);  // separately: std::max would drop a NaN
+                km = std::max(km, v);
             }
+            if (!finite) return decline("tau-dependence not finite on [tau_min, tau_max]");
             gmax[T->m_group[k]] += km * (tm.j < 0 ? 1.0 : std::abs(T->m_F[tm.i][tm.j]));
         }
         for (double v : gmax)
@@ -289,11 +293,13 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
     // chi = delta^d e^{-delta^l} (d - l delta^l)) while the rounding error of its evaluation does not.
     auto parts_max = [](const Term& rep, double lo, double hi) {
         double m = 0;
+        bool finite = true;
         for (int j = 0; j <= NQ; ++j) {
             const double v = rep.parts(lo + (hi - lo) * (std::cos(PI * (j + 0.5) / (NQ + 1)) + 1) / 2);
-            if (std::isnan(m) || !(v <= m)) m = v;  // latches a NaN (a later finite v must not overwrite it)
+            finite = finite && std::isfinite(v);
+            m = std::max(m, v);
         }
-        return m;
+        return finite ? m : std::numeric_limits<double>::quiet_NaN();  // any non-finite value -> NaN, checked by the caller
     };
 
     // Adaptive pieces shared by all groups.  The allowed fit error of a weighted group is tol in units of Z, relaxed

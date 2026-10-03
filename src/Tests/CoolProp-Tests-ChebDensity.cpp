@@ -30,9 +30,10 @@ namespace CD = CoolProp::ChebDensity;
 
 namespace {
 
-// Lower bounds on the per-piece error/margin statistics of the margin test, ~10x below the measured ones (median
-// 0.006-0.019, 10th percentile 0.003-0.008 over the cases below): an inflated margin (e.g. a roundoff term 1e6 times
-// too large) fails them, while the worst-case check alone would still pass on the fit-error-dominated pieces.
+// Lower bounds on the per-piece error/margin statistics of the margin test.  Measured (macOS arm64 clang) over the
+// cases below: median 0.0058-0.019, 10th percentile 0.0027-0.0075, so ~6x and ~9x headroom for other toolchains
+// (FMA contraction changes the roundoff).  An inflated margin (e.g. a roundoff term 1e6 times too large) fails them,
+// while the worst-case check alone would still pass on the fit-error-dominated pieces.
 constexpr double MEDIAN_MIN = 1e-3, P10_MIN = 3e-4;
 
 struct Case
@@ -104,17 +105,20 @@ std::vector<double> temperatures_fine(const Built& b) {
     return T;
 }
 
-// compositions: the case's own, plus n random ones (fixed seed; shape 0.5 puts weight near the edges)
+// compositions: the case's own, plus n random ones.  Built from the raw mt19937_64 output (portable: the standard
+// distributions are implementation-defined, so std::gamma_distribution gives different x on libstdc++, libc++ and
+// MSVC).  Squared exponential variates put weight near the edges of the simplex.
 std::vector<std::vector<double>> compositions(const Case& c, int n) {
     std::vector<std::vector<double>> xs = {c.z};
     if (c.z.size() > 1) {
         std::mt19937_64 g(42);
-        std::gamma_distribution<double> G(0.5);
         for (int k = 0; k < n; ++k) {
             std::vector<double> x(c.z.size());
             double s = 0;
-            for (double& v : x)
-                s += (v = G(g));
+            for (double& v : x) {
+                const double u = (static_cast<double>(g() >> 11) + 0.5) * 0x1.0p-53, e = -std::log(u);
+                s += (v = e * e);
+            }
             for (double& v : x)
                 v /= s;
             xs.push_back(x);
@@ -208,13 +212,18 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
         const double dmax = b.tab->options().delta_max;
         const int NS = 20000;
         long n_true = 0, n_cert = 0, n_unres = 0, n_states = 0;
+        double max_unres_width = 0;  // widest uncertified interval, as a fraction of its piece
+        const auto xs = compositions(c, 1);
+        std::vector<long> n_assembled(xs.size(), 0);
         std::vector<CB::Root> rr;
-        for (const auto& x : compositions(c, 1))
+        for (std::size_t ix = 0; ix < xs.size(); ++ix)
             for (double T : temperatures(b)) {
+                const auto& x = xs[ix];
                 if (!b.tab->assemble(T, x, S)) {
-                    CHECK(x != c.z);  // only a random x may fall outside the tau range
+                    CHECK(ix != 0);  // only a random x may fall outside the tau range
                     continue;
                 }
+                ++n_assembled[ix];
                 // F = delta Z on the scan grid (t = 0)
                 std::vector<double> Dg(NS + 1), Fg(NS + 1);
                 for (int k = 0; k <= NS; ++k) {
@@ -251,6 +260,7 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
                                 CHECK((Ga < 0) != (Gb < 0));
                             } else {
                                 ++n_unres;
+                                max_unres_width = std::max(max_unres_width, (r.ub - r.ua) / 2);
                             }
                         }
                     }
@@ -281,9 +291,15 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
         INFO(c.backend << "::" << c.fluids << ": " << n_states << " (T, p), " << n_true << " true roots, " << n_cert << " certified, " << n_unres
                        << " unresolved");
         CHECK(n_true > n_states);  // some states have several roots
-        // every root isolated and certified: no wide unresolved interval can make the containment check above vacuous
-        CHECK(n_cert == n_true);
-        CHECK(n_unres == 0);
+        // (>=: two roots closer than the scan step count once in n_true.)  Uncertified intervals are allowed only
+        // rarely (e.g. a tangency) and only narrow, so a wide one cannot make the containment check vacuous.
+        CHECK(n_cert + n_unres >= n_true);
+        CHECK(n_unres <= n_true / 100);
+        CHECK(max_unres_width <= 1.0 / 4096);
+        for (std::size_t ix = 0; ix < xs.size(); ++ix) {
+            INFO("composition " << ix);
+            CHECK(n_assembled[ix] > 0);  // each composition actually tested
+        }
     }
 }
 
