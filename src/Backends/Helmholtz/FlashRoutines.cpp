@@ -351,7 +351,9 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         if (o.x[i] < 1e-12 || o.y[i] < 1e-12) continue;  // trace in one phase
                         CoolPropDbl lnfL = std::log(o.x[i]) + std::log(HEOS.SatL->fugacity_coefficient(i));
                         CoolPropDbl lnfV = std::log(o.y[i]) + std::log(HEOS.SatV->fugacity_coefficient(i));
-                        fug_resid = std::max(fug_resid, std::abs(lnfV - lnfL));
+                        const CoolPropDbl d = std::abs(lnfV - lnfL);
+                        if (!ValidNumber(d)) return false;  // std::max would silently drop a NaN term
+                        fug_resid = std::max(fug_resid, d);
                     }
                     return ValidNumber(fug_resid) && fug_resid <= tol;
                 } catch (const CoolProp::CoolPropBaseError&) {
@@ -440,21 +442,22 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         // phase density solve" for Amarillo natural gas at ~180 K, 5-10 MPa), treat it like a
                         // non-converged split -- recover or fall back to single phase -- rather than throw where
                         // the flash used to answer.  Only the feed's root or that of the trial which found the
-                        // instability counts as guard-dependent; any other split-solver failure still throws.
-                        // A flash-first instability the trial search cannot reproduce is EXTRA as well: without
-                        // flash-first the flash would have answered single phase here, so recover or fall back
-                        // rather than throw.  o.nonconvergence is that of the last solve attempted (the retry
-                        // when one ran).
+                        // instability counts as guard-dependent; any other split-solver failure still throws,
+                        // except on the path below.  A flash-first instability the trial search cannot reproduce
+                        // is EXTRA whatever the failure: without flash-first the flash would have answered single
+                        // phase here, so recover or fall back rather than throw.  o.nonconvergence is that of the
+                        // last solve attempted (the retry when one ran).
                         const bool beyond_baseline = use_flash_first_split || stability_tester.unstable_beyond_baseline();
                         if (!o.nonconvergence && !beyond_baseline) {
                             throw;
                         }
                         // Recovery, paid only by a flash whose split failed the gate: the stability test
-                        // PROVED instability (tm < 0), but the second-order solver started from its trial
-                        // collapsed to the trivial root or stalled -- seen for a near-pure water liquid out of
-                        // CO2 (CO2/H2O 99/1 at 272.7 K, 6.1 MPa: converged to x == y).  Refine the stability
-                        // trial by successive substitution and publish it only if it verifies, at the same
-                        // recovery tolerance as the Wilson-seeded path; otherwise single phase, as before.
+                        // PROVED instability (tm < 0), but the second-order solver started from its trial (or from
+                        // the flash-first split, which is then what gets refined) collapsed to the trivial root or
+                        // stalled -- seen for a near-pure water liquid out of CO2 (CO2/H2O 99/1 at 272.7 K, 6.1 MPa:
+                        // converged to x == y).  Refine the stability trial by successive substitution and publish
+                        // it only if it verifies, at the same recovery tolerance as the Wilson-seeded path;
+                        // otherwise single phase, as before.
                         do_twophase = false;
                         try {
                             std::vector<CoolPropDbl> xr, yr;
