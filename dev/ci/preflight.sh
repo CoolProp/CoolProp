@@ -210,8 +210,8 @@ ensure_build_dir() {
 
 # keep_existing: drop (loudly) any listed path that is not on disk.  The lists
 # below come from ONE diff of the merge-base against the working tree, whose
-# --diff-filter=ACMR already excludes deletions, so this should never fire; it
-# stays as a guard.  It was added when the lists were a union of the range diff
+# --diff-filter=ACM already excludes deletions, so it rarely fires -- a dangling
+# symlink that was added is one case it still catches.  It was added when the lists were a union of the range diff
 # and the working-tree diff, where a file added in a commit and then deleted in
 # the working tree survived the union.  Deleting a workflow file used to break the actionlint gate exactly that
 # way: actionlint was handed a path that no longer existed and refused to run,
@@ -291,10 +291,26 @@ ALL_PATHS="$(printf '%s\n' "$ALL_PATHS" | sort -u | grep -v '^$' || true)"
 # which left a branch made entirely of shell, CMake and YAML (a packaging or
 # CI change, exactly the shape that breaks quietly) reporting
 # "0 passed / 0 failed" and gating nothing.
-CHANGED_SH="$(git_diff --name-only --diff-filter=ACM "$MERGE_BASE" -- '*.sh' '*.bash' \
-               | sort -u | grep -v '^$' | keep_existing || true)"
-CHANGED_WORKFLOWS="$(git_diff --name-only --diff-filter=ACM "$MERGE_BASE" -- '.github/workflows/*.yml' '.github/workflows/*.yaml' \
-                      | sort -u | grep -v '^$' | keep_existing || true)"
+#
+# Two steps, as for ALL_CPP: the git_diff runs on its own line so a git failure
+# aborts under set -e.  Inside one `... | keep_existing || true` pipeline,
+# pipefail handed git's status to the `|| true`, which turned it into an empty
+# list -- and both gates then skipped green on "no files in diff".  The `|| true`
+# on the second line is only for grep, which exits 1 on an empty list.
+CHANGED_SH="$(git_diff --name-only --diff-filter=ACM "$MERGE_BASE" -- '*.sh' '*.bash')"
+CHANGED_SH="$(printf '%s\n' "$CHANGED_SH" | sort -u | grep -v '^$' | keep_existing || true)"
+CHANGED_WORKFLOWS="$(git_diff --name-only --diff-filter=ACM "$MERGE_BASE" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')"
+CHANGED_WORKFLOWS="$(printf '%s\n' "$CHANGED_WORKFLOWS" | sort -u | grep -v '^$' | keep_existing || true)"
+# As arrays for passing to the tools, like ALL_CPP_ARR: expanding the strings
+# unquoted would split a path containing a space.
+CHANGED_SH_ARR=()
+while IFS= read -r _f; do
+    [ -n "$_f" ] && CHANGED_SH_ARR+=("$_f")
+done <<< "$CHANGED_SH"
+CHANGED_WORKFLOWS_ARR=()
+while IFS= read -r _f; do
+    [ -n "$_f" ] && CHANGED_WORKFLOWS_ARR+=("$_f")
+done <<< "$CHANGED_WORKFLOWS"
 
 # Added/modified line ranges of the C-family files, one "path<TAB>first<TAB>last"
 # per hunk, with line numbers in the working-tree file -- what cppcheck and
@@ -957,12 +973,10 @@ elif [ -z "$CHANGED_SH" ]; then
 elif ! command -v uvx >/dev/null 2>&1; then
     skip "shellcheck" "uvx not on PATH"
 else
-    # Unquoted on purpose, as with $ALL_CPP above: the file list has to split.
-    # shellcheck disable=SC2086
-    if ! uvx --from shellcheck-py shellcheck --severity=warning $CHANGED_SH \
-         > /tmp/preflight-shellcheck.log 2>&1; then
-        cat /tmp/preflight-shellcheck.log
-        fail "shellcheck (see /tmp/preflight-shellcheck.log)"
+    if ! uvx --from shellcheck-py shellcheck --severity=warning "${CHANGED_SH_ARR[@]}" \
+         > "$PF_LOGDIR/shellcheck.log" 2>&1; then
+        cat "$PF_LOGDIR/shellcheck.log"
+        fail "shellcheck (see $PF_LOGDIR/shellcheck.log)"
     else
         ok "shellcheck ($(printf '%s\n' "$CHANGED_SH" | wc -l | tr -d ' ') file(s))"
     fi
@@ -1005,16 +1019,15 @@ else
     # change to `--with` entry points, a platform with no shellcheck-py wheel,
     # or somebody "simplifying" the flag away.  Fail the step instead.
     if ! uvx --with shellcheck-py --from actionlint-py \
-         sh -c 'command -v shellcheck' > /tmp/preflight-actionlint-probe.log 2>&1; then
-        cat /tmp/preflight-actionlint-probe.log
+         sh -c 'command -v shellcheck' > "$PF_LOGDIR/actionlint-probe.log" 2>&1; then
+        cat "$PF_LOGDIR/actionlint-probe.log"
         fail "actionlint (no shellcheck binary in the uvx environment; run: blocks would not be linted)"
     else
-        # shellcheck disable=SC2086
         if ! SHELLCHECK_OPTS="--severity=warning" \
-             uvx --with shellcheck-py --from actionlint-py actionlint $CHANGED_WORKFLOWS \
-             > /tmp/preflight-actionlint.log 2>&1; then
-            cat /tmp/preflight-actionlint.log
-            fail "actionlint (see /tmp/preflight-actionlint.log)"
+             uvx --with shellcheck-py --from actionlint-py actionlint "${CHANGED_WORKFLOWS_ARR[@]}" \
+             > "$PF_LOGDIR/actionlint.log" 2>&1; then
+            cat "$PF_LOGDIR/actionlint.log"
+            fail "actionlint (see $PF_LOGDIR/actionlint.log)"
         else
             ok "actionlint ($(printf '%s\n' "$CHANGED_WORKFLOWS" | wc -l | tr -d ' ') file(s), shell linting confirmed active)"
         fi
