@@ -542,7 +542,7 @@ TEST_CASE("Wide-boiling split: water drops out of compressed humid air without t
         V->specify_phase(iphase_gas);
         L->update(DmolarT_INPUTS, AS->saturated_liquid_keyed_output(iDmolar), s.T);
         V->update(DmolarT_INPUTS, AS->saturated_vapor_keyed_output(iDmolar), s.T);
-        // 1e-7: liquid water's bulk modulus amplifies a density round-off ~150x in pressure.
+        // 1e-7, not tighter: liquid water's stiffness amplifies the density solver's tolerance ~150x in pressure.
         CHECK(L->p() == Catch::Approx(s.p).epsilon(1e-7));
         CHECK(V->p() == Catch::Approx(s.p).epsilon(1e-7));
         for (std::size_t i = 0; i < z.size(); ++i) {

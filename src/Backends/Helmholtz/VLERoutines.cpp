@@ -3456,9 +3456,10 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
 
                 bool eval_ok = false;
                 try {
-                    // Guarded (mechanically stable, lowest-Gibbs) roots, as in evaluate_phases: the plain
-                    // global solver can return the unstable middle root for a water-rich liquid (#3448) and
-                    // follows SatV's imposed gas phase for a dense CO2-rich phase.
+                    // Guarded (mechanically stable, lowest-Gibbs) roots: the plain global solver can return the
+                    // unstable middle root for a water-rich liquid (#3448) and follows SatV's imposed gas phase
+                    // for a dense CO2-rich phase.  Unlike evaluate_phases there is no phase-specified fallback
+                    // here: where the global solve throws, the step is rejected and Phase 3 takes over.
                     HEOS.SatL->set_mole_fractions(x_trial);
                     CoolPropDbl rL = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, IO.T, IO.p);
                     HEOS.SatV->set_mole_fractions(y_trial);
@@ -3685,7 +3686,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // sheet -- the objective, gradient and acceptance test then live on a higher-Gibbs
             // surface and the line search stalls.  Global keeps every evaluation on the same
             // stable roots the seed was built on.  (Where the global solve throws, evaluate_phases falls back
-            // to the lower-Gibbs phase-specified root, which keeps the same lowest-Gibbs contract.)
+            // to the lower-Gibbs of the two phase-specified roots -- not necessarily the global solver's
+            // sheet, so an objective mixing both kinds of evaluation can be discontinuous there.)
             rho_warm_L = -1;
             rho_warm_V = -1;
             // The whole density + fugacity evaluation is wrapped: evaluate_phases already catches the
