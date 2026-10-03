@@ -99,7 +99,7 @@ TEST_CASE("parse_double_C ignores the C locale", "[locale]") {
     CHECK(p.value == 0.0);
     CHECK(p.length == 1);
 
-    for (const char* bad : {"", "+-1", "+", ".", "abc", " 1"}) {
+    for (const char* bad : {"", "+-1", "+", "-", "-.", ".", "abc", " 1"}) {
         INFO(bad);
         p = parse(bad);
         CHECK(p.ec == std::errc::invalid_argument);
