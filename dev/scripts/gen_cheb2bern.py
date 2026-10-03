@@ -6,6 +6,7 @@ Chebyshev polynomial T_k(u).  Entries are computed exactly in rational arithmeti
 nearest double, so the only error in a conversion b = M c is the rounding of the matrix-vector product.
 
     python3 dev/scripts/gen_cheb2bern.py > include/CoolProp/numerics/cheb2bern_tables.h
+    uvx clang-format@18.1.8 -i include/CoolProp/numerics/cheb2bern_tables.h
 """
 from fractions import Fraction as Fr
 from math import comb
