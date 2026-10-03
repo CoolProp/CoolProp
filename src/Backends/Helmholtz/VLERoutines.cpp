@@ -2217,8 +2217,8 @@ CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBac
     return r;
 }
 
-// guard_unstable_branch (stability-test callers): also reject a mechanically unstable root, warm or global;
-// see solve_rho_Tp_global_stable.  The two-phase flash callers keep the unguarded behaviour.
+// guard_unstable_branch: also reject a mechanically unstable root, warm or global (see
+// solve_rho_Tp_global_stable); used by the stability test and the phase-split solver's phase densities.
 // max_jump: the largest relative density change still accepted as the SAME branch for the warm root.
 static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, CoolPropDbl& rho_warm,
                                         bool guard_unstable_branch = false, bool* guard_replaced = nullptr, double max_jump = 2.0) {
@@ -2233,7 +2233,7 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             // so the stable root's density changes only slightly per step; a large jump
             // (the liquid and vapor branches differ by ~10x or more) signals the local
             // Newton landing on the OTHER, now-metastable branch after a spinodal crossing.
-            // (Near the critical point the two branches merge, so a sub-2x change there is
+            // (Near the critical point the two branches merge, so a change below max_jump there is
             // genuinely the same root.)
             // The local root must also be mechanically stable: a warm start on (or Newton drifting
             // onto) the unstable middle branch would otherwise be carried along the trajectory.
@@ -2273,6 +2273,12 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     _guard_replaced = false;
     _feed_guard_replaced = false;
     _flash_first = false;
+    // The recorded split densities and vapor fraction belong to the verdict of THIS call only: the flash
+    // re-runs the test on the same tester (the trial-search retry after a flash-first split failed), and
+    // exits that do not record them (the minimizer exit) must not hand back the previous call's values.
+    rhomolar_liq = -1;
+    rhomolar_vap = -1;
+    beta = -1;
     bool any_uncertain = false;  // a trial's minimize_tpd was non-conclusive (step/density fail, max-iter)
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))

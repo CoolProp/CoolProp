@@ -840,11 +840,6 @@ class StabilityEvaluationClass
     bool unstable_by_near_pure_trial() const {
         return !_stable && _near_pure;
     }
-    /// True when an instability was found that the stability test would not have reached before the
-    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or relying on a
-    /// density root the guard replaced -- the feed's, or one of the trial that found the instability
-    /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
-    /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
     /// True when the instability was found by the flash-first successive substitution (before the trial
     /// search): get_liq / get_vap then return the split phases, with their densities, and get_beta() the
     /// split's vapor fraction -- a better start for the phase-split solver than a trial phase.
@@ -855,10 +850,16 @@ class StabilityEvaluationClass
         return beta;
     }
     /// Switch the flash-first successive substitution off (or back on) for the next is_stable() call: the
-    /// flash retries the trial search when the split solver cannot follow a flash-first split.
+    /// flash retries the trial search when the split solver cannot follow a flash-first split.  The tester
+    /// is constructed per flash, so the setting does not outlive that flash.
     void set_flash_first_enabled(bool enabled) {
         _flash_first_enabled = enabled;
     }
+    /// True when an instability was found that the stability test would not have reached before the
+    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or relying on a
+    /// density root the guard replaced -- the feed's, or one of the trial that found the instability
+    /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
+    /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
     bool unstable_beyond_baseline() const {
         return !_stable && (_near_pure || _guard_replaced);
     }

@@ -401,15 +401,27 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     // split can still be far from equilibrium (CO2/H2O at 253 K, 1.5 MPa: a "liquid" with 20 %
                     // CO2), and the solver started there may collapse onto the feed.  Retry once the way the
                     // flash worked before flash-first: rerun the trial search and start the solver from its
-                    // trial phase.  If that retry also fails (or the trial search finds no instability), the
-                    // handling below applies to it unchanged.
+                    // trial phase.  If that retry also fails, or the trial search finds no instability, the
+                    // handling below applies (in the latter case to the flash-first split and verdict).
                     bool retried_ok = false;
+                    // The flash-first verdict already PROVED instability.  Keep its split and its guard verdict:
+                    // if the trial search below finds no instability, the handling further down must still treat
+                    // the state as unstable, recovering from this split (deliberately, not from whatever the
+                    // tester happens to hold) and gating on the flash-first verdict.
+                    bool use_flash_first_split = false, flash_first_beyond_baseline = false;
+                    std::vector<double> ff_x, ff_y;
+                    double ff_rhoL = -1, ff_rhoV = -1;
                     if (stability_tester.unstable_by_flash_first()) {
+                        stability_tester.get_liq(ff_x, ff_rhoL);
+                        stability_tester.get_vap(ff_y, ff_rhoV);
+                        flash_first_beyond_baseline = stability_tester.unstable_beyond_baseline();
                         stability_tester.set_flash_first_enabled(false);
-                        if (!stability_tester.is_stable()) {
+                        if (stability_tester.is_stable()) {
+                            use_flash_first_split = true;
+                        } else {
                             stability_tester.get_liq(o.x, o.rhomolar_liq);
                             stability_tester.get_vap(o.y, o.rhomolar_vap);
-                            o.beta = _HUGE;  // unset, as on the trial path: the solver starts from its default
+                            o.beta = 0.5;  // as on the trial path: the solver's default start
                             o.rho_warm_liq_seed = o.rho_warm_vap_seed = -1;
                             if (stability_tester.unstable_by_near_pure_trial()) {
                                 o.rho_warm_liq_seed = o.rhomolar_liq;
@@ -431,7 +443,10 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         // non-converged split -- recover or fall back to single phase -- rather than throw where
                         // the flash used to answer.  Only the feed's root or that of the trial which found the
                         // instability counts as guard-dependent; any other split-solver failure still throws.
-                        if (!o.nonconvergence && !stability_tester.unstable_beyond_baseline()) {
+                        // o.nonconvergence is that of the last solve attempted (the retry when one ran).
+                        const bool beyond_baseline =
+                          use_flash_first_split ? flash_first_beyond_baseline : stability_tester.unstable_beyond_baseline();
+                        if (!o.nonconvergence && !beyond_baseline) {
                             throw;
                         }
                         // Recovery, paid only by a flash whose split failed the gate: the stability test
@@ -444,8 +459,15 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         try {
                             std::vector<CoolPropDbl> xr, yr;
                             CoolPropDbl rL = -1, rV = -1;
-                            stability_tester.get_liq(xr, rL);
-                            stability_tester.get_vap(yr, rV);
+                            if (use_flash_first_split) {
+                                xr.assign(ff_x.begin(), ff_x.end());
+                                yr.assign(ff_y.begin(), ff_y.end());
+                                rL = ff_rhoL;
+                                rV = ff_rhoV;
+                            } else {
+                                stability_tester.get_liq(xr, rL);
+                                stability_tester.get_vap(yr, rV);
+                            }
                             // Densities: the stability trial's guarded roots when it recorded them; otherwise a
                             // guarded cold solve -- the plain global solver can return the unstable middle root
                             // for a water-rich liquid (GitHub #3448), from which the refinement diverges.
