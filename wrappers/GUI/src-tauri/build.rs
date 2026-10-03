@@ -6,7 +6,45 @@ fn main() {
     let coolprop_root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../..");
 
-    let dst = cmake::Config::new(&coolprop_root)
+    let mut cfg = cmake::Config::new(&coolprop_root);
+
+    // Pass through CPM dependency-source overrides (CPM_<Name>_SOURCE) so the
+    // CoolProp build works in network-restricted environments where the
+    // FetchContent tarball downloads are blocked and local clones are used
+    // instead. No effect when the variables are unset.
+    //
+    // Declare the whole supported set up front, not just the variables that
+    // happen to be set right now: cargo only re-runs this script for an env
+    // var it was *told* about, so a var that is currently absent would
+    // otherwise be ignored on a cached rebuild after the developer sets it.
+    // Keep in sync with the CPMAddPackage NAMEs in cmake/dependencies.cmake.
+    const CPM_PACKAGES: &[&str] = &[
+        "Catch2",
+        "Eigen",
+        "ExcelAddinInstaller",
+        "FindMathematica",
+        "IF97",
+        "REFPROP_headers",
+        "boost_headers",
+        "fmt",
+        "msgpack",
+        "multicomplex",
+        "nlohmann_json",
+        "valijson",
+    ];
+    for package in CPM_PACKAGES {
+        println!("cargo:rerun-if-env-changed=CPM_{package}_SOURCE");
+    }
+    for (key, value) in std::env::vars() {
+        if key.starts_with("CPM_") && key.ends_with("_SOURCE") {
+            // Also covers any override outside the list above; that one just
+            // does not get its own cache-invalidation hook.
+            println!("cargo:rerun-if-env-changed={key}");
+            cfg.define(&key, &value);
+        }
+    }
+
+    let dst = cfg
         .define("COOLPROP_STATIC_LIBRARY", "ON")
         .define("COOLPROP_SHARED_LIBRARY", "OFF")
         .define("BUILD_TESTING", "OFF")
