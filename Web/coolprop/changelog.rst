@@ -61,9 +61,9 @@ Highlights:
   (2019), covering 240-500 K to 2300 MPa -- including the cold high-pressure
   region where IAPWS-95 refuses below the melting line.  Reproduces the paper's
   own tabulated densities, heat capacities and sound speeds to 5e-6.
-  ``PT_INPUTS`` only, liquid only; a small cold high-pressure corner where the
-  published surface is not thermodynamically admissible is refused rather than
-  returned.
+  ``PT_INPUTS`` only, liquid only.  A cold high-pressure box
+  (p >= 1500 MPa and T <= 255 K), where the published surface is not usable,
+  is refused rather than returned.
 
 * **Relocatable CMake package.** See GitHub issue `#2144
   <https://github.com/CoolProp/CoolProp/issues/2144>`_. Static and shared

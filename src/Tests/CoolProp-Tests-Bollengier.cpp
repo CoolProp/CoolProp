@@ -30,20 +30,26 @@ constexpr double kPmaxMPa = 2300.6;
 constexpr double kTminK = 240.0;
 constexpr double kTmaxK = 500.0;
 
-// The cold high-pressure corner where the fit is not thermodynamically
-// admissible.  Measured on the committed coefficients: cv <= 0 over
-// p in [1832.8, 2300.6] MPa, T in [240.0, 249.5] K, with (dv/dP)_T >= 0
-// over a subset of that.  Reported upstream to SeaFreeze.
+// The box the backend excludes inside its published domain.  Duplicated
+// from the backend rather than imported, so a change to either side has
+// to be made deliberately on both -- and the comparisons below must stay
+// IDENTICAL to the backend's (>= on p, <= on T), or the sweep's
+// accepted == expected stops meaning anything.
 //
-// Checks stay OUT of this box, with margin.  Values from inside it are
-// not water -- asserting them would make the suite brittle against a
-// coefficient revision and would implicitly bless numbers we have told
-// the authors are wrong.  What is still checked here is the guard's
-// BEHAVIOUR (does it serve or refuse), never a property magnitude.
-constexpr double kUnstablePminMPa = 1500.0;
-constexpr double kUnstableTmaxK = 255.0;
-bool in_unstable_corner(double p_MPa, double T) {
-    return p_MPa > kUnstablePminMPa && T < kUnstableTmaxK;
+// Measured on the committed coefficients, the states the fit gets wrong
+// all lie at p >= 1526.4 MPa and T <= 251.6 K: thermodynamically
+// inadmissible (cv <= 0 or (dv/dP)_T >= 0, with a non-finite w) over
+// p in [1833.5, 2300.6] MPa and T in [240.0, 249.6] K, and admissible
+// but sub-physical over the remainder.  Reported upstream to SeaFreeze.
+// The box rounds that outward to round numbers.
+//
+// No property magnitude from inside is asserted anywhere: those values
+// are not water, and pinning them would bless numbers we have told the
+// authors are wrong.  What is pinned is WHERE the backend refuses.
+constexpr double kExcludedPminMPa = 1500.0;
+constexpr double kExcludedTmaxK = 255.0;
+bool in_excluded_box(double p_MPa, double T) {
+    return p_MPa >= kExcludedPminMPa && T <= kExcludedTmaxK;
 }
 
 std::shared_ptr<AbstractState> make() {
@@ -219,10 +225,13 @@ TEST_CASE("Bollengier backend caches nothing across updates", "[Bollengier][wate
     (void)reused->speed_sound();
     (void)reused->hmolar();
     (void)reused->cpmolar();
-    reused->update(PT_INPUTS, 2000e6, 250.0);
+    // Warm, so the second state is outside the excluded box.  Any two
+    // distinct states prove the point; this one differs from the first in
+    // both p and T, which is what the cache has to notice.
+    reused->update(PT_INPUTS, 2000e6, 400.0);
 
     auto fresh = make();
-    fresh->update(PT_INPUTS, 2000e6, 250.0);
+    fresh->update(PT_INPUTS, 2000e6, 400.0);
 
     INFO("reused w = " << reused->speed_sound() << ", fresh w = " << fresh->speed_sound());
     CHECK_THAT(reused->speed_sound(), Catch::Matchers::WithinRel(fresh->speed_sound(), 1e-12));
@@ -320,7 +329,7 @@ TEST_CASE("Bollengier backend range guard throws, and is pinned open", "[Bolleng
     }
 }
 
-TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengier][water][nan]") {
+TEST_CASE("Bollengier backend refuses the excluded box, and nothing else", "[Bollengier][water][nan]") {
     // Contract, matching the reference implementation (SeaFreeze, by a
     // co-author): evaluate the surface wherever it is defined, and refuse
     // only where it produces nothing usable.  SeaFreeze returns NaN there;
@@ -328,55 +337,53 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
     // the failure this codebase refuses to ship.
     auto AS = make();
 
-    SECTION("where (dv/dP)_T >= 0 there is no answer, so it throws") {
-        // Interior, far from any bound, so the range guard cannot be what
-        // fires.
-        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 1850.0e6, 240.0), Catch::Matchers::ContainsSubstring("not thermodynamically admissible"));
-        CHECK_THROWS_WITH(AS->update(PT_INPUTS, 2290.0e6, 240.0), Catch::Matchers::ContainsSubstring("not thermodynamically admissible"));
+    SECTION("inside the box it throws, and says so") {
+        // Interior points, far from any domain bound, so the range guard
+        // cannot be what fires.  The message is matched on "excluded box"
+        // rather than just the type: the post-evaluation admissibility
+        // backstop throws the same ValueError, and if the box stopped
+        // covering these the backstop would catch some of them and the
+        // test would still pass on type alone.
+        for (const auto pT : {std::make_pair(1850.0, 240.0), std::make_pair(2290.0, 240.0), std::make_pair(1700.0, 240.0),
+                              std::make_pair(2185.0, 240.0), std::make_pair(1600.0, 250.0)}) {
+            INFO("p = " << pT.first << " MPa, T = " << pT.second << " K");
+            CHECK_THROWS_WITH(AS->update(PT_INPUTS, pT.first * 1e6, pT.second), Catch::Matchers::ContainsSubstring("excluded box"));
+        }
     }
-    SECTION("the extrapolated corner IS served, and is documented as such") {
-        // These states are self-consistent but are no longer water: the fit
-        // is unconstrained here, deep inside the ice VI/VII field where no
-        // liquid data existed to fit against.  SeaFreeze serves them; so do
-        // we.  Pinned so that a future change to that policy is deliberate
-        // rather than accidental, and so the magnitude is on record.
-        // Behaviour only: that the state is SERVED and self-consistent.
-        // Its cv (~920 J/kg/K against water's ~3800) and w are deliberately
-        // not asserted -- see kUnstablePminMPa.
-        REQUIRE_NOTHROW(AS->update(PT_INPUTS, 1700.0e6, 240.0));
-        INFO("cv = " << AS->cvmass() << " J/kg/K, w = " << AS->speed_sound());
-        CHECK(std::isfinite(AS->cvmass()));
-        CHECK(AS->cvmass() > 0.0);
-        CHECK(AS->cvmass() < AS->cpmass());
-        // And the sound speed does NOT flag it: 3561 m/s here, against
-        // 3513 m/s at a perfectly physical 2200 MPa / 300 K -- the
-        // bad state is FASTER.  The overlap is wider still: pathological
-        // states run down to 2497 m/s, over 1000 m/s below the fastest
-        // value the authors publish.  No threshold at ANY value separates
-        // the two populations -- which is why this backend does not try,
-        // and why an earlier attempt to do so had to be reverted.
+    SECTION("the box edge is exactly where it is advertised, inclusive") {
+        // The corner itself is refused, and the two states a hair outside
+        // it are served.  This is what pins the comparisons: flipping
+        // either >= to > or <= to < serves the corner and fails here, and
+        // the raw surface is perfectly healthy at all three (cv ~ 2010,
+        // w ~ 3065), so nothing but the box can be deciding.
+        CHECK_THROWS_WITH(AS->update(PT_INPUTS, kExcludedPminMPa * 1e6, kExcludedTmaxK), Catch::Matchers::ContainsSubstring("excluded box"));
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, kExcludedPminMPa * 1e6, kExcludedTmaxK + 0.1));
+        CHECK(std::isfinite(AS->speed_sound()));
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, (kExcludedPminMPa - 0.1) * 1e6, kExcludedTmaxK));
+        CHECK(std::isfinite(AS->speed_sound()));
+        // ...and the box must not have swallowed the cold low-pressure
+        // edge, which is ordinary supercooled liquid.
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, 1e5, kTminK));
+    }
+    SECTION("no ceiling on the sound speed outside the box") {
+        // The box removed the states the old no-ceiling policy was written
+        // around, but not the policy: w still reaches 6845 m/s at a state
+        // the backend must serve, against roughly 3500 for real water.
+        // The populations overlap in w -- pathological states run down to
+        // 2497 m/s, below the fastest value the authors publish -- so no
+        // threshold on w separates them, and adding one would start
+        // refusing served states here.  Pinned by behaviour: a reinstated
+        // ceiling anywhere below 6845 fails this NOTHROW.
+        auto fast = make();
+        REQUIRE_NOTHROW(fast->update(PT_INPUTS, 2300.0e6, 256.0));
+        CHECK(fast->speed_sound() > 6000.0);
+        // And the comparison that makes it unfixable: a physical state at
+        // 2200 MPa / 300 K is SLOWER than that, so the fast one cannot be
+        // rejected on speed without rejecting this too.
         auto warm = make();
         warm->update(PT_INPUTS, 2200.0e6, 300.0);
-        CHECK(warm->cvmass() > 3000.0);  // physical, and inside the SM_E grid
-
-        // AND a state with an absurdly HIGH sound speed must also be
-        // served.  Without this the no-ceiling policy is not pinned at
-        // all: reinstating the reverted `_w > 6000` guard passed every
-        // other assertion in this file, because nothing asserted that a
-        // FAST state survives -- only that a served state was slow.  The
-        // gap began at ~4081 m/s (a pre-existing test happens to update at
-        // 2000 MPa / 250 K, where w = 4081, so lower ceilings died by
-        // accident); anything above that could be reintroduced silently.
-        //
-        // NOTE this pins the policy up to 12688 m/s, not absolutely -- a
-        // ceiling above that would still survive.  Pinning higher is
-        // inherently brittle: w scales as cv^(-1/2), so w = 100 km/s sits
-        // within ~0.1 MPa of the cv = 0 locus.
-        // Pinned by BEHAVIOUR, not magnitude: this state has w ~ 12.7 km/s
-        // and must still be served.  A reinstated ceiling fails the NOTHROW
-        // without this test asserting the absurd value itself.
-        auto fast = make();
-        REQUIRE_NOTHROW(fast->update(PT_INPUTS, 2185.0e6, 240.0));
+        CHECK(warm->cvmass() > 3000.0);
+        CHECK(warm->speed_sound() < fast->speed_sound());
     }
     SECTION("the same pressures are ordinary when warm") {
         for (const double p_MPa : {1900.0, 2175.0, 2290.0}) {
@@ -395,8 +402,8 @@ TEST_CASE("Bollengier backend refuses only what it cannot evaluate", "[Bollengie
             for (int j = 0; j <= 40; ++j) {
                 const double p_MPa = 2300.0 * i / 60.0;
                 const double T = kTminK + (kTmaxK - kTminK) * j / 40.0;
-                if (in_unstable_corner(p_MPa, T)) {
-                    continue;  // see kUnstablePminMPa
+                if (in_excluded_box(p_MPa, T)) {
+                    continue;  // see kExcludedPminMPa
                 }
                 ++expected;
                 try {

@@ -25,17 +25,37 @@ namespace CoolProp {
 /// fitted knot.  The paper says "2300 MPa"; 2300.6 is this code's
 /// rounding of the knot and is REFUSED -- see domain().)
 ///
-/// ONE CARVE-OUT INSIDE THAT DOMAIN.  The advertised bounds are the
-/// paper's, and they are kept as published rather than narrowed to dodge
-/// this: in a small cold high-pressure corner the fitted surface is not
-/// thermodynamically admissible, and update() throws there.  Measured on
-/// the published coefficients, cv <= 0 over p in [1832.8, 2300.6] MPa,
-/// T in [240.0, 249.5] K -- 0.06% of the rectangle -- with
-/// (dv/dP)_T >= 0 over a subset.  That corner is ~2.6x deeper in
-/// pressure than any datum below 293 K in the authors' own fitted set,
-/// and Supplementary Material E declines to tabulate 250 K above
-/// 900 MPa.  Reported upstream to SeaFreeze.  It is a limit of the
-/// published fit, not of this implementation.
+/// ONE EXCLUDED BOX INSIDE THAT DOMAIN.  The advertised bounds stay as
+/// published rather than being narrowed to dodge this, and a single
+/// rectangle is cut out of them: update() refuses
+/// p >= 1500 MPa AND T <= 255 K.  Both of CoolProp's motivating cases
+/// above -- 250 K/200 MPa and 300 K/2000 MPa -- are outside it and still
+/// served.
+///
+/// In that corner the fitted surface stops being usable, in two ways
+/// that run into each other.  Measured on a 1 MPa x 0.1 K grid: over
+/// p in [1833.5, 2300.6] MPa and T in [240.0, 249.6] K it is not
+/// thermodynamically admissible at all (cv <= 0 over most of it,
+/// (dv/dP)_T >= 0 over the rest, and a non-finite w throughout), and
+/// around that, out to p >= 1526.4 MPa and T <= 251.6 K, cv stays
+/// positive but falls continuously to 0.03 J/kg/K -- two orders of
+/// magnitude below liquid water.  There is no boundary between the two
+/// for a caller to find.  The box rounds the union outward to round
+/// numbers; zero problem states lie outside it.
+///
+/// It is stated as a REGION, not as a test on the computed properties,
+/// because the defect belongs to the fit over an area -- so an area is
+/// what can be written down, audited, and held still across a
+/// coefficient revision.  It also means refusal does not depend on which
+/// property you ask for.  See kExcludedPminMPa for the property-based
+/// rules that were tried and are worse, and for the cost: the box is
+/// 2.02% of the rectangle, and 1.26% of it would have evaluated fine.
+///
+/// That corner is ~2.6x deeper in pressure than any datum below 293 K in
+/// the authors' own fitted set, and Supplementary Material E declines to
+/// tabulate 250 K above 900 MPa, so nothing validated is forfeited.
+/// Reported upstream to SeaFreeze.  It is a limit of the published fit,
+/// not of this implementation.
 ///
 /// PT_INPUTS ONLY, by design.  For a Gibbs-explicit model (P, T) is the
 /// native pair: one surface evaluation plus five partials yields every
@@ -95,6 +115,34 @@ class BollengierBackend : public AbstractState
     static constexpr double kPaperPmaxMPa = 2300.6;
     static constexpr double kPaperTminK = 240.0;
     static constexpr double kPaperTmaxK = 500.0;
+
+    /// The excluded box: refused outright, inside the published domain.
+    ///
+    /// Chosen to contain the whole problematic corner with margin, rather
+    /// than to trace its edge.  Measured on a 1 MPa x 0.1 K grid over the
+    /// published rectangle, everything the surface gets wrong lies at
+    /// p >= 1526.4 MPa and T <= 251.6 K; this box rounds that outward.
+    /// Verified: zero problem states fall outside it.
+    ///
+    /// A box, and not a test on the computed properties, because the
+    /// defect is a property of the FIT over a region -- so a region is
+    /// what can be stated, audited and held constant.  Every
+    /// property-based rule tried here was worse.  A cv floor leaves the
+    /// absurd sound speeds on both sides of itself (cv and w are not in
+    /// correspondence: states at 11969 m/s clear any floor that still
+    /// admits ordinary water, and states at an unremarkable 2689 m/s fall
+    /// below it).  A w ceiling cannot be placed at all, because the
+    /// pathological and physical populations overlap in w -- see update().
+    /// Both also make the refusal depend on which property you ask for,
+    /// which a caller cannot predict.
+    ///
+    /// The cost is accepted deliberately: the box is 2.02% of the
+    /// rectangle and 1.26% of it is states that would have evaluated
+    /// fine.  They sit in the corner the authors themselves decline to
+    /// tabulate (SM_E omits 250 K above 900 MPa), so refusing them
+    /// forfeits nothing that was ever validated.
+    static constexpr double kExcludedPminMPa = 1500.0;
+    static constexpr double kExcludedTmaxK = 255.0;
 
     /// The advertised domain, and the check that the data supports it.
     ///
@@ -250,6 +298,16 @@ class BollengierBackend : public AbstractState
             throw ValueError(format("BollengierBackend: temperature %g K is outside the published domain [%g, %g] K", T_K, kPaperTminK, kPaperTmaxK));
         }
 
+        if (p_MPa >= kExcludedPminMPa && T_K <= kExcludedTmaxK) {
+            throw ValueError(format("BollengierBackend: p = %g Pa, T = %g K is inside the excluded box (p >= %g MPa and "
+                                    "T <= %g K), a cold high-pressure corner of the published domain where the fitted "
+                                    "surface is not usable: it turns thermodynamically inadmissible over part of it and "
+                                    "sub-physical over the rest. The corner is far beyond any data the fit was "
+                                    "constrained by, and the authors' own tables omit it. This is a limit of the "
+                                    "published fit, not of this implementation; the domain is otherwise as published.",
+                                    p_Pa, T_K, kExcludedPminMPa, kExcludedTmaxK));
+        }
+
         const spline::TensorBSpline2D& G = surface();
         // Partials of G [J/kg] with respect to P [MPa] and T [K].
         const double G_P = G.eval(p_MPa, T_K, 1, 0);
@@ -360,6 +418,13 @@ class BollengierBackend : public AbstractState
         // A caller who needs to know whether liquid is the stable phase --
         // or whether these numbers mean anything -- must determine that
         // separately.
+        // Unreachable with the committed coefficients: the excluded box
+        // above contains every state that trips this, verified by scanning
+        // the published rectangle.  Kept as a backstop, not as dead code --
+        // it is the only thing standing between a coefficient revision that
+        // moved the bad region and a silently propagating NaN, and the
+        // values it tests are computed anyway, so it costs nothing.  If
+        // this ever fires, the box needs re-measuring.
         if (!(G_PP < 0.0) || !std::isfinite(_w) || !std::isfinite(_cv) || _cv <= 0.0) {
             throw ValueError(format("BollengierBackend: the published surface is not thermodynamically admissible at "
                                     "p = %g Pa, T = %g K ((dv/dP)_T >= 0 or cv <= 0), so no properties can be returned. "
