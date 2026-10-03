@@ -108,7 +108,8 @@ std::vector<double> temperatures(const Built& b) {
 std::vector<double> temperatures_critical(const Built& b, const std::vector<double>& x) {
     std::vector<double> T;
     const double Tr = b.heos->Reducing->Tr(x);
-    for (double dt : {-0.1, -0.03, -0.01, -1e-3, -1e-5, -1e-6, -1e-7, 0.0, 1e-7, 1.26e-7, 1.58e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.03, 0.1})
+    for (double dt :
+         {-0.1, -0.03, -0.01, -1e-3, -1e-5, -1e-6, -1.58e-7, -1.26e-7, -1e-7, 0.0, 1e-7, 1.26e-7, 1.58e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.03, 0.1})
         T.push_back(Tr / (1 + dt));
     return T;
 }
@@ -312,11 +313,13 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
                        << " unresolved");
         CHECK(n_true > n_states);  // some states have several roots
         // (>=: two roots closer than the scan step count once in n_true.)  Uncertified intervals are allowed only
-        // rarely (e.g. a tangency) and only narrow, so a wide one cannot make the containment check vacuous.
+        // rarely (e.g. a tangency, the critical point) and only narrow.
         CHECK(n_cert + n_unres >= n_true);
         CHECK(n_unres <= n_true / 100);
         INFO("widest uncertified interval " << max_unres_width << " in delta");
-        // at the critical point G ~ c (delta - 1)^3, so a margin m localizes the root only to ~(m / c)^(1/3): ~1e-3
+        // At a critical point G ~ c (delta - delta_c)^3, so a margin m localizes the root only to ~(m / c)^(1/3): ~1e-3
+        // for pure CO2.  This cap does not stop a whole graded piece near delta = 1 (~1e-3 wide) from being reported
+        // uncertified; the count cap above (<= 1 % of the roots) and the containment check are what bind there.
         CHECK(max_unres_width <= 3e-3);
         for (std::size_t ix = 0; ix < xs.size(); ++ix) {
             INFO("composition " << ix);

@@ -413,7 +413,7 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
         // top of it), so Chebyshev fits on a piece ending there converge only algebraically.  Make delta = 1 an edge and
         // grade the pieces geometrically toward it, 1 +- 2^-k: each graded piece is then at a distance from the
         // singular point comparable to its width (geometric convergence), and on the last ones the terms are small.
-        // The edges stay dyadic, like the bisection's, so no slivers.
+        // (These edges are added after the MAX_PIECES check: at most 2 NA_GRADING_LEVELS + 1 more pieces.)
         std::vector<double> extra = {1.0};
         for (int k = 1; k <= NA_GRADING_LEVELS; ++k) {
             extra.push_back(1.0 - std::ldexp(1.0, -k));
@@ -490,34 +490,46 @@ std::string Tables::verify(HelmholtzEOSMixtureBackend& HEOS) const {
     if (!m_na.empty())
         for (double tau : {0.98, 0.999, 1.0, 1.001, 1.02})
             for (double D : {0.9, 0.99, 1.01, 1.1})
-                if (tau >= tlo && tau <= m_opt.tau_max && D <= m_opt.delta_max) pts.emplace_back(tau, D);
+                if (D <= m_opt.delta_max) pts.emplace_back(std::min(std::max(tau, tlo), m_opt.tau_max), D);  // clamped, not dropped
     for (const auto& x : xs)
         for (const auto& [tau, D] : pts) {
             const double lt = std::log(tau);
-            double a = 0, z = 0, sa = 0, sz = 0;
+            // alphar, chi = delta alphar_delta and its delta-derivative (used by Newton steps on the true equation)
+            double a = 0, z = 0, dz = 0, sa = 0, sz = 0, sdz = 0;
+            double pw[Term::MAX_POW + 1];
+            fill_powers(D, pw);
             for (const Term& tm : m_terms) {
                 const double w = (tm.j < 0 ? x[tm.i] : x[tm.i] * x[tm.j] * m_F[tm.i][tm.j]) * tm.kappa(tau, lt);
-                const double va = w * tm.phi(D), vz = w * tm.chi(D);
+                double f = 0, df = 0;
+                tm.chi_d(D, pw, f, df);
+                const double va = w * tm.phi(D);
                 a += va;
-                z += vz;
+                z += w * f;
+                dz += w * df;
                 sa += std::abs(va);
-                sz += std::abs(vz);
+                sz += std::abs(w * f);
+                sdz += std::abs(w * df);
             }
             for (const auto& c : m_na) {
                 const auto v = eval_nonanalytic(c.terms, tau, D);
                 a += x[c.i] * v.alphar;
                 z += x[c.i] * v.chi;
+                dz += x[c.i] * v.dchi;
                 sa += std::abs(x[c.i] * v.alphar);
                 sz += std::abs(x[c.i] * v.chi);
+                sdz += std::abs(x[c.i] * v.dchi);
             }
-            double a_ref = 0, z_ref = 0;
+            double a_ref = 0, z_ref = 0, dz_ref = 0;
             try {
                 a_ref = HEOS.calc_alphar_deriv_nocache(0, 0, x, tau, D);
-                z_ref = D * HEOS.calc_alphar_deriv_nocache(0, 1, x, tau, D);
+                const double a1 = HEOS.calc_alphar_deriv_nocache(0, 1, x, tau, D), a2 = HEOS.calc_alphar_deriv_nocache(0, 2, x, tau, D);
+                z_ref = D * a1;
+                dz_ref = a1 + D * a2;
             } catch (const std::exception& e) {
                 return std::string("backend alphar failed during verification: ") + e.what();
             }
-            if (!(std::abs(a - a_ref) <= 1e-12 * (1 + sa)) || !(std::abs(z - z_ref) <= 1e-12 * (1 + sz)))
+            if (!(std::abs(a - a_ref) <= 1e-12 * (1 + sa)) || !(std::abs(z - z_ref) <= 1e-12 * (1 + sz))
+                || !(std::abs(dz - dz_ref) <= 1e-12 * (1 + sdz)))
                 return "regrouped residual does not reproduce the backend's alphar (unsupported term type)";
         }
     return "";
