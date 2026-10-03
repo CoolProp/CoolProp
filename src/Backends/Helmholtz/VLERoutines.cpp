@@ -3152,18 +3152,38 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // a ~11 kmol/m3 root -- SatV carries an imposed GAS phase -- after which lnK blew up and the split
     // collapsed onto the feed.
     constexpr double split_max_jump = 1.5;
+    // Last resort when the guarded solve fails for a phase (the global solver can throw for an ordinary
+    // single-root phase, e.g. "One stationary point" for a supercritical air-like vapor): the sub-backend's
+    // own phase-imposed solve -- SatL liquid, SatV gas -- as the stability test's feed solve falls back to.
+    // Its root is accepted only if positive, finite and mechanically stable; otherwise the phase is lost.
+    auto imposed_phase_fallback = [&](HelmholtzEOSMixtureBackend& phase, CoolPropDbl& rho_warm) -> CoolPropDbl {
+        const CoolPropDbl r = phase.solver_rho_Tp(IO.T, IO.p);
+        if (!(ValidNumber(r) && r > 0)) throw ValueError("imposed-phase density fallback: invalid root");
+        phase.update_DmolarT_direct(r, IO.T);
+        if (!mechanically_stable(phase)) throw ValueError("imposed-phase density fallback: unstable root");
+        rho_warm = r;
+        return r;
+    };
     auto evaluate_phases = [&]() -> bool {
         HEOS.SatL->set_mole_fractions(IO.x);
         try {
             IO.rhomolar_liq = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rho_warm_L, true, nullptr, split_max_jump);
         } catch (...) {
-            return false;
+            try {
+                IO.rhomolar_liq = imposed_phase_fallback(*HEOS.SatL, rho_warm_L);
+            } catch (...) {
+                return false;
+            }
         }
         HEOS.SatV->set_mole_fractions(IO.y);
         try {
             IO.rhomolar_vap = solve_trial_rho_warm(*HEOS.SatV, IO.T, IO.p, rho_warm_V, true, nullptr, split_max_jump);
         } catch (...) {
-            return false;
+            try {
+                IO.rhomolar_vap = imposed_phase_fallback(*HEOS.SatV, rho_warm_V);
+            } catch (...) {
+                return false;
+            }
         }
         return true;
     };

@@ -506,4 +506,54 @@ TEST_CASE("Wide-boiling split: the stability test's density solve never returns 
     }
 }
 
+TEST_CASE("Wide-boiling split: water drops out of compressed humid air without the flash throwing", "[flash][mixture]") {
+    // Humid air (x_w = 0.02, GERG-2008) at 360-400 K and 11-27 MPa: the water partial pressure is several times
+    // its saturation pressure, so ~1 % of the feed condenses as near-pure liquid water.  The stability test
+    // finds it with an ordinary Wilson trial, but the split solver's first Rachford-Rice step puts the vapor
+    // exactly on the feed, and a cold global density solve for it threw "One stationary point", so the flash
+    // threw "PT flash lost a phase density solve" (60 of 2000 states of the benchmark sequence, also on master).
+    // Each published phase is re-evaluated here at its own density: equal pressures and fugacities, and a
+    // closed material balance.
+    const char* const fluids = "Nitrogen&Oxygen&Argon&CarbonDioxide&Water";
+    const std::vector<double> z = {0.7654, 0.2053, 0.0090, 0.0003, 0.02};
+    const TP states[] = {{359.9932689, 14588684.14}, {376.4715673, 17787839.36}, {401.7300373, 27160874.81}};
+    for (const auto& s : states) {
+        CAPTURE(s.T, s.p);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", fluids));
+        AS->set_mole_fractions(z);
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+        REQUIRE(AS->phase() == iphase_twophase);
+        const double Q = AS->Q();
+        CHECK(Q > 0.98);
+        CHECK(Q < 1.0);
+        std::vector<double> x, y;
+        for (auto v : AS->mole_fractions_liquid())
+            x.push_back(static_cast<double>(v));
+        for (auto v : AS->mole_fractions_vapor())
+            y.push_back(static_cast<double>(v));
+        REQUIRE(x.size() == z.size());
+        REQUIRE(y.size() == z.size());
+        CHECK(x[4] > 0.999);  // near-pure liquid water
+        std::shared_ptr<AbstractState> L(AbstractState::factory("GERG2008", fluids)), V(AbstractState::factory("GERG2008", fluids));
+        L->set_mole_fractions(x);
+        V->set_mole_fractions(y);
+        // Impose the phases so the D,T update evaluates the EOS at the published densities, without a flash.
+        L->specify_phase(iphase_liquid);
+        V->specify_phase(iphase_gas);
+        L->update(DmolarT_INPUTS, AS->saturated_liquid_keyed_output(iDmolar), s.T);
+        V->update(DmolarT_INPUTS, AS->saturated_vapor_keyed_output(iDmolar), s.T);
+        CHECK(L->p() == Catch::Approx(s.p).epsilon(1e-8));
+        CHECK(V->p() == Catch::Approx(s.p).epsilon(1e-8));
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i, x[i], y[i]);
+            const double lnfL = std::log(x[i] * L->fugacity_coefficient(i));
+            const double lnfV = std::log(y[i] * V->fugacity_coefficient(i));
+            CHECK(std::isfinite(lnfL));
+            CHECK(std::isfinite(lnfV));
+            CHECK(std::abs(lnfL - lnfV) < 1e-6);  // false for NaN
+            CHECK(std::abs((1 - Q) * x[i] + Q * y[i] - z[i]) < 1e-8);
+        }
+    }
+}
+
 #endif

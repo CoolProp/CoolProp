@@ -280,10 +280,14 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                     o.beta = stability_tester.get_beta();
                     o.rho_warm_liq_seed = o.rhomolar_liq;
                     o.rho_warm_vap_seed = o.rhomolar_vap;
-                } else if (stability_tester.unstable_by_near_pure_trial()) {
-                    // A near-pure trial found the split: start the solver's density solves from the trial's
-                    // and the feed's roots rather than a cold global search, which can throw for a
-                    // near-pure supercritical vapor (H2 at 300 K over n-decane).
+                } else {
+                    // A trial found the split: start the solver's density solves from the trial's and the
+                    // feed's roots (recorded by the stability test; -1, i.e. a cold solve, when it recorded
+                    // none) rather than a cold global search.  The cold search can throw for an ordinary
+                    // single-root phase -- a near-pure supercritical vapor (H2 at 300 K over n-decane), or
+                    // humid air at 360-400 K, 4-28 MPa, where the first Rachford-Rice step puts the vapor
+                    // exactly on the feed ("One stationary point").  The solver still validates each warm
+                    // root (same branch within 1.5x, mechanically stable) and re-solves it otherwise.
                     o.rho_warm_liq_seed = o.rhomolar_liq;
                     o.rho_warm_vap_seed = o.rhomolar_vap;
                 }
@@ -421,12 +425,9 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                         } else {
                             stability_tester.get_liq(o.x, o.rhomolar_liq);
                             stability_tester.get_vap(o.y, o.rhomolar_vap);
-                            o.beta = 0.5;  // as on the trial path: the solver's default start
-                            o.rho_warm_liq_seed = o.rho_warm_vap_seed = -1;
-                            if (stability_tester.unstable_by_near_pure_trial()) {
-                                o.rho_warm_liq_seed = o.rhomolar_liq;
-                                o.rho_warm_vap_seed = o.rhomolar_vap;
-                            }
+                            o.beta = 0.5;                          // as on the trial path: the solver's default start
+                            o.rho_warm_liq_seed = o.rhomolar_liq;  // as on the trial path above
+                            o.rho_warm_vap_seed = o.rhomolar_vap;
                             try {
                                 CoolProp::SaturationSolvers::PTflash_twophase retry(HEOS, o);
                                 retry.solve();
