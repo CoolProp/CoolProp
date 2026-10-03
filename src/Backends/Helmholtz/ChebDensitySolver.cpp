@@ -90,13 +90,13 @@ const std::array<std::array<double, n + 1>, n + 1>& lobatto_matrix() {
 // degree-n interpolant from v, the values at the degree-NQ Lobatto points (every (NQ/n)-th of them is used)
 template <int n>
 ChebyshevBernstein::Coeffs<n> lobatto_fit(const std::array<double, NQ + 1>& v) {
-    static_assert(NQ % n == 0, "nested Lobatto levels divide NQ");
+    static_assert(NQ % n == 0, "the degree must divide NQ");
     const auto& M = lobatto_matrix<n>();
     ChebyshevBernstein::Coeffs<n> c{};
     for (int k = 0; k <= n; ++k) {
         double sum = 0;
         for (int j = 0; j <= n; ++j)
-            sum += M[k][j] * v[j * (NQ / n)];
+            sum += M[k][j] * v[static_cast<std::size_t>(j) * (NQ / n)];
         c[k] = sum;
     }
     return c;
@@ -582,9 +582,11 @@ bool Tables::build_na_tables(NAComp& c) const {
     // band half-width: the largest |1 - tau| (on a geometric grid) where that bound is not negligible on some piece
     const double dtau_max = m_na_dtau.back();
     double w = 0;
-    for (double dt = dtau_max; dt > 1e-12 && w == 0; dt *= 0.97)
+    for (int it = 0; it < 1000 && w == 0; ++it) {  // dt = dtau_max 0.97^it, down to ~1e-13 dtau_max
+        const double dt = dtau_max * std::pow(0.97, it);
         for (int p = 0; p < P && w == 0; ++p)
             if (!(bound_at(p, dt, dt) < negligible)) w = std::min(dtau_max, dt / 0.97);
+    }
     if (w == 0) return true;  // negligible everywhere: no tables, assemble() always skips
     const double tlo = std::max({m_opt.tau_min, 1 - w, 1e-9}), thi = std::min(m_opt.tau_max, 1 + w);
     if (!(thi > tlo)) return true;
@@ -765,7 +767,6 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
     std::size_t rung = 0;
     while (rung + 1 < R && m_na_dtau[rung] < std::abs(1 - tau))
         ++rung;
-    S.na_degree = {};
     // tau-factor exp(-D (tau-1)^2) of each non-analytic term's bound, shared by all pieces
     std::vector<double> na_tau_factor;
     for (const NAComp& c : m_na)
@@ -868,63 +869,21 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                 pmax = std::max(pmax, std::abs(xi) * v.parts);
                 return xi * v.chi;
             };
-            // Nested Chebyshev-Lobatto interpolation, degree 4 -> 8 -> NQ: the error of each level is MEASURED at the
-            // next level's new points (between its nodes; the ends are nodes), so moving up reuses every value.  A lower
-            // level is taken only if its error is negligible against the table tolerance; the top level is taken with
-            // its measured error.  (A tail estimate alone fails: on wide pieces the slowly decaying CO2 terms, C = 10,
-            // beat it by ~100x.)
+            // Fit at this tau: degree-NQ Chebyshev-Lobatto interpolation (the ends are nodes), its error MEASURED at the
+            // NQ points between the nodes (a tail estimate alone fails: on wide pieces the slowly decaying CO2 terms,
+            // C = 10, beat it by ~100x).  Only the cells the valley crosses get here, and they need the full degree.
             const auto& ul = lobatto_points();
+            static_assert(std::tuple_size_v<std::decay_t<decltype(ul)>> == NQ + 1, "one value per Lobatto point");
             std::array<double, NQ + 1> v{};
-            auto fill = [&](int start, int step) {
-                for (int k = start; k <= NQ; k += step)
-                    v[k] = f(lo + (hi - lo) * (ul[k] + 1) / 2);
-            };
-            // a lower level is good enough if its error allowance is negligible against the table tolerance, or adds at
-            // most ~5 % to the margin this piece has anyway (2 fiterr + rnd scale, from the other fits so far)
-            const double negligible = std::max(1e-3 * m_opt.tol, 0.05 * (2 * fiterr + rnd * scale) / 2);
-            CoeffsQ cf{};
-            double meas = 0, tail = 0;
-            bool done = false;
-            fill(0, NQ / 4);
-            fill(NQ / 8, NQ / 4);
-            {
-                const auto c4 = lobatto_fit<4>(v);
-                double m4 = 0;
-                for (int k = NQ / 8; k <= NQ; k += NQ / 4)
-                    m4 = std::max(m4, std::abs(ChebyshevBernstein::clenshaw<4>(c4, ul[k]) - v[k]));
-                const double t4 = std::abs(c4[4]) + std::abs(c4[3]);
-                if (std::max(10 * m4, 5 * t4) < negligible) {
-                    std::copy(c4.begin(), c4.end(), cf.begin());
-                    meas = m4;
-                    tail = t4;
-                    done = true;
-                    ++S.na_degree[0];
-                }
-            }
-            if (!done) {
-                fill(1, 2);
-                const auto c8 = lobatto_fit<8>(v);
-                double m8 = 0;
-                for (int k = 1; k <= NQ; k += 2)
-                    m8 = std::max(m8, std::abs(ChebyshevBernstein::clenshaw<8>(c8, ul[k]) - v[k]));
-                const double t8 = std::abs(c8[8]) + std::abs(c8[7]);
-                if (std::max(10 * m8, 5 * t8) < negligible) {
-                    std::copy(c8.begin(), c8.end(), cf.begin());
-                    meas = m8;
-                    tail = t8;
-                    done = true;
-                    ++S.na_degree[1];
-                }
-            }
-            if (!done) {
-                cf = lobatto_fit<NQ>(v);
-                ++S.na_degree[2];
-                tail = std::abs(cf[NQ]) + std::abs(cf[NQ - 1]);
-                for (double u : lobatto_midpoints()) {
-                    const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(cf, u) - f(lo + (hi - lo) * (u + 1) / 2));
-                    finite = finite && std::isfinite(e);
-                    meas = std::max(meas, e);
-                }
+            for (std::size_t k = 0; k < v.size(); ++k)
+                v[k] = f(lo + (hi - lo) * (ul[k] + 1) / 2);
+            const CoeffsQ cf = lobatto_fit<NQ>(v);
+            const double tail = std::abs(cf[NQ]) + std::abs(cf[NQ - 1]);
+            double meas = 0;
+            for (double u : lobatto_midpoints()) {
+                const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(cf, u) - f(lo + (hi - lo) * (u + 1) / 2));
+                finite = finite && std::isfinite(e);
+                meas = std::max(meas, e);
             }
             for (double e : v)
                 finite = finite && std::isfinite(e);

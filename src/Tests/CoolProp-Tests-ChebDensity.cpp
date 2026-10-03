@@ -434,26 +434,38 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
             auto tab = CD::Tables::build(*heos, o);
             REQUIRE(tab != nullptr);
             const double dtau_max = 2.4;
-            double worst = 0;
+            // both over the whole tau range and at the actual |1 - tau| (assemble() takes the first rung of a ladder at or
+            // above it; the bound is monotone in |1 - tau|, so the actual value is the strictest test), with tau packed
+            // toward 1 where the bound is tightest
+            std::vector<double> taus;
+            for (int it = 0; it <= 40; ++it)
+                taus.push_back(0.3 + 3.1 * it / 40.0);
+            for (int k = 1; k <= 9; ++k) {
+                taus.push_back(1 + std::pow(10.0, -k));
+                taus.push_back(1 - std::pow(10.0, -k));
+            }
+            double worst = 0, worst_actual = 0;
             long n = 0;
             for (int p = 0; p < tab->n_pieces(); ++p)
                 for (const auto& term : terms) {
                     const double K = term.bound_factor(tab->edges()[p], tab->edges()[p + 1], dtau_max);
                     REQUIRE(std::isfinite(K));
-                    for (int it = 0; it <= 40; ++it) {
-                        const double tau = 0.3 + 3.1 * it / 40.0;
+                    for (double tau : taus) {
+                        const double Ka = term.bound_factor(tab->edges()[p], tab->edges()[p + 1], std::abs(tau - 1));
                         for (int j = 0; j <= 400; ++j) {
                             const double D = tab->delta_of(p, -1 + 2.0 * j / 400);
                             const auto v = CD::eval_nonanalytic({term}, tau, D);
-                            const double bnd = K * std::exp(-term.D * (tau - 1) * (tau - 1));
-                            worst = std::max(worst, std::abs(v.chi) / bnd);
+                            const double ef = std::exp(-term.D * (tau - 1) * (tau - 1));
+                            worst = std::max(worst, std::abs(v.chi) / (K * ef));
+                            worst_actual = std::max(worst_actual, std::abs(v.chi) / (Ka * ef));
                             ++n;
                         }
                     }
                 }
-            INFO(f << ": " << n << " points, worst |chi| / bound " << worst);
+            INFO(f << ": " << n << " points, worst |chi| / bound " << worst << ", at the actual |1 - tau| " << worst_actual);
             CHECK(worst <= 1.0);
-            CHECK(worst > 1e-3);  // not vacuous
+            CHECK(worst_actual <= 1.0);
+            CHECK(worst_actual > 0.1);  // not vacuous: the bound is tight near tau = 1
         }
 
         SECTION(f + ": the add-in paths: 2-D table, fit at tau, skipped") {
@@ -473,7 +485,7 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
             REQUIRE(tab->assemble(Tc / 1.01, {1.0}, S));
             CHECK(S.na_table > 0);
             CHECK(S.na_fits > 0);
-            CHECK(S.na_fits <= 4);
+            CHECK(S.na_fits < S.na_table);               // a few (2 today); the exact count depends on rounding near the acceptance
             REQUIRE(tab->assemble(Tc / 3.0, {1.0}, S));  // tau = 3: exp(-D (tau-1)^2) is negligible
             CHECK(S.na_fits == 0);
             CHECK(S.na_table == 0);

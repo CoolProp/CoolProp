@@ -30,7 +30,7 @@
  *    the margin;
  *  - the cell's table, kept at build only where its measured error is negligible: contracted, error into the margin;
  *  - otherwise (where Delta ~ 0 along tau - 1 = A |delta - 1|^(1/beta) crosses the cell, a few pieces for tau > 1):
- *    fit at the actual tau by nested Lobatto interpolation (degree 4, 8, NQ) with a measured error.
+ *    fit at the actual tau by degree-NQ Lobatto interpolation with a measured error.
  * The pieces have an edge at delta = 1, where these terms are not analytic, and are graded geometrically toward it
  * (1 +- 2^-k), as are the tau-cells toward tau = 1, so that the interpolants converge there.
  *
@@ -41,9 +41,9 @@
  * The margin bounds the difference from G as evaluated from the same grouped terms (true_G), not from the backend's
  * own pressure; the two agree to roundoff (build() verifies the regrouping to 1e-12 relative to the size of the terms,
  * the tests find ~1e-15).  The fit errors in the margin are measured -- the generalized-exponential fits between the
- * interpolation nodes (factor 2); the non-analytic tables on a 16 x 16 grid between their nodes and the per-tau fits at
- * the next Lobatto level (factor 10); all doubled in the margin -- and its roundoff allowance is empirical; neither is
- * proven.
+ * interpolation nodes (factor 2); the non-analytic tables on a 16 x 16 grid between their nodes (factor 10) and the
+ * per-tau fits between their nodes (max of 10 x measured, 5 x tail); all doubled in the margin -- and its roundoff
+ * allowance is empirical; neither is proven.
  *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
  * function, no pointers into the backend that built it), so it may be shared across threads and across backends
@@ -150,10 +150,9 @@ class Tables
         std::vector<double> W;       ///< group weights W_g(T, x)
         std::vector<double> x;       ///< mole fractions
         double T = 0, tau = 0, rhor = 0;
-        double t_scale = 0;               ///< t = p * t_scale = p / (rhor R T)
-        long na_fits = 0;                 ///< pieces on which a non-analytic contribution was fit (rest: bounded into the margin)
-        std::array<long, 3> na_degree{};  ///< of those, how many ended at degree 4, 8, NQ
-        long na_table = 0;                ///< pieces on which it came from the 2-D table instead (not counted in na_fits)
+        double t_scale = 0;  ///< t = p * t_scale = p / (rhor R T)
+        long na_fits = 0;    ///< pieces on which a non-analytic contribution was fit (rest: bounded into the margin)
+        long na_table = 0;   ///< pieces on which it came from the 2-D table instead (not counted in na_fits)
     };
 
     /// Build the tables for the components of HEOS (its mole fractions must be set: they are used to identify how
