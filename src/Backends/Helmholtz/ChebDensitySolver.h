@@ -26,8 +26,15 @@
  * extrapolated, and assemble() declines a (T, x) outside it.  Models with residual terms that do not factor
  * (non-analytic critical-region terms, SAFT association, cubic or other term types) are declined at build.
  *
+ * The margin bounds the difference from G as evaluated from the same grouped terms (true_G); that agrees with the
+ * backend's own pressure to roundoff (~1e-15 relative), which the margin's roundoff allowance also covers.  The fit
+ * error in it is measured (between the interpolation nodes, with a factor 2), not proven.
+ *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
- * function, no pointers into the backend that built it), so it may be shared across threads and backends.
+ * function, no pointers into the backend that built it), so it may be shared across threads and across backends
+ * with the SAME model.  It is a snapshot: interaction parameters changed on the backend afterwards (F_ij, the
+ * reducing function, departure terms) or a change of NORMALIZE_GAS_CONSTANTS / R_U_CODATA are not seen; a cache of
+ * tables must be keyed on (or invalidated by) them.
  */
 
 #include <array>
@@ -64,17 +71,19 @@ struct Term
     int di = -1, li = -1;  ///< d and l as small non-negative integers (powers from a table), else -1
 
     /// phi = delta^d exp(u_delta)
-    double phi(double D) const;
+    [[nodiscard]] double phi(double D) const;
     /// chi = delta d(phi)/d(delta)
-    double chi(double D) const;
+    [[nodiscard]] double chi(double D) const;
     /// chi and d(chi)/d(delta); pw[k] = delta^k for k <= MAX_POW is used when the exponents are small integers
     void chi_d(double D, const double* pw, double& f, double& df) const;
+    /// Size of the parts chi is summed from, delta^d e^u (|d| + delta |u'|, termwise): the scale of its rounding error
+    [[nodiscard]] double parts(double D) const;
     /// phi, with pw as in chi_d
-    double phi_pw(double D, const double* pw) const;
+    [[nodiscard]] double phi_pw(double D, const double* pw) const;
     /// kappa = n tau^t exp(u_tau), with ltau = ln(tau)
-    double kappa(double tau, double ltau) const;
+    [[nodiscard]] double kappa(double tau, double ltau) const;
     /// true if phi is the same function of delta for both terms
-    bool same_delta(const Term& o) const;
+    [[nodiscard]] bool same_delta(const Term& o) const;
 
     static constexpr int MAX_POW = 24;
 };
@@ -88,7 +97,7 @@ struct BuildOptions
     double tau_min = 0.0;     ///< lower end of the tau range (0: any tau > 0)
     double tau_max = 0.0;     ///< upper end of the tau range; required (> tau_min)
     double tol = 1e-6;        ///< allowed fit error of each weighted group, in units of Z (see build())
-    double min_width = 1e-3;  ///< pieces are not split below this width in delta
+    double min_width = 1e-3;  ///< pieces are not split below this width in delta (at least 1e-9 delta_max)
 };
 
 class Tables
@@ -108,44 +117,45 @@ class Tables
     /// Build the tables for the components of HEOS (its mole fractions must be set: they are used to identify how
     /// the backend forms the mixture gas constant, not otherwise).  Returns nullptr when the model is declined; the reason is
     /// written to *reason when given.  Throws only for invalid options.
-    static std::shared_ptr<const Tables> build(HelmholtzEOSMixtureBackend& HEOS, const BuildOptions& opt, std::string* reason = nullptr);
+    [[nodiscard]] static std::shared_ptr<const Tables> build(HelmholtzEOSMixtureBackend& HEOS, const BuildOptions& opt,
+                                                             std::string* reason = nullptr);
 
     /// Combine the tables at (T, x).  Returns false (S unspecified) if tau = Tr(x)/T is outside the rectangle,
     /// x has the wrong length, or anything is non-finite.
-    bool assemble(double T, const std::vector<double>& x, State& S) const;
+    [[nodiscard]] bool assemble(double T, const std::vector<double>& x, State& S) const;
 
     /// The true G(delta) = delta Z - t at the state of S (evaluated from the same grouped terms, no tables), its
     /// delta-derivative, and a roundoff scale (|G| below ~1e-15 * scale is noise)
     void true_G(const State& S, double delta, double t, double& G, double& dG, double& scale) const;
     /// alphar(tau, delta) at the state of S
-    double alphar(const State& S, double delta) const;
+    [[nodiscard]] double alphar(const State& S, double delta) const;
 
     /// delta at piece variable u in [-1, 1] of piece p
-    double delta_of(int p, double u) const {
+    [[nodiscard]] double delta_of(int p, double u) const {
         return m_edges[p] + (m_edges[p + 1] - m_edges[p]) * (u + 1) / 2;
     }
-    int n_pieces() const {
+    [[nodiscard]] int n_pieces() const {
         return static_cast<int>(m_edges.size()) - 1;
     }
-    const std::vector<double>& edges() const {
+    [[nodiscard]] const std::vector<double>& edges() const {
         return m_edges;
     }
-    std::size_t n_terms() const {
+    [[nodiscard]] std::size_t n_terms() const {
         return m_terms.size();
     }
-    std::size_t n_groups() const {
+    [[nodiscard]] std::size_t n_groups() const {
         return m_reps.size();
     }
-    std::size_t n_components() const {
+    [[nodiscard]] std::size_t n_components() const {
         return static_cast<std::size_t>(m_N);
     }
-    const BuildOptions& options() const {
+    [[nodiscard]] const BuildOptions& options() const {
         return m_opt;
     }
 
    private:
     Tables() = default;
-    std::string verify(HelmholtzEOSMixtureBackend& HEOS) const;
+    [[nodiscard]] std::string verify(HelmholtzEOSMixtureBackend& HEOS) const;
 
     BuildOptions m_opt;
     int m_N = 0;
@@ -156,6 +166,7 @@ class Tables
     std::vector<CoeffsQ> m_C;                 ///< fit of chi_g on piece p at [p * n_groups + g]
     std::vector<double> m_Cn;                 ///< l1 norm of each fit (roundoff scale)
     std::vector<double> m_Ct;                 ///< fit-error bound of each fit
+    std::vector<double> m_Cp;                 ///< roundoff scale of evaluating chi_g on the piece (see Term::parts)
     std::vector<std::vector<double>> m_F;     ///< F_ij
     std::shared_ptr<ReducingFunction> m_red;  ///< owned copy
     std::vector<double> m_Ri;                 ///< component gas constants

@@ -5,10 +5,11 @@
 //  - all-roots parity: every sign change of the true G found by a dense scan lies in an interval reported by
 //    ChebyshevBernstein::real_roots on the tables (with the margin as tolerance), and the true G changes sign
 //    across every certified interval;
-//  - declines: non-analytic terms, cubic backends, (T, x) outside the rectangle.
+//  - declines: non-analytic and other non-factoring terms, cubic backends, invalid options, (T, x) outside the rectangle.
 #if defined(ENABLE_CATCH)
 
 #    include <algorithm>
+#    include <cfloat>
 #    include <cmath>
 #    include <memory>
 #    include <random>
@@ -46,6 +47,7 @@ const std::vector<Case>& cases() {
       {"HEOS", "Methane&Ethane&Propane&n-Butane", {0.7, 0.15, 0.1, 0.05}},
       {"HEOS", "Propane&n-Hexane", {0.4, 0.6}},
       {"HEOS", "Methane", {1.0}},
+      {"GERG2008", "Nitrogen&Argon&Oxygen", {0.7812, 0.0092, 0.2096}},
     };
     return c;
 }
@@ -88,13 +90,22 @@ std::vector<double> temperatures(const Built& b) {
     return T;
 }
 
-// compositions: the case's own, plus two random ones (fixed seed)
-std::vector<std::vector<double>> compositions(const Case& c) {
+// a finer grid from Tmin up, where the terms cancel most and the margins are tightest
+std::vector<double> temperatures_fine(const Built& b) {
+    std::vector<double> T = temperatures(b);
+    for (int k = 0; k < 16; ++k)
+        T.push_back(b.Tmin * (1.03 + 0.11 * k));
+    std::sort(T.begin(), T.end());
+    return T;
+}
+
+// compositions: the case's own, plus n random ones (fixed seed; shape 0.5 puts weight near the edges)
+std::vector<std::vector<double>> compositions(const Case& c, int n) {
     std::vector<std::vector<double>> xs = {c.z};
     if (c.z.size() > 1) {
         std::mt19937_64 g(42);
-        std::gamma_distribution<double> G(1.0);
-        for (int k = 0; k < 2; ++k) {
+        std::gamma_distribution<double> G(0.5);
+        for (int k = 0; k < n; ++k) {
             std::vector<double> x(c.z.size());
             double s = 0;
             for (double& v : x)
@@ -147,12 +158,13 @@ TEST_CASE("ChebDensity: margin bounds the table error on dense grids", "[cheb_de
         CD::Tables::State S;
         double worst = 0, worst_margin = 0, worst_G = 0;
         long n = 0;
-        for (const auto& x : compositions(c))
-            for (double T : temperatures(b)) {
+        for (const auto& x : compositions(c, 4))
+            for (double T : temperatures_fine(b)) {
                 if (!b.tab->assemble(T, x, S)) continue;  // a random x can push tau = Tr(x)/T outside the rectangle
                 for (int p = 0; p < b.tab->n_pieces(); ++p) {
-                    for (int k = 0; k <= 200; ++k) {
-                        const double u = -1 + 2.0 * k / 200, D = b.tab->delta_of(p, u);
+                    // dense: the error peaks between the interpolation nodes, in spots a few hundred points per piece miss
+                    for (int k = 0; k <= 1000; ++k) {
+                        const double u = -1 + 2.0 * k / 1000, D = b.tab->delta_of(p, u);
                         double G, dG, sc;
                         b.tab->true_G(S, D, 0, G, dG, sc);
                         const double e = std::abs(CB::clenshaw<CD::NG>(S.G[p], u) - G);
@@ -222,14 +234,26 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
                         }
                     }
                 }
-                // every true sign change of the scan lies in a reported interval
+                // every true root bracketed by the scan lies in a reported interval: bisect the true G down to the
+                // last bit, then require containment (a few ulp of slack for the rounding of the delta mapping)
                 for (int k = 0; k < NS; ++k) {
                     const double a = Fg[k] - t, bb = Fg[k + 1] - t;
                     if ((a < 0) == (bb < 0)) continue;
                     ++n_true;
-                    const bool covered = std::any_of(
-                      rep.begin(), rep.end(), [&](const std::pair<double, double>& iv) { return iv.first <= Dg[k + 1] && iv.second >= Dg[k]; });
-                    INFO(c.fluids << " T=" << T << " t=" << t << ": true root in [" << Dg[k] << ", " << Dg[k + 1] << "] not reported");
+                    double lo = Dg[k], hi = Dg[k + 1];
+                    const bool neg_lo = a < 0;
+                    for (int it = 0; it < 200; ++it) {
+                        const double mid = 0.5 * (lo + hi);
+                        if (!(lo < mid && mid < hi)) break;
+                        double G, dG, sc;
+                        b.tab->true_G(S, mid, t, G, dG, sc);
+                        ((G < 0) == neg_lo ? lo : hi) = mid;
+                    }
+                    const double root = 0.5 * (lo + hi), slack = 8 * DBL_EPSILON * root;
+                    const bool covered = std::any_of(rep.begin(), rep.end(), [&](const std::pair<double, double>& iv) {
+                        return iv.first - slack <= root && root <= iv.second + slack;
+                    });
+                    INFO(c.fluids << " T=" << T << " t=" << t << ": true root " << root << " not in any reported interval");
                     CHECK(covered);
                 }
             }
@@ -252,13 +276,25 @@ TEST_CASE("ChebDensity: declines", "[cheb_density]") {
             CHECK(why.find("non-analytic") != std::string::npos);
         }
     }
-    SECTION("cubic backend") {
-        std::shared_ptr<AbstractState> AS(AbstractState::factory("PR", "Methane&Ethane"));
-        auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-        REQUIRE(heos != nullptr);
+    SECTION("cubic backends") {
+        for (const std::string f : {"Methane", "Methane&Ethane"}) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("PR", f));
+            auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+            REQUIRE(heos != nullptr);
+            AS->set_mole_fractions(f == "Methane" ? std::vector<double>{1.0} : std::vector<double>{0.5, 0.5});
+            std::string why;
+            CHECK(CD::Tables::build(*heos, opt, &why) == nullptr);
+            INFO(f << ": " << why);
+            CHECK_FALSE(why.empty());
+            CHECK(why != "mole fractions not set");
+        }
+    }
+    SECTION("other residual term types") {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Ammonia"));  // Gao et al. B terms
+        AS->set_mole_fractions({1.0});
         std::string why;
-        CHECK(CD::Tables::build(*heos, opt, &why) == nullptr);
-        CHECK_FALSE(why.empty());
+        CHECK(CD::Tables::build(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get()), opt, &why) == nullptr);
+        CHECK(why.find("other than generalized exponential") != std::string::npos);
     }
     SECTION("invalid options throw") {
         std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Methane"));
@@ -269,6 +305,14 @@ TEST_CASE("ChebDensity: declines", "[cheb_density]") {
         bad.tau_max = 2;
         bad.tau_min = 3;
         CHECK_THROWS(CD::Tables::build(heos, bad));
+        bad.tau_min = 0;
+        bad.min_width = 1e-15;  // would bisect the delta range into ulp-wide pieces
+        CHECK_THROWS(CD::Tables::build(heos, bad));
+        bad.min_width = 1e-3;
+        bad.tol = NAN;
+        CHECK_THROWS(CD::Tables::build(heos, bad));
+        bad.tol = 1e-6;
+        CHECK(CD::Tables::build(heos, bad) != nullptr);
     }
     SECTION("outside the rectangle") {
         std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Methane&Ethane"));
