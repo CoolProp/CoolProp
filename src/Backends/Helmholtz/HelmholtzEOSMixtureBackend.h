@@ -252,6 +252,12 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     }
+    /// The phase currently imposed with specify_phase (iphase_not_imposed if none), so a routine that
+    /// imposes a phase temporarily can restore it: e.g. the SatL / SatV sub-backends are created with a
+    /// liquid / gas phase imposed, and clearing that silently changes every later density solve on them.
+    phases imposed_phase() const {
+        return imposed_phase_index;
+    }
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value) override;
     void calc_ssat_max();
     void calc_hsat_max();
