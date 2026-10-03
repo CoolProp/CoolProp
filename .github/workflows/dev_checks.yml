@@ -460,9 +460,12 @@ jobs:
     # upload are load-bearing: they keep this workflow informational across
     # every code path.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-    # Pinned rather than ubuntu-latest: clang-tidy-20 and the llvm-20 path
-    # below come from the Ubuntu 24.04 archive.
-    runs-on: ubuntu-24.04
+    # An explicit label, not ubuntu-latest (still 24.04, whose image carries
+    # only clang-tidy 16-18): the 26.04 image ships clang-tidy 20, 21 and 22,
+    # and 21 is the major version macOS preflight runs (Homebrew llvm), so CI
+    # and local runs see the same check set.  When ubuntu-latest moves, this
+    # job does not move with it.
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -471,20 +474,18 @@ jobs:
       # clang-tidy >= 19 is REQUIRED: .clang-tidy uses ExcludeHeaderFilterRegex
       # (new in 19), and clang-tidy 18 rejects the whole config on that
       # unknown key, runs its default checks and still exits 0.
-      - name: Install clang-tidy-20 + ninja
+      - name: Install ninja; check clang-tidy-21
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-20 ninja-build
-          # The runner image registers its default clang-tidy (18) at priority
-          # 100 too, and a tie keeps the current choice -- so --install alone
-          # left /usr/bin/clang-tidy at 18.  --set makes the choice explicit;
-          # the run step also names the binary, and the version is asserted.
-          sudo update-alternatives --install \
-            /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-20 100
-          sudo update-alternatives --set clang-tidy /usr/bin/clang-tidy-20
-          clang-tidy --version
-          if ! /usr/bin/clang-tidy-20 --version | grep -q 'version 20\.'; then
-            echo "::error::clang-tidy-20 is not version 20"
+          # clang-tidy-21 is preinstalled on the image, so naming it is a no-op
+          # today; it keeps the job working if the image ever drops it.
+          sudo apt-get install -y clang-tidy-21 ninja-build
+          # Every use below names /usr/bin/clang-tidy-21 explicitly, so what the
+          # bare `clang-tidy` alternative points at does not matter (on 24.04
+          # it silently stayed at 18).  Assert the version actually used.
+          /usr/bin/clang-tidy-21 --version
+          if ! /usr/bin/clang-tidy-21 --version | grep -q 'version 21\.'; then
+            echo "::error::/usr/bin/clang-tidy-21 is not version 21"
             exit 1
           fi
 
@@ -518,14 +519,14 @@ jobs:
 
       - name: Locate clang-tidy-diff.py
         id: diff_script
-        # Pinned to the clang-tidy-20 package's copy.  A `find /usr | head -1`
+        # Pinned to the clang-tidy-21 package's copy.  A `find /usr | head -1`
         # used to pick whichever copy the runner image listed first -- LLVM
         # 17's, or the Android NDK's -- rather than the one matching the
         # installed clang-tidy.
         run: |
-          path=/usr/lib/llvm-20/share/clang/clang-tidy-diff.py
+          path=/usr/lib/llvm-21/share/clang/clang-tidy-diff.py
           if [ ! -f "$path" ]; then
-            echo "::error::$path not found; clang-tidy-20 did not install it"
+            echo "::error::$path not found; clang-tidy-21 did not install it"
             exit 1
           fi
           echo "path=$path" >> "$GITHUB_OUTPUT"
@@ -549,7 +550,7 @@ jobs:
             | python3 ${{ steps.diff_script.outputs.path }} \
                 -p1 \
                 -path ${{ github.workspace }}/build \
-                -clang-tidy-binary /usr/bin/clang-tidy-20 \
+                -clang-tidy-binary /usr/bin/clang-tidy-21 \
                 -regex '.*\.(c|cpp|h|hpp)$' \
                 -j"$(nproc)" \
                 2>&1 | tee clang-tidy-diff.log

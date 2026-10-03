@@ -207,7 +207,8 @@ while still exiting 0.
 `dev/ci/run-clang-tidy-staged.sh` refuses anything older.  (On macOS, versions
 before 19 also don't recognize new libc++ builtins -- `__builtin_clzg`,
 `__builtin_ctzg` -- that Apple's libc++ headers use.)  CI installs
-`clang-tidy-20` from the Ubuntu 24.04 archive.
+`clang-tidy-21` on the `ubuntu-26.04` image, the same major version as
+Homebrew's `llvm`.
 
 ### Running clang-tidy locally
 
