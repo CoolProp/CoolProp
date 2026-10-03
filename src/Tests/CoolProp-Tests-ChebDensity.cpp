@@ -30,6 +30,11 @@ namespace CD = CoolProp::ChebDensity;
 
 namespace {
 
+// Lower bounds on the per-piece error/margin statistics of the margin test, ~10x below the measured ones (median
+// 0.006-0.019, 10th percentile 0.003-0.008 over the cases below): an inflated margin (e.g. a roundoff term 1e6 times
+// too large) fails them, while the worst-case check alone would still pass on the fit-error-dominated pieces.
+constexpr double MEDIAN_MIN = 1e-3, P10_MIN = 3e-4;
+
 struct Case
 {
     std::string backend, fluids;
@@ -147,7 +152,7 @@ TEST_CASE("ChebDensity: regrouped model reproduces CoolProp p and alphar", "[che
         }
         INFO(c.backend << "::" << c.fluids << ": " << n << " states, worst |G|/scale " << worst_p << ", worst alphar " << worst_a);
         CHECK(n > 40);
-        CHECK(worst_p < 1e-13);
+        CHECK(worst_p < 1e-14);
         CHECK(worst_a < 1e-12);
     }
 }
@@ -157,31 +162,42 @@ TEST_CASE("ChebDensity: margin bounds the table error on dense grids", "[cheb_de
         Built b = build(c);
         CD::Tables::State S;
         double worst = 0, worst_margin = 0, worst_G = 0;
+        std::vector<double> piece_ratio;  // max error/margin on each (state, piece)
         long n = 0;
         for (const auto& x : compositions(c, 4))
             for (double T : temperatures_fine(b)) {
                 if (!b.tab->assemble(T, x, S)) continue;  // a random x can push tau = Tr(x)/T outside the rectangle
                 for (int p = 0; p < b.tab->n_pieces(); ++p) {
+                    double pr = 0;
                     // dense: the error peaks between the interpolation nodes, in spots a few hundred points per piece miss
                     for (int k = 0; k <= 1000; ++k) {
                         const double u = -1 + 2.0 * k / 1000, D = b.tab->delta_of(p, u);
                         double G, dG, sc;
                         b.tab->true_G(S, D, 0, G, dG, sc);
                         const double e = std::abs(CB::clenshaw<CD::NG>(S.G[p], u) - G);
-                        worst = std::max(worst, e / S.margin[p]);
+                        pr = std::max(pr, e / S.margin[p]);
                         worst_G = std::max(worst_G, std::abs(G));
                         ++n;
                     }
+                    worst = std::max(worst, pr);
+                    piece_ratio.push_back(pr);
                     worst_margin = std::max(worst_margin, S.margin[p]);
                 }
             }
+        std::sort(piece_ratio.begin(), piece_ratio.end());
+        const double median = piece_ratio.empty() ? 0 : piece_ratio[piece_ratio.size() / 2];
+        const double p10 = piece_ratio.empty() ? 0 : piece_ratio[piece_ratio.size() / 10];
+        INFO(c.backend << "::" << c.fluids << ": per-piece error/margin median " << median << ", 10th percentile " << p10);
         INFO(c.backend << "::" << c.fluids << ": " << b.tab->n_pieces() << " pieces, " << b.tab->n_groups() << " groups of " << b.tab->n_terms()
                        << " terms; " << n << " points, worst error/margin " << worst << ", largest margin " << worst_margin << ", largest |G| "
                        << worst_G);
         CHECK(n > 1000);
         CHECK(worst <= 1.0);
-        // the margin must stay useful, not merely valid: an inflated margin would pass the check above trivially
+        // the margin must stay useful, not merely valid: an inflated margin would pass the check above trivially.
+        // Per piece, not only the worst one: a margin inflated where roundoff dominates must show up too.
         CHECK(worst > 0.01);
+        CHECK(median > MEDIAN_MIN);
+        CHECK(p10 > P10_MIN);
     }
 }
 
@@ -193,75 +209,81 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
         const int NS = 20000;
         long n_true = 0, n_cert = 0, n_unres = 0, n_states = 0;
         std::vector<CB::Root> rr;
-        for (double T : temperatures(b)) {
-            REQUIRE(b.tab->assemble(T, c.z, S));
-            // F = delta Z on the scan grid (t = 0)
-            std::vector<double> Dg(NS + 1), Fg(NS + 1);
-            for (int k = 0; k <= NS; ++k) {
-                double G, dG, sc;
-                Dg[k] = dmax * k / NS;
-                b.tab->true_G(S, Dg[k], 0, G, dG, sc);
-                Fg[k] = G;
-            }
-            // pressures: F at a spread of densities (so the dome's three-root states are included), and fixed ones
-            std::vector<double> ts;
-            for (int k = 1; k <= 24; ++k)
-                ts.push_back(Fg[k * NS / 25]);
-            for (double p : {1e3, 1e5, 1e6, 5e6, 2e7, 1e8})
-                ts.push_back(p * S.t_scale);
-            for (double t : ts) {
-                if (!(t > 0)) continue;
-                ++n_states;
-                // reported intervals in delta, over all pieces
-                std::vector<std::pair<double, double>> rep;
-                for (int p = 0; p < b.tab->n_pieces(); ++p) {
-                    CD::CoeffsG g = S.G[p];
-                    g[0] -= t;
-                    CB::real_roots<CD::NG>(g, S.margin[p], rr);
-                    for (const auto& r : rr) {
-                        const double Da = b.tab->delta_of(p, r.ua), Db = b.tab->delta_of(p, r.ub);
-                        rep.emplace_back(Da, Db);
-                        if (r.certified) {
-                            ++n_cert;
-                            // certified: the TRUE G changes sign across the interval
-                            double Ga, Gb, dG, sc;
-                            b.tab->true_G(S, Da, t, Ga, dG, sc);
-                            b.tab->true_G(S, Db, t, Gb, dG, sc);
-                            INFO(c.fluids << " T=" << T << " t=" << t << " certified [" << Da << ", " << Db << "]: G " << Ga << " " << Gb);
-                            CHECK((Ga < 0) != (Gb < 0));
-                        } else {
-                            ++n_unres;
+        for (const auto& x : compositions(c, 1))
+            for (double T : temperatures(b)) {
+                if (!b.tab->assemble(T, x, S)) {
+                    CHECK(x != c.z);  // only a random x may fall outside the tau range
+                    continue;
+                }
+                // F = delta Z on the scan grid (t = 0)
+                std::vector<double> Dg(NS + 1), Fg(NS + 1);
+                for (int k = 0; k <= NS; ++k) {
+                    double G, dG, sc;
+                    Dg[k] = dmax * k / NS;
+                    b.tab->true_G(S, Dg[k], 0, G, dG, sc);
+                    Fg[k] = G;
+                }
+                // pressures: F at a spread of densities (so the dome's three-root states are included), and fixed ones
+                std::vector<double> ts;
+                for (int k = 1; k <= 24; ++k)
+                    ts.push_back(Fg[k * NS / 25]);
+                for (double p : {1e3, 1e5, 1e6, 5e6, 2e7, 1e8})
+                    ts.push_back(p * S.t_scale);
+                for (double t : ts) {
+                    if (!(t > 0)) continue;
+                    ++n_states;
+                    // reported intervals in delta, over all pieces
+                    std::vector<std::pair<double, double>> rep;
+                    for (int p = 0; p < b.tab->n_pieces(); ++p) {
+                        CD::CoeffsG g = S.G[p];
+                        g[0] -= t;
+                        CB::real_roots<CD::NG>(g, S.margin[p], rr);
+                        for (const auto& r : rr) {
+                            const double Da = b.tab->delta_of(p, r.ua), Db = b.tab->delta_of(p, r.ub);
+                            rep.emplace_back(Da, Db);
+                            if (r.certified) {
+                                ++n_cert;
+                                // certified: the TRUE G changes sign across the interval
+                                double Ga, Gb, dG, sc;
+                                b.tab->true_G(S, Da, t, Ga, dG, sc);
+                                b.tab->true_G(S, Db, t, Gb, dG, sc);
+                                INFO(c.fluids << " T=" << T << " t=" << t << " certified [" << Da << ", " << Db << "]: G " << Ga << " " << Gb);
+                                CHECK((Ga < 0) != (Gb < 0));
+                            } else {
+                                ++n_unres;
+                            }
                         }
                     }
-                }
-                // every true root bracketed by the scan lies in a reported interval: bisect the true G down to the
-                // last bit, then require containment (a few ulp of slack for the rounding of the delta mapping)
-                for (int k = 0; k < NS; ++k) {
-                    const double a = Fg[k] - t, bb = Fg[k + 1] - t;
-                    if ((a < 0) == (bb < 0)) continue;
-                    ++n_true;
-                    double lo = Dg[k], hi = Dg[k + 1];
-                    const bool neg_lo = a < 0;
-                    for (int it = 0; it < 200; ++it) {
-                        const double mid = 0.5 * (lo + hi);
-                        if (!(lo < mid && mid < hi)) break;
-                        double G, dG, sc;
-                        b.tab->true_G(S, mid, t, G, dG, sc);
-                        ((G < 0) == neg_lo ? lo : hi) = mid;
+                    // every true root bracketed by the scan lies in a reported interval: bisect the true G down to the
+                    // last bit, then require containment (a few ulp of slack for the rounding of the delta mapping)
+                    for (int k = 0; k < NS; ++k) {
+                        const double a = Fg[k] - t, bb = Fg[k + 1] - t;
+                        if ((a < 0) == (bb < 0)) continue;
+                        ++n_true;
+                        double lo = Dg[k], hi = Dg[k + 1];
+                        const bool neg_lo = a < 0;
+                        for (int it = 0; it < 200; ++it) {
+                            const double mid = 0.5 * (lo + hi);
+                            if (!(lo < mid && mid < hi)) break;
+                            double G, dG, sc;
+                            b.tab->true_G(S, mid, t, G, dG, sc);
+                            ((G < 0) == neg_lo ? lo : hi) = mid;
+                        }
+                        const double root = 0.5 * (lo + hi), slack = 8 * DBL_EPSILON * root;
+                        const bool covered = std::any_of(rep.begin(), rep.end(), [&](const std::pair<double, double>& iv) {
+                            return iv.first - slack <= root && root <= iv.second + slack;
+                        });
+                        INFO(c.fluids << " T=" << T << " t=" << t << ": true root " << root << " not in any reported interval");
+                        CHECK(covered);
                     }
-                    const double root = 0.5 * (lo + hi), slack = 8 * DBL_EPSILON * root;
-                    const bool covered = std::any_of(rep.begin(), rep.end(), [&](const std::pair<double, double>& iv) {
-                        return iv.first - slack <= root && root <= iv.second + slack;
-                    });
-                    INFO(c.fluids << " T=" << T << " t=" << t << ": true root " << root << " not in any reported interval");
-                    CHECK(covered);
                 }
             }
-        }
         INFO(c.backend << "::" << c.fluids << ": " << n_states << " (T, p), " << n_true << " true roots, " << n_cert << " certified, " << n_unres
                        << " unresolved");
         CHECK(n_true > n_states);  // some states have several roots
-        CHECK(n_cert >= n_true / 2);
+        // every root isolated and certified: no wide unresolved interval can make the containment check above vacuous
+        CHECK(n_cert == n_true);
+        CHECK(n_unres == 0);
     }
 }
 

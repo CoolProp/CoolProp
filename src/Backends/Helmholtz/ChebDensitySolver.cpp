@@ -185,6 +185,10 @@ void collect_terms(const ResidualHelmholtzGeneralizedExponential& g, int i, int 
 
 // ------------------------------------------------------------------ build
 
+namespace {
+constexpr std::size_t MAX_PIECES = 4096;
+}
+
 std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, const BuildOptions& opt, std::string* reason) {
     if (!(opt.delta_max > 0 && std::isfinite(opt.delta_max)) || !(opt.tau_min >= 0) || !(opt.tau_max > opt.tau_min) || !std::isfinite(opt.tau_max)
         || !(opt.tol > 0) || !(opt.min_width >= 1e-9 * opt.delta_max)) {
@@ -287,7 +291,7 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
         double m = 0;
         for (int j = 0; j <= NQ; ++j) {
             const double v = rep.parts(lo + (hi - lo) * (std::cos(PI * (j + 0.5) / (NQ + 1)) + 1) / 2);
-            if (!(v <= m)) m = v;  // NaN propagates
+            if (std::isnan(m) || !(v <= m)) m = v;  // latches a NaN (a later finite v must not overwrite it)
         }
         return m;
     };
@@ -312,6 +316,7 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
             ok = (std::abs(c[NQ]) + std::abs(c[NQ - 1])) * gmax[g] <= allowed;
         }
         const double mid = 0.5 * (lo + hi);
+        if (done.size() + todo.size() >= MAX_PIECES) return decline("more than " + std::to_string(MAX_PIECES) + " delta-pieces (tol unattainable?)");
         if (ok || hi - lo < opt.min_width || !(lo < mid && mid < hi)) {
             done.emplace_back(lo, hi);
         } else {
@@ -340,17 +345,19 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
             // Fit-error bound: the error measured at 64 points between the interpolation nodes, never below the
             // tail estimate (the tail alone underestimates it on pieces where the series has not settled)
             double meas = 0, pmax = parts_max(rep, lo, hi);
+            bool finite = std::isfinite(pmax);
             for (int k = 0; k < 64; ++k) {
                 const double u = -1 + 2 * (k + 0.5) / 64, D = lo + (hi - lo) * (u + 1) / 2;
                 const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(c, u) - rep.chi(D)), pv = rep.parts(D);
-                if (!(e <= meas)) meas = e;  // not std::max: a NaN must propagate to the finiteness check below
-                if (!(pv <= pmax)) pmax = pv;
+                finite = finite && std::isfinite(e) && std::isfinite(pv);  // not via max(): it would drop a NaN
+                meas = std::max(meas, e);
+                pmax = std::max(pmax, pv);
             }
             T->m_C[p * NGRP + g] = c;
             T->m_Cn[p * NGRP + g] = s;
             T->m_Ct[p * NGRP + g] = std::max(meas, std::abs(c[NQ]) + std::abs(c[NQ - 1]));
             T->m_Cp[p * NGRP + g] = pmax;
-            if (!std::isfinite(s) || !std::isfinite(meas) || !std::isfinite(pmax)) return decline("non-finite fit on [0, delta_max]");
+            if (!finite || !std::isfinite(s)) return decline("non-finite fit on [0, delta_max]");
         }
     }
     return T;
@@ -411,12 +418,15 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
         S.W[m_group[k]] += X * tm.kappa(tau, lt);
     }
     const int P = n_pieces();
+    const double rnd = (45.0 + static_cast<double>(NGRP)) * DBL_EPSILON;
     S.G.resize(P);
     S.margin.resize(P);
     for (int p = 0; p < P; ++p) {
         CoeffsQ q{};
         q[0] = 1.0;
         double scale = 1.0, fiterr = 0.0;
+        // roundoff allowance per unit of scale: an empirical ~45 eps for evaluating one chi_g (the parts bound omits
+        // the exp/pow rounding, (|u| + d + l) eps relative), plus one eps per group summed
         const CoeffsQ* cp = &m_C[p * NGRP];
         const double* cn = &m_Cn[p * NGRP];
         const double* ct = &m_Ct[p * NGRP];
@@ -432,7 +442,7 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
         // |G_tables - G_true| <= delta * |Z_tables - Z_true| <= hi * (fit error + roundoff), with a factor 2 on
         // the (measured, not proven) fit error.  The roundoff term covers the evaluation of the fits and of the
         // chi_g themselves (scale includes the size of their parts), which the measured error only samples.
-        S.margin[p] = m_edges[p + 1] * (2 * fiterr + 1e-14 * scale);
+        S.margin[p] = m_edges[p + 1] * (2 * fiterr + rnd * scale);
         if (!std::isfinite(S.margin[p])) return false;
     }
     double Rmix = m_R;

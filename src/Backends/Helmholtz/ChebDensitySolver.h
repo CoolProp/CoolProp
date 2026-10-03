@@ -26,9 +26,10 @@
  * extrapolated, and assemble() declines a (T, x) outside it.  Models with residual terms that do not factor
  * (non-analytic critical-region terms, SAFT association, cubic or other term types) are declined at build.
  *
- * The margin bounds the difference from G as evaluated from the same grouped terms (true_G); that agrees with the
- * backend's own pressure to roundoff (~1e-15 relative), which the margin's roundoff allowance also covers.  The fit
- * error in it is measured (between the interpolation nodes, with a factor 2), not proven.
+ * The margin bounds the difference from G as evaluated from the same grouped terms (true_G), not from the backend's
+ * own pressure; the two agree to roundoff (build() verifies the regrouping to 1e-12 relative to the size of the terms,
+ * the tests find ~1e-15).  The fit error in the margin is measured (between the interpolation nodes, with a factor 2),
+ * and its roundoff allowance is empirical; neither is proven.
  *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
  * function, no pointers into the backend that built it), so it may be shared across threads and across backends
