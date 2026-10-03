@@ -116,7 +116,7 @@ std::vector<std::vector<double>> compositions(const Case& c, int n) {
             std::vector<double> x(c.z.size());
             double s = 0;
             for (double& v : x) {
-                const double u = (static_cast<double>(g() >> 11) + 0.5) * 0x1.0p-53, e = -std::log(u);
+                const double u = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53, e = -std::log(u);
                 s += (v = e * e);
             }
             for (double& v : x)

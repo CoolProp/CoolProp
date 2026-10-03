@@ -317,7 +317,9 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
             for (double v : c)
                 big = std::max(big, std::abs(v));
             const double loc = std::min(std::abs(rep.chi(lo > 0 ? lo : DBL_MIN)), std::abs(rep.chi(hi)));
-            const double floor = lo > 0 ? 4 * DBL_EPSILON * gmax[g] * std::max(big, parts_max(rep, lo, hi)) : 0.0;
+            const double pm = parts_max(rep, lo, hi);
+            if (!std::isfinite(pm)) return decline("non-finite residual terms on [0, delta_max]");
+            const double floor = lo > 0 ? 4 * DBL_EPSILON * gmax[g] * std::max(big, pm) : 0.0;
             const double allowed = std::max(opt.tol * std::max(1.0, gmax[g] * loc), floor);
             ok = (std::abs(c[NQ]) + std::abs(c[NQ - 1])) * gmax[g] <= allowed;
         }
