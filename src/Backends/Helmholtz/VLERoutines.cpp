@@ -2169,20 +2169,10 @@ static bool mechanically_stable(HelmholtzEOSMixtureBackend& phase) {
     return ValidNumber(dpdrho) && dpdrho > 0;
 }
 
-// solver_rho_Tp_global, guarded for the stability test (GitHub #3448 -- remove once the global solver
-// itself only returns lowest-Gibbs, mechanically stable roots): it can return the mechanically UNSTABLE middle
-// root (dp/drho < 0) when calc_rhomolar_max_bound sits below the true liquid density -- e.g. near-pure
-// water at 298 K, 1.6 bar, where the bound is ~42.6 kmol/m3 but liquid water is ~55.3 kmol/m3 and the
-// "global" root is ~47.8 kmol/m3 on the unstable branch.  Fugacities evaluated there are meaningless
-// (the near-pure water trial then reports tm = +0.11, "stable", for a feed that is two-phase).  In that
-// case solve both phase-specified roots and keep the mechanically stable one with the lower Gibbs
-// energy (the lowest-Gibbs-root contract the global solver is meant to honour).  Throws only where the
-// global solver itself throws; with no better alternative it returns the global root unchanged.  Leaves
-// `phase` at the returned root.
-CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, bool* replaced) {
-    const CoolPropDbl rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
-    phase.update_DmolarT_direct(rg, T);
-    if (mechanically_stable(phase)) return rg;
+// The lowest-Gibbs, mechanically stable root among the two phase-specified solves (liquid and gas imposed,
+// each scoped so `phase` keeps its own imposed phase) that also reproduces the target pressure; -1 when
+// neither solve yields one.  Leaves `phase` at an unspecified state.
+static CoolPropDbl lowest_gibbs_phase_specified_root(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p) {
     CoolPropDbl best = -1, g_best = HUGE_VAL;
     for (const phases ph : {iphase_liquid, iphase_gas}) {
         try {
@@ -2203,6 +2193,24 @@ CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBac
             // this phase-specified root is unavailable; the other is still tried
         }
     }
+    return best;
+}
+
+// solver_rho_Tp_global, guarded for the stability test (GitHub #3448 -- remove once the global solver
+// itself only returns lowest-Gibbs, mechanically stable roots): it can return the mechanically UNSTABLE middle
+// root (dp/drho < 0) when calc_rhomolar_max_bound sits below the true liquid density -- e.g. near-pure
+// water at 298 K, 1.6 bar, where the bound is ~42.6 kmol/m3 but liquid water is ~55.3 kmol/m3 and the
+// "global" root is ~47.8 kmol/m3 on the unstable branch.  Fugacities evaluated there are meaningless
+// (the near-pure water trial then reports tm = +0.11, "stable", for a feed that is two-phase).  In that
+// case solve both phase-specified roots and keep the mechanically stable one with the lower Gibbs
+// energy (the lowest-Gibbs-root contract the global solver is meant to honour).  Throws only where the
+// global solver itself throws; with no better alternative it returns the global root unchanged.  Leaves
+// `phase` at the returned root.
+CoolPropDbl SaturationSolvers::solve_rho_Tp_global_stable(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, bool* replaced) {
+    const CoolPropDbl rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
+    phase.update_DmolarT_direct(rg, T);
+    if (mechanically_stable(phase)) return rg;
+    const CoolPropDbl best = lowest_gibbs_phase_specified_root(phase, T, p);
     // No mechanically stable alternative found (e.g. both phase-specified solves fail for a liquid-like
     // trial at 80 K): keep the global root, exactly as before this guard existed.  Throwing here instead
     // would turn the trial non-conclusive and flip a clean "stable" verdict to "uncertain" -- which forces
@@ -2540,8 +2548,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                     }
                     // Record the trial's last (guarded) density root -- at its composition BEFORE this SS update,
                     // so only a seed for the updated composition stored above -- and the feed's root for the caller: the flash
-                    // passes them to the split solver as warm starts when a near-pure trial found the
-                    // instability, and its recovery path uses them in place of an unguarded cold solve.
+                    // passes them to the split solver as warm starts, and its recovery path uses them in place of an
+                    // unguarded cold solve.
                     rhomolar_vap = trials[t].vapor_like ? rho_warm : rho_b;
                     rhomolar_liq = trials[t].vapor_like ? rho_b : rho_warm;
                     return;
@@ -3153,14 +3161,13 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
     // collapsed onto the feed.
     constexpr double split_max_jump = 1.5;
     // Last resort when the guarded solve fails for a phase (the global solver can throw for an ordinary
-    // single-root phase, e.g. "One stationary point" for a supercritical air-like vapor): the sub-backend's
-    // own phase-imposed solve -- SatL liquid, SatV gas -- as the stability test's feed solve falls back to.
-    // Its root is accepted only if positive, finite and mechanically stable; otherwise the phase is lost.
-    auto imposed_phase_fallback = [&](HelmholtzEOSMixtureBackend& phase, CoolPropDbl& rho_warm) -> CoolPropDbl {
-        const CoolPropDbl r = phase.solver_rho_Tp(IO.T, IO.p);
-        if (!(ValidNumber(r) && r > 0)) throw ValueError("imposed-phase density fallback: invalid root");
+    // single-root phase, e.g. "One stationary point" for a supercritical air-like vapor, before the guard can
+    // look for an alternative): the guard's own validated search -- both phase-specified roots, each at the
+    // target pressure and mechanically stable, the lower-Gibbs one kept.  No such root: the phase is lost.
+    auto phase_specified_fallback = [&](HelmholtzEOSMixtureBackend& phase, CoolPropDbl& rho_warm) -> CoolPropDbl {
+        const CoolPropDbl r = lowest_gibbs_phase_specified_root(phase, IO.T, IO.p);
+        if (r <= 0) throw ValueError("phase-specified density fallback found no valid root");
         phase.update_DmolarT_direct(r, IO.T);
-        if (!mechanically_stable(phase)) throw ValueError("imposed-phase density fallback: unstable root");
         rho_warm = r;
         return r;
     };
@@ -3170,7 +3177,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             IO.rhomolar_liq = solve_trial_rho_warm(*HEOS.SatL, IO.T, IO.p, rho_warm_L, true, nullptr, split_max_jump);
         } catch (...) {
             try {
-                IO.rhomolar_liq = imposed_phase_fallback(*HEOS.SatL, rho_warm_L);
+                IO.rhomolar_liq = phase_specified_fallback(*HEOS.SatL, rho_warm_L);
             } catch (...) {
                 return false;
             }
@@ -3180,7 +3187,7 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             IO.rhomolar_vap = solve_trial_rho_warm(*HEOS.SatV, IO.T, IO.p, rho_warm_V, true, nullptr, split_max_jump);
         } catch (...) {
             try {
-                IO.rhomolar_vap = imposed_phase_fallback(*HEOS.SatV, rho_warm_V);
+                IO.rhomolar_vap = phase_specified_fallback(*HEOS.SatV, rho_warm_V);
             } catch (...) {
                 return false;
             }
@@ -3677,7 +3684,8 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             // guard) after the first call, so the incipient/majority densities land on the wrong
             // sheet -- the objective, gradient and acceptance test then live on a higher-Gibbs
             // surface and the line search stalls.  Global keeps every evaluation on the same
-            // stable roots the seed was built on.
+            // stable roots the seed was built on.  (Where the global solve throws, evaluate_phases falls back
+            // to the lower-Gibbs phase-specified root, which keeps the same lowest-Gibbs contract.)
             rho_warm_L = -1;
             rho_warm_V = -1;
             // The whole density + fugacity evaluation is wrapped: evaluate_phases already catches the
