@@ -13,76 +13,83 @@
 namespace CoolProp {
 namespace spline {
 
-// Tensor-product B-spline surface on a knot grid.
-//
-// Clamped and unclamped knot vectors are both supported.  The valid
-// domain is the true support interval [knots[order-1], knots[n]], which
-// coincides with [knots.front(), knots.back()] only when clamped.
-//
-//   f(x, y) = sum_i sum_j  c_ij  B_i,kx(x)  B_j,ky(y)
-//
-// ORDER CONVENTION.  `order` here is the B-spline ORDER, i.e. one more
-// than the polynomial degree, matching the MATLAB spline-toolbox B-form
-// and the Bollengier et al. (2019) water coefficient file (order 6 =
-// quintic).  Note scipy.interpolate.BSpline takes the DEGREE instead;
-// the two differ by one.  Getting this wrong is the likeliest source of
-// a silently wrong answer, so it is stated in both directions here and
-// in dev/scripts/gen_tensor_bspline_ref.py.
-//
-// The number of coefficients along an axis is fixed by the knot vector:
-//   n = knots.size() - order
-// and `coefs` is row-major with shape (nx, ny).
+/// Tensor-product B-spline surface on a knot grid.
+///
+/// Clamped and unclamped knot vectors are both supported.  The valid
+/// domain is the true support interval [knots[order-1], knots[n]], which
+/// coincides with [knots.front(), knots.back()] only when clamped.
+///
+///   f(x, y) = sum_i sum_j  c_ij  B_i,kx(x)  B_j,ky(y)
+///
+/// ORDER CONVENTION.  `order` here is the B-spline ORDER, i.e. one more
+/// than the polynomial degree, matching the MATLAB spline-toolbox B-form
+/// and the Bollengier et al. (2019) water coefficient file (order 6 =
+/// quintic).  Note scipy.interpolate.BSpline takes the DEGREE instead;
+/// the two differ by one.  Getting this wrong is the likeliest source of
+/// a silently wrong answer, so it is stated in both directions here and
+/// in dev/scripts/gen_tensor_bspline_ref.py.
+///
+/// The number of coefficients along an axis is fixed by the knot vector:
+///   n = knots.size() - order
+/// and `coefs` is row-major with shape (nx, ny).
 class TensorBSpline2D
 {
    public:
-    // Largest supported order per axis.  Evaluation uses fixed-size
-    // stack scratch, so this is a hard bound, enforced by the
-    // constructor rather than trusted from the caller.
+    /// Largest supported order per axis.  Evaluation uses fixed-size
+    /// stack scratch, so this is a hard bound, enforced by the
+    /// constructor rather than trusted from the caller.
     static constexpr std::size_t kMaxOrder = 16;
 
+    /// Build the surface from two knot vectors, the two ORDERS (degree +
+    /// 1; see the note above), and the row-major (nx, ny) coefficients.
+    ///
+    /// Throws ValueError if either axis is unusable or if the
+    /// coefficient count is not exactly nx * ny.  Every precondition is
+    /// checked here rather than trusted, so a constructed object is
+    /// always evaluable over its whole domain.
     TensorBSpline2D(std::vector<double> knots_x, std::vector<double> knots_y, std::size_t order_x, std::size_t order_y, std::vector<double> coefs);
 
-    // Mixed partial d^(dx+dy) f / dx^dx dy^dy at (x, y); (0, 0) is the
-    // value itself.  Any order is accepted: orders above the polynomial
-    // degree of an axis are identically zero, as they should be.
+    /// Mixed partial d^(dx+dy) f / dx^dx dy^dy at (x, y); (0, 0) is the
+    /// value itself.  Any order is accepted: orders above the polynomial
+    /// degree of an axis are identically zero, as they should be.
     [[nodiscard]] double eval(double x, double y, unsigned dx = 0, unsigned dy = 0) const;
 
    private:
     using BasisOut = std::array<double, kMaxOrder>;
 
-    // Throws ValueError unless (order, knots) describe a usable axis:
-    // order in [1, kMaxOrder], enough knots that n = size - order is at
-    // least 1, and a finite non-decreasing knot sequence.
+    /// Throws ValueError unless (order, knots) describe a usable axis:
+    /// order in [1, kMaxOrder], enough knots that n = size - order is at
+    /// least 1, and a finite non-decreasing knot sequence.
     static void validate_axis(const std::vector<double>& knots, std::size_t order, const char* axis);
 
-    // Throws ValueError unless `v` is finite and inside [knots[p],
-    // knots[n]] -- the actual support of a clamped spline, which is
-    // narrower than the knot vector's own extent.
+    /// Throws ValueError unless `v` is finite and inside [knots[p],
+    /// knots[n]] -- the actual support of a clamped spline, which is
+    /// narrower than the knot vector's own extent.
     static void check_in_domain(const std::vector<double>& knots, std::size_t order, std::size_t n, double v, const char* axis);
 
-    // Index of the knot span containing `v`, clamped to [p, n-1] so that
-    // the right-hand endpoint belongs to the last span rather than
-    // falling off the end.
-    //
-    // PRECONDITION: check_in_domain() has passed for `v`.  The bisection
-    // below does not terminate for out-of-domain input -- it does not
-    // merely return a wrong span, it hangs -- so this must never be
-    // reached without the guard in front of it.
+    /// Index of the knot span containing `v`, clamped to [p, n-1] so that
+    /// the right-hand endpoint belongs to the last span rather than
+    /// falling off the end.
+    ///
+    /// PRECONDITION: check_in_domain() has passed for `v`.  The bisection
+    /// below does not terminate for out-of-domain input -- it does not
+    /// merely return a wrong span, it hangs -- so this must never be
+    /// reached without the guard in front of it.
     [[nodiscard]] static std::size_t find_span(const std::vector<double>& knots, std::size_t order, std::size_t n, double v);
 
-    // The `order` non-zero basis functions on span `span`, written to
-    // out[0 .. order-1] and corresponding to coefficients
-    // span-p .. span  (p = order - 1).  Cox-de Boor recurrence in the
-    // triangular form of Piegl & Tiller, The NURBS Book, Alg. A2.2.
+    /// The `order` non-zero basis functions on span `span`, written to
+    /// out[0 .. order-1] and corresponding to coefficients
+    /// span-p .. span  (p = order - 1).  Cox-de Boor recurrence in the
+    /// triangular form of Piegl & Tiller, The NURBS Book, Alg. A2.2.
     static void basis_funs(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, BasisOut& out);
 
-    // The `nd`-th derivatives of those same `order` basis functions,
-    // written to out[0 .. order-1].  Piegl & Tiller, Alg. A2.3
-    // (DersBasisFuns), keeping only the row we asked for.
-    //
-    // Signed arithmetic throughout: the book's recurrence indexes
-    // r - k, which goes negative, and doing that in std::size_t would
-    // wrap to a huge value and read out of bounds.
+    /// The `nd`-th derivatives of those same `order` basis functions,
+    /// written to out[0 .. order-1].  Piegl & Tiller, Alg. A2.3
+    /// (DersBasisFuns), keeping only the row we asked for.
+    ///
+    /// Signed arithmetic throughout: the book's recurrence indexes
+    /// r - k, which goes negative, and doing that in std::size_t would
+    /// wrap to a huge value and read out of bounds.
     static void basis_ders(const std::vector<double>& knots, std::size_t order, std::size_t span, double v, unsigned nd, BasisOut& out);
 
     std::vector<double> kx_;

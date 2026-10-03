@@ -28,6 +28,12 @@ rng = np.random.default_rng(20260926)
 C = np.round(rng.uniform(-3.0, 3.0, size=(nx, ny)), 6)
 
 def ev(x, y, dx=0, dy=0):
+    """Evaluate the tensor-product surface, or a mixed partial, at (x, y).
+
+    dx/dy are derivative orders in each axis; (0, 0) is the value.  Uses
+    scipy, which takes the DEGREE, so order-1 is passed -- see the note
+    at the top of this file.
+    """
     Bx = BSpline(kx, np.eye(nx), ox - 1, extrapolate=False)
     By = BSpline(ky, np.eye(ny), oy - 1, extrapolate=False)
     vx = (Bx.derivative(dx) if dx else Bx)(x)
@@ -87,6 +93,11 @@ nx4, ny4 = len(kx4)-ox4, len(ky4)-oy4
 C4 = np.round(np.random.default_rng(13).uniform(-1, 1, size=(nx4, ny4)), 6)
 
 def emit(name, kxx, kyy, oxx, oyy, CC, pts, derivs):
+    """Print one Catch2 reference block for the given surface and probes.
+
+    `pts` are the (x, y) probes and `derivs` the (dx, dy) pairs; the output
+    is pasted into src/Tests/CoolProp-Tests-TensorBSpline.cpp.
+    """
     nxx, nyy = len(kxx)-oxx, len(kyy)-oyy
     print(f"\n// ---- {name}: order {oxx}/{oyy}, n = {nxx}x{nyy} ----")
     print("    const std::vector<double> %s_kx{%s};" % (name, ", ".join(f"{v:g}" for v in kxx)))
