@@ -397,54 +397,83 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 try {
                     solver.solve();
                 } catch (const CoolProp::CoolPropBaseError&) {
-                    // An instability the stability test only reaches through the near-pure trials or the #3448
-                    // density guard is an EXTRA verdict; if the split solver cannot follow it (e.g. "lost a
-                    // phase density solve" for Amarillo natural gas at ~180 K, 5-10 MPa), treat it like a
-                    // non-converged split -- recover or fall back to single phase -- rather than throw where
-                    // the flash used to answer.  Only the feed's root or that of the trial which found the
-                    // instability counts as guard-dependent; any other split-solver failure still throws.
-                    if (!o.nonconvergence && !stability_tester.unstable_beyond_baseline()) {
-                        throw;
+                    // A flash-first verdict PROVES instability, but after only a few SS steps from Wilson K its
+                    // split can still be far from equilibrium (CO2/H2O at 253 K, 1.5 MPa: a "liquid" with 20 %
+                    // CO2), and the solver started there may collapse onto the feed.  Retry once the way the
+                    // flash worked before flash-first: rerun the trial search and start the solver from its
+                    // trial phase.  If that retry also fails (or the trial search finds no instability), the
+                    // handling below applies to it unchanged.
+                    bool retried_ok = false;
+                    if (stability_tester.unstable_by_flash_first()) {
+                        stability_tester.set_flash_first_enabled(false);
+                        if (!stability_tester.is_stable()) {
+                            stability_tester.get_liq(o.x, o.rhomolar_liq);
+                            stability_tester.get_vap(o.y, o.rhomolar_vap);
+                            o.beta = _HUGE;  // unset, as on the trial path: the solver starts from its default
+                            o.rho_warm_liq_seed = o.rho_warm_vap_seed = -1;
+                            if (stability_tester.unstable_by_near_pure_trial()) {
+                                o.rho_warm_liq_seed = o.rhomolar_liq;
+                                o.rho_warm_vap_seed = o.rhomolar_vap;
+                            }
+                            try {
+                                CoolProp::SaturationSolvers::PTflash_twophase retry(HEOS, o);
+                                retry.solve();
+                                retried_ok = true;
+                            } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                                // fall through to the handling below with the retry's o.nonconvergence
+                            }
+                        }
                     }
-                    // Recovery, paid only by a flash whose split failed the gate: the stability test
-                    // PROVED instability (tm < 0), but the second-order solver started from its trial
-                    // collapsed to the trivial root or stalled -- seen for a near-pure water liquid out of
-                    // CO2 (CO2/H2O 99/1 at 272.7 K, 6.1 MPa: converged to x == y).  Refine the stability
-                    // trial by successive substitution and publish it only if it verifies, at the same
-                    // recovery tolerance as the Wilson-seeded path; otherwise single phase, as before.
-                    do_twophase = false;
-                    try {
-                        std::vector<CoolPropDbl> xr, yr;
-                        CoolPropDbl rL = -1, rV = -1;
-                        stability_tester.get_liq(xr, rL);
-                        stability_tester.get_vap(yr, rV);
-                        // Densities: the stability trial's guarded roots when it recorded them; otherwise a
-                        // guarded cold solve -- the plain global solver can return the unstable middle root
-                        // for a water-rich liquid (GitHub #3448), from which the refinement diverges.
-                        if (!(rL > 0)) {
-                            HEOS.SatL->set_mole_fractions(xr);
-                            rL = CoolProp::SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, o.T, o.p);
+                    if (!retried_ok) {  // a converged trial-seeded retry is published below like any genuine split
+                        // An instability the stability test only reaches through the near-pure trials or the #3448
+                        // density guard is an EXTRA verdict; if the split solver cannot follow it (e.g. "lost a
+                        // phase density solve" for Amarillo natural gas at ~180 K, 5-10 MPa), treat it like a
+                        // non-converged split -- recover or fall back to single phase -- rather than throw where
+                        // the flash used to answer.  Only the feed's root or that of the trial which found the
+                        // instability counts as guard-dependent; any other split-solver failure still throws.
+                        if (!o.nonconvergence && !stability_tester.unstable_beyond_baseline()) {
+                            throw;
                         }
-                        if (!(rV > 0)) {
-                            HEOS.SatV->set_mole_fractions(yr);
-                            rV = CoolProp::SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatV, o.T, o.p);
+                        // Recovery, paid only by a flash whose split failed the gate: the stability test
+                        // PROVED instability (tm < 0), but the second-order solver started from its trial
+                        // collapsed to the trivial root or stalled -- seen for a near-pure water liquid out of
+                        // CO2 (CO2/H2O 99/1 at 272.7 K, 6.1 MPa: converged to x == y).  Refine the stability
+                        // trial by successive substitution and publish it only if it verifies, at the same
+                        // recovery tolerance as the Wilson-seeded path; otherwise single phase, as before.
+                        do_twophase = false;
+                        try {
+                            std::vector<CoolPropDbl> xr, yr;
+                            CoolPropDbl rL = -1, rV = -1;
+                            stability_tester.get_liq(xr, rL);
+                            stability_tester.get_vap(yr, rV);
+                            // Densities: the stability trial's guarded roots when it recorded them; otherwise a
+                            // guarded cold solve -- the plain global solver can return the unstable middle root
+                            // for a water-rich liquid (GitHub #3448), from which the refinement diverges.
+                            if (!(rL > 0)) {
+                                HEOS.SatL->set_mole_fractions(xr);
+                                rL = CoolProp::SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, o.T, o.p);
+                            }
+                            if (!(rV > 0)) {
+                                HEOS.SatV->set_mole_fractions(yr);
+                                rV = CoolProp::SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatV, o.T, o.p);
+                            }
+                            {
+                                // Neither phase's branch is imposed during the refinement: the "vapor" of a
+                                // liquid-liquid split (a dense CO2-rich phase over water at 290 K, 5.8 MPa) would
+                                // otherwise be forced onto SatV's gas branch and the SS diverge.  Restored after.
+                                const CoolProp::ScopedImposedPhase freeL(*HEOS.SatL, iphase_not_imposed);
+                                const CoolProp::ScopedImposedPhase freeV(*HEOS.SatV, iphase_not_imposed);
+                                CoolProp::SaturationSolvers::successive_substitution_guessrho(HEOS, xr, yr, rL, rV, o.z, 80, 1e-11);
+                            }
+                            o.x = xr;
+                            o.y = yr;
+                            o.rhomolar_liq = rL;
+                            o.rhomolar_vap = rV;
+                            o.beta = seeded_beta(o);
+                            do_twophase = ValidNumber(o.beta) && o.beta > 0 && o.beta < 1 && verify_split(1e-4);
+                        } catch (const CoolProp::CoolPropBaseError&) {
+                            do_twophase = false;  // recovery itself failed: single phase, as before
                         }
-                        {
-                            // Neither phase's branch is imposed during the refinement: the "vapor" of a
-                            // liquid-liquid split (a dense CO2-rich phase over water at 290 K, 5.8 MPa) would
-                            // otherwise be forced onto SatV's gas branch and the SS diverge.  Restored after.
-                            const CoolProp::ScopedImposedPhase freeL(*HEOS.SatL, iphase_not_imposed);
-                            const CoolProp::ScopedImposedPhase freeV(*HEOS.SatV, iphase_not_imposed);
-                            CoolProp::SaturationSolvers::successive_substitution_guessrho(HEOS, xr, yr, rL, rV, o.z, 80, 1e-11);
-                        }
-                        o.x = xr;
-                        o.y = yr;
-                        o.rhomolar_liq = rL;
-                        o.rhomolar_vap = rV;
-                        o.beta = seeded_beta(o);
-                        do_twophase = ValidNumber(o.beta) && o.beta > 0 && o.beta < 1 && verify_split(1e-4);
-                    } catch (const CoolProp::CoolPropBaseError&) {
-                        do_twophase = false;  // recovery itself failed: single phase, as before
                     }
                 }
             }

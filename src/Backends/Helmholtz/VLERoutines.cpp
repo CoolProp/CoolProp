@@ -2237,8 +2237,11 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             // genuinely the same root.)
             // The local root must also be mechanically stable: a warm start on (or Newton drifting
             // onto) the unstable middle branch would otherwise be carried along the trajectory.
-            warm_ok =
-              ValidNumber(r) && r > 0 && r < max_jump * rho_warm && r > rho_warm / max_jump && (!guard_unstable_branch || mechanically_stable(phase));
+            const bool same_branch = ValidNumber(r) && r > 0 && r < max_jump * rho_warm && r > rho_warm / max_jump;
+            warm_ok = same_branch && (!guard_unstable_branch || mechanically_stable(phase));
+            // A warm root the guard rejects for being mechanically unstable is a guard intervention just like
+            // a replaced global root: the solve below lands on a different branch than the unguarded code.
+            if (guard_unstable_branch && same_branch && !warm_ok && guard_replaced) *guard_replaced = true;
         } catch (...) {
             warm_ok = false;  // warm solve threw -> fall back to the global solver below
         }
@@ -2330,7 +2333,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     // (a negative tpd at ANY composition is sufficient), and the split itself is a much better start
     // for the phase-split solver than a trial phase against the feed.  Otherwise the trial search
     // below runs exactly as before.
-    if (g0 > 0 && g1 < 0 && Kmin < HUGE_VAL) {
+    if (_flash_first_enabled && g0 > 0 && g1 < 0 && Kmin < HUGE_VAL) {
         constexpr int n_flash_first_steps = 3;
         constexpr double ff_tol = 1e-7;
         constexpr double ff_max_jump = 1.5;  // same branch window as the phase-split solver

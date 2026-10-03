@@ -738,6 +738,7 @@ class StabilityEvaluationClass
     bool _feed_guard_replaced;   ///< the guard replaced the feed's density root in this test
     bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
     bool _flash_first;           ///< the instability was found by the flash-first successive substitution
+    bool _flash_first_enabled;   ///< run the flash-first successive substitution (on by default)
     bool debug;
     bool use_michelsen;
 
@@ -760,6 +761,7 @@ class StabilityEvaluationClass
         _feed_guard_replaced(false),
         _trial_guard_replaced(false),
         _flash_first(false),
+        _flash_first_enabled(true),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -851,6 +853,11 @@ class StabilityEvaluationClass
     }
     double get_beta() const {
         return beta;
+    }
+    /// Switch the flash-first successive substitution off (or back on) for the next is_stable() call: the
+    /// flash retries the trial search when the split solver cannot follow a flash-first split.
+    void set_flash_first_enabled(bool enabled) {
+        _flash_first_enabled = enabled;
     }
     bool unstable_beyond_baseline() const {
         return !_stable && (_near_pure || _guard_replaced);
