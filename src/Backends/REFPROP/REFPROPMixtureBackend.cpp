@@ -109,6 +109,18 @@ std::string get_casesensitive_fluids(const std::string& root) {
         }
     }
 }
+/// Find either MIXTURES or mixtures folder relative to the root path provided; return the path
+std::string get_casesensitive_mixtures(const std::string& root) {
+    std::string joined = join_path(root, "mixtures");
+    if (path_exists(joined)) {
+        return joined;
+    }
+    std::string ucase_joined = join_path(root, "MIXTURES");
+    if (path_exists(ucase_joined)) {
+        return ucase_joined;
+    }
+    throw CoolProp::ValueError(format(R"(mixture directories "MIXTURES" or "mixtures" could not be found in the directory [%s])", root));
+}
 std::string get_REFPROP_fluid_path_prefix() {
     if (get_envvar("COOLPROP_REFPROP_ROOT")) {
         return "";
@@ -150,12 +162,12 @@ std::string get_REFPROP_mixtures_path_prefix() {
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        return join_path(alt_refprop_path, "mixtures");
+        return get_casesensitive_mixtures(alt_refprop_path);
     }
 #if defined(__ISWINDOWS__)
     return rpPath;
 #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    return join_path(rpPath, "mixtures");
+    return get_casesensitive_mixtures(rpPath);
 #else
     throw CoolProp::NotImplementedError("This function should not be called.");
     return rpPath;
