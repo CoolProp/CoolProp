@@ -22,14 +22,20 @@
  *  - the caller (once per p): shifts the constant coefficient by -t and isolates the roots on every piece with
  *    ChebyshevBernstein::real_roots, using the margin as the sign tolerance.
  *
+ * The non-analytic critical-region terms of IAPWS-95 and Span-Wagner type, n Delta^b delta psi, do not factor.  They
+ * are added per (T, x) instead: fit on each piece at that tau (degree 8, or NQ when 8 is not enough) with a measured
+ * error, or -- where a rigorous bound on their size (NonAnalyticTerm::bound_factor) shows them negligible -- left out
+ * of the fit and put into the margin.  The pieces have an edge at delta = 1, where these terms are not analytic.
+ *
  * The tables live on a hard rectangle tau in [tau_min, tau_max], delta in [0, delta_max]; nothing is
- * extrapolated, and assemble() declines a (T, x) outside it.  Models with residual terms that do not factor
- * (non-analytic critical-region terms, SAFT association, cubic or other term types) are declined at build.
+ * extrapolated, and assemble() declines a (T, x) outside it.  Models with other residual terms that do not factor
+ * (SAFT association, cubic, Gao-B, ...) are declined at build.
  *
  * The margin bounds the difference from G as evaluated from the same grouped terms (true_G), not from the backend's
  * own pressure; the two agree to roundoff (build() verifies the regrouping to 1e-12 relative to the size of the terms,
- * the tests find ~1e-15).  The fit error in the margin is measured (between the interpolation nodes, with a factor 2),
- * and its roundoff allowance is empirical; neither is proven.
+ * the tests find ~1e-15).  The fit errors in the margin are measured (the generalized-exponential fits between the
+ * interpolation nodes, with a factor 2; the non-analytic fits at 6 points, with a factor 10), and its roundoff
+ * allowance is empirical; neither is proven.
  *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
  * function, no pointers into the backend that built it), so it may be shared across threads and across backends
@@ -89,6 +95,30 @@ struct Term
     static constexpr int MAX_POW = 24;
 };
 
+/// One non-analytic critical-region term, alphar = n Delta^b delta psi with
+///   Delta = theta^2 + B ((delta - 1)^2)^a,  theta = (1 - tau) + A ((delta - 1)^2)^(1/(2 beta)),
+///   psi = exp(-C (delta - 1)^2 - D (tau - 1)^2)            (IAPWS-95 Table 5 form; also Span-Wagner CO2)
+struct NonAnalyticTerm
+{
+    double n = 0, a = 0, b = 0, beta = 0, A = 0, B = 0, C = 0, D = 0;
+
+    /// Bound on |delta d(alphar)/d(delta)| of this term over delta in [lo, hi] and |1 - tau| <= dtau_max, WITHOUT
+    /// the factor exp(-D (tau - 1)^2): multiply by it for a given tau.  +inf when the parameters are outside the
+    /// range the bound is derived for (beta in (0, 1], b >= 1/2, 2 a b >= 1, a >= 1/2, A, C >= 0, B > 0).
+    [[nodiscard]] double bound_factor(double lo, double hi, double dtau_max) const;
+};
+
+/// Sum of non-analytic terms at (tau, delta), evaluated as ResidualHelmholtzNonAnalytic does (same expressions and the
+/// same offset away from tau = 1 and delta = 1)
+struct NonAnalyticValues
+{
+    double alphar = 0;
+    double chi = 0;    ///< delta d(alphar)/d(delta)
+    double dchi = 0;   ///< d(chi)/d(delta)
+    double parts = 0;  ///< roundoff scale of chi: the size of what it is summed from, incl. the cancellation in Delta
+};
+NonAnalyticValues eval_nonanalytic(const std::vector<NonAnalyticTerm>& terms, double tau, double delta);
+
 /// Split the terms of a generalized-exponential residual into Term (appended to out)
 void collect_terms(const ResidualHelmholtzGeneralizedExponential& g, int i, int j, std::vector<Term>& out);
 
@@ -113,6 +143,7 @@ class Tables
         std::vector<double> x;       ///< mole fractions
         double T = 0, tau = 0, rhor = 0;
         double t_scale = 0;  ///< t = p * t_scale = p / (rhor R T)
+        long na_fits = 0;    ///< pieces on which a non-analytic contribution was fit (rest: bounded into the margin)
     };
 
     /// Build the tables for the components of HEOS (its mole fractions must be set: they are used to identify how
@@ -161,13 +192,20 @@ class Tables
     BuildOptions m_opt;
     int m_N = 0;
     std::vector<Term> m_terms;
-    std::vector<int> m_group;                 ///< term -> group
-    std::vector<Term> m_reps;                 ///< one representative term per group (its delta-part)
-    std::vector<double> m_edges;              ///< piece edges, m_edges[0] = 0, back() = delta_max
-    std::vector<CoeffsQ> m_C;                 ///< fit of chi_g on piece p at [p * n_groups + g]
-    std::vector<double> m_Cn;                 ///< l1 norm of each fit (roundoff scale)
-    std::vector<double> m_Ct;                 ///< fit-error bound of each fit
-    std::vector<double> m_Cp;                 ///< roundoff scale of evaluating chi_g on the piece (see Term::parts)
+    std::vector<int> m_group;     ///< term -> group
+    std::vector<Term> m_reps;     ///< one representative term per group (its delta-part)
+    std::vector<double> m_edges;  ///< piece edges, m_edges[0] = 0, back() = delta_max
+    std::vector<CoeffsQ> m_C;     ///< fit of chi_g on piece p at [p * n_groups + g]
+    std::vector<double> m_Cn;     ///< l1 norm of each fit (roundoff scale)
+    std::vector<double> m_Ct;     ///< fit-error bound of each fit
+    std::vector<double> m_Cp;     ///< roundoff scale of evaluating chi_g on the piece (see Term::parts)
+    struct NAComp
+    {
+        int i = 0;                           ///< component
+        std::vector<NonAnalyticTerm> terms;  ///< owned copy of its non-analytic terms
+        std::vector<double> K;               ///< bound factor of term k on piece p at [p * terms.size() + k]
+    };
+    std::vector<NAComp> m_na;
     std::vector<std::vector<double>> m_F;     ///< F_ij
     std::shared_ptr<ReducingFunction> m_red;  ///< owned copy
     std::vector<double> m_Ri;                 ///< component gas constants

@@ -150,6 +150,72 @@ bool Term::same_delta(const Term& o) const {
            && o.has_e2 == has_e2 && (!has_e2 || (o.e2 == e2 && o.eps2 == eps2));
 }
 
+// ------------------------------------------------------------------ non-analytic terms
+
+// Delta-derivatives of order 0-2, as ResidualHelmholtzNonAnalytic::all_deltaonly computes them
+NonAnalyticValues eval_nonanalytic(const std::vector<NonAnalyticTerm>& terms, double tau_in, double delta_in) {
+    NonAnalyticValues v;
+    const double tau = std::abs(tau_in - 1) < 10 * DBL_EPSILON ? 1.0 + 10 * DBL_EPSILON : tau_in;
+    const double delta = std::abs(delta_in - 1) < 10 * DBL_EPSILON ? 1.0 + 10 * DBL_EPSILON : delta_in;
+    const double dm = delta - 1, d2 = dm * dm;
+    double ad = 0, add = 0;
+    for (const auto& el : terms) {
+        const double pw_t = std::pow(d2, 1.0 / (2.0 * el.beta));
+        const double theta = (1.0 - tau) + el.A * pw_t;
+        const double dtheta = el.A / el.beta * std::pow(d2, 1 / (2 * el.beta) - 1) * dm;
+        const double d2theta = el.A / el.beta * (1 / el.beta - 1) * std::pow(d2, 1 / (2 * el.beta) - 1);
+        const double PSI = std::exp(-el.C * d2 - el.D * (tau - 1.0) * (tau - 1.0));
+        const double dPSI = -2.0 * el.C * dm * PSI;
+        const double d2PSI = (2.0 * el.C * d2 - 1.0) * 2.0 * el.C * PSI;
+        const double pa = std::pow(d2, el.a), pa1 = std::pow(d2, el.a - 1.0);
+        const double DELTA = theta * theta + el.B * pa;
+        const double dDELTA = 2 * theta * dtheta + 2 * el.B * el.a * pa1 * dm;
+        const double d2DELTA = 2 * (theta * d2theta + dtheta * dtheta + el.B * (2 * el.a * el.a - el.a) * pa1);
+        const double Db = std::pow(DELTA, el.b), Db1 = std::pow(DELTA, el.b - 1);
+        const double dDb = el.b * Db1 * dDELTA;
+        const double d2Db = el.b * (Db1 * d2DELTA + (el.b - 1.0) * std::pow(DELTA, el.b - 2.0) * dDELTA * dDELTA);
+        v.alphar += delta * el.n * Db * PSI;
+        ad += el.n * (Db * (PSI + delta * dPSI) + dDb * delta * PSI);
+        add += el.n * (Db * (2.0 * dPSI + delta * d2PSI) + 2.0 * dDb * (PSI + delta * dPSI) + d2Db * delta * PSI);
+        // roundoff scale of delta * (the d(alphar)/d(delta) contribution), in units of eps: the size of its parts, with
+        // Delta and dDelta/d(delta) weighted by their own cancellation (theta -> 0 and Delta -> 0 near the critical point)
+        const double th_abs = std::abs(1.0 - tau) + std::abs(el.A * pw_t);
+        const double eDELTA = 2 * std::abs(theta) * th_abs + std::abs(el.B * pa);  // abs. rounding of Delta / eps
+        const double edDELTA = 2 * th_abs * std::abs(dtheta) + std::abs(2 * el.B * el.a * pa1 * dm);
+        const double kD = eDELTA / DELTA;
+        const double t1 = std::abs(Db) * (std::abs(PSI) + delta * std::abs(dPSI)) * (1 + std::abs(el.b) * kD);
+        const double t2 = std::abs(el.b * Db1) * delta * std::abs(PSI) * (std::abs(dDELTA) * (1 + std::abs(el.b - 1) * kD) + edDELTA);
+        v.parts += delta * std::abs(el.n) * (t1 + t2);
+    }
+    v.chi = delta * ad;
+    v.dchi = ad + delta * add;
+    return v;
+}
+
+// |chi| <= delta |n| [Delta^b (psi + delta |psi'|) + |d(Delta^b)/d(delta)| delta psi], with on [lo, hi] (d = |delta - 1|
+// in [dmin, dmax]) and |1 - tau| <= dtau_max:
+//   theta <= dtau_max + A dmax^(1/beta),  Delta <= theta_max^2 + B dmax^(2a),  |theta'| <= (A/beta) dmax^(1/beta - 1),
+//   psi <= exp(-C dmin^2) exp(-D (tau-1)^2),  |psi'| <= 2 C dmax psi,
+//   |d(Delta^b)/d(delta)| = b Delta^(b-1) |2 theta theta' + 2 a B d^(2a-1)| is bounded by
+//     b >= 1:      b Delta_max^(b-1) (2 theta_max |theta'|_max + 2 a B dmax^(2a-1))
+//     1/2 <= b < 1: 2 b Delta_max^(b-1/2) |theta'|_max + 2 a b B^b dmax^(2ab-1)
+//       (using |theta| <= Delta^(1/2) and Delta >= B d^(2a) in Delta^(b-1)).
+double NonAnalyticTerm::bound_factor(double lo, double hi, double dtau_max) const {
+    const double inf = std::numeric_limits<double>::infinity();
+    if (!(beta > 0 && beta <= 1 && b >= 0.5 && a >= 0.5 && 2 * a * b >= 1 && A >= 0 && B > 0 && C >= 0 && D >= 0)) return inf;
+    if (!(lo >= 0 && hi >= lo && dtau_max >= 0)) return inf;
+    const double dmin = (lo <= 1 && hi >= 1) ? 0.0 : std::min(std::abs(lo - 1), std::abs(hi - 1));
+    const double dmax = std::max(std::abs(lo - 1), std::abs(hi - 1));
+    const double th = dtau_max + A * std::pow(dmax, 1 / beta);
+    const double Dl = th * th + B * std::pow(dmax, 2 * a);
+    const double dth = A / beta * std::pow(dmax, 1 / beta - 1);
+    const double psi = std::exp(-C * dmin * dmin), dpsi = 2 * C * dmax * psi;
+    const double dDb = b >= 1 ? b * std::pow(Dl, b - 1) * (2 * th * dth + 2 * a * B * std::pow(dmax, 2 * a - 1))
+                              : 2 * b * std::pow(Dl, b - 0.5) * dth + 2 * a * b * std::pow(B, b) * std::pow(dmax, 2 * a * b - 1);
+    const double r = hi * std::abs(n) * (std::pow(Dl, b) * (psi + hi * dpsi) + dDb * hi * psi);
+    return std::isfinite(r) ? r : inf;
+}
+
 void collect_terms(const ResidualHelmholtzGeneralizedExponential& g, int i, int j, std::vector<Term>& out) {
     for (const auto& el : g.elements) {
         Term T;
@@ -210,14 +276,19 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
     for (int i = 0; i < N; ++i) {
         if (comps[i].EOSVector.empty()) return decline("component " + std::to_string(i) + " has no equation of state");
         const auto& ar = comps[i].EOS().alphar;
-        // Term types that do not factor as kappa(tau) phi(delta).  The non-analytic terms are checked by type, not
-        // only by the numerical verification below: they are negligible away from the critical point, so sample
-        // points could miss them.
-        if (ar.NonAnalytic.N > 0) return decline("component " + std::to_string(i) + " has non-analytic residual terms");
+        // Term types that do not factor as kappa(tau) phi(delta) and have no add-in here.  Checked by type, not only by
+        // the numerical verification below, which samples a few points and could miss a term that is locally small.
         if (!ar.SAFT.disabled) return decline("component " + std::to_string(i) + " has SAFT association terms");
         if (ar.cubic.enabled || ar.XiangDeiters.enabled || ar.GaoB.enabled)
             return decline("component " + std::to_string(i) + " has residual terms other than generalized exponential");
         collect_terms(ar.GenExp, i, -1, T->m_terms);
+        if (ar.NonAnalytic.N > 0) {  // owned copy: no pointer into the backend (COO-125)
+            NAComp c;
+            c.i = i;
+            for (const auto& el : ar.NonAnalytic.elements)
+                c.terms.push_back({el.n, el.a, el.b, el.beta, el.A, el.B, el.C, el.D});
+            T->m_na.push_back(std::move(c));
+        }
         T->m_Ri.push_back(comps[i].gas_constant());
     }
     const auto& Ex = HEOS.residual_helmholtz->Excess;
@@ -333,6 +404,14 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
         }
     }
     std::sort(done.begin(), done.end());
+    if (!T->m_na.empty())  // the non-analytic terms are not analytic at delta = 1: make it a piece edge
+        for (std::size_t k = 0; k < done.size(); ++k)
+            if (done[k].first < 1.0 && done[k].second > 1.0) {
+                const auto pr = done[k];
+                done[k] = {pr.first, 1.0};
+                done.insert(done.begin() + static_cast<std::ptrdiff_t>(k) + 1, {1.0, pr.second});
+                break;
+            }
     T->m_edges = {0.0};
     for (const auto& pr : done)
         T->m_edges.push_back(pr.second);
@@ -368,6 +447,16 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
             if (!finite || !std::isfinite(s)) return decline("non-finite fit on [0, delta_max]");
         }
     }
+    // tau-independent part of the bound on each non-analytic term, per piece
+    {
+        const double dtau_max = std::max(std::abs(1 - opt.tau_min), std::abs(opt.tau_max - 1));
+        for (auto& c : T->m_na) {
+            c.K.resize(static_cast<std::size_t>(P) * c.terms.size());
+            for (int p = 0; p < P; ++p)
+                for (std::size_t k = 0; k < c.terms.size(); ++k)
+                    c.K[p * c.terms.size() + k] = c.terms[k].bound_factor(T->m_edges[p], T->m_edges[p + 1], dtau_max);
+        }
+    }
     return T;
 }
 
@@ -395,6 +484,13 @@ std::string Tables::verify(HelmholtzEOSMixtureBackend& HEOS) const {
                     z += vz;
                     sa += std::abs(va);
                     sz += std::abs(vz);
+                }
+                for (const auto& c : m_na) {
+                    const auto v = eval_nonanalytic(c.terms, tau, D);
+                    a += x[c.i] * v.alphar;
+                    z += x[c.i] * v.chi;
+                    sa += std::abs(x[c.i] * v.alphar);
+                    sz += std::abs(x[c.i] * v.chi);
                 }
                 double a_ref = 0, z_ref = 0;
                 try {
@@ -429,7 +525,14 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
     const double rnd = (45.0 + static_cast<double>(NGRP)) * DBL_EPSILON;
     S.G.resize(P);
     S.margin.resize(P);
+    S.na_fits = 0;
+    // tau-factor exp(-D (tau-1)^2) of each non-analytic term's bound, shared by all pieces
+    std::vector<double> na_tau_factor;
+    for (const NAComp& c : m_na)
+        for (const auto& tm : c.terms)
+            na_tau_factor.push_back(std::exp(-tm.D * (tau - 1) * (tau - 1)));
     for (int p = 0; p < P; ++p) {
+        std::size_t ntf = 0;
         CoeffsQ q{};
         q[0] = 1.0;
         double scale = 1.0, fiterr = 0.0;
@@ -445,6 +548,57 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                 q[k] += w * cp[g][k];
             scale += std::abs(w) * (cn[g] + cpart[g]);
             fiterr += std::abs(w) * ct[g];
+        }
+        for (const NAComp& c : m_na) {  // non-analytic add-in at this tau
+            const double xi = x[c.i];
+            const std::size_t nk = c.terms.size();
+            const double* tf = &na_tau_factor[ntf];
+            ntf += nk;
+            if (xi == 0) continue;
+            double bound = 0;
+            for (std::size_t k = 0; k < nk; ++k)
+                bound += c.K[p * nk + k] * tf[k];
+            bound *= std::abs(xi);
+            if (bound < 1e-3 * m_opt.tol) {  // negligible on this piece (rigorous bound): into the margin, not the fit
+                fiterr += bound;
+                continue;
+            }
+            ++S.na_fits;
+            const double lo = m_edges[p], hi = m_edges[p + 1];
+            bool finite = true;
+            double pmax = 0;
+            auto f = [&](double D) {
+                const auto v = eval_nonanalytic(c.terms, tau, D);
+                finite = finite && std::isfinite(v.chi) && std::isfinite(v.parts);
+                pmax = std::max(pmax, std::abs(xi) * v.parts);
+                return xi * v.chi;
+            };
+            // degree 8 first; NQ when the degree-8 tail is not negligible against the table tolerance
+            CoeffsQ cf{};
+            const auto c8 = chebfit<8>(f, lo, hi);
+            double tail = std::abs(c8[8]) + std::abs(c8[7]);
+            if (tail < 1e-3 * m_opt.tol) {
+                std::copy(c8.begin(), c8.end(), cf.begin());
+            } else {
+                cf = chebfit<NQ>(f, lo, hi);
+                tail = std::abs(cf[NQ]) + std::abs(cf[NQ - 1]);
+            }
+            // Fit error MEASURED between the nodes, not a tail estimate alone: on wide pieces the slowly decaying CO2
+            // terms (C = 10) beat the tail estimate by ~100x
+            double meas = 0;
+            for (double u : {-0.97, -0.62, -0.21, 0.21, 0.62, 0.97}) {
+                const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(cf, u) - f(lo + (hi - lo) * (u + 1) / 2));
+                finite = finite && std::isfinite(e);
+                meas = std::max(meas, e);
+            }
+            if (!finite) return false;
+            double s1 = 0;
+            for (int k = 0; k <= NQ; ++k) {
+                q[k] += cf[k];
+                s1 += std::abs(cf[k]);
+            }
+            scale += s1 + pmax;
+            fiterr += std::max(10 * meas, 5 * tail);
         }
         S.G[p] = times_delta(q, m_edges[p], m_edges[p + 1]);
         // |G_tables - G_true| <= delta * |Z_tables - Z_true| <= hi * (fit error + roundoff), with a factor 2 on
@@ -486,6 +640,14 @@ void Tables::true_G(const State& S, double D, double t, double& G, double& dG, d
         dZ += S.W[g] * df;
         a += std::abs(S.W[g] * f);
     }
+    for (const NAComp& c : m_na) {
+        const double xi = S.x[c.i];
+        if (xi == 0) continue;
+        const auto v = eval_nonanalytic(c.terms, S.tau, D);
+        Z += xi * v.chi;
+        dZ += xi * v.dchi;
+        a += std::abs(xi) * v.parts;
+    }
     G = D * Z - t;
     dG = Z + D * dZ;
     scale = D * (1 + a) + std::abs(t);
@@ -497,6 +659,8 @@ double Tables::alphar(const State& S, double D) const {
     double a = 0;
     for (std::size_t g = 0; g < m_reps.size(); ++g)
         a += S.W[g] * m_reps[g].phi_pw(D, pw);
+    for (const NAComp& c : m_na)
+        if (S.x[c.i] != 0) a += S.x[c.i] * eval_nonanalytic(c.terms, S.tau, D).alphar;
     return a;
 }
 

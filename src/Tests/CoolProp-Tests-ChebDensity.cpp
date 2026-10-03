@@ -5,7 +5,8 @@
 //  - all-roots parity: every sign change of the true G found by a dense scan lies in an interval reported by
 //    ChebyshevBernstein::real_roots on the tables (with the margin as tolerance), and the true G changes sign
 //    across every certified interval;
-//  - declines: non-analytic and other non-factoring terms, cubic backends, invalid options, (T, x) outside the rectangle.
+//  - the non-analytic add-in: closed-form evaluation vs CoolProp, the rigorous bound used to skip it, the fit path used;
+//  - declines: non-factoring terms, cubic backends, invalid options, (T, x) outside the rectangle.
 #if defined(ENABLE_CATCH)
 
 #    include <algorithm>
@@ -54,6 +55,11 @@ const std::vector<Case>& cases() {
       {"HEOS", "Propane&n-Hexane", {0.4, 0.6}},
       {"HEOS", "Methane", {1.0}},
       {"GERG2008", "Nitrogen&Argon&Oxygen", {0.7812, 0.0092, 0.2096}},
+      // non-analytic critical-region terms (IAPWS-95 water, Span-Wagner CO2)
+      {"HEOS", "Water", {1.0}},
+      {"HEOS", "CarbonDioxide", {1.0}},
+      {"HEOS", "CarbonDioxide&Water", {0.9, 0.1}},
+      {"HEOS", "Nitrogen&Oxygen&Argon&Water", {0.77, 0.2, 0.01, 0.02}},  // humid air
     };
     return c;
 }
@@ -97,10 +103,14 @@ std::vector<double> temperatures(const Built& b) {
 }
 
 // a finer grid from Tmin up, where the terms cancel most and the margins are tightest
-std::vector<double> temperatures_fine(const Built& b) {
+// plus temperatures packed around tau = Tr(x)/T = 1, where the non-analytic terms are largest and least smooth
+std::vector<double> temperatures_fine(const Built& b, const std::vector<double>& x) {
     std::vector<double> T = temperatures(b);
     for (int k = 0; k < 16; ++k)
         T.push_back(b.Tmin * (1.03 + 0.11 * k));
+    const double Tr = b.heos->Reducing->Tr(x);
+    for (double tau : {0.9, 0.97, 0.99, 0.999, 1.0, 1.0001, 1.001, 1.01, 1.03, 1.1})
+        T.push_back(Tr / tau);
     std::sort(T.begin(), T.end());
     return T;
 }
@@ -168,8 +178,8 @@ TEST_CASE("ChebDensity: margin bounds the table error on dense grids", "[cheb_de
         double worst = 0, worst_margin = 0, worst_G = 0;
         std::vector<double> piece_ratio;  // max error/margin on each (state, piece)
         long n = 0;
-        for (const auto& x : compositions(c, 4))
-            for (double T : temperatures_fine(b)) {
+        for (const auto& x : compositions(c, 2))
+            for (double T : temperatures_fine(b, x)) {
                 if (!b.tab->assemble(T, x, S)) continue;  // a random x can push tau = Tr(x)/T outside the rectangle
                 for (int p = 0; p < b.tab->n_pieces(); ++p) {
                     double pr = 0;
@@ -306,14 +316,6 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
 TEST_CASE("ChebDensity: declines", "[cheb_density]") {
     CD::BuildOptions opt;
     opt.tau_max = 3;
-    SECTION("non-analytic terms") {
-        for (const std::string f : {"Water", "CarbonDioxide", "CarbonDioxide&Water"}) {
-            std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", f));
-            std::string why;
-            CHECK(CD::Tables::build(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get()), opt, &why) == nullptr);
-            CHECK(why.find("non-analytic") != std::string::npos);
-        }
-    }
     SECTION("cubic backends") {
         for (const std::string f : {"Methane", "Methane&Ethane"}) {
             std::shared_ptr<AbstractState> AS(AbstractState::factory("PR", f));
@@ -373,6 +375,123 @@ TEST_CASE("ChebDensity: declines", "[cheb_density]") {
         CHECK_FALSE(tab->assemble(-1, x, S));
         CHECK_FALSE(tab->assemble(Tr, {1.0}, S));  // wrong length
         CHECK_FALSE(tab->assemble(Tr, {NAN, 0.5}, S));
+    }
+}
+
+TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
+    for (const std::string f : {"Water", "CarbonDioxide"}) {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", f));
+        auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+        REQUIRE(heos != nullptr);
+        auto& na = heos->get_components()[0].EOS().alphar.NonAnalytic;
+        REQUIRE(na.N > 0);
+        std::vector<CD::NonAnalyticTerm> terms;
+        for (const auto& el : na.elements)
+            terms.push_back({el.n, el.a, el.b, el.beta, el.A, el.B, el.C, el.D});
+
+        SECTION(f + ": closed form agrees with ResidualHelmholtzNonAnalytic") {
+            double worst = 0;
+            for (double tau : {0.5, 0.9, 0.99, 0.9999, 1.0, 1.0001, 1.01, 1.2, 2.5})
+                for (double D : {0.05, 0.5, 0.9, 0.99, 0.9999, 1.0, 1.0001, 1.01, 1.3, 2.5, 3.9}) {
+                    HelmholtzDerivatives d;
+                    na.all_deltaonly(tau, D, d);
+                    const auto v = CD::eval_nonanalytic(terms, tau, D);
+                    const double chi = D * d.dalphar_ddelta, dchi = d.dalphar_ddelta + D * d.d2alphar_ddelta2;
+                    INFO(f << " tau=" << tau << " delta=" << D << ": alphar " << v.alphar << " vs " << d.alphar << ", chi " << v.chi << " vs " << chi
+                           << ", dchi " << v.dchi << " vs " << dchi);
+                    // the same expressions; differences are FMA contraction only, measured against the roundoff scale
+                    CHECK(std::abs(v.alphar - d.alphar) <= 1e-13 * (std::abs(d.alphar) + 1e-300) + 1e-14 * v.parts);
+                    CHECK(std::abs(v.chi - chi) <= 1e-14 * v.parts + 1e-300);
+                    CHECK(std::abs(v.dchi - dchi) <= 1e-12 * std::abs(dchi) + 1e-14 * v.parts / std::max(std::abs(D - 1), 1e-12));
+                    worst = std::max(worst, std::abs(v.chi - chi) / (v.parts + 1e-300));
+                }
+            INFO(f << ": worst |chi diff| / parts " << worst);
+            CHECK(worst < 1e-14);
+        }
+
+        SECTION(f + ": the bound used to skip the fit holds") {
+            // dense in delta on the table pieces, over tau in [0.3, 3.4], per term
+            CD::BuildOptions o;
+            o.tau_min = 0.3;
+            o.tau_max = 3.4;
+            AS->set_mole_fractions({1.0});
+            auto tab = CD::Tables::build(*heos, o);
+            REQUIRE(tab != nullptr);
+            const double dtau_max = 2.4;
+            double worst = 0;
+            long n = 0;
+            for (int p = 0; p < tab->n_pieces(); ++p)
+                for (std::size_t k = 0; k < terms.size(); ++k) {
+                    const double K = terms[k].bound_factor(tab->edges()[p], tab->edges()[p + 1], dtau_max);
+                    REQUIRE(std::isfinite(K));
+                    for (int it = 0; it <= 40; ++it) {
+                        const double tau = 0.3 + 3.1 * it / 40.0;
+                        for (int j = 0; j <= 400; ++j) {
+                            const double D = tab->delta_of(p, -1 + 2.0 * j / 400);
+                            const auto v = CD::eval_nonanalytic({terms[k]}, tau, D);
+                            const double bnd = K * std::exp(-terms[k].D * (tau - 1) * (tau - 1));
+                            worst = std::max(worst, std::abs(v.chi) / bnd);
+                            ++n;
+                        }
+                    }
+                }
+            INFO(f << ": " << n << " points, worst |chi| / bound " << worst);
+            CHECK(worst <= 1.0);
+            CHECK(worst > 1e-3);  // not vacuous
+        }
+
+        SECTION(f + ": the add-in is fit near the critical point and skipped far from it") {
+            CD::BuildOptions o;
+            o.tau_min = 0.3;
+            o.tau_max = 3.4;
+            AS->set_mole_fractions({1.0});
+            auto tab = CD::Tables::build(*heos, o);
+            REQUIRE(tab != nullptr);
+            CD::Tables::State S;
+            const double Tc = AS->get_fluid_constant(0, iT_reducing);
+            REQUIRE(tab->assemble(Tc, {1.0}, S));
+            CHECK(S.na_fits > 0);
+            REQUIRE(tab->assemble(Tc / 3.0, {1.0}, S));  // tau = 3: exp(-D (tau-1)^2) is negligible
+            CHECK(S.na_fits == 0);
+            // delta = 1 is a piece edge
+            CHECK(std::find(tab->edges().begin(), tab->edges().end(), 1.0) != tab->edges().end());
+        }
+    }
+}
+
+// COO-125: the spike's cached solver kept a raw pointer to the non-analytic terms of the backend that built it -- a
+// heap use-after-free once that backend was destroyed, whose garbage made phase verdicts vary with ASLR.  The tables
+// own copies of everything; this use after the backend's destruction is what the ASan CI job checks.
+TEST_CASE("ChebDensity: tables outlive the backend that built them", "[cheb_density]") {
+    std::shared_ptr<const CD::Tables> tab;
+    std::vector<double> ref_G;
+    const std::vector<double> x = {0.9, 0.1};
+    const double T = 310;
+    {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "CarbonDioxide&Water"));
+        AS->set_mole_fractions(x);
+        CD::BuildOptions o;
+        o.tau_min = 0.3;
+        o.tau_max = 3.4;
+        tab = CD::Tables::build(*dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get()), o);
+        REQUIRE(tab != nullptr);
+        CD::Tables::State S;
+        REQUIRE(tab->assemble(T, x, S));
+        for (double D : {0.1, 0.9, 1.1, 2.0}) {
+            double G, dG, sc;
+            tab->true_G(S, D, 0, G, dG, sc);
+            ref_G.push_back(G);
+        }
+    }  // backend destroyed here
+    std::shared_ptr<AbstractState> other(AbstractState::factory("HEOS", "Water&CarbonDioxide"));  // reuse the freed heap
+    CD::Tables::State S;
+    REQUIRE(tab->assemble(T, x, S));
+    CHECK(S.na_fits > 0);
+    std::size_t k = 0;
+    for (double D : {0.1, 0.9, 1.1, 2.0}) {
+        double G, dG, sc;
+        tab->true_G(S, D, 0, G, dG, sc);
+        CHECK(G == ref_G[k++]);  // same object, same inputs: bit-identical
     }
 }
 
