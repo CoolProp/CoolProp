@@ -4,7 +4,6 @@
 #include <cfloat>
 #include <cmath>
 #include <limits>
-#include <iterator>
 #include <mutex>
 #include <map>
 #include <stdexcept>
@@ -491,7 +490,9 @@ std::shared_ptr<NATable> build_nonanalytic_table(const std::vector<NonAnalyticTe
 
 // The fluid's table, from a process-wide cache keyed on the exact term coefficients and the tolerance (compared
 // exactly, so two fluids share a table only if their terms are identical, and a changed EOS gets a new one).  Entries
-// are weak: a table is freed when no Tables uses it.  Built outside the lock; a racing duplicate build is only waste.
+// are kept for the life of the process: backends are often short-lived (one per PropsSI call), and a weak entry would
+// rebuild the table (~80 ms) each time; there is one entry per distinct (terms, tol), and few fluids have such terms.
+// Built outside the lock; a racing duplicate build is only waste.
 std::shared_ptr<const NATable> get_nonanalytic_table(const std::vector<NonAnalyticTerm>& terms, double tol) {
     std::vector<double> key = {tol, double(NQ), double(NA_GRADING_LEVELS), double(NA_TABLE_TAU_LEVELS)};
     for (const auto& tm : terms)
@@ -501,22 +502,16 @@ std::shared_ptr<const NATable> get_nonanalytic_table(const std::vector<NonAnalyt
         cacheable = cacheable && std::isfinite(v);  // NaN would break the map's ordering
     if (!cacheable) return build_nonanalytic_table(terms, tol);
     static std::mutex mtx;
-    static std::map<std::vector<double>, std::weak_ptr<const NATable>> cache;
+    static std::map<std::vector<double>, std::shared_ptr<const NATable>> cache;
     {
-        std::lock_guard<std::mutex> lock(mtx);
+        std::scoped_lock lock(mtx);
         const auto it = cache.find(key);
-        if (it != cache.end())
-            if (auto sp = it->second.lock()) return sp;
+        if (it != cache.end()) return it->second;
     }
     std::shared_ptr<const NATable> built = build_nonanalytic_table(terms, tol);
     if (!built) return nullptr;
-    std::lock_guard<std::mutex> lock(mtx);
-    for (auto it = cache.begin(); it != cache.end();)  // drop expired entries
-        it = it->second.expired() ? cache.erase(it) : std::next(it);
-    auto& slot = cache[key];
-    if (auto sp = slot.lock()) return sp;  // another thread built it meanwhile
-    slot = built;
-    return built;
+    std::scoped_lock lock(mtx);
+    return cache.emplace(key, built).first->second;  // another thread's, if it got there first
 }
 
 }  // namespace
@@ -747,7 +742,6 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
     // where each piece sits in its fluid's 2-D table: the cell, and the re-expansion onto the piece when it is only part
     // of the cell (the pieces' edges include the cells' edges, so a piece never straddles two cells)
     for (auto& c : T->m_na) {
-        if (!c.table) continue;
         constexpr int N1 = NQ + 1;
         const auto& de = c.table->delta_edges;
         const auto& ul = lobatto_points();
@@ -962,7 +956,7 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                         }
                     }
                     CoeffsQ cf = cc;  // on the piece
-                    if (!c.table_identity[p]) {
+                    if (c.table_identity[p] == 0) {
                         const double* Rp = &c.table_reexpand[static_cast<std::size_t>(p) * N1 * N1];
                         for (int a = 0; a < N1; ++a) {
                             double sum = 0;
@@ -974,10 +968,9 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                     double s1 = 0;
                     for (int k = 0; k <= NQ; ++k) {
                         q[k] += cf[k];
-                        s1 += std::abs(cf[k]);
+                        s1 += std::abs(cf[k]) + (c.table_identity[p] == 0 ? std::abs(cc[k]) : 0.0);  // re-expansion roundoff
                     }
-                    // the cell's error and roundoff scale bound the piece (part of the cell); re-expansion roundoff
-                    // is covered by the scale term
+                    // the cell's error and roundoff scale bound the piece (part of the cell)
                     scale += s1 + std::abs(xi) * tb.cell_parts[at];
                     fiterr += 10 * std::abs(xi) * tb.cell_err[at];
                     ++S.na_table;

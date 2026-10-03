@@ -557,14 +557,26 @@ TEST_CASE("ChebDensity: non-analytic tables are shared across mixtures", "[cheb_
     // a different tolerance is a different table
     const auto co2_loose = make("CarbonDioxide", {1.0}, 1e-4);
     CHECK(co2_loose->nonanalytic_table(0) != co2->nonanalytic_table(0));
-    // and the shared table gives the same answer in each: CO2 at the same (T, x) through both
+    // and the shared table gives the same tabulated G in each: CO2 at the same (T, x) through both
     CD::Tables::State S1, S2;
     REQUIRE(co2->assemble(300.0, {1.0}, S1));
     REQUIRE(co2w->assemble(300.0, {1.0, 0.0}, S2));
-    double G1, G2, dG, sc;
-    co2->true_G(S1, 1.2, 0, G1, dG, sc);
-    co2w->true_G(S2, 1.2, 0, G2, dG, sc);
-    CHECK(std::abs(G1 - G2) <= 1e-12 * sc);
+    CHECK(S1.na_table > 0);
+    CHECK(S2.na_table > 0);
+    auto table_G = [](const CD::Tables& t, const CD::Tables::State& S, double D, double& margin) {
+        const auto& e = t.edges();
+        const int p = static_cast<int>(std::upper_bound(e.begin(), e.end(), D) - e.begin()) - 1;
+        margin = S.margin[p];
+        return CB::clenshaw<CD::NG>(S.G[p], 2 * (D - e[p]) / (e[p + 1] - e[p]) - 1);
+    };
+    for (double D : {0.6, 0.97, 1.03, 1.2, 1.7}) {
+        double m1 = 0, m2 = 0;
+        const double G1 = table_G(*co2, S1, D, m1), G2 = table_G(*co2w, S2, D, m2);
+        INFO("delta " << D << ": " << G1 << " vs " << G2 << ", margins " << m1 << " " << m2);
+        CHECK(std::abs(G1 - G2) <= m1 + m2);
+        CHECK(m1 < 1e-6);  // not vacuous: small, finite margins (the GE fits put ~2e-7 here)
+        CHECK(m2 < 1e-6);
+    }
 }
 
 #endif
