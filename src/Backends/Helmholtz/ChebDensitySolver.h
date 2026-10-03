@@ -25,7 +25,8 @@
  * The non-analytic critical-region terms of IAPWS-95 and Span-Wagner type, n Delta^b delta psi, do not factor.  They
  * are added per (T, x) instead: fit on each piece at that tau (degree 8, or NQ when 8 is not enough) with a measured
  * error, or -- where a rigorous bound on their size (NonAnalyticTerm::bound_factor) shows them negligible -- left out
- * of the fit and put into the margin.  The pieces have an edge at delta = 1, where these terms are not analytic.
+ * of the fit and put into the margin.  The pieces have an edge at delta = 1, where these terms are not analytic, and are
+ * graded geometrically toward it (1 +- 2^-k), so that the fits converge there.
  *
  * The tables live on a hard rectangle tau in [tau_min, tau_max], delta in [0, delta_max]; nothing is
  * extrapolated, and assemble() declines a (T, x) outside it.  Models with other residual terms that do not factor
@@ -34,7 +35,7 @@
  * The margin bounds the difference from G as evaluated from the same grouped terms (true_G), not from the backend's
  * own pressure; the two agree to roundoff (build() verifies the regrouping to 1e-12 relative to the size of the terms,
  * the tests find ~1e-15).  The fit errors in the margin are measured (the generalized-exponential fits between the
- * interpolation nodes, with a factor 2; the non-analytic fits at 6 points, with a factor 10), and its roundoff
+ * interpolation nodes, with a factor 2; the non-analytic fits at the 17 Chebyshev-Lobatto points, with a factor 10, both then doubled in the margin), and its roundoff
  * allowance is empirical; neither is proven.
  *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
@@ -180,6 +181,9 @@ class Tables
     }
     [[nodiscard]] std::size_t n_components() const {
         return static_cast<std::size_t>(m_N);
+    }
+    [[nodiscard]] bool has_nonanalytic() const {
+        return !m_na.empty();
     }
     [[nodiscard]] const BuildOptions& options() const {
         return m_opt;

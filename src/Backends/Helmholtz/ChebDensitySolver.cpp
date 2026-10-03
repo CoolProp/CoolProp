@@ -254,7 +254,8 @@ void collect_terms(const ResidualHelmholtzGeneralizedExponential& g, int i, int 
 
 namespace {
 constexpr std::size_t MAX_PIECES = 4096;
-}
+constexpr int NA_GRADING_LEVELS = 10;  // pieces graded toward delta = 1 down to a width of 2^-10 (see build)
+}  // namespace
 
 std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, const BuildOptions& opt, std::string* reason) {
     if (!(opt.delta_max > 0 && std::isfinite(opt.delta_max)) || !(opt.tau_min >= 0) || !(opt.tau_max > opt.tau_min) || !std::isfinite(opt.tau_max)
@@ -404,18 +405,26 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
         }
     }
     std::sort(done.begin(), done.end());
-    if (!T->m_na.empty())  // the non-analytic terms are not analytic at delta = 1: make it a piece edge
-        for (std::size_t k = 0; k < done.size(); ++k)
-            if (done[k].first < 1.0 && done[k].second > 1.0) {
-                const auto pr = done[k];
-                done[k] = {pr.first, 1.0};
-                done.insert(done.begin() + static_cast<std::ptrdiff_t>(k) + 1, {1.0, pr.second});
-                break;
-            }
     T->m_edges = {0.0};
     for (const auto& pr : done)
         T->m_edges.push_back(pr.second);
-    const int P = static_cast<int>(done.size());
+    if (!T->m_na.empty()) {
+        // The non-analytic terms are not analytic at delta = 1 (theta carries |delta - 1|^(1/beta), and Delta^b sits on
+        // top of it), so Chebyshev fits on a piece ending there converge only algebraically.  Make delta = 1 an edge and
+        // grade the pieces geometrically toward it, 1 +- 2^-k: each graded piece is then at a distance from the
+        // singular point comparable to its width (geometric convergence), and on the last ones the terms are small.
+        // The edges stay dyadic, like the bisection's, so no slivers.
+        std::vector<double> extra = {1.0};
+        for (int k = 1; k <= NA_GRADING_LEVELS; ++k) {
+            extra.push_back(1.0 - std::ldexp(1.0, -k));
+            extra.push_back(1.0 + std::ldexp(1.0, -k));
+        }
+        for (double e : extra)
+            if (e > 0 && e < opt.delta_max) T->m_edges.push_back(e);
+        std::sort(T->m_edges.begin(), T->m_edges.end());
+        T->m_edges.erase(std::unique(T->m_edges.begin(), T->m_edges.end()), T->m_edges.end());
+    }
+    const int P = static_cast<int>(T->m_edges.size()) - 1;
 
     T->m_C.resize(NGRP * P);
     T->m_Cn.resize(NGRP * P);
@@ -472,36 +481,45 @@ std::string Tables::verify(HelmholtzEOSMixtureBackend& HEOS) const {
     }
     if (m_N > 1) xs.emplace_back(m_N, 1.0 / m_N);
     const double tlo = m_opt.tau_min > 0 ? m_opt.tau_min : 0.05 * m_opt.tau_max;
+    std::vector<std::pair<double, double>> pts;  // (tau, delta)
+    for (double ft : {0.13, 0.5, 0.97})
+        for (double fd : {0.011, 0.23, 0.61, 0.97})
+            pts.emplace_back(tlo + ft * (m_opt.tau_max - tlo), fd * m_opt.delta_max);
+    // the non-analytic terms are negligible except near tau = 1 = delta (exp(-D (tau-1)^2), D ~ 300-800): sample there
+    // too, or a wrong evaluation of them would pass
+    if (!m_na.empty())
+        for (double tau : {0.98, 0.999, 1.0, 1.001, 1.02})
+            for (double D : {0.9, 0.99, 1.01, 1.1})
+                if (tau >= tlo && tau <= m_opt.tau_max && D <= m_opt.delta_max) pts.emplace_back(tau, D);
     for (const auto& x : xs)
-        for (double ft : {0.13, 0.5, 0.97})
-            for (double fd : {0.011, 0.23, 0.61, 0.97}) {
-                const double tau = tlo + ft * (m_opt.tau_max - tlo), D = fd * m_opt.delta_max, lt = std::log(tau);
-                double a = 0, z = 0, sa = 0, sz = 0;
-                for (const Term& tm : m_terms) {
-                    const double w = (tm.j < 0 ? x[tm.i] : x[tm.i] * x[tm.j] * m_F[tm.i][tm.j]) * tm.kappa(tau, lt);
-                    const double va = w * tm.phi(D), vz = w * tm.chi(D);
-                    a += va;
-                    z += vz;
-                    sa += std::abs(va);
-                    sz += std::abs(vz);
-                }
-                for (const auto& c : m_na) {
-                    const auto v = eval_nonanalytic(c.terms, tau, D);
-                    a += x[c.i] * v.alphar;
-                    z += x[c.i] * v.chi;
-                    sa += std::abs(x[c.i] * v.alphar);
-                    sz += std::abs(x[c.i] * v.chi);
-                }
-                double a_ref = 0, z_ref = 0;
-                try {
-                    a_ref = HEOS.calc_alphar_deriv_nocache(0, 0, x, tau, D);
-                    z_ref = D * HEOS.calc_alphar_deriv_nocache(0, 1, x, tau, D);
-                } catch (const std::exception& e) {
-                    return std::string("backend alphar failed during verification: ") + e.what();
-                }
-                if (!(std::abs(a - a_ref) <= 1e-12 * (1 + sa)) || !(std::abs(z - z_ref) <= 1e-12 * (1 + sz)))
-                    return "regrouped residual does not reproduce the backend's alphar (unsupported term type)";
+        for (const auto& [tau, D] : pts) {
+            const double lt = std::log(tau);
+            double a = 0, z = 0, sa = 0, sz = 0;
+            for (const Term& tm : m_terms) {
+                const double w = (tm.j < 0 ? x[tm.i] : x[tm.i] * x[tm.j] * m_F[tm.i][tm.j]) * tm.kappa(tau, lt);
+                const double va = w * tm.phi(D), vz = w * tm.chi(D);
+                a += va;
+                z += vz;
+                sa += std::abs(va);
+                sz += std::abs(vz);
             }
+            for (const auto& c : m_na) {
+                const auto v = eval_nonanalytic(c.terms, tau, D);
+                a += x[c.i] * v.alphar;
+                z += x[c.i] * v.chi;
+                sa += std::abs(x[c.i] * v.alphar);
+                sz += std::abs(x[c.i] * v.chi);
+            }
+            double a_ref = 0, z_ref = 0;
+            try {
+                a_ref = HEOS.calc_alphar_deriv_nocache(0, 0, x, tau, D);
+                z_ref = D * HEOS.calc_alphar_deriv_nocache(0, 1, x, tau, D);
+            } catch (const std::exception& e) {
+                return std::string("backend alphar failed during verification: ") + e.what();
+            }
+            if (!(std::abs(a - a_ref) <= 1e-12 * (1 + sa)) || !(std::abs(z - z_ref) <= 1e-12 * (1 + sz)))
+                return "regrouped residual does not reproduce the backend's alphar (unsupported term type)";
+        }
     return "";
 }
 
@@ -583,10 +601,12 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                 cf = chebfit<NQ>(f, lo, hi);
                 tail = std::abs(cf[NQ]) + std::abs(cf[NQ - 1]);
             }
-            // Fit error MEASURED between the nodes, not a tail estimate alone: on wide pieces the slowly decaying CO2
-            // terms (C = 10) beat the tail estimate by ~100x
+            // Fit error MEASURED, not a tail estimate alone (on wide pieces the slowly decaying CO2 terms, C = 10, beat
+            // the tail estimate by ~100x): at the Chebyshev-Lobatto points, which interleave the interpolation nodes
+            // and include the ends -- next to delta = 1 the error peaks at or near an end
             double meas = 0;
-            for (double u : {-0.97, -0.62, -0.21, 0.21, 0.62, 0.97}) {
+            for (int j = 0; j <= NQ; ++j) {
+                const double u = std::cos(PI * j / NQ);
                 const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(cf, u) - f(lo + (hi - lo) * (u + 1) / 2));
                 finite = finite && std::isfinite(e);
                 meas = std::max(meas, e);

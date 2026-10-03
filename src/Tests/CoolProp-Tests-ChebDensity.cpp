@@ -103,14 +103,23 @@ std::vector<double> temperatures(const Built& b) {
 }
 
 // a finer grid from Tmin up, where the terms cancel most and the margins are tightest
-// plus temperatures packed around tau = Tr(x)/T = 1, where the non-analytic terms are largest and least smooth
+// temperatures packed around tau = Tr(x)/T = 1, where the non-analytic terms are largest and least smooth; the band
+// 1e-7 <= |tau - 1| <= 1e-5 is where an ungraded fit next to delta = 1 lost roots (pre-PR review of COO-70)
+std::vector<double> temperatures_critical(const Built& b, const std::vector<double>& x) {
+    std::vector<double> T;
+    const double Tr = b.heos->Reducing->Tr(x);
+    for (double dt : {-0.1, -0.03, -0.01, -1e-3, -1e-5, -1e-6, -1e-7, 0.0, 1e-7, 1.26e-7, 1.58e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.03, 0.1})
+        T.push_back(Tr / (1 + dt));
+    return T;
+}
+
+// plus temperatures around tau = 1
 std::vector<double> temperatures_fine(const Built& b, const std::vector<double>& x) {
     std::vector<double> T = temperatures(b);
     for (int k = 0; k < 16; ++k)
         T.push_back(b.Tmin * (1.03 + 0.11 * k));
-    const double Tr = b.heos->Reducing->Tr(x);
-    for (double tau : {0.9, 0.97, 0.99, 0.999, 1.0, 1.0001, 1.001, 1.01, 1.03, 1.1})
-        T.push_back(Tr / tau);
+    for (double T_c : temperatures_critical(b, x))
+        T.push_back(T_c);
     std::sort(T.begin(), T.end());
     return T;
 }
@@ -178,7 +187,8 @@ TEST_CASE("ChebDensity: margin bounds the table error on dense grids", "[cheb_de
         double worst = 0, worst_margin = 0, worst_G = 0;
         std::vector<double> piece_ratio;  // max error/margin on each (state, piece)
         long n = 0;
-        for (const auto& x : compositions(c, 2))
+        // fewer random compositions where the non-analytic add-in makes every point expensive
+        for (const auto& x : compositions(c, b.tab->has_nonanalytic() ? 2 : 4))
             for (double T : temperatures_fine(b, x)) {
                 if (!b.tab->assemble(T, x, S)) continue;  // a random x can push tau = Tr(x)/T outside the rectangle
                 for (int p = 0; p < b.tab->n_pieces(); ++p) {
@@ -222,12 +232,12 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
         const double dmax = b.tab->options().delta_max;
         const int NS = 20000;
         long n_true = 0, n_cert = 0, n_unres = 0, n_states = 0;
-        double max_unres_width = 0;  // widest uncertified interval, as a fraction of its piece
+        double max_unres_width = 0;  // widest uncertified interval, in delta
         const auto xs = compositions(c, 1);
         std::vector<long> n_assembled(xs.size(), 0);
         std::vector<CB::Root> rr;
         for (std::size_t ix = 0; ix < xs.size(); ++ix)
-            for (double T : temperatures(b)) {
+            for (double T : b.tab->has_nonanalytic() ? temperatures_fine(b, xs[ix]) : temperatures(b)) {
                 const auto& x = xs[ix];
                 if (!b.tab->assemble(T, x, S)) {
                     CHECK(ix != 0);  // only a random x may fall outside the tau range
@@ -270,7 +280,7 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
                                 CHECK((Ga < 0) != (Gb < 0));
                             } else {
                                 ++n_unres;
-                                max_unres_width = std::max(max_unres_width, (r.ub - r.ua) / 2);
+                                max_unres_width = std::max(max_unres_width, Db - Da);
                             }
                         }
                     }
@@ -305,7 +315,9 @@ TEST_CASE("ChebDensity: all-roots parity with a dense scan of the true equation"
         // rarely (e.g. a tangency) and only narrow, so a wide one cannot make the containment check vacuous.
         CHECK(n_cert + n_unres >= n_true);
         CHECK(n_unres <= n_true / 100);
-        CHECK(max_unres_width <= 1.0 / 4096);
+        INFO("widest uncertified interval " << max_unres_width << " in delta");
+        // at the critical point G ~ c (delta - 1)^3, so a margin m localizes the root only to ~(m / c)^(1/3): ~1e-3
+        CHECK(max_unres_width <= 3e-3);
         for (std::size_t ix = 0; ix < xs.size(); ++ix) {
             INFO("composition " << ix);
             CHECK(n_assembled[ix] > 0);  // each composition actually tested
@@ -386,6 +398,7 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
         auto& na = heos->get_components()[0].EOS().alphar.NonAnalytic;
         REQUIRE(na.N > 0);
         std::vector<CD::NonAnalyticTerm> terms;
+        terms.reserve(na.elements.size());
         for (const auto& el : na.elements)
             terms.push_back({el.n, el.a, el.b, el.beta, el.A, el.B, el.C, el.D});
 
@@ -402,7 +415,7 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
                     // the same expressions; differences are FMA contraction only, measured against the roundoff scale
                     CHECK(std::abs(v.alphar - d.alphar) <= 1e-13 * (std::abs(d.alphar) + 1e-300) + 1e-14 * v.parts);
                     CHECK(std::abs(v.chi - chi) <= 1e-14 * v.parts + 1e-300);
-                    CHECK(std::abs(v.dchi - dchi) <= 1e-12 * std::abs(dchi) + 1e-14 * v.parts / std::max(std::abs(D - 1), 1e-12));
+                    CHECK(std::abs(v.dchi - dchi) <= 1e-12 * std::abs(dchi) + 1e-14 * v.parts / std::max(std::abs(D - 1), 1e-4));
                     worst = std::max(worst, std::abs(v.chi - chi) / (v.parts + 1e-300));
                 }
             INFO(f << ": worst |chi diff| / parts " << worst);
@@ -421,15 +434,15 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
             double worst = 0;
             long n = 0;
             for (int p = 0; p < tab->n_pieces(); ++p)
-                for (std::size_t k = 0; k < terms.size(); ++k) {
-                    const double K = terms[k].bound_factor(tab->edges()[p], tab->edges()[p + 1], dtau_max);
+                for (const auto& term : terms) {
+                    const double K = term.bound_factor(tab->edges()[p], tab->edges()[p + 1], dtau_max);
                     REQUIRE(std::isfinite(K));
                     for (int it = 0; it <= 40; ++it) {
                         const double tau = 0.3 + 3.1 * it / 40.0;
                         for (int j = 0; j <= 400; ++j) {
                             const double D = tab->delta_of(p, -1 + 2.0 * j / 400);
-                            const auto v = CD::eval_nonanalytic({terms[k]}, tau, D);
-                            const double bnd = K * std::exp(-terms[k].D * (tau - 1) * (tau - 1));
+                            const auto v = CD::eval_nonanalytic({term}, tau, D);
+                            const double bnd = K * std::exp(-term.D * (tau - 1) * (tau - 1));
                             worst = std::max(worst, std::abs(v.chi) / bnd);
                             ++n;
                         }
