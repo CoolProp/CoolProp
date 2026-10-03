@@ -23,10 +23,16 @@
  *    ChebyshevBernstein::real_roots, using the margin as the sign tolerance.
  *
  * The non-analytic critical-region terms of IAPWS-95 and Span-Wagner type, n Delta^b delta psi, do not factor.  They
- * are added per (T, x) instead: fit on each piece at that tau (degree 8, or NQ when 8 is not enough) with a measured
- * error, or -- where a rigorous bound on their size (NonAnalyticTerm::bound_factor) shows them negligible -- left out
- * of the fit and put into the margin.  The pieces have an edge at delta = 1, where these terms are not analytic, and are
- * graded geometrically toward it (1 +- 2^-k), so that the fits converge there.
+ * depend on (tau, delta) only, though, so per component they are tabulated at build as 2-D Chebyshev tables on
+ * tau-cells x the delta-pieces (the steep Gaussian exp(-D (tau-1)^2) factored out and multiplied back exactly), and
+ * assemble() contracts the table at its tau.  Per piece, in order:
+ *  - a rigorous bound on their size (NonAnalyticTerm::bound_factor) shows them negligible: left out, the bound into
+ *    the margin;
+ *  - the cell's table, kept at build only where its measured error is negligible: contracted, error into the margin;
+ *  - otherwise (where Delta ~ 0 along tau - 1 = A |delta - 1|^(1/beta) crosses the cell, a few pieces for tau > 1):
+ *    fit at the actual tau by nested Lobatto interpolation (degree 4, 8, NQ) with a measured error.
+ * The pieces have an edge at delta = 1, where these terms are not analytic, and are graded geometrically toward it
+ * (1 +- 2^-k), as are the tau-cells toward tau = 1, so that the interpolants converge there.
  *
  * The tables live on a hard rectangle tau in [tau_min, tau_max], delta in [0, delta_max]; nothing is
  * extrapolated, and assemble() declines a (T, x) outside it.  Models with other residual terms that do not factor
@@ -34,9 +40,10 @@
  *
  * The margin bounds the difference from G as evaluated from the same grouped terms (true_G), not from the backend's
  * own pressure; the two agree to roundoff (build() verifies the regrouping to 1e-12 relative to the size of the terms,
- * the tests find ~1e-15).  The fit errors in the margin are measured (the generalized-exponential fits between the
- * interpolation nodes, with a factor 2; the non-analytic fits at the 17 Chebyshev-Lobatto points, with a factor 10, both then doubled in the margin), and its roundoff
- * allowance is empirical; neither is proven.
+ * the tests find ~1e-15).  The fit errors in the margin are measured -- the generalized-exponential fits between the
+ * interpolation nodes (factor 2); the non-analytic tables on a 16 x 16 grid between their nodes and the per-tau fits at
+ * the next Lobatto level (factor 10); all doubled in the margin -- and its roundoff allowance is empirical; neither is
+ * proven.
  *
  * Thread safety: a built Tables object is immutable and owns everything it reads (its own copy of the reducing
  * function, no pointers into the backend that built it), so it may be shared across threads and across backends
@@ -143,8 +150,10 @@ class Tables
         std::vector<double> W;       ///< group weights W_g(T, x)
         std::vector<double> x;       ///< mole fractions
         double T = 0, tau = 0, rhor = 0;
-        double t_scale = 0;  ///< t = p * t_scale = p / (rhor R T)
-        long na_fits = 0;    ///< pieces on which a non-analytic contribution was fit (rest: bounded into the margin)
+        double t_scale = 0;               ///< t = p * t_scale = p / (rhor R T)
+        long na_fits = 0;                 ///< pieces on which a non-analytic contribution was fit (rest: bounded into the margin)
+        std::array<long, 3> na_degree{};  ///< of those, how many ended at degree 4, 8, NQ
+        long na_table = 0;                ///< pieces on which it came from the 2-D table instead (not counted in na_fits)
     };
 
     /// Build the tables for the components of HEOS (its mole fractions must be set: they are used to identify how
@@ -192,6 +201,8 @@ class Tables
    private:
     Tables() = default;
     [[nodiscard]] std::string verify(HelmholtzEOSMixtureBackend& HEOS) const;
+    struct NAComp;
+    [[nodiscard]] bool build_na_tables(NAComp& c) const;
 
     BuildOptions m_opt;
     int m_N = 0;
@@ -207,9 +218,18 @@ class Tables
     {
         int i = 0;                           ///< component
         std::vector<NonAnalyticTerm> terms;  ///< owned copy of its non-analytic terms
-        std::vector<double> K;               ///< bound factor of term k on piece p at [p * terms.size() + k]
+        std::vector<double> K;               ///< bound factor of term k on piece p, rung r: [(p * terms.size() + k) * rungs + r]
+        // 2-D tables of chi_NA(tau, delta) / exp(-D (tau-1)^2) per distinct D, on tau-cells x the delta-pieces (see build)
+        std::vector<double> Dg;                            ///< the distinct D
+        std::vector<std::vector<NonAnalyticTerm>> gterms;  ///< the terms with each D, with D set to 0
+        std::vector<double> tau_edges;                     ///< tau-cells (empty: no tables)
+        std::vector<int> cell;                             ///< [q * P + p]: index of the stored table, -1: fit at assemble, -2: negligible
+        std::vector<double> cell_err;                      ///< [q * P + p]: measured error of the table in chi (incl. max exp factor)
+        std::vector<double> cell_parts;                    ///< [q * P + p]: roundoff scale of chi on the cell
+        std::vector<double> coef;                          ///< stored tables, each Dg.size() x (NQ+1) x (NQ+1): [g][m (tau)][k (delta)]
     };
     std::vector<NAComp> m_na;
+    std::vector<double> m_na_dtau;            ///< the |1 - tau| ladder of the bounds (increasing; last = max over the tau range)
     std::vector<std::vector<double>> m_F;     ///< F_ij
     std::shared_ptr<ReducingFunction> m_red;  ///< owned copy
     std::vector<double> m_Ri;                 ///< component gas constants

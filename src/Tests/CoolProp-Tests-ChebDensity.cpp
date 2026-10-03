@@ -456,7 +456,7 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
             CHECK(worst > 1e-3);  // not vacuous
         }
 
-        SECTION(f + ": the add-in is fit near the critical point and skipped far from it") {
+        SECTION(f + ": the add-in paths: 2-D table, fit at tau, skipped") {
             CD::BuildOptions o;
             o.tau_min = 0.3;
             o.tau_max = 3.4;
@@ -465,10 +465,18 @@ TEST_CASE("ChebDensity: non-analytic terms", "[cheb_density]") {
             REQUIRE(tab != nullptr);
             CD::Tables::State S;
             const double Tc = AS->get_fluid_constant(0, iT_reducing);
-            REQUIRE(tab->assemble(Tc, {1.0}, S));
+            REQUIRE(tab->assemble(Tc, {1.0}, S));  // tau = 1: every non-negligible piece from the 2-D table
+            CHECK(S.na_table > 0);
+            CHECK(S.na_fits == 0);
+            // tau = 1.01: the valley Delta ~ 0 at tau - 1 = A |delta - 1|^(1/beta) crosses a few pieces, whose cells keep
+            // no table: fit at this tau
+            REQUIRE(tab->assemble(Tc / 1.01, {1.0}, S));
+            CHECK(S.na_table > 0);
             CHECK(S.na_fits > 0);
+            CHECK(S.na_fits <= 4);
             REQUIRE(tab->assemble(Tc / 3.0, {1.0}, S));  // tau = 3: exp(-D (tau-1)^2) is negligible
             CHECK(S.na_fits == 0);
+            CHECK(S.na_table == 0);
             // delta = 1 is a piece edge
             CHECK(std::find(tab->edges().begin(), tab->edges().end(), 1.0) != tab->edges().end());
         }
@@ -502,7 +510,7 @@ TEST_CASE("ChebDensity: tables outlive the backend that built them", "[cheb_dens
     std::shared_ptr<AbstractState> other(AbstractState::factory("HEOS", "Water&CarbonDioxide"));  // reuse the freed heap
     CD::Tables::State S;
     REQUIRE(tab->assemble(T, x, S));
-    CHECK(S.na_fits > 0);
+    CHECK(S.na_fits + S.na_table > 0);
     std::size_t k = 0;
     for (double D : {0.1, 0.9, 1.1, 2.0}) {
         double G, dG, sc;

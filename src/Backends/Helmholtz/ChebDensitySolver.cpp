@@ -53,6 +53,55 @@ CoeffsG times_delta(const CoeffsQ& q, double lo, double hi) {
     return r;
 }
 
+// Chebyshev-Lobatto points of degree NQ, u_i = cos(pi i / NQ); those of degree NQ/2, NQ/4 are every 2nd, 4th of them
+const std::array<double, NQ + 1>& lobatto_points() {
+    static const auto u = [] {
+        std::array<double, NQ + 1> r{};
+        for (int i = 0; i <= NQ; ++i)
+            r[i] = std::cos(PI * i / NQ);
+        r[NQ / 2] = 0.0;  // exactly
+        return r;
+    }();
+    return u;
+}
+// the new points of degree 2 NQ: cos(pi (2j + 1) / (2 NQ)), between the degree-NQ points
+const std::array<double, NQ>& lobatto_midpoints() {
+    static const auto u = [] {
+        std::array<double, NQ> r{};
+        for (int j = 0; j < NQ; ++j)
+            r[j] = std::cos(PI * (2 * j + 1) / (2 * NQ));
+        return r;
+    }();
+    return u;
+}
+// Chebyshev coefficients of the degree-n interpolant through values at the degree-n Lobatto points:
+// c_k = (2/n) sum''_j f_j cos(pi j k / n), with the j = 0, n terms halved and c_0, c_n halved
+template <int n>
+const std::array<std::array<double, n + 1>, n + 1>& lobatto_matrix() {
+    static const auto M = [] {
+        std::array<std::array<double, n + 1>, n + 1> m{};
+        for (int k = 0; k <= n; ++k)
+            for (int j = 0; j <= n; ++j)
+                m[k][j] = 2.0 / n * ((k == 0 || k == n) ? 0.5 : 1.0) * ((j == 0 || j == n) ? 0.5 : 1.0) * std::cos(PI * j * k / n);
+        return m;
+    }();
+    return M;
+}
+// degree-n interpolant from v, the values at the degree-NQ Lobatto points (every (NQ/n)-th of them is used)
+template <int n>
+ChebyshevBernstein::Coeffs<n> lobatto_fit(const std::array<double, NQ + 1>& v) {
+    static_assert(NQ % n == 0, "nested Lobatto levels divide NQ");
+    const auto& M = lobatto_matrix<n>();
+    ChebyshevBernstein::Coeffs<n> c{};
+    for (int k = 0; k <= n; ++k) {
+        double sum = 0;
+        for (int j = 0; j <= n; ++j)
+            sum += M[k][j] * v[j * (NQ / n)];
+        c[k] = sum;
+    }
+    return c;
+}
+
 void fill_powers(double D, double* pw) {
     pw[0] = 1;
     for (int k = 1; k <= Term::MAX_POW; ++k)
@@ -159,21 +208,34 @@ NonAnalyticValues eval_nonanalytic(const std::vector<NonAnalyticTerm>& terms, do
     const double delta = std::abs(delta_in - 1) < 10 * DBL_EPSILON ? 1.0 + 10 * DBL_EPSILON : delta_in;
     const double dm = delta - 1, d2 = dm * dm;
     double ad = 0, add = 0;
+    // The terms of one fluid share beta and often a (IAPWS-95: a = 3.5, beta = 0.3 throughout), so the powers of
+    // (delta - 1)^2 are computed once per distinct value; d2^(s-1) = d2^s / d2 and Delta^(b-1) = Delta^b / Delta are
+    // exact up to one rounding (d2 >= (10 eps)^2 > 0 and Delta > 0 here), unlike separate pow() calls.
+    double last_beta = std::numeric_limits<double>::quiet_NaN(), pw_t = 0, pw_t1 = 0;
+    double last_a = std::numeric_limits<double>::quiet_NaN(), pa = 0, pa1 = 0;
     for (const auto& el : terms) {
-        const double pw_t = std::pow(d2, 1.0 / (2.0 * el.beta));
+        if (!(el.beta == last_beta)) {
+            pw_t = std::pow(d2, 1.0 / (2.0 * el.beta));  // d2^(1/(2 beta))
+            pw_t1 = pw_t / d2;                           // d2^(1/(2 beta) - 1)
+            last_beta = el.beta;
+        }
+        if (!(el.a == last_a)) {
+            pa = std::pow(d2, el.a);
+            pa1 = pa / d2;
+            last_a = el.a;
+        }
         const double theta = (1.0 - tau) + el.A * pw_t;
-        const double dtheta = el.A / el.beta * std::pow(d2, 1 / (2 * el.beta) - 1) * dm;
-        const double d2theta = el.A / el.beta * (1 / el.beta - 1) * std::pow(d2, 1 / (2 * el.beta) - 1);
+        const double dtheta = el.A / el.beta * pw_t1 * dm;
+        const double d2theta = el.A / el.beta * (1 / el.beta - 1) * pw_t1;
         const double PSI = std::exp(-el.C * d2 - el.D * (tau - 1.0) * (tau - 1.0));
         const double dPSI = -2.0 * el.C * dm * PSI;
         const double d2PSI = (2.0 * el.C * d2 - 1.0) * 2.0 * el.C * PSI;
-        const double pa = std::pow(d2, el.a), pa1 = std::pow(d2, el.a - 1.0);
         const double DELTA = theta * theta + el.B * pa;
         const double dDELTA = 2 * theta * dtheta + 2 * el.B * el.a * pa1 * dm;
         const double d2DELTA = 2 * (theta * d2theta + dtheta * dtheta + el.B * (2 * el.a * el.a - el.a) * pa1);
-        const double Db = std::pow(DELTA, el.b), Db1 = std::pow(DELTA, el.b - 1);
+        const double Db = std::pow(DELTA, el.b), Db1 = Db / DELTA, Db2 = Db1 / DELTA;
         const double dDb = el.b * Db1 * dDELTA;
-        const double d2Db = el.b * (Db1 * d2DELTA + (el.b - 1.0) * std::pow(DELTA, el.b - 2.0) * dDELTA * dDELTA);
+        const double d2Db = el.b * (Db1 * d2DELTA + (el.b - 1.0) * Db2 * dDELTA * dDELTA);
         v.alphar += delta * el.n * Db * PSI;
         ad += el.n * (Db * (PSI + delta * dPSI) + dDb * delta * PSI);
         add += el.n * (Db * (2.0 * dPSI + delta * d2PSI) + 2.0 * dDb * (PSI + delta * dPSI) + d2Db * delta * PSI);
@@ -255,6 +317,9 @@ void collect_terms(const ResidualHelmholtzGeneralizedExponential& g, int i, int 
 namespace {
 constexpr std::size_t MAX_PIECES = 4096;
 constexpr int NA_GRADING_LEVELS = 10;  // pieces graded toward delta = 1 down to a width of 2^-10 (see build)
+// the |1 - tau| ladder of the non-analytic bounds (see build)
+constexpr double NA_DTAU_RUNGS[] = {1e-6, 1e-5, 1e-4, 1e-3, 3e-3, 1e-2, 3e-2, 0.1, 0.3, 1.0};
+constexpr int NA_TABLE_TAU_LEVELS = 16;  // tau-cells of the 2-D non-analytic tables graded toward tau = 1 (see build_na_tables)
 }  // namespace
 
 std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, const BuildOptions& opt, std::string* reason) {
@@ -456,17 +521,156 @@ std::shared_ptr<const Tables> Tables::build(HelmholtzEOSMixtureBackend& HEOS, co
             if (!finite || !std::isfinite(s)) return decline("non-finite fit on [0, delta_max]");
         }
     }
-    // tau-independent part of the bound on each non-analytic term, per piece
+    // Bound on each non-analytic term per piece, without its factor exp(-D (tau-1)^2), at a ladder of |1 - tau|: the
+    // bound grows monotonically with |1 - tau| (through theta_max), so assemble() takes the first rung at or above the
+    // actual value -- much tighter near the critical point than the bound over the whole tau range.
     {
         const double dtau_max = std::max(std::abs(1 - opt.tau_min), std::abs(opt.tau_max - 1));
+        for (double r : NA_DTAU_RUNGS)
+            if (r < dtau_max) T->m_na_dtau.push_back(r);
+        T->m_na_dtau.push_back(dtau_max);
+        const std::size_t R = T->m_na_dtau.size();
         for (auto& c : T->m_na) {
-            c.K.resize(static_cast<std::size_t>(P) * c.terms.size());
+            const std::size_t nk = c.terms.size();
+            c.K.resize(static_cast<std::size_t>(P) * nk * R);
             for (int p = 0; p < P; ++p)
-                for (std::size_t k = 0; k < c.terms.size(); ++k)
-                    c.K[p * c.terms.size() + k] = c.terms[k].bound_factor(T->m_edges[p], T->m_edges[p + 1], dtau_max);
+                for (std::size_t k = 0; k < nk; ++k)
+                    for (std::size_t r = 0; r < R; ++r)
+                        c.K[(p * nk + k) * R + r] = c.terms[k].bound_factor(T->m_edges[p], T->m_edges[p + 1], T->m_na_dtau[r]);
         }
     }
+    // 2-D tables of the non-analytic terms, see build_na_tables
+    for (auto& c : T->m_na)
+        if (!T->build_na_tables(c)) return decline("non-finite non-analytic table");
     return T;
+}
+
+// 2-D tables of the non-analytic terms.  chi_NA depends on (tau, delta) only, not on x, so instead of fitting it on
+// every piece at every assemble() (~10^2 us near tau = 1), it is tabulated once: per distinct D, the smooth part
+// g_D = chi / exp(-D (tau-1)^2) -- the Gaussian in tau is steep (D ~ 300-800) and is multiplied back exactly -- as
+// degree-NQ x NQ Lobatto interpolants on tau-cells x the delta-pieces.  The tau-cells cover the band where the terms are
+// not negligible and are graded toward tau = 1, like the pieces toward delta = 1.  A cell keeps its table only if its
+// error, measured on the 16 x 16 grid between the nodes, is negligible against the table tolerance; elsewhere -- where
+// the valley Delta ~ 0 along tau - 1 = A |delta - 1|^(1/beta) crosses the cell, which happens for tau > 1 only --
+// assemble() fits at the actual tau as before.
+bool Tables::build_na_tables(NAComp& c) const {
+    const int P = n_pieces();
+    const std::size_t nk = c.terms.size(), R = m_na_dtau.size();
+    const double negligible = 1e-3 * m_opt.tol;
+    for (const auto& tm : c.terms) {
+        auto it = std::find(c.Dg.begin(), c.Dg.end(), tm.D);
+        if (it == c.Dg.end()) {
+            c.Dg.push_back(tm.D);
+            c.gterms.emplace_back();
+            it = c.Dg.end() - 1;
+        }
+        NonAnalyticTerm g = tm;
+        g.D = 0;
+        c.gterms[static_cast<std::size_t>(it - c.Dg.begin())].push_back(g);
+    }
+    const std::size_t NGd = c.Dg.size();
+    // the bound assemble() applies: rung at or above |1 - tau|, Gaussian factor at |1 - tau|
+    auto bound_at = [&](int p, double dt_rung, double dt_exp) {
+        std::size_t r = 0;
+        while (r + 1 < R && m_na_dtau[r] < dt_rung)
+            ++r;
+        double b = 0;
+        for (std::size_t k = 0; k < nk; ++k)
+            b += c.K[(p * nk + k) * R + r] * std::exp(-c.terms[k].D * dt_exp * dt_exp);
+        return b;
+    };
+    // band half-width: the largest |1 - tau| (on a geometric grid) where that bound is not negligible on some piece
+    const double dtau_max = m_na_dtau.back();
+    double w = 0;
+    for (double dt = dtau_max; dt > 1e-12 && w == 0; dt *= 0.97)
+        for (int p = 0; p < P && w == 0; ++p)
+            if (!(bound_at(p, dt, dt) < negligible)) w = std::min(dtau_max, dt / 0.97);
+    if (w == 0) return true;  // negligible everywhere: no tables, assemble() always skips
+    const double tlo = std::max({m_opt.tau_min, 1 - w, 1e-9}), thi = std::min(m_opt.tau_max, 1 + w);
+    if (!(thi > tlo)) return true;
+    std::vector<double> e = {tlo, thi, 1.0};
+    for (int k = 1; k <= NA_TABLE_TAU_LEVELS; ++k) {
+        e.push_back(1 - w * std::ldexp(1.0, -k));
+        e.push_back(1 + w * std::ldexp(1.0, -k));
+    }
+    for (double v : e)
+        if (v >= tlo && v <= thi) c.tau_edges.push_back(v);
+    std::sort(c.tau_edges.begin(), c.tau_edges.end());
+    c.tau_edges.erase(std::unique(c.tau_edges.begin(), c.tau_edges.end()), c.tau_edges.end());
+    const int Q = static_cast<int>(c.tau_edges.size()) - 1;
+    c.cell.assign(static_cast<std::size_t>(Q) * P, -2);
+    c.cell_err.assign(static_cast<std::size_t>(Q) * P, 0.0);
+    c.cell_parts.assign(static_cast<std::size_t>(Q) * P, 0.0);
+    const auto& ul = lobatto_points();
+    const auto& um = lobatto_midpoints();
+    const auto& M = lobatto_matrix<NQ>();
+    constexpr int N1 = NQ + 1;
+    std::vector<double> tab(NGd * N1 * N1);
+    for (int qc = 0; qc < Q; ++qc) {
+        const double tl = c.tau_edges[qc], th = c.tau_edges[qc + 1];
+        const double dtmin = (tl <= 1 && th >= 1) ? 0.0 : std::min(std::abs(tl - 1), std::abs(th - 1));
+        const double dtmax = std::max(std::abs(tl - 1), std::abs(th - 1));
+        for (int p = 0; p < P; ++p) {
+            if (bound_at(p, dtmax, dtmin) < negligible) continue;  // -2: assemble()'s own bound skips every tau here
+            const double dl = m_edges[p], dh = m_edges[p + 1];
+            double err = 0, parts = 0;
+            bool finite = true;
+            for (std::size_t gi = 0; gi < NGd; ++gi) {
+                const double emax = std::exp(-c.Dg[gi] * dtmin * dtmin);  // largest Gaussian factor on the cell
+                double F[N1][N1], G[N1][N1];
+                for (int i = 0; i < N1; ++i)
+                    for (int j = 0; j < N1; ++j) {
+                        const auto v = eval_nonanalytic(c.gterms[gi], tl + (th - tl) * (ul[i] + 1) / 2, dl + (dh - dl) * (ul[j] + 1) / 2);
+                        F[i][j] = v.chi;
+                        finite = finite && std::isfinite(v.chi) && std::isfinite(v.parts);
+                        parts = std::max(parts, emax * v.parts);
+                    }
+                for (int i = 0; i < N1; ++i)  // delta direction
+                    for (int k = 0; k < N1; ++k) {
+                        double sum = 0;
+                        for (int j = 0; j < N1; ++j)
+                            sum += M[k][j] * F[i][j];
+                        G[i][k] = sum;
+                    }
+                double* C = &tab[gi * N1 * N1];
+                for (int m = 0; m < N1; ++m)  // tau direction
+                    for (int k = 0; k < N1; ++k) {
+                        double sum = 0;
+                        for (int i = 0; i < N1; ++i)
+                            sum += M[m][i] * G[i][k];
+                        C[m * N1 + k] = sum;
+                    }
+                double eg = 0;
+                for (double ut : um)
+                    for (double ud : um) {
+                        CoeffsQ dc{};
+                        for (int k = 0; k < N1; ++k) {
+                            CoeffsQ tc{};
+                            for (int m = 0; m < N1; ++m)
+                                tc[m] = C[m * N1 + k];
+                            dc[k] = ChebyshevBernstein::clenshaw<NQ>(tc, ut);
+                        }
+                        const auto v = eval_nonanalytic(c.gterms[gi], tl + (th - tl) * (ut + 1) / 2, dl + (dh - dl) * (ud + 1) / 2);
+                        const double d = std::abs(ChebyshevBernstein::clenshaw<NQ>(dc, ud) - v.chi);
+                        finite = finite && std::isfinite(d) && std::isfinite(v.parts);
+                        eg = std::max(eg, d);
+                        parts = std::max(parts, emax * v.parts);
+                    }
+                err += emax * eg;
+            }
+            if (!finite) return false;
+            const std::size_t at = static_cast<std::size_t>(qc) * P + p;
+            c.cell_err[at] = err;
+            c.cell_parts[at] = parts;
+            if (10 * err <= negligible) {
+                c.cell[at] = static_cast<int>(c.coef.size() / (NGd * N1 * N1));
+                c.coef.insert(c.coef.end(), tab.begin(), tab.end());
+            } else {
+                c.cell[at] = -1;
+            }
+        }
+    }
+    return true;
 }
 
 // The regrouped model must reproduce the backend's alphar and delta d(alphar)/d(delta): every pure component, and the
@@ -556,13 +760,45 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
     S.G.resize(P);
     S.margin.resize(P);
     S.na_fits = 0;
+    // the rung of the |1 - tau| ladder of the bounds: the first at or above |1 - tau|
+    const std::size_t R = m_na_dtau.size();
+    std::size_t rung = 0;
+    while (rung + 1 < R && m_na_dtau[rung] < std::abs(1 - tau))
+        ++rung;
+    S.na_degree = {};
     // tau-factor exp(-D (tau-1)^2) of each non-analytic term's bound, shared by all pieces
     std::vector<double> na_tau_factor;
     for (const NAComp& c : m_na)
         for (const auto& tm : c.terms)
             na_tau_factor.push_back(std::exp(-tm.D * (tau - 1) * (tau - 1)));
+    // per non-analytic component: its tau-cell, the Chebyshev polynomials in the cell's variable, the Gaussian factors
+    struct NATau
+    {
+        int q = -1;
+        std::array<double, NQ + 1> Tm{};
+        std::vector<double> ef;
+    };
+    std::vector<NATau> nat(m_na.size());
+    for (std::size_t ci = 0; ci < m_na.size(); ++ci) {
+        const NAComp& c = m_na[ci];
+        const auto& te = c.tau_edges;
+        if (te.size() < 2 || tau < te.front() || tau > te.back()) continue;
+        int qc = static_cast<int>(std::upper_bound(te.begin(), te.end(), tau) - te.begin()) - 1;
+        qc = std::min(std::max(qc, 0), static_cast<int>(te.size()) - 2);
+        const double ut = std::min(1.0, std::max(-1.0, 2 * (tau - te[qc]) / (te[qc + 1] - te[qc]) - 1));
+        auto& nt = nat[ci];
+        nt.q = qc;
+        nt.Tm[0] = 1;
+        nt.Tm[1] = ut;
+        for (int m = 2; m <= NQ; ++m)
+            nt.Tm[m] = 2 * ut * nt.Tm[m - 1] - nt.Tm[m - 2];
+        for (double Dv : c.Dg)
+            nt.ef.push_back(std::exp(-Dv * (tau - 1) * (tau - 1)));
+    }
+    S.na_table = 0;
     for (int p = 0; p < P; ++p) {
-        std::size_t ntf = 0;
+        std::size_t ntf = 0, nci = 0;
+
         CoeffsQ q{};
         q[0] = 1.0;
         double scale = 1.0, fiterr = 0.0;
@@ -584,14 +820,43 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
             const std::size_t nk = c.terms.size();
             const double* tf = &na_tau_factor[ntf];
             ntf += nk;
+            const NATau& nt = nat[nci++];
             if (xi == 0) continue;
             double bound = 0;
             for (std::size_t k = 0; k < nk; ++k)
-                bound += c.K[p * nk + k] * tf[k];
+                bound += c.K[(p * nk + k) * R + rung] * tf[k];
             bound *= std::abs(xi);
             if (bound < 1e-3 * m_opt.tol) {  // negligible on this piece (rigorous bound): into the margin, not the fit
                 fiterr += bound;
                 continue;
+            }
+            if (nt.q >= 0) {  // from the 2-D table, if this cell has one
+                const std::size_t at = static_cast<std::size_t>(nt.q) * P + p;
+                const int idx = c.cell[at];
+                if (idx >= 0) {
+                    constexpr int N1 = NQ + 1;
+                    const std::size_t NGd = c.Dg.size();
+                    const double* C = &c.coef[static_cast<std::size_t>(idx) * NGd * N1 * N1];
+                    CoeffsQ cf{};
+                    for (std::size_t gi = 0; gi < NGd; ++gi) {
+                        const double fac = xi * nt.ef[gi];
+                        const double* Cg = C + gi * N1 * N1;
+                        for (int m = 0; m < N1; ++m) {
+                            const double tm = fac * nt.Tm[m];
+                            for (int k = 0; k < N1; ++k)
+                                cf[k] += tm * Cg[m * N1 + k];
+                        }
+                    }
+                    double s1 = 0;
+                    for (int k = 0; k <= NQ; ++k) {
+                        q[k] += cf[k];
+                        s1 += std::abs(cf[k]);
+                    }
+                    scale += s1 + std::abs(xi) * c.cell_parts[at];
+                    fiterr += 10 * std::abs(xi) * c.cell_err[at];
+                    ++S.na_table;
+                    continue;
+                }
             }
             ++S.na_fits;
             const double lo = m_edges[p], hi = m_edges[p + 1];
@@ -603,26 +868,66 @@ bool Tables::assemble(double T, const std::vector<double>& x, State& S) const {
                 pmax = std::max(pmax, std::abs(xi) * v.parts);
                 return xi * v.chi;
             };
-            // degree 8 first; NQ when the degree-8 tail is not negligible against the table tolerance
+            // Nested Chebyshev-Lobatto interpolation, degree 4 -> 8 -> NQ: the error of each level is MEASURED at the
+            // next level's new points (between its nodes; the ends are nodes), so moving up reuses every value.  A lower
+            // level is taken only if its error is negligible against the table tolerance; the top level is taken with
+            // its measured error.  (A tail estimate alone fails: on wide pieces the slowly decaying CO2 terms, C = 10,
+            // beat it by ~100x.)
+            const auto& ul = lobatto_points();
+            std::array<double, NQ + 1> v{};
+            auto fill = [&](int start, int step) {
+                for (int k = start; k <= NQ; k += step)
+                    v[k] = f(lo + (hi - lo) * (ul[k] + 1) / 2);
+            };
+            // a lower level is good enough if its error allowance is negligible against the table tolerance, or adds at
+            // most ~5 % to the margin this piece has anyway (2 fiterr + rnd scale, from the other fits so far)
+            const double negligible = std::max(1e-3 * m_opt.tol, 0.05 * (2 * fiterr + rnd * scale) / 2);
             CoeffsQ cf{};
-            const auto c8 = chebfit<8>(f, lo, hi);
-            double tail = std::abs(c8[8]) + std::abs(c8[7]);
-            if (tail < 1e-3 * m_opt.tol) {
-                std::copy(c8.begin(), c8.end(), cf.begin());
-            } else {
-                cf = chebfit<NQ>(f, lo, hi);
+            double meas = 0, tail = 0;
+            bool done = false;
+            fill(0, NQ / 4);
+            fill(NQ / 8, NQ / 4);
+            {
+                const auto c4 = lobatto_fit<4>(v);
+                double m4 = 0;
+                for (int k = NQ / 8; k <= NQ; k += NQ / 4)
+                    m4 = std::max(m4, std::abs(ChebyshevBernstein::clenshaw<4>(c4, ul[k]) - v[k]));
+                const double t4 = std::abs(c4[4]) + std::abs(c4[3]);
+                if (std::max(10 * m4, 5 * t4) < negligible) {
+                    std::copy(c4.begin(), c4.end(), cf.begin());
+                    meas = m4;
+                    tail = t4;
+                    done = true;
+                    ++S.na_degree[0];
+                }
+            }
+            if (!done) {
+                fill(1, 2);
+                const auto c8 = lobatto_fit<8>(v);
+                double m8 = 0;
+                for (int k = 1; k <= NQ; k += 2)
+                    m8 = std::max(m8, std::abs(ChebyshevBernstein::clenshaw<8>(c8, ul[k]) - v[k]));
+                const double t8 = std::abs(c8[8]) + std::abs(c8[7]);
+                if (std::max(10 * m8, 5 * t8) < negligible) {
+                    std::copy(c8.begin(), c8.end(), cf.begin());
+                    meas = m8;
+                    tail = t8;
+                    done = true;
+                    ++S.na_degree[1];
+                }
+            }
+            if (!done) {
+                cf = lobatto_fit<NQ>(v);
+                ++S.na_degree[2];
                 tail = std::abs(cf[NQ]) + std::abs(cf[NQ - 1]);
+                for (double u : lobatto_midpoints()) {
+                    const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(cf, u) - f(lo + (hi - lo) * (u + 1) / 2));
+                    finite = finite && std::isfinite(e);
+                    meas = std::max(meas, e);
+                }
             }
-            // Fit error MEASURED, not a tail estimate alone (on wide pieces the slowly decaying CO2 terms, C = 10, beat
-            // the tail estimate by ~100x): at the Chebyshev-Lobatto points, which interleave the interpolation nodes
-            // and include the ends -- next to delta = 1 the error peaks at or near an end
-            double meas = 0;
-            for (int j = 0; j <= NQ; ++j) {
-                const double u = std::cos(PI * j / NQ);
-                const double e = std::abs(ChebyshevBernstein::clenshaw<NQ>(cf, u) - f(lo + (hi - lo) * (u + 1) / 2));
+            for (double e : v)
                 finite = finite && std::isfinite(e);
-                meas = std::max(meas, e);
-            }
             if (!finite) return false;
             double s1 = 0;
             for (int k = 0; k <= NQ; ++k) {
