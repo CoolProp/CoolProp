@@ -356,7 +356,11 @@ struct Solver
     struct NAComp
     {
         int i;
-        const CoolProp::ResidualHelmholtzNonAnalytic* na;
+        // OWNED copy of the component's non-analytic terms.  This Solver lives in a process-wide cache shared by
+        // every backend with the same components (HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb), so a pointer
+        // into the backend that happened to build it dangles once that backend is destroyed -- a heap
+        // use-after-free whose garbage made phase verdicts vary run to run with ASLR (COO-125).
+        std::shared_ptr<const CoolProp::ResidualHelmholtzNonAnalytic> na;
         double Dmin;  // smallest D: the terms carry exp(-D (tau-1)^2)
         double Cmin;  // smallest C: ... and exp(-C (delta-1)^2)
         double nsum;  // sum |n|
@@ -419,7 +423,8 @@ struct Solver
     }
     static void na_z_coolprop(const NAComp& c, double tau, double D, double& f, double& df) {  // reference
         CoolProp::HelmholtzDerivatives d;
-        const_cast<CoolProp::ResidualHelmholtzNonAnalytic*>(c.na)->all(tau, D, d);  // reads only its own members
+        CoolProp::ResidualHelmholtzNonAnalytic copy = *c.na;  // all() is non-const; evaluate a local copy
+        copy.all(tau, D, d);
         f = D * d.dalphar_ddelta;
         df = d.dalphar_ddelta + D * d.d2alphar_ddelta2;
     }
@@ -448,7 +453,7 @@ struct Solver
                     Cmin = std::min(Cmin, el.C);
                     nsum += std::abs(el.n);
                 }
-                nacomps.push_back({i, &ar.NonAnalytic, Dmin, Cmin, nsum});
+                nacomps.push_back({i, std::make_shared<const CoolProp::ResidualHelmholtzNonAnalytic>(ar.NonAnalytic), Dmin, Cmin, nsum});
             }
             // every residual contribution must be GenExp or NonAnalytic, else refuse
             for (double tau : {0.7, 1.3})
