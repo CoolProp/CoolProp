@@ -190,7 +190,7 @@ ls build/compile_commands.json          # 90+ entries covering src/
 
 ### macOS contributors
 
-The Homebrew `llvm@18` and `llvm` packages ship `clang-tidy`, but they don't
+The Homebrew `llvm` package ships `clang-tidy`, but it doesn't
 know about the Xcode SDK that Apple's `/usr/bin/c++` links against. If
 `clang-tidy` reports `'iterator' file not found` or `__builtin_clzg`-style
 errors against system headers, point it at the Xcode sysroot:
@@ -200,11 +200,15 @@ SDK=$(xcrun --show-sdk-path)
 clang-tidy -p build --extra-arg=--sysroot=$SDK src/CPstrings.cpp
 ```
 
-clang-tidy 19+ is recommended on macOS — earlier versions don't recognize new
-libc++ builtins (`__builtin_clzg`, `__builtin_ctzg`) that Apple's libc++
-headers use.
-
-CI runs on Ubuntu where this issue doesn't apply.
+clang-tidy 19+ is **required** on every platform: `.clang-tidy` uses
+`ExcludeHeaderFilterRegex`, which 19 introduced; clang-tidy 18 prints a parse
+error on that unknown key, discards the whole config and runs its default checks
+while still exiting 0.
+`dev/ci/run-clang-tidy-staged.sh` refuses anything older.  (On macOS, versions
+before 19 also don't recognize new libc++ builtins -- `__builtin_clzg`,
+`__builtin_ctzg` -- that Apple's libc++ headers use.)  CI installs
+`clang-tidy-21` on the `ubuntu-26.04` image, the same major version as
+Homebrew's `llvm`.
 
 ### Running clang-tidy locally
 

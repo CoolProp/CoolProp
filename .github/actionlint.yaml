@@ -1,5 +1,12 @@
 # actionlint configuration (picked up automatically from the repo root; used
 # by dev/ci/preflight.sh).
+self-hosted-runner:
+  # Not self-hosted: these are GitHub-hosted labels newer than the runner list
+  # actionlint <= 1.7.12 bundles, which reports them as "unknown".  Listing a
+  # label here is actionlint's documented way to accept it.  Drop each once
+  # actionlint knows it.
+  labels:
+    - ubuntu-26.04
 paths:
   .github/workflows/docs_devdocs-run.yml:
     ignore:

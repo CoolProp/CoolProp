@@ -812,7 +812,12 @@ else
 
     CPP_ONLY="$(printf '%s\n' "$ALL_CPP" | grep -E '\.(cpp|cc|cxx)$' || true)"
     if [ -z "$CPP_ONLY" ]; then
-        skip "clang-tidy" "no .cpp files in diff (headers covered transitively)"
+        # Headers are analysed only through a .cpp in the diff that includes
+        # them (the line filter then keeps their changed lines).  With no .cpp
+        # there is nothing to analyse them through, so say so instead of
+        # claiming coverage.  The same gap exists, silently, for a changed
+        # header that no changed .cpp includes.
+        skip "clang-tidy" "no .cpp files in diff; changed headers NOT analysed locally (CI's informational clang-tidy job runs on them standalone)"
     else
         # Scoped to CHANGED LINES via clang-tidy's -line-filter, the same
         # scoping CI's clang-tidy-diff job uses.  The whole-file form failed on
