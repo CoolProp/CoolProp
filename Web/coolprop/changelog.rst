@@ -224,6 +224,8 @@ New features:
   GERG backends now raise ``NotImplementedError`` there; every other
   unsupported backend now raises ``ValueError`` (see Bug fixes).
 
+* **Stricter number parsing.**  Hex and out-of-range (``1e400``) numbers are errors in expression formulas, ``HMX.BNC`` text and floating-point ``COOLPROP_*`` settings; a malformed incompressible concentration (``MEG-abc%``, ``MEG-20 %``) raises instead of silently giving 0 or an unscaled value; a floating-point ``COOLPROP_*`` setting with trailing text (``0.25abc``) is rejected (`#3432 <https://github.com/CoolProp/CoolProp/pull/3432>`_, `#3455 <https://github.com/CoolProp/CoolProp/pull/3455>`_).
+
 * **vtable change in an internal header:**
   ``HelmholtzEOSMixtureBackend::set_mixture_parameters()`` is now ``virtual``,
   so the GERG backends can populate the reducing function and excess term from
@@ -301,6 +303,7 @@ Bug fixes:
 * Binary interaction parameters supplied with ``set_interaction_parameters``, or from a REFPROP ``HMX.BNC`` file through ``set_departure_functions``, before the first mixture calculation are merged into the built-in library at once.  Before, with ``OVERWRITE_BINARY_INTERACTION`` set, the built-in record for the same pair loaded afterwards and silently replaced the caller's (`#3278 <https://github.com/CoolProp/CoolProp/pull/3278>`_).
 * ``rhosr-CS`` viscosity models use the ``x_crossover`` value from the fluid file instead of a hard-coded 2.  All eight shipped ``rhosr-CS`` fluids set it to 2, so no shipped value changes; a fluid added with ``add_fluids_as_JSON`` that sets a different ``x_crossover`` now gets it (`#3339 <https://github.com/CoolProp/CoolProp/pull/3339>`_).
 * Two error messages that lost their diagnostic to a ``format()`` argument mismatch (`#3359 <https://github.com/CoolProp/CoolProp/pull/3359>`_).
+* Expression transport formulas, ``HMX.BNC`` text for ``set_departure_functions``, incompressible concentrations and ``COOLPROP_*`` settings are read independently of the C locale.  A host that set a decimal-comma ``LC_NUMERIC`` made 10 fluids fail to load, ``HMX.BNC`` files fail to parse, ``INCOMP::MEG-20.5%`` return inf, and a ``COOLPROP_*`` value of ``0.25`` read as 0 (`#3432 <https://github.com/CoolProp/CoolProp/pull/3432>`_, `#3455 <https://github.com/CoolProp/CoolProp/pull/3455>`_).
 * Python plots: saturation lines of pure fluids reach the critical point instead of stopping short with NaN when the last flash fails within 1 K (QT lines) or 100 Pa (PQ lines) of it (`#3409 <https://github.com/CoolProp/CoolProp/pull/3409>`_).
 * Python source builds no longer fail after building the same checkout with a different Python version (`#3305 <https://github.com/CoolProp/CoolProp/issues/3305>`_, `#3306 <https://github.com/CoolProp/CoolProp/pull/3306>`_).
 * GUI: About-dialog and Sponsor links open the system browser (`#3230 <https://github.com/CoolProp/CoolProp/issues/3230>`_, `#3231 <https://github.com/CoolProp/CoolProp/pull/3231>`_).
