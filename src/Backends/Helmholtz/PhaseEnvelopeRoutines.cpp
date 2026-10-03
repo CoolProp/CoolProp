@@ -4,12 +4,154 @@
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
 #include "PhaseEnvelopeRoutines.h"
+#include "PhaseEnvelopeTracers.h"
+#include "MixtureDerivatives.h"
 #include "CoolProp/fluids/PhaseEnvelope.h"
 #include "CoolProp/detail/tools.h"
 #include "CoolProp/Configuration.h"
 #include "CoolProp/numerics/numerics.h"
+#include <cstdint>
 
 namespace CoolProp {
+
+namespace {
+/// Minimum number of stored points for a partial (non-closed) envelope to be worth keeping.
+constexpr std::size_t kMinPointsForPartialEnvelope = 20;
+
+/// Throw unless the point the saturation solver landed on is actually on the phase boundary.
+///
+/// newton_raphson_saturation::call leaves its loop as soon as ANY single variable stops moving
+/// (`min_rel_change > 1000*DBL_EPSILON` going false) and returns without looking at its residual,
+/// so a stalled solve is indistinguishable from a converged one at the call site.  Its own
+/// `error_rms` cannot be used as the gate either: for the density-imposed formulation the
+/// residual vector mixes dimensionless ln-fugacity terms with a pressure difference in Pascals,
+/// so it is not comparable to any fixed tolerance and the loop essentially never exits on it.
+///
+/// Equality of the component fugacities is the definition of a phase-boundary point and is
+/// dimensionless, so check that directly on the two instances the solver just converged.  Before
+/// this, the worst stored point in the corpus was off by 4.2 in ln-fugacity -- on exactly the
+/// partial envelopes that are now kept rather than discarded.
+void require_on_boundary(HelmholtzEOSMixtureBackend& HEOS, SaturationSolvers::newton_raphson_saturation_options& IO) {
+    // Threshold note.  There is NO clean gap in the observed distribution -- an earlier version of
+    // this comment claimed one and was wrong.  What settles the value is that reach does not
+    // depend on it: measured over the corpus, 1e-3 and 1e-2 both give 154 traced and 131 closed,
+    // but 1e-2 admits stored points as bad as 6.4e-3 while 1e-3 caps them at 8.4e-4.  Same
+    // envelopes, better data, so take the tighter one.  Its purpose is to stop states that are
+    // not on the boundary at all (the worst seen was off by 4.2, a factor of 67 in fugacity),
+    // not to police convergence quality.
+    constexpr double tol = 1e-3;
+    if (!HEOS.SatL || !HEOS.SatV) {
+        throw ValueError("Cannot verify the phase boundary: SatL/SatV are unavailable");  // never read "cannot check" as "checked"
+    }
+    HelmholtzEOSMixtureBackend &liq = *HEOS.SatL, &vap = *HEOS.SatV;
+    if (IO.x.empty() || IO.x.size() != IO.y.size()) {
+        throw ValueError("Cannot verify the phase boundary: empty or mismatched composition vectors");
+    }
+    // Evaluate at exactly the values about to be stored.  The solver leaves SatL/SatV holding the
+    // state from its last Jacobian build, one Newton step behind the answer it returns, so
+    // checking them in place would grade a slightly different point than the one recorded.
+    liq.set_mole_fractions(IO.x);
+    liq.update(DmolarT_INPUTS, IO.rhomolar_liq, IO.T);
+    vap.set_mole_fractions(IO.y);
+    vap.update(DmolarT_INPUTS, IO.rhomolar_vap, IO.T);
+    for (std::size_t i = 0; i < IO.x.size(); ++i) {
+        const CoolPropDbl fl = MixtureDerivatives::fugacity_i(liq, i, XN_DEPENDENT);
+        const CoolPropDbl fv = MixtureDerivatives::fugacity_i(vap, i, XN_DEPENDENT);
+        if (!ValidNumber(fl) || !ValidNumber(fv) || fl <= 0 || fv <= 0) {
+            throw ValueError(format("Non-positive fugacity for component %d", static_cast<int>(i)));
+        }
+        const double d = std::abs(std::log(fl) - std::log(fv));
+        if (!ValidNumber(d) || d > tol) {
+            throw ValueError(format("Point is not on the phase boundary: |dln f| = %g for component %d", d, static_cast<int>(i)));
+        }
+    }
+    // Mechanical equilibrium is the other half of the definition; the fugacity loop above is only
+    // the chemical half.  Relative, since the absolute difference is meaningless at the sub-Pascal
+    // pressures a low-temperature tail reaches.  Measured worst on this path: 6.5e-6.
+    const double p_liq = liq.p(), p_vap = vap.p();
+    if (!ValidNumber(p_liq) || !ValidNumber(p_vap) || p_liq <= 0 || p_vap <= 0) {
+        throw ValueError("Non-positive phase pressure");
+    }
+    if (std::abs(p_liq / p_vap - 1) > 1e-3) {
+        throw ValueError(format("Phases are not in mechanical equilibrium: p' = %g, p'' = %g", p_liq, p_vap));
+    }
+
+    // SatL/SatV now hold exactly the state being stored, so take the caloric properties from it.
+    // IO's copies came from the solver's pre-final-step state -- the same staleness this function
+    // exists to avoid -- so refreshing them keeps the stored h and s consistent with the stored
+    // T, rho and composition.
+    IO.hmolar_liq = liq.hmolar();
+    IO.hmolar_vap = vap.hmolar();
+    IO.smolar_liq = liq.smolar();
+    IO.smolar_vap = vap.smolar();
+    // ...and the pressure, for the same reason.  The solver leaves IO.p holding the mean of the
+    // two phase pressures from its PREVIOUS Jacobian build, which is what env.p then stores and
+    // what evaluate() and the flash fast paths interpolate.  Refreshing h and s but not p would
+    // leave the stored tuple internally inconsistent (measured up to 0.43 % apart).
+    IO.p = 0.5 * (liq.p() + vap.p());
+}
+
+/// Throw unless every value that would be stored for this point is finite.
+///
+/// Checking the state variables alone is not enough: for a wide-boiling multicomponent gas the
+/// trace-component mole fractions underflow and go non-finite while T, p and the densities still
+/// look reasonable, and the bad composition is then stored and handed to callers.
+void require_storable(const SaturationSolvers::newton_raphson_saturation_options& IO) {
+    // Finiteness of the state is not sufficient.  store_variables/insert_variables also derive
+    // and store K = y/x, ln K, ln T and ln p, so a value that is merely finite but non-positive
+    // still corrupts the envelope: x[i] underflowing to exactly zero gives K = +inf and
+    // ln K = +inf, a negative x[i] gives K < 0 and ln K = NaN, and T or p at zero gives
+    // ln T / ln p = -inf.  newton_raphson_saturation::call updates the incipient composition
+    // additively with no clamp, so all of those are reachable.  Require positivity, not just
+    // finiteness, for everything a logarithm or a quotient is taken of.
+    if (!ValidNumber(IO.T) || !ValidNumber(IO.p) || !ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.rhomolar_vap)) {
+        throw ValueError("Invalid number");
+    }
+    if (IO.T <= 0 || IO.p <= 0 || IO.rhomolar_liq <= 0 || IO.rhomolar_vap <= 0) {
+        throw ValueError(format("Non-positive state: T = %g, p = %g, rho' = %g, rho'' = %g", static_cast<double>(IO.T), static_cast<double>(IO.p),
+                                static_cast<double>(IO.rhomolar_liq), static_cast<double>(IO.rhomolar_vap)));
+    }
+    for (std::size_t i = 0; i < IO.x.size(); ++i) {
+        if (!ValidNumber(IO.x[i]) || IO.x[i] <= 0) {
+            throw ValueError(format("Invalid mole fraction for component %d in the incipient phase", static_cast<int>(i)));
+        }
+    }
+    for (std::size_t i = 0; i < IO.y.size(); ++i) {
+        if (!ValidNumber(IO.y[i]) || IO.y[i] <= 0) {
+            throw ValueError(format("Invalid mole fraction for component %d in the bulk phase", static_cast<int>(i)));
+        }
+    }
+    if (!ValidNumber(IO.hmolar_liq) || !ValidNumber(IO.hmolar_vap) || !ValidNumber(IO.smolar_liq) || !ValidNumber(IO.smolar_vap)) {
+        throw ValueError("Invalid caloric property");
+    }
+}
+}  // namespace
+
+/// Finish a trace that stopped before closing: keep the partial envelope when it is long enough
+/// to be useful, otherwise throw rather than return an empty one silently.
+void PhaseEnvelopeRoutines::finish_partial(HelmholtzEOSMixtureBackend& HEOS, const std::string& level, const std::string& reason,
+                                           const std::string& detail) {
+    PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
+    PhaseEnvelopeTracers::set_last_stop(reason, detail);
+    if (env.T.size() < kMinPointsForPartialEnvelope) {
+        throw ValueError(
+          format("Phase envelope construction stopped after %d points (%s: %s)", static_cast<int>(env.T.size()), reason.c_str(), detail.c_str()));
+    }
+    // Deliberately NOT `built = true`.  `built` is what the envelope-guided flash fast paths in
+    // FlashRoutines gate on, and two of them check it without also checking `closed`.  Seeding a
+    // guided solve from a boundary that stops short does not reliably fail --
+    // newton_raphson_saturation::call leaves its loop as soon as any single variable stops moving
+    // and returns without checking its residual -- so a stalled solve would return a wrong answer
+    // instead of falling through to the blind solver.  Keeping `built` false leaves every
+    // consumer behaving exactly as it did before, while the traced points and the stop reason are
+    // still available to anyone who asks for them directly.
+    env.built = false;
+    env.closed = false;
+    if (get_debug_level() > 0) {
+        std::cout << format("phase envelope: kept %d points, open (%s: %s)\n", static_cast<int>(env.T.size()), reason.c_str(), detail.c_str());
+    }
+    refine(HEOS, level);
+}
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::string& level) {
     if (HEOS.get_mole_fractions_ref().empty()) {
@@ -95,6 +237,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         // It's a mixture
         // --------------
 
+        // Experimental tracers selected by configuration; "legacy" is the code below, untouched.
+        const std::string algorithm = get_config_string(PHASE_ENVELOPE_ALGORITHM);
+        if (algorithm != "legacy") {
+            PhaseEnvelopeTracers::trace(HEOS, algorithm, level);
+            return;
+        }
+
         // First we try to generate all the critical points.  This
         // is very useful
         std::vector<CriticalState> critpts;
@@ -113,19 +262,42 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         io.sstype = SaturationSolvers::imposed_p;
         io.Nstep_max = 20;
 
-        // Set the pressure to a low pressure
-        HEOS._p = get_config_double(PHASE_ENVELOPE_STARTING_PRESSURE_PA);  //[Pa]
-        HEOS._Q = 1;
+        // Set the pressure to a low pressure.  The configured start pressure is not solvable for
+        // every mixture -- a wide-boiling blend's incipient liquid at 100 Pa can sit below its own
+        // triple point, and solver_rho_Tp then fails outright with no envelope at all (Amarillo,
+        // R508A, CO2+water).  Retry a decade higher rather than giving up; the pressure actually
+        // used becomes the closure pressure, since closure is tested against env.p[0].
+        const double p_start_configured = get_config_double(PHASE_ENVELOPE_STARTING_PRESSURE_PA);  //[Pa]
+        const int start_retries = 4;
+        std::string start_error;
+        bool started = false;
+        CoolPropDbl Tguess = 0;
+        for (int attempt = 0; attempt <= start_retries && !started; ++attempt) {
+            HEOS._p = p_start_configured * std::pow(10.0, attempt);
+            HEOS._Q = 1;
+            try {
+                // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
+                Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
 
-        // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-        CoolPropDbl Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
+                // Use Wilson iteration to obtain updated guess for temperature
+                Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
 
-        // Use Wilson iteration to obtain updated guess for temperature
-        Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
-
-        // Actually call the successive substitution solver
-        io.beta = 1;
-        SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+                // Actually call the successive substitution solver
+                io.beta = 1;
+                SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+                started = true;
+            } catch (std::exception& e) {
+                start_error = e.what();
+                if (debug) {
+                    std::cout << format("phase envelope: start at p = %g Pa failed: %s\n", static_cast<double>(HEOS._p), e.what());
+                }
+            }
+        }
+        if (!started) {
+            PhaseEnvelopeTracers::set_last_stop("start_failed", start_error);
+            throw ValueError(format("Unable to obtain a starting dew point for the phase envelope after %d attempts; last error: %s",
+                                    start_retries + 1, start_error.c_str()));
+        }
 
         // Use the residual function based on x_i, T and rho' as independent variables.  rho'' is specified
         SaturationSolvers::newton_raphson_saturation NR;
@@ -168,11 +340,19 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
         CoolPropDbl factor = 1.05;
 
         for (;;) {
+        // Pre-existing legacy flow control: the nested composition loop below restarts the outer
+        // step via `goto top_of_loop`.  Left as-is deliberately -- this is the DEFAULT tracer and
+        // restructuring its control flow is out of scope for the tracer spike.
         top_of_loop:;  // A goto label so that nested loops can break out to the top of this loop
 
             if (failure_count > 5) {
-                // Stop since we are stuck at a bad point
-                //throw SolutionError("stuck");
+                // Stuck at a bad point.  This used to `return` with built still false, which
+                // handed the caller an empty envelope and no error at all -- 24 of the 157
+                // mixtures in the torture corpus ended here silently.  Keep whatever was traced
+                // when it is long enough to be useful, mark it open rather than closed, and say
+                // why; both envelope-guided flash paths gate on `built` but wrap the guided
+                // solve in try/catch with a blind fallback, so a partial envelope is safe.
+                finish_partial(HEOS, level, "stalled", "solver failed repeatedly at the same point");
                 return;
             }
 
@@ -223,6 +403,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                         IO.rhomolar_vap /= factor;
                         factor = 1 + (factor - 1) / 2;
                         failure_count++;
+                        // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
                         goto top_of_loop;
                     }
                 }
@@ -237,9 +418,8 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             // Dewpoint calculation, liquid (x) is incipient phase
             try {
                 NR.call(HEOS, IO.y, IO.x, IO);
-                if (!ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.p) || !ValidNumber(IO.T)) {
-                    throw ValueError("Invalid number");
-                }
+                require_on_boundary(HEOS, IO);
+                require_storable(IO);
                 // Reject trivial solution
                 if (std::abs(IO.rhomolar_liq - IO.rhomolar_vap) < 1e-3) {
                     throw ValueError("Trivial solution");
@@ -260,6 +440,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                 // Try again, but with a smaller step
                 IO.rhomolar_vap /= factor;
                 if (iter < 4) {
+                    PhaseEnvelopeTracers::set_last_stop("start_failed", e.what());
                     throw ValueError(format("Unable to calculate at least 4 points in phase envelope; quitting"));
                 }
                 IO.rhomolar_liq = QuadInterp(env.rhomolar_vap, env.rhomolar_liq, iter - 3, iter - 2, iter - 1, IO.rhomolar_vap);
@@ -336,9 +517,34 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             // Stop if the pressure is below the starting pressure
             // or if the composition of one of the phases becomes almost pure
             CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
-            if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0 - max_fraction) < 1e-9)) {
+            // Closure needs more than a low pressure.  A collapse onto a degenerate root also
+            // drives p down, and env.p[0] is now whatever start pressure actually worked (up to
+            // 1e6 Pa after retries), so the pressure bar alone is weaker than it used to be.
+            // Require the two phases to be genuinely distinct as well, as the continuation
+            // tracers do -- at a real low-pressure closure the incipient phase is dilute.
+            const double closure_rho_ratio = std::max(IO.rhomolar_liq, IO.rhomolar_vap) / std::max(std::min(IO.rhomolar_liq, IO.rhomolar_vap), 1e-30);
+            // The bar is "the phases are still clearly distinct", i.e. not a collapse onto a
+            // degenerate root where the densities merge (ratio -> 1).  Measured over the corpus,
+            // 3, 100 and 1e4 give bit-identical tallies and 1e9 breaks 22 closures, so every
+            // genuine closure here has a ratio above 1e4 and nothing is bought by being lenient.
+            // 100 matches the continuation tracers and leaves two decades of margin.
+            const bool pressure_closed = IO.p < env.p[0] && closure_rho_ratio > 100;
+            if (iter > 4 && (pressure_closed || std::abs(1.0 - max_fraction) < 1e-9)) {
+                if (!pressure_closed) {
+                    // A phase went numerically pure: the trace ended, but it did not come back
+                    // round, so this is an OPEN envelope and must be finished the same way every
+                    // other non-closure is -- `built` stays false, the minimum-length rule
+                    // applies, and the reason is recorded.  This branch used to set built = true
+                    // with closed = false, which is precisely the state that can steer the
+                    // envelope-guided flash fast paths (they gate on `built` alone) off an
+                    // incomplete boundary; it did so on a 5-point Neon/Argon envelope and on a
+                    // Methane/Hydrogen one that disagrees with a blind flash by ~100 %.
+                    finish_partial(HEOS, level, "pure", "a phase became numerically pure");
+                    return;
+                }
                 env.built = true;
-                env.closed = (IO.p < env.p[0]);
+                env.closed = true;
+                PhaseEnvelopeTracers::set_last_stop("closed", "pressure fell below the starting pressure with the phases still distinct");
                 if (debug) {
                     std::cout << format("envelope built.\n");
                     std::cout << format("closest fraction to 1.0: distance %g\n", 1 - max_fraction);
@@ -375,8 +581,25 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
     if (level == "none") {
         return;
     }
+    // Fail-safe on total insertions.  Every guard below is a local argument about one segment;
+    // this is the global one, so no future pathology can make refine run away.
+    const std::size_t max_points_after_refine = std::max<std::size_t>(4 * env.T.size(), 64);
     std::size_t i = 0;
     do {
+        if (env.T.size() >= max_points_after_refine) {
+            if (debug) {
+                std::cout << format("refine: stopping at %d points (cap %d)\n", static_cast<int>(env.T.size()),
+                                    static_cast<int>(max_points_after_refine));
+            }
+            break;
+        }
+        // The index must advance on every pass.  The geometric sweep below only runs when the
+        // segment steps FORWARD in vapor density, and it only bumps `i` on a successful insert
+        // or after a failure -- so a segment whose sweep body never executes used to leave `i`
+        // untouched and spin here forever.  Closed envelopes are monotone in rhomolar_vap by
+        // construction, which is why this was unreachable until partial envelopes started
+        // being refined; guard it directly rather than relying on the caller.
+        const std::size_t i_at_entry = i;
 
         // Don't do anything if change in density and pressure is small enough
         if ((std::abs(env.rhomolar_vap[i] / env.rhomolar_vap[i + 1] - 1) < acceptable_rhodiff)
@@ -389,13 +612,32 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
 
         // Vapor densities for this step, vapor density monotonically increasing
         const double rhomolar_vap_start = env.rhomolar_vap[i], rhomolar_vap_end = env.rhomolar_vap[i + 1];
+        // The segment must be meaningfully wide in vapor density before a geometric sweep across
+        // it means anything.  A segment that runs backwards, through zero, or is only a rounding
+        // step wide is skipped: with end/start within round-off of 1 the factor below rounds to
+        // exactly 1, every swept density lands back on the segment start, and refine inserts an
+        // unbounded run of duplicates of that one point (the array then grows exactly as fast as
+        // the index advances, so the outer loop never reaches the end either).  A closed envelope
+        // escapes that through the coarseness skip above; a partial one need not.
+        if (!(rhomolar_vap_start > 0) || !(rhomolar_vap_end > rhomolar_vap_start * (1 + 1e-9))) {
+            i++;
+            continue;
+        }
 
         double factor = pow(rhomolar_vap_end / rhomolar_vap_start, 1.0 / N);
 
         int failure_count = 0;
-        // Geometric density sweep (factor = (end/start)^(1/N)); ~N
-        // iterations, no FP accumulation issue worth converting.
-        for (double rhomolar_vap = rhomolar_vap_start * factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor) {  // NOLINT(cert-flp30-c)
+        // Geometric density sweep, integer-indexed: rho_k = start * factor^k for k = 1..N-1,
+        // which is exactly what `for (rho = start*factor; rho < end; rho *= factor)` produced
+        // since start * factor^N == end.  The float-driven form did not terminate when start and
+        // end were nearly equal: factor is then 1 to within round-off, `rho *= factor` stops
+        // changing rho, and the loop spins forever doing a Newton solve every pass.  A closed
+        // envelope never presents such a segment; a partial one does.
+        for (int k_ref = 1; k_ref < N; ++k_ref) {
+            const double rhomolar_vap = rhomolar_vap_start * std::pow(factor, k_ref);
+            if (!(rhomolar_vap > rhomolar_vap_start) || !(rhomolar_vap < rhomolar_vap_end)) {
+                break;  // no longer strictly inside the segment: nothing left to insert
+            }
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
             if (i < env.T.size() - 3) {
@@ -414,9 +656,8 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
             IO.x[IO.x.size() - 1] = 1 - std::accumulate(IO.x.begin(), IO.x.end() - 1, 0.0);
             try {
                 NR.call(HEOS, IO.y, IO.x, IO);
-                if (!ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.p)) {
-                    throw ValueError("invalid numbers");
-                }
+                require_on_boundary(HEOS, IO);
+                require_storable(IO);
                 env.insert_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x,
                                      IO.y, i + 1);
                 if (debug) {
@@ -435,7 +676,12 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
         if (failure_count > 0) {
             i++;
         }
-    } while (i < env.T.size() - 1);
+        if (i == i_at_entry) {
+            // The sweep inserted nothing and reported no failure (it can be entered with a
+            // first step already at or past the end).  Advance anyway; never spin.
+            i++;
+        }
+    } while (i + 1 < env.T.size());
 }
 double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData& env, parameters output, parameters iInput1, double value1, std::size_t& i) {
     int _i = static_cast<int>(i);
@@ -517,7 +763,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
         return;
     }
 
-    enum maxima_points
+    enum class maxima_points : std::uint8_t
     {
         PMAX_SAT = 0,
         TMAX_SAT = 1
@@ -541,55 +787,80 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
     // See method in Gernert.  We use our spline class to find the coefficients
     if (env.TypeI) {
         for (int imaxima = 0; imaxima <= 1; ++imaxima) {
-            maxima_points maxima;
-            if (imaxima == PMAX_SAT) {
-                maxima = PMAX_SAT;
-            } else if (imaxima == TMAX_SAT) {
-                maxima = TMAX_SAT;
+            maxima_points maxima = maxima_points::PMAX_SAT;
+            if (imaxima == static_cast<int>(maxima_points::PMAX_SAT)) {
+                maxima = maxima_points::PMAX_SAT;
+            } else if (imaxima == static_cast<int>(maxima_points::TMAX_SAT)) {
+                maxima = maxima_points::TMAX_SAT;
             } else {
                 throw ValueError("I don't understand your maxima index");
             }
 
-            // Spline using the points around it
+            // Spline using the points around it.  The 4-point stencil is [i-1, i+2], so the
+            // anchor has to leave room on both sides: an extremum sitting at index 0 or 1 used
+            // to underflow i-1 (std::size_t) into an enormous index and read out of bounds.
+            const std::size_t nenv = env.T.size();
+            if (nenv < 4) {
+                break;
+            }
             SplineClass spline;
-            if (maxima == TMAX_SAT) {
-                imax = iTmax;
-                if (iTmax > env.T.size() - 3) {
-                    iTmax -= 2;
+            if (maxima == maxima_points::TMAX_SAT) {
+                if (iTmax + 3 > nenv) {
+                    iTmax = nenv - 3;
                 }
+                if (iTmax < 1) {
+                    iTmax = 1;
+                }
+                imax = iTmax;
                 spline.add_4value_constraints(env.rhomolar_vap[iTmax - 1], env.rhomolar_vap[iTmax], env.rhomolar_vap[iTmax + 1],
                                               env.rhomolar_vap[iTmax + 2], env.T[iTmax - 1], env.T[iTmax], env.T[iTmax + 1], env.T[iTmax + 2]);
             } else {
-                imax = ipmax;
-                if (ipmax > env.p.size() - 3) {
-                    ipmax -= 2;
+                if (ipmax + 3 > nenv) {
+                    ipmax = nenv - 3;
                 }
+                if (ipmax < 1) {
+                    ipmax = 1;
+                }
+                imax = ipmax;
                 spline.add_4value_constraints(env.rhomolar_vap[ipmax - 1], env.rhomolar_vap[ipmax], env.rhomolar_vap[ipmax + 1],
                                               env.rhomolar_vap[ipmax + 2], env.p[ipmax - 1], env.p[ipmax], env.p[ipmax + 1], env.p[ipmax + 2]);
             }
-            spline.build();  // y = a*rho^3 + b*rho^2 + c*rho + d
-
-            // Take derivative
-            // dy/drho = 3*a*rho^2 + 2*b*rho + c
-            // Solve quadratic for derivative to find rho
-            int Nsoln = 0;
-            double rho0 = _HUGE, rho1 = _HUGE, rho2 = _HUGE;
-            solve_cubic(0, 3 * spline.a, 2 * spline.b, spline.c, Nsoln, rho0, rho1, rho2);
-
             SaturationSolvers::newton_raphson_saturation_options IO;
             IO.rhomolar_vap = _HUGE;
-            // Find the correct solution
-            if (Nsoln == 1) {
-                IO.rhomolar_vap = rho0;
-            } else if (Nsoln == 2) {
-                if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho0)) {
+            try {
+                spline.build();  // y = a*rho^3 + b*rho^2 + c*rho + d
+
+                // Take derivative
+                // dy/drho = 3*a*rho^2 + 2*b*rho + c
+                // Solve quadratic for derivative to find rho
+                int Nsoln = 0;
+                double rho0 = _HUGE, rho1 = _HUGE, rho2 = _HUGE;
+                solve_cubic(0, 3 * spline.a, 2 * spline.b, spline.c, Nsoln, rho0, rho1, rho2);
+
+                // Find the correct solution
+                if (Nsoln == 1) {
                     IO.rhomolar_vap = rho0;
+                } else if (Nsoln == 2) {
+                    if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho0)) {
+                        IO.rhomolar_vap = rho0;
+                    }
+                    if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho1)) {
+                        IO.rhomolar_vap = rho1;
+                    }
+                } else {
+                    throw ValueError("More than 2 solutions found");
                 }
-                if (is_in_closed_range(env.rhomolar_vap[imax - 1], env.rhomolar_vap[imax + 1], rho1)) {
-                    IO.rhomolar_vap = rho1;
+            } catch (std::exception& e) {
+                // The spline is singular when the four abscissae are not distinct, which happens
+                // where the traced points bunch up.  The maxima are a convenience for
+                // is_inside(); skipping one is far better than failing the whole envelope.
+                if (get_debug_level() > 0) {
+                    std::cout << format("finalize: no maxima insertion for index %d: %s\n", imaxima, e.what());
                 }
-            } else {
-                throw ValueError("More than 2 solutions found");
+                continue;
+            }
+            if (!ValidNumber(IO.rhomolar_vap) || IO.rhomolar_vap == _HUGE) {
+                continue;
             }
 
             class solver_resid : public FuncWrapper1D
@@ -621,7 +892,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                     }
                     IO.x[IO.x.size() - 1] = 1 - std::accumulate(IO.x.begin(), IO.x.end() - 1, 0.0);
                     NR.call(*HEOS, IO.y, IO.x, IO);
-                    if (maxima == TMAX_SAT) {
+                    if (maxima == maxima_points::TMAX_SAT) {
                         return NR.dTsat_dPsat;
                     } else {
                         return NR.dPsat_dTsat;
@@ -639,6 +910,8 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
                     imax++;
                 }
 
+                require_on_boundary(HEOS, resid.IO);
+                require_storable(resid.IO);
                 env.insert_variables(resid.IO.T, resid.IO.p, resid.IO.rhomolar_liq, resid.IO.rhomolar_vap, resid.IO.hmolar_liq, resid.IO.hmolar_vap,
                                      resid.IO.smolar_liq, resid.IO.smolar_vap, resid.IO.x, resid.IO.y, imax);
             } catch (...) {  // NOLINT(bugprone-empty-catch)
@@ -658,7 +931,15 @@ std::vector<std::pair<std::size_t, std::size_t>> PhaseEnvelopeRoutines::find_int
                                                                                            double value) {
     std::vector<std::pair<std::size_t, std::size_t>> intersections;
 
-    for (std::size_t i = 0; i < env.p.size() - 1; ++i) {
+    // `env.p.size() - 1` is unsigned: an empty envelope wraps it to SIZE_MAX and the loop below
+    // reads out of bounds on the first iteration.  An empty envelope reaches here whenever a
+    // build failed but the caller carried on -- TabularDataSet::build_tables copies whatever
+    // build_phase_envelope left behind and never checks `built`.
+    if (env.p.size() < 2) {
+        return intersections;
+    }
+
+    for (std::size_t i = 0; i + 1 < env.p.size(); ++i) {
         bool matched = false;
         switch (iInput) {
             case iP:
