@@ -25,6 +25,9 @@ class PCSAFTLibraryClass
     /// Map from sorted pair of CAS numbers to interaction parameter map.  The interaction parameter map is a map from key (string) to value (double)
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
 
+    /// The parameters stored for a binary pair, in either CAS order; throws ValueError if none.
+    Dictionary& find_binary_pair(const std::string& CAS1, const std::string& CAS2);
+
     void load_from_JSON(const nlohmann::json& doc);
     void load_from_string(const std::string_view& str);
 
@@ -44,7 +47,12 @@ class PCSAFTLibraryClass
         return m_binary_pair_map;
     };
 
+    /// A binary interaction parameter as text: "name1", "name2", "BibTeX", or "kij"/"kijT" formatted with %0.16g.
+    /// Backs the public get_mixture_binary_pair_pcsaft(); in C++ use get_binary_interaction_number() for kij/kijT.
     std::string get_binary_interaction_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& key);
+    /// "kij" or "kijT" for a binary pair as a double, without a round trip through text.  kijT is 0 when not given, even
+    /// if kij is also absent.  Not to be confused with AbstractState::get_binary_interaction_double().
+    double get_binary_interaction_number(const std::string& CAS1, const std::string& CAS2, const std::string& key);
     void set_binary_interaction_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& key, const double value);
 };
 
