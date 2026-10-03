@@ -122,7 +122,7 @@ inline bool strstartswith(const std::string& s, const std::string& other) {
 std::errc parse_double_C(const char* first, const char* last, double& value, const char*& end);
 
 /// Convert a whole string to a double, accepting a FORTRAN-style 'D' or 'd'
-/// exponent and leading whitespace.  Independent of the C locale.  Throws
+/// exponent and surrounding whitespace.  Independent of the C locale.  Throws
 /// CoolProp::ValueError if any of the string is not part of the number.
 double string2double(const std::string& s);
 

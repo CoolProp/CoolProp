@@ -96,18 +96,22 @@ double string2double(const std::string& s) {
     if (pos != std::string::npos) mys.replace(pos, 1, "e");
 
     const char* first = mys.c_str();
-    const char* const last = first + mys.size();
+    const char* last = first + mys.size();
+    // Skip surrounding whitespace, e.g. the trailing space left by Windows'
+    // "set COOLPROP_X=0.25 && ..." idiom.
     while (first < last && std::isspace(static_cast<unsigned char>(*first)) != 0)
         ++first;
+    while (last > first && std::isspace(static_cast<unsigned char>(last[-1])) != 0)
+        --last;
     double val = 0.0;
     const char* end = nullptr;
     const std::errc ec = parse_double_C(first, last, val, end);
     if (ec == std::errc::result_out_of_range) {
-        throw CoolProp::ValueError(format("Number is out of range for a double:%s", mys.c_str()));
+        throw CoolProp::ValueError(format("Number is out of range for a double:%s", s.c_str()));
     }
     if (ec != std::errc() || end != last) {
         // Found a character that is not able to be converted to number
-        throw CoolProp::ValueError(format("Unable to convert this string to a number:%s", mys.c_str()));
+        throw CoolProp::ValueError(format("Unable to convert this string to a number:%s", s.c_str()));
     }
     return val;
 }
