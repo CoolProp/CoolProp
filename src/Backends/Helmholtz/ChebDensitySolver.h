@@ -174,6 +174,14 @@ class Tables
     /// The true G(delta) = delta Z - t at the state of S (evaluated from the same grouped terms, no tables), its
     /// delta-derivative, and a roundoff scale (|G| below ~1e-15 * scale is noise)
     void true_G(const State& S, double delta, double t, double& G, double& dG, double& scale) const;
+    /// The stable density root [mol/m^3] at pressure p [Pa] for the state of S, or -1 when the tables cannot answer
+    /// (the caller then uses another solver): some root interval the isolation cannot certify, a root possibly beyond
+    /// delta_max, or no mechanically stable root.  All roots on [0, delta_max] are isolated (ChebyshevBernstein,
+    /// certified against the margins); of the mechanically stable ones on the vapor spinodal branch (below the first
+    /// local maximum of delta Z) and the liquid branch (above the last local minimum), the one of lower Gibbs energy
+    /// is taken -- not the lowest Gibbs energy over all roots, which can pick a root in an alphar well between the
+    /// branches -- and polished by bracketed Newton on the true equation.
+    [[nodiscard]] double stable_root(const State& S, double p) const;
     /// alphar(tau, delta) at the state of S
     [[nodiscard]] double alphar(const State& S, double delta) const;
 

@@ -40,8 +40,13 @@
 #include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
 #include "CoolProp/expression/ExpressionCorrelation.h"
+#include "ChebDensitySolver.h"
 #include <atomic>
+#include <cstdio>
 #include <cstdlib>
+#include <map>
+#include <mutex>
+#include <random>
 
 // Instrumentation only: counts the number of EOS derivative-cache evaluations
 // across all HEOS instances. Atomic so concurrent calls do not race (#2844).
@@ -104,6 +109,8 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     _phase = iphase_unknown;
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
+    cheb_density.reset();  // a new model: resolve the Chebyshev solver again
+    cheb_density_resolved = false;
 
     // Drop the cached ECS transport reference fluids: they are tied to the
     // OLD component's reference-fluid name, so a post-construction component
@@ -382,6 +389,7 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
 }
 
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -413,6 +421,7 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const double value) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -459,6 +468,7 @@ double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const std::string& value) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -2891,7 +2901,123 @@ CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     }
     return b;
 }
+// ---------------------------------------------------------------- Chebyshev all-roots density solver
+
+struct ChebDensityEntry
+{
+    std::shared_ptr<const ChebDensity::Tables> tab;
+    double Tmin = 0;  ///< the tables cover T >= Tmin
+};
+namespace {
+std::mutex cheb_cache_mtx;
+std::map<std::string, std::shared_ptr<const ChebDensityEntry>> cheb_cache;  // by model key, see cheb_model_key
+
+// Key of the model the tables are built from: backend, components, gas-constant configuration, and a fingerprint of
+// the mixture parameters -- the reducing temperature and density and alphar at fixed points, for every pure component
+// and the equimolar mixture, as exact hex floats -- so a backend whose interaction parameters were changed does not
+// pick up tables built for other parameters.
+std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
+    std::string key = HEOS.backend_name();
+    const auto& comps = HEOS.get_components();
+    for (const auto& c : comps)
+        key += "|" + c.name;
+    char buf[64];
+    auto add = [&](double v) {
+        std::snprintf(buf, sizeof(buf), "|%a", v);
+        key += buf;
+    };
+    add(get_config_bool(NORMALIZE_GAS_CONSTANTS) ? 1.0 : 0.0);
+    add(get_config_double(R_U_CODATA));
+    const std::size_t N = comps.size();
+    std::vector<std::vector<CoolPropDbl>> xs;
+    for (std::size_t i = 0; i < N; ++i) {
+        std::vector<CoolPropDbl> x(N, 0.0);
+        x[i] = 1;
+        xs.push_back(x);
+    }
+    if (N > 1) xs.emplace_back(N, 1.0 / static_cast<double>(N));
+    for (const auto& x : xs) {
+        add(HEOS.Reducing->Tr(x));
+        add(HEOS.Reducing->rhormolar(x));
+        add(HEOS.calc_alphar_deriv_nocache(0, 0, x, 0.8, 0.7));
+        add(HEOS.calc_alphar_deriv_nocache(0, 1, x, 1.3, 1.6));
+    }
+    return key;
+}
+}  // namespace
+
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
+    if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
+    if (!cheb_density_resolved) {
+        cheb_density_resolved = true;
+        cheb_density.reset();
+        // Multiparameter Helmholtz models only: the cubic backends derive from this class, but their components carry
+        // no multiparameter EOS
+        const std::string be = backend_name();
+        const bool supported = be == get_backend_string(HEOS_BACKEND_MIX) || be == get_backend_string(HEOS_BACKEND_PURE)
+                               || be == get_backend_string(GERG2008_BACKEND) || be == get_backend_string(GERG2004_BACKEND);
+        if (supported && mole_fractions.size() == components.size()) {
+            try {
+                const std::string key = cheb_model_key(*this);
+                std::scoped_lock lk(cheb_cache_mtx);
+                const auto it = cheb_cache.find(key);
+                if (it != cheb_cache.end()) {
+                    cheb_density = it->second;
+                } else {
+                    auto e = std::make_shared<ChebDensityEntry>();
+                    double Tcmax = 0;
+                    for (const auto& c : components)
+                        Tcmax = std::max(Tcmax, static_cast<double>(c.EOS().reduce.T));
+                    e->Tmin = std::max(60.0, 0.3 * Tcmax);
+                    // the tau range: Tr(x) over the pure components and random compositions (a composition beyond
+                    // the sampled maximum is declined by assemble() and solved by the existing solvers)
+                    const std::size_t Nc = components.size();
+                    double Trmax = 0;
+                    std::vector<CoolPropDbl> xx(Nc);
+                    for (std::size_t i = 0; i < Nc; ++i) {
+                        std::fill(xx.begin(), xx.end(), 0.0);
+                        xx[i] = 1;
+                        Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                    }
+                    std::mt19937_64 g(12345);
+                    for (int s = 0; s < 500; ++s) {
+                        double sum = 0;
+                        for (auto& v : xx) {
+                            const double u = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53;
+                            sum += (v = -std::log(u));
+                        }
+                        for (auto& v : xx)
+                            v /= sum;
+                        Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                    }
+                    ChebDensity::BuildOptions o;
+                    o.delta_max = 4.0;
+                    o.tau_max = 1.02 * Trmax / e->Tmin;
+                    e->tab = ChebDensity::Tables::build(*this, o);
+                    if (e->tab) cheb_density = e;
+                    cheb_cache[key] = cheb_density;  // null too: the model is declined, do not try again
+                }
+            } catch (...) {
+                cheb_density.reset();  // e.g. a component without a multiparameter EOS: the existing solvers
+            }
+        }
+    }
+    if (!cheb_density || !(T >= cheb_density->Tmin) || !(p > 0) || !std::isfinite(p)) return -1;
+    const std::vector<CoolPropDbl>& mf = get_mole_fractions_ref();
+    for (const CoolPropDbl v : mf)
+        if (!std::isfinite(v)) return -1;  // e.g. a non-finite trial composition: leave it to the existing solver
+    thread_local ChebDensity::Tables::State S;
+    thread_local std::vector<double> x;
+    x.assign(mf.begin(), mf.end());
+    if (!cheb_density->tab->assemble(T, x, S)) return -1;
+    return cheb_density->tab->stable_root(S, p);
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
+    {  // the Chebyshev all-roots solver, when enabled and able to answer
+        const CoolPropDbl rc = solver_rho_Tp_cheb(T, p);
+        if (rc > 0) return rc;
+    }
     // Find the densities along the isotherm where dpdrho|T = 0 (if you can)
     CoolPropDbl light = -1, heavy = -1;
     StationaryPointReturnFlag retval = solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);
