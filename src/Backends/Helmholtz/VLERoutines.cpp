@@ -2297,7 +2297,8 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             // (Near the critical point the two branches merge, so a sub-2x change there is
             // genuinely the same root.)
             warm_ok = ValidNumber(r) && r > 0 && r < 2.0 * rho_warm && r > 0.5 * rho_warm;
-            if (warm_ok && strict && !(phase.first_partial_deriv(iP, iDmolar, iT) > 0 && fugacity_coefficients_finite(phase))) {
+            if (warm_ok && strict && get_config_bool(CHEBYSHEV_DENSITY_SOLVER)
+                && !(phase.first_partial_deriv(iP, iDmolar, iT) > 0 && fugacity_coefficients_finite(phase))) {
                 const CoolPropDbl rc = phase.solver_rho_Tp_cheb(T, p);
                 if (rc > 0) {
                     phase.update_DmolarT_direct(rc, T);
@@ -2305,7 +2306,9 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
                         rho_warm = rc;
                         return rc;
                     }
-                    warm_ok = false;  // not even the stable root is usable -> global solver below
+                    warm_ok = false;  // not even the stable root is usable: the global solver below (with the Chebyshev
+                                      // solver enabled it returns this same root, and the K-factor guard reports the
+                                      // split as non-converged)
                 }
             }
         } catch (...) {

@@ -1122,20 +1122,25 @@ double Tables::stable_root(const State& S, double p) const {
             ChebyshevBernstein::real_roots<NG>(d, 1e-13 * sa, ro);
             const double hmax = 0.5 * (m_edges[pc + 1] - m_edges[pc]);
             for (const auto& q : ro) {
+                if (!q.certified) return -1;  // an extremum we cannot place: the branch limits are unknown
                 const double D = delta_of(pc, q.u);
-                for (double h = 1e-7 * D; h <= hmax; h *= 8) {
+                bool classified = false;
+                for (double h = 1e-7 * D; h <= hmax && !classified; h *= 8) {
                     double G, dl, dr, sc;
                     true_G(S, D - h, 0, G, dl, sc);
                     true_G(S, D + h, 0, G, dr, sc);
                     if (dl > 0 && dr < 0) {
                         dmax1 = std::min(dmax1, D);
-                        break;
-                    }
-                    if (dl < 0 && dr > 0) {
+                        classified = true;
+                    } else if (dl < 0 && dr > 0) {
                         dminL = std::max(dminL, D);
-                        break;
+                        classified = true;
                     }
                 }
+                // Neither a maximum nor a minimum within the piece: an inflection where delta Z is flat, or a pair of
+                // extrema closer than the probe.  Dropping it could move the branch limits past an interior root, so
+                // defer rather than guess.
+                if (!classified) return -1;
             }
         }
         int vap = -1, liq = -1;
@@ -1174,7 +1179,7 @@ double Tables::stable_root(const State& S, double p) const {
     }
     if (!(D > 0) || !std::isfinite(D)) return -1;
     true_G(S, D, t, G, dG, sc);
-    if (!(dG > 0)) return -1;
+    if (!(dG > 0) || !(std::abs(G) <= 1e-10 * sc)) return -1;  // mechanically stable, and actually a root
     return D * S.rhor;
 }
 

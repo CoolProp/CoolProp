@@ -492,6 +492,7 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t
 };
 
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string& EOS_name) {
+    cheb_density_resolved = false;  // a different EOS: resolve the Chebyshev solver again
 
     if (i < components.size()) {
         CoolPropFluid& fluid = components[i];
@@ -2913,9 +2914,10 @@ std::mutex cheb_cache_mtx;
 std::map<std::string, std::shared_ptr<const ChebDensityEntry>> cheb_cache;  // by model key, see cheb_model_key
 
 // Key of the model the tables are built from: backend, components, gas-constant configuration, and a fingerprint of
-// the mixture parameters -- the reducing temperature and density and alphar at fixed points, for every pure component
-// and the equimolar mixture, as exact hex floats -- so a backend whose interaction parameters were changed does not
-// pick up tables built for other parameters.
+// the mixture parameters -- the reducing temperature and density and alphar at fixed points, as exact hex floats, at
+// every pure component, the equimolar mixture and three asymmetric compositions (at x_i = x_j the GERG reducing
+// function is symmetric under beta -> 1/beta, so the equimolar point alone cannot tell those parameters apart) -- so a
+// backend whose interaction parameters were changed does not pick up tables built for other parameters.
 std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
     std::string key = HEOS.backend_name();
     const auto& comps = HEOS.get_components();
@@ -2935,7 +2937,20 @@ std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
         x[i] = 1;
         xs.push_back(x);
     }
-    if (N > 1) xs.emplace_back(N, 1.0 / static_cast<double>(N));
+    if (N > 1) {
+        xs.emplace_back(N, 1.0 / static_cast<double>(N));
+        for (int form = 0; form < 3; ++form) {  // weights i+1, N-i, 1/(i+1)^2
+            std::vector<CoolPropDbl> x(N);
+            double sum = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                const double w = form == 0 ? static_cast<double>(i + 1) : form == 1 ? static_cast<double>(N - i) : 1.0 / ((i + 1.0) * (i + 1.0));
+                sum += (x[i] = w);
+            }
+            for (auto& v : x)
+                v /= sum;
+            xs.push_back(x);
+        }
+    }
     for (const auto& x : xs) {
         add(HEOS.Reducing->Tr(x));
         add(HEOS.Reducing->rhormolar(x));
@@ -2948,8 +2963,21 @@ std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
 
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
     if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
+    try {
+        return solver_rho_Tp_cheb_impl(T, p);
+    } catch (...) {
+        return -1;  // never fail the flash from here: the existing solvers answer instead
+    }
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p) {
+    // the gas-constant configuration is part of the model the tables were built for
+    const bool R_norm = get_config_bool(NORMALIZE_GAS_CONSTANTS);
+    const double R_u = get_config_double(R_U_CODATA);
+    if (cheb_density_resolved && (R_norm != cheb_R_normalized || R_u != cheb_R_u)) cheb_density_resolved = false;
     if (!cheb_density_resolved) {
         cheb_density_resolved = true;
+        cheb_R_normalized = R_norm;
+        cheb_R_u = R_u;
         cheb_density.reset();
         // Multiparameter Helmholtz models only: the cubic backends derive from this class, but their components carry
         // no multiparameter EOS
@@ -2993,7 +3021,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPr
                     ChebDensity::BuildOptions o;
                     o.delta_max = 4.0;
                     o.tau_max = 1.02 * Trmax / e->Tmin;
-                    e->tab = ChebDensity::Tables::build(*this, o);
+                    try {
+                        e->tab = ChebDensity::Tables::build(*this, o);
+                    } catch (...) {
+                        e->tab.reset();  // cached as declined below, so later backends do not retry
+                    }
                     if (e->tab) cheb_density = e;
                     cheb_cache[key] = cheb_density;  // null too: the model is declined, do not try again
                 }
