@@ -595,6 +595,8 @@ struct ConfigBoolScope
     }
     ConfigBoolScope(const ConfigBoolScope&) = delete;
     ConfigBoolScope& operator=(const ConfigBoolScope&) = delete;
+    ConfigBoolScope(ConfigBoolScope&&) = delete;
+    ConfigBoolScope& operator=(ConfigBoolScope&&) = delete;
 };
 }  // namespace
 
@@ -625,7 +627,8 @@ TEST_CASE("ChebDensity: PT flash with CHEBYSHEV_DENSITY_SOLVER", "[cheb_density]
                 off->update(PT_INPUTS, p, T);
                 rho_off = off->rhomolar();
                 Q_off = off->Q();
-            } catch (...) {
+            } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                // a failed flash leaves rho_off NaN: the state is skipped below
             }
             {
                 ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
@@ -633,7 +636,8 @@ TEST_CASE("ChebDensity: PT flash with CHEBYSHEV_DENSITY_SOLVER", "[cheb_density]
                     on->update(PT_INPUTS, p, T);
                     rho_on = on->rhomolar();
                     Q_on = on->Q();
-                } catch (...) {
+                } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                    // a failed flash leaves rho_on NaN: the state is skipped below
                 }
                 auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(on.get());
                 REQUIRE(heos != nullptr);

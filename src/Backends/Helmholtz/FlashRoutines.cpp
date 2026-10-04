@@ -5363,6 +5363,8 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
 
 #if defined(ENABLE_CATCH)
 
+// cppcheck cannot expand Catch2's TEST_CASE macro here and reports a whole-file syntaxError (also on master)
+// cppcheck-suppress syntaxError
 TEST_CASE("PD with T very large should yield error", "[PDflash]") {
     shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>("R134a");
     double Tc = HEOS->T_critical();

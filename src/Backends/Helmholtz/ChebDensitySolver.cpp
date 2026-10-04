@@ -1125,7 +1125,9 @@ double Tables::stable_root(const State& S, double p) const {
                 if (!q.certified) return -1;  // an extremum we cannot place: the branch limits are unknown
                 const double D = delta_of(pc, q.u);
                 bool classified = false;
-                for (double h = 1e-7 * D; h <= hmax && !classified; h *= 8) {
+                for (int s = 0; s < 40 && !classified; ++s) {  // h = 1e-7 D 8^s, within the piece
+                    const double h = 1e-7 * D * std::pow(8.0, s);
+                    if (h > hmax) break;
                     double G, dl, dr, sc;
                     true_G(S, D - h, 0, G, dl, sc);
                     true_G(S, D + h, 0, G, dr, sc);

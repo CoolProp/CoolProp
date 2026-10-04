@@ -42,11 +42,11 @@
 #include "CoolProp/expression/ExpressionCorrelation.h"
 #include "ChebDensitySolver.h"
 #include <atomic>
-#include <cstdio>
 #include <cstdlib>
 #include <map>
 #include <mutex>
 #include <random>
+#include <sstream>
 
 // Instrumentation only: counts the number of EOS derivative-cache evaluations
 // across all HEOS instances. Atomic so concurrent calls do not race (#2844).
@@ -2923,11 +2923,9 @@ std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
     const auto& comps = HEOS.get_components();
     for (const auto& c : comps)
         key += "|" + c.name;
-    char buf[64];
-    auto add = [&](double v) {
-        std::snprintf(buf, sizeof(buf), "|%a", v);
-        key += buf;
-    };
+    std::ostringstream os;
+    os << std::hexfloat;
+    auto add = [&](double v) { os << '|' << v; };
     add(get_config_bool(NORMALIZE_GAS_CONSTANTS) ? 1.0 : 0.0);
     add(get_config_double(R_U_CODATA));
     const std::size_t N = comps.size();
@@ -2957,7 +2955,7 @@ std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
         add(HEOS.calc_alphar_deriv_nocache(0, 0, x, 0.8, 0.7));
         add(HEOS.calc_alphar_deriv_nocache(0, 1, x, 1.3, 1.6));
     }
-    return key;
+    return key + os.str();
 }
 }  // namespace
 
