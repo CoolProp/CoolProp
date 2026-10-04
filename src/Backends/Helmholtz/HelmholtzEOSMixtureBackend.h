@@ -15,6 +15,8 @@
 
 namespace CoolProp {
 
+struct ChebDensityEntry;  // Chebyshev all-roots density solver for a component set, see solver_rho_Tp_cheb
+
 class FlashRoutines;
 
 class ResidualHelmholtz;
@@ -146,6 +148,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     }
     shared_ptr<ReducingFunction> Reducing;
     shared_ptr<ResidualHelmholtz> residual_helmholtz;
+    /// Chebyshev all-roots density solver for this model (configuration CHEBYSHEV_DENSITY_SOLVER), shared between
+    /// backends with the same model; null when unavailable.  Resolved lazily, again after the model changes.
+    shared_ptr<const ChebDensityEntry> cheb_density;
+    bool cheb_density_resolved = false;
+    /// The stable density root [mol/m^3] at (T, p) for the current composition from the Chebyshev solver, or -1 when
+    /// it cannot answer here (disabled, unsupported model, outside its tables, or a root it cannot certify).
+    CoolPropDbl solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p);
+
+   private:
+    CoolPropDbl solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p);
+    bool cheb_R_normalized = true;  ///< gas-constant configuration cheb_density was resolved for
+    double cheb_R_u = 0;
+
+   public:
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;
     SsatSimpleState ssat_max;

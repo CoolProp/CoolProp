@@ -1067,6 +1067,124 @@ void Tables::true_G(const State& S, double D, double t, double& G, double& dG, d
     scale = D * (1 + a) + std::abs(t);
 }
 
+// ------------------------------------------------------------------ the stable root at given p
+
+namespace {
+struct Candidate
+{
+    double D = 0;                ///< table root in delta
+    double Da = 0, Db = 0;       ///< its certified bracket
+    bool negative_at_a = false;  ///< sign of G at Da
+};
+}  // namespace
+
+double Tables::stable_root(const State& S, double p) const {
+    if (!(p > 0) || !std::isfinite(p)) return -1;
+    const double t = p * S.t_scale;
+    const int P = n_pieces();
+    // a root beyond delta_max: G(delta_max) <= 0 means the isotherm has not reached p yet
+    {
+        double G, dG, sc;
+        true_G(S, m_opt.delta_max, t, G, dG, sc);
+        if (!(G > 0)) return -1;
+    }
+    // all roots
+    thread_local std::vector<ChebyshevBernstein::Root> rr;
+    thread_local std::vector<Candidate> roots;
+    roots.clear();
+    for (int pc = 0; pc < P; ++pc) {
+        CoeffsG g = S.G[pc];
+        g[0] -= t;
+        if (std::abs(g[0]) > ChebyshevBernstein::l1_tail<NG>(g) + S.margin[pc]) continue;  // no root on this piece
+        ChebyshevBernstein::real_roots<NG>(g, S.margin[pc], rr);
+        for (const auto& r : rr) {
+            if (!r.certified) return -1;  // cannot vouch for the root set here
+            const double D = delta_of(pc, r.u);
+            if (!roots.empty() && std::abs(D - roots.back().D) < 1e-10 * roots.back().D) continue;  // shared piece edge
+            roots.push_back({D, delta_of(pc, r.ua), delta_of(pc, r.ub), ChebyshevBernstein::clenshaw<NG>(g, r.ua) < 0});
+        }
+    }
+    if (roots.empty()) return -1;
+    // selection by spinodal branches
+    int k = 0;
+    if (roots.size() > 1) {
+        // the extrema of delta Z: the first local maximum and the last local minimum, classified by the TRUE slope on
+        // either side (the table's derivative root can sit well off the true one where delta Z is flat, so the probe
+        // widens geometrically within the piece until the two sides differ)
+        double dmax1 = 1e300, dminL = -1;
+        thread_local std::vector<ChebyshevBernstein::Root> ro;
+        for (int pc = 0; pc < P; ++pc) {
+            const CoeffsG d = ChebyshevBernstein::derivative<NG>(S.G[pc]);
+            double sa = 0;
+            for (double v : d)
+                sa += std::abs(v);
+            if (std::abs(d[0]) > ChebyshevBernstein::l1_tail<NG>(d) + 1e-13 * sa) continue;
+            ChebyshevBernstein::real_roots<NG>(d, 1e-13 * sa, ro);
+            const double hmax = 0.5 * (m_edges[pc + 1] - m_edges[pc]);
+            for (const auto& q : ro) {
+                if (!q.certified) return -1;  // an extremum we cannot place: the branch limits are unknown
+                const double D = delta_of(pc, q.u);
+                bool classified = false;
+                for (int s = 0; s < 40 && !classified; ++s) {  // h = 1e-7 D 8^s, within the piece
+                    const double h = 1e-7 * D * std::pow(8.0, s);
+                    if (h > hmax) break;
+                    double G, dl, dr, sc;
+                    true_G(S, D - h, 0, G, dl, sc);
+                    true_G(S, D + h, 0, G, dr, sc);
+                    if (dl > 0 && dr < 0) {
+                        dmax1 = std::min(dmax1, D);
+                        classified = true;
+                    } else if (dl < 0 && dr > 0) {
+                        dminL = std::max(dminL, D);
+                        classified = true;
+                    }
+                }
+                // Neither a maximum nor a minimum within the piece: an inflection where delta Z is flat, or a pair of
+                // extrema closer than the probe.  Dropping it could move the branch limits past an interior root, so
+                // defer rather than guess.
+                if (!classified) return -1;
+            }
+        }
+        int vap = -1, liq = -1;
+        for (int j = 0; j < static_cast<int>(roots.size()); ++j) {
+            double G, dG, sc;
+            true_G(S, roots[j].D, t, G, dG, sc);
+            if (!(dG > 0)) continue;  // mechanically unstable
+            if (roots[j].D < dmax1) vap = j;
+            if (roots[j].D > dminL && liq < 0) liq = j;
+        }
+        if (vap < 0 && liq < 0) return -1;
+        if (vap < 0)
+            k = liq;
+        else if (liq < 0 || liq == vap)
+            k = vap;
+        else {
+            auto g = [&](int j) { return std::log(roots[j].D) + alphar(S, roots[j].D) + t / roots[j].D; };
+            k = g(vap) <= g(liq) ? vap : liq;
+        }
+    }
+    // polish: bracketed Newton on the true equation; the certified bracket's end signs are known
+    const Candidate& c = roots[k];
+    double D = c.D, a = c.Da, b = c.Db, G = 0, dG = 0, sc = 0;
+    for (int it = 0; it < 30; ++it) {
+        true_G(S, D, t, G, dG, sc);
+        if (G == 0) break;
+        ((G < 0) == c.negative_at_a ? a : b) = D;
+        const double step = G / dG;
+        if (std::abs(step) <= 2 * DBL_EPSILON * D) {
+            D -= step;
+            break;
+        }
+        double Dn = D - step;
+        if (!(Dn > std::min(a, b) && Dn < std::max(a, b))) Dn = 0.5 * (a + b);
+        D = Dn;
+    }
+    if (!(D > 0) || !std::isfinite(D)) return -1;
+    true_G(S, D, t, G, dG, sc);
+    if (!(dG > 0) || !(std::abs(G) <= 1e-10 * sc)) return -1;  // mechanically stable, and actually a root
+    return D * S.rhor;
+}
+
 const void* Tables::nonanalytic_table(std::size_t k) const {
     return k < m_na.size() ? m_na[k].table.get() : nullptr;
 }

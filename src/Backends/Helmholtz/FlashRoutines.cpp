@@ -138,6 +138,16 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             const CoolPropDbl T_saved = HEOS.T();
             const CoolPropDbl p_saved = HEOS.p();
 
+            {  // the Chebyshev all-roots solver (configuration CHEBYSHEV_DENSITY_SOLVER): the stable root directly
+                const CoolPropDbl rc = HEOS.solver_rho_Tp_cheb(T_saved, p_saved);
+                if (rc > 0) {
+                    HEOS.update_DmolarT_direct(rc, T_saved);
+                    HEOS._Q = -1;
+                    HEOS._phase = (rc < HEOS.rhomolar_reducing()) ? iphase_gas : iphase_liquid;
+                    return;
+                }
+            }
+
             // Solve SRK cubic for both gas and liquid roots to decide which
             // HEOS branch(es) to solve.  When both roots are valid, solve
             // both HEOS densities and pick the phase with lower Gibbs energy.
@@ -5353,6 +5363,8 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
 
 #if defined(ENABLE_CATCH)
 
+// cppcheck cannot expand Catch2's TEST_CASE macro here and reports a whole-file syntaxError (also on master)
+// cppcheck-suppress syntaxError
 TEST_CASE("PD with T very large should yield error", "[PDflash]") {
     shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>("R134a");
     double Tc = HEOS->T_critical();
