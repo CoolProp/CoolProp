@@ -3675,16 +3675,14 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             HEOS.recalculate_singlephase_phase();
         }
     } else {
-        // Mixture: bracket-solve for T at fixed P using TOMS748.
-        // Each iteration calls update(PT_INPUTS, ...) which dispatches to
-        // PT_flash_mixtures (stability analysis + two-phase solver).  The
-        // full update path ensures SatL/SatV are set for two-phase states,
-        // so keyed_output(other) returns correct H/S/U for any phase.
+        // Mixture: use saturation endpoints to route bracketed two-phase
+        // targets to a PQ quality solve. Other targets retain the PT temperature
+        // solve below. Both routes populate the phase states used by keyed_output.
         CoolPropDbl Tmin = HEOS.calc_Tmin();
         CoolPropDbl Tmax = HEOS.calc_Tmax();
         CoolPropDbl p = HEOS._p;
 
-        // --- Change 1: PQ-based bracket narrowing ---
+        // PQ saturation endpoints for routing and bracket narrowing.
         // Try PQ flash at Q=0 (bubble) and Q=1 (dew) to narrow the
         // bracket and potentially shortcut exact saturation states.
         CoolPropDbl T_bubble = -1, T_dew = -1;
@@ -3716,7 +3714,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 return;
             }
 
-            // Classify phase and narrow bracket.
+            // Route two-phase targets; narrow the bracket for other targets.
             // Use actual computed values — don't assume val_bubble < val_dew.
             CoolPropDbl val_lo = (val_bubble < val_dew) ? val_bubble : val_dew;
             CoolPropDbl val_hi = (val_bubble < val_dew) ? val_dew : val_bubble;
@@ -3729,10 +3727,34 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             } else if (value > val_hi) {
                 // Above both saturation values → on the high-T side
                 Tmin = T_at_hi;
+            } else if (HEOS.imposed_phase_index == iphase_not_imposed) {
+                // Bubble/dew properties bracket the request. Solve in quality
+                // using PQ flashes, so the inverse residual does not depend on
+                // repeated blind PT phase classification near saturation. Imposed
+                // phases retain the PT route, which honors that constraint.
+                auto resid_Q = [&](double Q) -> double {
+                    HEOS.update(PQ_INPUTS, p, Q);
+                    return HEOS.keyed_output(other) - value;
+                };
+                try {
+                    std::uintmax_t max_iter = 100;
+                    auto bracket = boost::math::tools::toms748_solve(resid_Q, 0.0, 1.0, static_cast<double>(val_bubble - value),
+                                                                     static_cast<double>(val_dew - value),
+                                                                     boost::math::tools::eps_tolerance<double>(40), max_iter);
+                    HEOS.update(PQ_INPUTS, p, (bracket.first + bracket.second) / 2.0);
+                } catch (std::exception& e) {
+                    throw ValueError(format("HSU_P_flash for mixture PQ solve failed at p=%Lg: %s", p, e.what()));
+                }
+                // Keep the specification guard used by the blind PT route.
+                const double resid_final = static_cast<double>(HEOS.keyed_output(other) - value);
+                const double resid_scale = std::abs(static_cast<double>(value)) + 1.0;
+                if (!ValidNumber(resid_final) || std::abs(resid_final) > 1e-6 * resid_scale) {
+                    throw ValueError(format("HSU_P_flash for mixture PQ solve did not converge to the specification: "
+                                            "residual %g (target %g) at T=%g K, p=%g Pa",
+                                            resid_final, static_cast<double>(value), static_cast<double>(HEOS.T()), static_cast<double>(p)));
+                }
+                return;
             }
-            // else: value between val_lo and val_hi → two-phase region;
-            // sweep over [T_bubble, T_dew] (PT flash handles two-phase)
-            // Keep [Tmin, Tmax] as-is so the resid functor can find it.
         }
         // When !pq_ok (supercritical P, PQ solver failure): fall through
         // to the full [Tmin, Tmax] bracket — no regression.
