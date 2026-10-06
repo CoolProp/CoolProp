@@ -557,4 +557,37 @@ TEST_CASE("Wide-boiling split: water drops out of compressed humid air without t
     }
 }
 
+TEST_CASE("Wide-boiling split: no trivial near-critical split of Amarillo natural gas from the Wilson recovery", "[flash][mixture]") {
+    // Dense single-phase Amarillo (GERG-2008) above its cricondenbar, where the PQ dew solve has no solution.
+    // The stability test calls these states stable, so the flash tries its speculative Wilson-seeded split; that
+    // refinement lands on the trivial solution (max|x - y| ~1.3e-6, rho_L / rho_V = 1.0000, beta = 1 - 1.6e-10) and
+    // the recovery's 1e-4 fugacity tolerance accepted it while the spread floor was a fixed 1e-6: a band about 1 K
+    // wide was published two-phase (all eight sections below fail without the fix).  Both seeds are states of Ian
+    // Bell's PT benchmark (seed 42, Amarillo).  The assertion is the invariant itself, whatever path the flash takes:
+    // a published split must have distinct phases -- so a correct future envelope reaching these states stays legal.
+    struct S
+    {
+        double T, p;
+    };
+    for (const S s : {S{243.1652681, 8594655.704}, S{246.7349277, 7987558.523}}) {
+        for (const double dT : {-1.0, -0.3, 0.0, 0.3}) {
+            DYNAMIC_SECTION("T=" << s.T + dT << " p=" << s.p) {
+                std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", AMARILLO_FLUIDS));
+                AS->set_mole_fractions(AMARILLO_Z);
+                REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T + dT));
+                if (AS->phase() == iphase_twophase) {
+                    double spread = 0;
+                    const auto x = AS->mole_fractions_liquid(), y = AS->mole_fractions_vapor();
+                    for (std::size_t i = 0; i < x.size(); ++i)
+                        spread = std::max(spread, std::abs(static_cast<double>(x[i] - y[i])));
+                    const double rL = AS->saturated_liquid_keyed_output(iDmolar), rV = AS->saturated_vapor_keyed_output(iDmolar);
+                    CAPTURE(AS->Q(), spread, rL, rV);
+                    CHECK(spread >= 1e-4);
+                    CHECK(std::abs(rL / rV - 1.0) > 1e-3);
+                }
+            }
+        }
+    }
+}
+
 #endif

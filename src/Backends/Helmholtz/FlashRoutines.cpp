@@ -318,12 +318,25 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
             // Verify a split before publishing it (used by the speculative Wilson-seeded path and by the
             // recovery of a genuine instability below): a non-trivial spread, material balance, both
             // phases at the target pressure, and equal fugacities to `tol`.
+            //
+            // The spread floor is max(1e-6, tol) -- an EMPIRICAL floor, not a derivation: the trivial solution
+            // x == y == z satisfies equal fugacities at any tolerance, and tol (ln f) and the spread (mole fraction) are
+            // not commensurate.  It is the only anti-trivial gate here.  With a fixed 1e-6 floor the loose 1e-4 path
+            // published near-critical trivial "splits" of Amarillo natural gas (GERG-2008, 243-247 K, 8.0-8.6 MPa:
+            // max|x - y| ~1.3e-6, rho_L/rho_V = 1.0000, beta = 1 - 1.6e-10, a band about 1 K wide) where the flash before
+            // this branch answered single phase.  1e-4 is the floor solve_michelsen's near_converged_genuine and the
+            // fallback's fb_genuine already use (there with a tighter 1e-5 residual).  Genuine splits accepted on the
+            // loose path (near-pure water out of CO2, humid-air water dropout) have spreads of order 0.1-1.  The cost: a
+            // genuine split with spread in [1e-6, 1e-4) -- within ~1e-8 relative of a mixture critical point -- is now
+            // rejected, and on the recovery path that means single phase, not a throw.  A lower-Gibbs gate was not used
+            // instead: a trivial split's dG is 0 up to round-off, and an epsilon large enough to catch it would also
+            // reject genuine near-dew splits, whose dG is second order in the incipient amount.
             auto verify_split = [&](double tol) -> bool {
                 try {
                     CoolPropDbl spread = 0;
                     for (std::size_t i = 0; i < o.z.size(); ++i)
                         spread = std::max(spread, std::abs(o.x[i] - o.y[i]));
-                    if (!(spread >= 1e-6)) return false;
+                    if (!(spread >= std::max(1e-6, tol))) return false;
                     // Material balance: the accepted (x, y, beta) must reconstruct the feed,
                     // z_i = (1-beta)*x_i + beta*y_i, for EVERY component.  Equal fugacities and
                     // phase-pressure consistency do not imply this on the loose recovery path,
