@@ -292,6 +292,7 @@ linkcheck_ignore = [
     r'https?://([^/]+\.)?onlinelibrary\.wiley\.com/.*',
     r'https?://stackoverflow\.com/.*',
     r'https?://bcbjournal\.org/.*',
+    r'https?://scholar\.google\.com/.*',
     # doi.org links are checked as written, so ignore rules cannot see the
     # publisher they redirect to.  Ignore the DOI prefixes of the publishers
     # that answer 403 to automated requests: 10.1002 Wiley, 10.1063 AIP,
