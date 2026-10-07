@@ -285,6 +285,19 @@ linkcheck_ignore = [
     r'https?://www\.tandfonline\.com/.*',
     r'https?://braumeister\.org/.*',
     r'https?://.*\.amazonaws\.com/.*',
+    # Hosts that still return 403 to automated requests even with browser-like
+    # headers (bot detection); verified to work in a browser.
+    r'https?://([^/]+\.)?sourceforge\.net/.*',
+    r'https?://pubs\.aip\.org/.*',
+    r'https?://([^/]+\.)?onlinelibrary\.wiley\.com/.*',
+    r'https?://stackoverflow\.com/.*',
+    r'https?://bcbjournal\.org/.*',
+    # doi.org links are checked as written, so ignore rules cannot see the
+    # publisher they redirect to.  Ignore the DOI prefixes of the publishers
+    # that answer 403 to automated requests: 10.1002 Wiley, 10.1063 AIP,
+    # 10.1103 APS, 10.2118 SPE/OnePetro.  (A dead DOI with one of these
+    # prefixes will not be reported; DOIs of other publishers are still checked.)
+    r'https?://(dx\.)?doi\.org/10\.(1002|1063|1103|2118)/.*',
 ]
 
 # -- Options for HTML output ---------------------------------------------------
