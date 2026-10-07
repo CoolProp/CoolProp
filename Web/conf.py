@@ -18,6 +18,8 @@
 # built documents.
 #
 
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -56,10 +58,32 @@ else:
 print("------------ Project information ------------")
 print("Detected version: %s" % version)
 print("Detected release: %s" % release)
-print("Public release  : %s" % "True" if isRelease else "False")
+print("Public release  : %s" % ("True" if isRelease else "False"))
 print("")
 
-extlinks = {'sfdownloads': (f'https://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
+# Release folder used by the :sfdownloads: role.  Development builds
+# (e.g. 8.1.0dev) have no folder on SourceForge, so point them at the latest
+# release instead: the highest git tag of the form vX.Y[.Z] (tags with a
+# non-numeric suffix such as v7.1.0bis, or not starting with "v", are skipped).
+sf_release_fallback = "8.0.0"  # used when git or the release tags are unavailable
+
+def latest_release_tag(default):
+    tags = []
+    try:
+        out = subprocess.run(['git', 'tag', '--list', 'v*'], capture_output=True,
+                             text=True, check=True, cwd=os.path.dirname(os.path.abspath(__file__))).stdout
+        tags = [t for t in out.split() if re.fullmatch(r'v\d+(\.\d+)*', t)]
+    except (OSError, subprocess.CalledProcessError) as e:
+        print("WARNING: could not list git tags (%s)" % e)
+    if tags:
+        return max(tags, key=lambda t: tuple(int(n) for n in t[1:].split('.')))[1:]
+    print("WARNING: no release tags found via git; using sf_release_fallback = %s" % default)
+    return default
+
+sf_release = release if isRelease else latest_release_tag(sf_release_fallback)
+print("SourceForge release folder for :sfdownloads: %s" % sf_release)
+
+extlinks = {'sfdownloads': (f'https://sourceforge.net/projects/coolprop/files/CoolProp/{sf_release}/%s', f'{sf_release} %s'),
             'sfnightly': ('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
             }
 import sys, os, datetime
@@ -181,9 +205,10 @@ copyright = u'2010-{0}, Ian H. Bell and the CoolProp Team'.format(d.year)
 # List of documents that shouldn't be included in the build.
 #unused_docs = []
 
-# List of directories, relative to source directory, that shouldn't be searched
-# for source files.
-exclude_trees = ['_build', 'sphinxext']
+# Patterns, relative to the source directory, that shouldn't be searched for
+# source files.  (This replaces the obsolete 'exclude_trees' option, which
+# current Sphinx ignores; without it _build/ was read as source.)
+exclude_patterns = ['_build', 'sphinxext']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -216,6 +241,14 @@ autoclass_content = 'both'
 
 # Fix the bibtext extension
 bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
+
+# Modules that are not installed in the docs environment (wxPython GUI, the
+# Python 2 ConfigParser, pytest) or no longer exist in matplotlib (the wx and
+# Qt4 backends, and PyQt4) but are imported by modules that apidoc lists.
+# Mocking them lets autodoc import those modules instead of warning.
+autodoc_mock_imports = ['wx', 'ConfigParser', 'pytest',
+                        'matplotlib.backends.backend_wxagg',
+                        'matplotlib.backends.backend_qt4agg', 'PyQt4']
 
 # -- Options for the linkcheck builder -----------------------------------------
 # `make linkcheck` (also run non-blocking in CI) reports dead URLs.  Tune it so

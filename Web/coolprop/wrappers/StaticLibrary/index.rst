@@ -121,7 +121,7 @@ This will result in an executable which can be run by the user.
 
 .. warning::
 
-    In gcc and mingw ports of gcc, make sure that the `-lCoolProp` is the last argument in the line, otherwise you will certainly get linking errors.  See also: https://www.mingw.org/wiki/specify_the_libraries_for_the_linker_to_use .
+    In gcc and mingw ports of gcc, make sure that the `-lCoolProp` is the last argument in the line, otherwise you will certainly get linking errors.  See also: https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html .
 
 Windows
 ^^^^^^^
