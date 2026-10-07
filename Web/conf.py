@@ -243,9 +243,12 @@ autoclass_content = 'both'
 bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
 # Modules that are not installed in the docs environment (wxPython GUI, the
-# Python 2 ConfigParser, pytest) but are imported by modules that apidoc lists.
+# Python 2 ConfigParser, pytest) or no longer exist in matplotlib (the wx and
+# Qt4 backends, and PyQt4) but are imported by modules that apidoc lists.
 # Mocking them lets autodoc import those modules instead of warning.
-autodoc_mock_imports = ['wx', 'ConfigParser', 'pytest']
+autodoc_mock_imports = ['wx', 'ConfigParser', 'pytest',
+                        'matplotlib.backends.backend_wxagg',
+                        'matplotlib.backends.backend_qt4agg', 'PyQt4']
 
 # -- Options for the linkcheck builder -----------------------------------------
 # `make linkcheck` (also run non-blocking in CI) reports dead URLs.  Tune it so
