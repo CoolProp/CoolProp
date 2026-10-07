@@ -247,7 +247,8 @@ jobs:
         make linkcheck SPHINXOPTS=-q || rc=$?
         echo "::group::Broken or timed-out links"
         if [ -f _build/linkcheck/output.txt ]; then
-          grep -E '\[(broken|timeout)\]' _build/linkcheck/output.txt || echo "(none)"
+          grep -E '\[(broken|timeout)\]' _build/linkcheck/output.txt \
+            || { [ $rc -eq 0 ] && echo "(none)" || echo "(no entries; linkcheck exited with status $rc, so the list may be incomplete)"; }
         else
           echo "linkcheck produced no output.txt (the build itself failed)"
         fi

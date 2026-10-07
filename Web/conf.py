@@ -286,7 +286,7 @@ linkcheck_ignore = [
     r'https?://braumeister\.org/.*',
     r'https?://.*\.amazonaws\.com/.*',
     # Hosts that still return 403 to automated requests even with browser-like
-    # headers (bot detection); verified to work in a browser.
+    # headers (bot detection); these are normal sites that open in a browser.
     r'https?://([^/]+\.)?sourceforge\.net/.*',
     r'https?://pubs\.aip\.org/.*',
     r'https?://([^/]+\.)?onlinelibrary\.wiley\.com/.*',
