@@ -10,6 +10,7 @@
 #    include <string>
 #    include <vector>
 #    include <sstream>
+#    include <iomanip>
 #    include <catch2/catch_all.hpp>
 #    include "../Backends/Helmholtz/VLERoutines.h"
 #    include <Eigen/Dense>
@@ -2840,6 +2841,34 @@ TEST_CASE("newton_raphson_twophase Jacobian matches finite differences (#3372)",
                 CHECK(worst < 1e-4);  // measured worst across these four states is 6.6e-7
             }
             restore();
+        }
+    }
+}
+
+TEST_CASE("Michelsen Phase 2: the Hessian shift guard cannot deadlock on a rounding error (COO-111 residual)", "[michelsen][flash][mixture]") {
+    // N2/C1/C2/nC4/nC5 (GERG-2008) splits into two liquids at these states (Q = 0.136 and 0.186, densities 4 % apart).
+    // Phase 2 meets an indefinite reduced Hessian and shifted its diagonal by (1e-8 - min_eig).  For these inputs the
+    // recomputed smallest eigenvalue rounded a hair below the 1e-8 floor; the next increment (~1e-24) vanished below
+    // the ULP of the shift (shift ~3.7e-5, ULP ~7e-21), so all 40 inner passes ran without taking a step, Phase 2
+    // reported a stall, and the flash published single phase -- while inputs 1e-10 away rounded the other way and
+    // converged.  The inputs are the exact doubles traced on x86-64 Linux / gcc; whether a given input hits the bad
+    // rounding is platform-dependent, so elsewhere this may pass without exercising the guard.  A failure on another
+    // platform still means a real (possibly different) Phase-2 or flash defect at these states.
+    struct S
+    {
+        double T, p, Q;
+    };
+    for (const S s : {S{112.56308295640963, 12202073.495216271, 0.1361}, S{112.56308293463886, 12202073.497307425, 0.1361},
+                      S{112.56308296476898, 12202073.499294188, 0.1361}, S{112.56308291325334, 12202073.497941729, 0.1361},
+                      S{112.59266059001008, 10743368.231995799, 0.1862}, S{112.59266053885793, 10743368.232025886, 0.1862},
+                      S{112.59266054850818, 10743368.237212962, 0.1862}, S{112.59266057405956, 10743368.233547488, 0.1862}}) {
+        DYNAMIC_SECTION("T=" << std::setprecision(17) << s.T << " p=" << s.p) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", "Nitrogen&Methane&Ethane&n-Butane&n-Pentane"));
+            AS->set_mole_fractions({0.3797, 0.3225, 0.278, 0.0014, 0.0184});
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == iphase_twophase);
+            CHECK(std::abs(AS->Q() - s.Q) < 2e-3);
         }
     }
 }

@@ -3414,7 +3414,12 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                 double min_eig = es.eigenvalues().minCoeff();
                 if (!ValidNumber(min_eig)) break;
                 if (min_eig < 1e-8) {
-                    diagonal_shift += (1e-8 - min_eig);
+                    // Shift the smallest eigenvalue to 2e-8, not exactly onto the 1e-8 floor: a shift of
+                    // (1e-8 - min_eig) can leave the recomputed eigenvalue a rounding error short of 1e-8, and the
+                    // next increment (~1e-24) then vanishes below the ULP of the shift (shift ~3.7e-5, ULP ~7e-21) --
+                    // no progress for all max_inner passes, a spurious Phase-2 stall, and a missed split that depends
+                    // on which way one eigenvalue rounds (COO-111 residual: N2/C1/C2/nC4/nC5 LLE at 112.56 K, 12.2 MPa).
+                    diagonal_shift += (2e-8 - min_eig);
                     continue;
                 }
 
