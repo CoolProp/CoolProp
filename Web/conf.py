@@ -68,14 +68,15 @@ print("")
 sf_release_fallback = "8.0.0"  # used when git or the release tags are unavailable
 
 def latest_release_tag(default):
+    tags = []
     try:
         out = subprocess.run(['git', 'tag', '--list', 'v*'], capture_output=True,
                              text=True, check=True, cwd=os.path.dirname(os.path.abspath(__file__))).stdout
         tags = [t for t in out.split() if re.fullmatch(r'v\d+(\.\d+)*', t)]
-        if tags:
-            return max(tags, key=lambda t: tuple(int(n) for n in t[1:].split('.')))[1:]
-    except (OSError, subprocess.CalledProcessError):
-        pass
+    except (OSError, subprocess.CalledProcessError) as e:
+        print("WARNING: could not list git tags (%s)" % e)
+    if tags:
+        return max(tags, key=lambda t: tuple(int(n) for n in t[1:].split('.')))[1:]
     print("WARNING: no release tags found via git; using sf_release_fallback = %s" % default)
     return default
 
