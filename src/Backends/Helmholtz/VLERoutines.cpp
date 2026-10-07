@@ -2169,6 +2169,18 @@ static bool mechanically_stable(HelmholtzEOSMixtureBackend& phase) {
     return ValidNumber(dpdrho) && dpdrho > 0;
 }
 
+// True when every fugacity coefficient of the state loaded in phase is finite and positive.  A local Newton can
+// converge onto a non-physical state that still reproduces p with dp/drho > 0 -- seen for a near-pure n-pentane
+// stability trial at 110 K (GERG-2008, far below its triple point): dp/drho ~ 7.5e13, phi_i = 0 and inf -- and its
+// non-finite ln(phi) then poisons the trial composition with NaN (COO-111 residual).
+static bool finite_fugacity_coefficients(HelmholtzEOSMixtureBackend& phase) {
+    for (std::size_t i = 0; i < phase.get_mole_fractions().size(); ++i) {
+        const CoolPropDbl phi = phase.fugacity_coefficient(i);
+        if (!ValidNumber(phi) || !(phi > 0) || !ValidNumber(std::log(phi))) return false;
+    }
+    return true;
+}
+
 // The lowest-Gibbs, mechanically stable root among the two phase-specified solves (liquid and gas imposed,
 // each scoped so `phase` keeps its own imposed phase) that also reproduces the target pressure; -1 when
 // neither solve yields one.  Leaves `phase` at an unspecified state.
@@ -2245,11 +2257,16 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
             // genuinely the same root.)
             // The local root must also be mechanically stable: a warm start on (or Newton drifting
             // onto) the unstable middle branch would otherwise be carried along the trajectory.
+            // And its fugacity coefficients must be finite and positive: a non-physical state can pass both
+            // checks above (see finite_fugacity_coefficients); the global solve below then finds the real root.
             const bool same_branch = ValidNumber(r) && r > 0 && r < max_jump * rho_warm && r > rho_warm / max_jump;
-            warm_ok = same_branch && (!guard_unstable_branch || mechanically_stable(phase));
+            const bool mech_ok = !guard_unstable_branch || mechanically_stable(phase);
+            warm_ok = same_branch && mech_ok && finite_fugacity_coefficients(phase);
             // A warm root the guard rejects for being mechanically unstable is a guard intervention just like
-            // a replaced global root: the solve below lands on a different branch than the unguarded code.
-            if (guard_unstable_branch && same_branch && !warm_ok && guard_replaced) *guard_replaced = true;
+            // a replaced global root: the solve below lands on a different branch than the unguarded code.  A root
+            // rejected only for non-finite fugacity coefficients is not: the unguarded code had no usable root
+            // there either, so it does not mark the verdict as guard-dependent.
+            if (guard_unstable_branch && same_branch && !mech_ok && guard_replaced) *guard_replaced = true;
         } catch (...) {
             warm_ok = false;  // warm solve threw -> fall back to the global solver below
         }

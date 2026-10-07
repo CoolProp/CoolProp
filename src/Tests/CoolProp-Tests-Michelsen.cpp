@@ -2873,4 +2873,31 @@ TEST_CASE("Michelsen Phase 2: the Hessian shift guard cannot deadlock on a round
     }
 }
 
+TEST_CASE("Stability test: a warm trial root with non-finite fugacity coefficients is rejected (COO-111 residual)", "[michelsen][flash][mixture]") {
+    // N2/C1/C2/nC4/nC5 (GERG-2008) at 109.94 K, 1.126 MPa splits into two liquids (Q = 0.397).  The liquid-like Wilson
+    // trial starts as near-pure n-pentane (K_min ~ 8e-10), far below its triple point.  On its second step the warm
+    // local density solve converged onto a non-physical state that reproduced p with dp/drho > 0 (~7.5e13) and stayed
+    // inside the same-branch window, but had phi_i = 0 and inf; the NaN it put into the trial composition made the
+    // minimizer fail, the verdict became "stable (uncertain)", the Wilson recovery collapsed to the trivial split, and
+    // the flash published single phase -- while inputs 1e-10 away left the window and took the guarded global solve.
+    // The inputs are exact doubles traced on x86-64 Linux / gcc; elsewhere they may not reach that root.  A failure on
+    // another platform still means a real (possibly different) stability-test or flash defect at this state.
+    struct S
+    {
+        double T, p;
+    };
+    for (const S s : {S{109.93767656293615, 1126248.26364221}, S{109.93767657738596, 1126248.2635481248}, S{109.93767658364027, 1126248.2636381935},
+                      S{109.93767655158882, 1126248.263547299}, S{109.9376765767004, 1126248.2636315981}, S{109.93767656929494, 1126248.2637366799},
+                      S{109.93767654773808, 1126248.2636428429}, S{109.9376765646801, 1126248.2637800211}}) {
+        DYNAMIC_SECTION("T=" << std::setprecision(17) << s.T << " p=" << s.p) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", "Nitrogen&Methane&Ethane&n-Butane&n-Pentane"));
+            AS->set_mole_fractions({0.3797, 0.3225, 0.278, 0.0014, 0.0184});
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == iphase_twophase);
+            CHECK(std::abs(AS->Q() - 0.3973) < 2e-3);
+        }
+    }
+}
+
 #endif
