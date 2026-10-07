@@ -1462,7 +1462,7 @@ Issues Closed:
 * `#1759 <https://github.com/CoolProp/CoolProp/issues/1759>`_ : Memory leak in Mathematica interface
 * `#1758 <https://github.com/CoolProp/CoolProp/issues/1758>`_ : Build AbstractState object from stored tabular data
 * `#1756 <https://github.com/CoolProp/CoolProp/issues/1756>`_ : Issue with incompressible fluid in v6.2.1
-* `#1753 <https://github.com/CoolProp/CoolProp/issues/1753>`_ : numpy.core.multiarray failed to import
+* ``#1753`` : numpy.core.multiarray failed to import (Issue disappeared from history)
 * `#1752 <https://github.com/CoolProp/CoolProp/issues/1752>`_ : Add fluids to CoolProp if you are using matlab
 * `#1748 <https://github.com/CoolProp/CoolProp/issues/1748>`_ : Apostrophe should be escaped in '...' strings or be used in "..." string
 * `#1745 <https://github.com/CoolProp/CoolProp/issues/1745>`_ : Surface Tension calculation failing ungracefully

@@ -417,7 +417,7 @@ manufactures, two specific publications provided a lot of data used for the
 incompressible fluids: Åke Melinder's book *Properties of Secondary Working
 Fluids for Indirect Systems* :cite:`Melinder2010` has inspired both, the work on
 pure fluids and aqueous solutions. The second major source of inspiration is the
-`SecCool <https://ipu.dk/products/seccool>`_
+`SecCool <https://www.ipu.dk/refrigeration-software/seccool>`_
 :cite:`Skovrup2013` software, which contains data compiled by Morten Juel
 Skovrup. It is provided free of charge by his employer `IPU <https://ipu.dk>`_.
 
@@ -484,7 +484,7 @@ freezing temperature: the composition axis is the ice fraction, so the fluid is
 already at solid-liquid equilibrium everywhere in its range and the equilibrium
 temperature is the temperature axis itself, not a separate curve over :math:`x`.
 Asking for ``T_freeze`` on one of them raises rather than returning a number. The implementation is based on the data
-available in `SecCool <https://www.ipu.dk/products/seccool>`_,
+available in `SecCool <https://www.ipu.dk/refrigeration-software/seccool>`_,
 which was originally recorded at the Danish Technological Institute `(DTI) <https://www.dti.dk/>`_.
 
 
