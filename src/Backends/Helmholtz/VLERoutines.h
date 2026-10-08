@@ -734,7 +734,7 @@ class StabilityEvaluationClass
    private:
     bool _stable;
     bool _uncertain;             ///< stability verdict was non-conclusive (minimize_tpd could not decide)
-    bool _near_pure;             ///< the instability (if any) was found by a near-pure trial phase
+    bool _near_pure;             ///< the instability (if any) was found by an EXTRA probe: a near-pure or liquid-liquid trial
     bool _guard_replaced;        ///< the instability (if any) relied on a root the #3448 guard replaced (feed or that trial)
     bool _feed_guard_replaced;   ///< the guard replaced the feed's density root in this test
     bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
@@ -857,7 +857,7 @@ class StabilityEvaluationClass
         _flash_first_enabled = enabled;
     }
     /// True when an instability was found that the stability test would not have reached before the
-    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or relying on a
+    /// extra probes and the #3448 density guard existed: found by a near-pure or liquid-liquid trial, or relying on a
     /// density root the guard replaced -- the feed's, or one of the trial that found the instability
     /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
     /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.

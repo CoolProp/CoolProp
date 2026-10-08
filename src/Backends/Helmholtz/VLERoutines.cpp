@@ -2457,6 +2457,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         std::vector<CoolPropDbl> Y;
         bool vapor_like;  // the trial is the incipient vapor (y), the feed the liquid (x) -- else reversed
         bool near_pure;
+        bool lle = false;  // liquid-liquid probe: a light-rich composition on the LIQUID density branch
     };
     std::vector<Trial> trials = {{yV, true, false}, {xL, false, false}};
     if (imin != imax && Kmin < HUGE_VAL && Kmax / Kmin > 1e3) {
@@ -2476,6 +2477,17 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             trials.push_back({near_pure(imin), false, true});
         }
     }
+    // Liquid-liquid probe for a liquid-like feed (g0 <= 0: at or below its ideal bubble point).  The two Wilson trials
+    // test the light-rich composition z*K on the VAPOR branch and the heavy-rich z/K on the liquid branch; a second
+    // LIQUID rich in the light components is tested by neither.  For N2/C1/C2/nC4/nC5 (HEOS) at 5 bar, 0.5-1.2 K below
+    // the bubble point, the feed is unstable (tm ~ -5e-3 against the N2-rich liquid) but the vapor-branch trial
+    // converges to tm > 0 and the z/K trial -- near-pure n-pentane ~46 K below its triple point -- has no usable density
+    // root, so the flash returned the metastable single liquid.  z*K on the liquid branch reaches tm < 0 in 1-3 SS
+    // steps there.  An extra probe like the near-pure trials: successive substitution only, run last (only when nothing
+    // else found an instability), and an undecided outcome is no evidence either way.
+    if (g0 <= 0) {
+        trials.push_back({yV, false, false, true});
+    }
 
     for (std::size_t t = 0; t < trials.size(); ++t) {
         auto& Y = trials[t].Y;
@@ -2492,7 +2504,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // worst miss an instability (the vapor-like trials cover that side), never invent one.
         CoolPropDbl rho_warm = -1;
         const bool ideal_gas_start = trials[t].near_pure && trials[t].vapor_like;
-        const bool liquid_start = trials[t].near_pure && !trials[t].vapor_like;
+        const bool liquid_start = (trials[t].near_pure && !trials[t].vapor_like) || trials[t].lle;
         // ...and keeps the liquid phase imposed on SatV for its whole trajectory (SatV normally carries
         // an imposed GAS phase, under which the warm solves would drift back to the vapor root and the
         // trial would collapse to the feed).  Restored when the trial ends, including on early return.
@@ -2577,7 +2589,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 // Early exit: tm < 0 means unstable
                 if (tm < -cntol) {
                     _stable = false;
-                    _near_pure = trials[t].near_pure;
+                    _near_pure = trials[t].near_pure || trials[t].lle;
                     _guard_replaced = _feed_guard_replaced || _trial_guard_replaced;
                     CoolPropDbl sY = 0;
                     for (std::size_t i = 0; i < N; ++i)
@@ -2657,16 +2669,16 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // solves per trial, most of the cost of a PT flash.
         if (ss_stable) continue;
         if (trial_nonfinite) {
-            if (!trials[t].near_pure) any_uncertain = true;  // an extra near-pure probe is no evidence either way
+            if (!trials[t].near_pure && !trials[t].lle) any_uncertain = true;  // an extra probe is no evidence either way
             continue;
         }
-        // Near-pure trials are an EXTRA probe for wide-boiling feeds and run successive substitution
+        // Near-pure trials (and the liquid-liquid probe above) are EXTRA probes and run successive substitution
         // only: one that SS did not decide (or whose density solve failed) is dropped -- no second-order
         // minimizer, and no "uncertain" flag, since an undecided extra probe is no evidence either way.
         // Their detections are SS early exits (tm < 0 within a few steps); on a 10-component natural gas
         // the minimizer runs they would otherwise trigger cost about as much as both Wilson trials while
         // finding almost nothing (Amarillo, 2000 states: 284 minimizer runs, 6 instabilities in 2310 trials).
-        if (trials[t].near_pure) continue;
+        if (trials[t].near_pure || trials[t].lle) continue;
         bool trial_unstable = false;
         bool trial_ok = minimize_tpd(Y, ln_f_z, the_T, the_p, trial_unstable);
         if (!trial_ok) any_uncertain = true;  // could not conclude this trial -> not a clean "stable"
