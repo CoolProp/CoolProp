@@ -2184,7 +2184,10 @@ static bool finite_fugacity_coefficients(HelmholtzEOSMixtureBackend& phase) {
 // The lowest-Gibbs, mechanically stable root among the two phase-specified solves (liquid and gas imposed,
 // each scoped so `phase` keeps its own imposed phase) that also reproduces the target pressure; -1 when
 // neither solve yields one.  Leaves `phase` at an unspecified state.
-static CoolPropDbl lowest_gibbs_phase_specified_root(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p) {
+// require_finite_phi: also skip a candidate whose fugacity coefficients are not finite and positive (an alpha^r-well
+// root can be mechanically stable, reproduce p and have the lowest G -- see finite_fugacity_coefficients).
+static CoolPropDbl lowest_gibbs_phase_specified_root(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p,
+                                                     bool require_finite_phi = false) {
     CoolPropDbl best = -1, g_best = HUGE_VAL;
     for (const phases ph : {iphase_liquid, iphase_gas}) {
         try {
@@ -2196,6 +2199,7 @@ static CoolPropDbl lowest_gibbs_phase_specified_root(HelmholtzEOSMixtureBackend&
             if (!ValidNumber(r) || r <= 0) continue;
             phase.update_DmolarT_direct(r, T);
             if (!mechanically_stable(phase) || std::abs(phase.p() / p - 1.0) > 1e-6) continue;
+            if (require_finite_phi && !finite_fugacity_coefficients(phase)) continue;
             const CoolPropDbl g = phase.gibbsmolar();
             if (ValidNumber(g) && g < g_best) {
                 g_best = g;
@@ -2280,6 +2284,20 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
     CoolPropDbl rg;
     if (guard_unstable_branch) {
         rg = SaturationSolvers::solve_rho_Tp_global_stable(phase, T, p, guard_replaced);
+        // The global root can itself be a non-physical state with phi_i = 0 or inf -- seen for the liquid-like Wilson
+        // trial of N2/C1/C2/nC4/nC5 (HEOS) at 5 bar, ~97 K: a near-pure n-pentane composition whose global root sits in
+        // the alpha^r well at delta ~ 1 (8962 mol/m3).  Take the lowest-Gibbs phase-specified root instead when it is
+        // usable; otherwise keep the global root (the caller's non-finite checks then report the trial non-conclusive).
+        // Not a guard intervention for guard_replaced: the unguarded code had no usable root here either.
+        if (!finite_fugacity_coefficients(phase)) {
+            const CoolPropDbl alt = lowest_gibbs_phase_specified_root(phase, T, p, true);
+            phase.update_DmolarT_direct(alt > 0 ? alt : rg, T);
+            if (alt > 0 && finite_fugacity_coefficients(phase)) {
+                rg = alt;
+            } else {
+                phase.update_DmolarT_direct(rg, T);
+            }
+        }
     } else {
         rg = phase.solver_rho_Tp_global(T, p, phase.calc_rhomolar_max_bound());
         phase.update_DmolarT_direct(rg, T);
@@ -2490,7 +2508,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         const int max_ss_loops = trials[t].near_pure ? 1 : 4;
         const double cntol = 1e-7;
         bool ss_decided = false;
-        bool ss_stable = false;  // SS concluded this trial is stable (stationary point with tm >= 0, or trivial solution)
+        bool trial_nonfinite = false;  // the trial hit a non-finite tm or step: non-conclusive
+        bool ss_stable = false;        // SS concluded this trial is stable (stationary point with tm >= 0, or trivial solution)
 
         for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
             std::array<double, 2> esq_pair = {0, 0};
@@ -2544,6 +2563,15 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                     tm += Y[i] * (s_i - 1.0);
 
                     Y[i] = std::exp(ln_Y_new);
+                }
+
+                // A non-finite tm or step (a fugacity coefficient of 0 or inf at the trial's density root) proves nothing:
+                // tm = -inf would otherwise pass the test below and publish an instability with an inf/NaN trial
+                // composition, which the split solver cannot use (the flash then falls back to the metastable single
+                // phase).  Stop this trial as non-conclusive instead.
+                if (!diffs_finite || !ValidNumber(tm)) {
+                    trial_nonfinite = ss_decided = true;
+                    break;
                 }
 
                 // Early exit: tm < 0 means unstable
@@ -2628,6 +2656,10 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // iterations (each an N x N Hessian of composition derivatives) and ~5 trial-density
         // solves per trial, most of the cost of a PT flash.
         if (ss_stable) continue;
+        if (trial_nonfinite) {
+            if (!trials[t].near_pure) any_uncertain = true;  // an extra near-pure probe is no evidence either way
+            continue;
+        }
         // Near-pure trials are an EXTRA probe for wide-boiling feeds and run successive substitution
         // only: one that SS did not decide (or whose density solve failed) is dropped -- no second-order
         // minimizer, and no "uncertain" flag, since an undecided extra probe is no evidence either way.
