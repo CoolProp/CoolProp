@@ -259,6 +259,19 @@ linkcheck_workers = 10
 # Don't check intra-page #anchors — many target sites are JS-rendered and report
 # spurious anchor-missing failures.
 linkcheck_anchors = False
+# Many publishers and project sites return 403 to the default "python-requests"
+# User-Agent but serve the same page to a browser.  Send browser-like headers to
+# every host so only genuinely broken links are reported.  (Do not also set
+# linkcheck_allowed_redirects: it turns every unlisted redirect into a warning.)
+linkcheck_request_headers = {
+    "*": {
+        "User-Agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"),
+        "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
+                   "image/avif,image/webp,*/*;q=0.8"),
+        "Accept-Language": "en-US,en;q=0.9",
+    },
+}
 linkcheck_ignore = [
     # Intentional placeholders that are not real URLs.
     r'https?://YOURUSERNAME\.pythonanywhere\.com.*',
@@ -272,6 +285,20 @@ linkcheck_ignore = [
     r'https?://www\.tandfonline\.com/.*',
     r'https?://braumeister\.org/.*',
     r'https?://.*\.amazonaws\.com/.*',
+    # Hosts that still return 403 to automated requests even with browser-like
+    # headers (bot detection); these are normal sites that open in a browser.
+    r'https?://([^/]+\.)?sourceforge\.net/.*',
+    r'https?://pubs\.aip\.org/.*',
+    r'https?://([^/]+\.)?onlinelibrary\.wiley\.com/.*',
+    r'https?://stackoverflow\.com/.*',
+    r'https?://bcbjournal\.org/.*',
+    r'https?://scholar\.google\.com/.*',
+    # doi.org links are checked as written, so ignore rules cannot see the
+    # publisher they redirect to.  Ignore the DOI prefixes of the publishers
+    # that answer 403 to automated requests: 10.1002 Wiley, 10.1063 AIP,
+    # 10.1103 APS, 10.2118 SPE/OnePetro.  (A dead DOI with one of these
+    # prefixes will not be reported; DOIs of other publishers are still checked.)
+    r'https?://(dx\.)?doi\.org/10\.(1002|1063|1103|2118)/.*',
 ]
 
 # -- Options for HTML output ---------------------------------------------------
