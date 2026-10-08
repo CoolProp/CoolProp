@@ -206,76 +206,42 @@ std::string_view get_pcsaft_fluids_schema() {
     return pcsaft_fluids_schema_JSON;
 }
 
+Dictionary& PCSAFTLibraryClass::find_binary_pair(const std::string& CAS1, const std::string& CAS2) {
+    // A pair is stored once, in either order
+    auto it = m_binary_pair_map.find(std::vector<std::string>{CAS1, CAS2});
+    if (it == m_binary_pair_map.end()) it = m_binary_pair_map.find(std::vector<std::string>{CAS2, CAS1});
+    if (it == m_binary_pair_map.end()) {
+        throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.", CAS1.c_str(), CAS2.c_str()));
+    }
+    return it->second[0];
+}
+
+double PCSAFTLibraryClass::get_binary_interaction_number(const std::string& CAS1, const std::string& CAS2, const std::string& key) {
+    Dictionary& pair = find_binary_pair(CAS1, CAS2);
+    if (key == "kij" && pair.has_number("kij")) {
+        return pair.get_double("kij");
+    }
+    if (key == "kijT") {
+        return pair.get_double("kijT", 0.0);  // optional; no temperature dependence when absent
+    }
+    throw ValueError(
+      format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
+}
+
 std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& key) {
-    // Find pair
-    std::vector<std::string> CAS;
-    CAS.push_back(CAS1);
-    CAS.push_back(CAS2);
-
-    std::vector<std::string> CASrev;
-    CASrev.push_back(CAS2);
-    CASrev.push_back(CAS1);
-
-    if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end()) {
-        std::vector<Dictionary>& v = m_binary_pair_map[CAS];
+    if (key == "kij" || key == "kijT") {
+        return format("%0.16g", get_binary_interaction_number(CAS1, CAS2, key));
+    }
+    Dictionary& pair = find_binary_pair(CAS1, CAS2);
+    if (key == "name1" || key == "name2" || key == "BibTeX") {
         try {
-            if (key == "name1") {
-                return v[0].get_string("name1");
-            } else if (key == "name2") {
-                return v[0].get_string("name2");
-            } else if (key == "BibTeX") {
-                return v[0].get_string("BibTeX");
-            } else if (key == "kij") {
-                return format("%0.16g", v[0].get_double("kij"));
-            } else if (key == "kijT") {
-                try {
-                    return format("%0.16g", v[0].get_double("kijT"));
-                } catch (const ValueError&) {
-                    return format("%0.16g", 0.0);
-                }
-            } else {
-            }
-        } catch (...) {  // NOLINT(bugprone-empty-catch)
-            // Dictionary lookup threw; fall through to the uniform
-            // "could not match the parameter" ValueError below.
-        }
-        throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(),
-                                CAS1.c_str(), CAS2.c_str()));
-    } else if (m_binary_pair_map.find(CASrev) != m_binary_pair_map.end()) {
-        std::vector<Dictionary>& v = m_binary_pair_map[CASrev];
-        try {
-            if (key == "name1") {
-                return v[0].get_string("name1");
-            } else if (key == "name2") {
-                return v[0].get_string("name2");
-            } else if (key == "BibTeX") {
-                return v[0].get_string("BibTeX");
-            } else if (key == "kij") {
-                return format("%0.16g", v[0].get_double("kij"));
-            } else if (key == "kijT") {
-                try {
-                    return format("%0.16g", v[0].get_double("kijT"));
-                } catch (const ValueError&) {
-                    return format("%0.16g", 0.0);
-                }
-            } else {
-            }
-        } catch (...) {  // NOLINT(bugprone-empty-catch)
-            // Dictionary lookup threw; fall through to the uniform
-            // "could not match the parameter" ValueError below.
-        }
-        throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(),
-                                CAS1.c_str(), CAS2.c_str()));
-    } else {
-        // Sort, see if other order works properly
-        std::sort(CAS.begin(), CAS.end());
-        if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end()) {
-            throw ValueError(format("Could not match the binary pair [%s,%s] - order of CAS numbers is backwards; found the swapped CAS numbers.",
-                                    CAS1.c_str(), CAS2.c_str()));
-        } else {
-            throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.", CAS1.c_str(), CAS2.c_str()));
+            return pair.get_string(key);
+        } catch (const ValueError&) {  // NOLINT(bugprone-empty-catch)
+            // Not stored for this pair; report it uniformly below.
         }
     }
+    throw ValueError(
+      format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
 }
 
 void PCSAFTLibraryClass::set_binary_interaction_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& key, const double value) {
