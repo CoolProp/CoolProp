@@ -585,6 +585,25 @@ CoolPropDbl CoolProp::TabularBackend::calc_cvmolar() {
     }
 }
 
+/// As for HEOS (#3446): transport properties are undefined for a two-phase state, so
+/// refuse 0 < Q < 1 rather than interpolate between the saturated phases.  Q = 0 and
+/// Q = 1 (to 1e-9) are the saturated phases.  Called only on the saturation path (not
+/// using a single-phase table), where every update branch that returns normally has
+/// set Q in [0, 1]; it keys on Q alone rather than on _phase, which update() does not
+/// reset and so can be stale.  A Q outside [0, 1] (or NaN) means the last update threw
+/// or none was made, and the saturation indices are not valid: refuse that as well.
+/// That bound is exact, matching the strict is_in_closed_range(0, 1) in update().
+static void check_transport_property_defined(double Q, const char* property) {
+    const double Q_tol = 1e-9;
+    if (!(Q >= 0 && Q <= 1)) {  // exact: update() range-checks Q strictly
+        throw CoolProp::ValueError(format("%s cannot be evaluated: no valid state (Q = %g); the last update failed or none was made", property, Q));
+    }
+    if (Q > Q_tol && Q < 1 - Q_tol) {
+        throw CoolProp::ValueError(
+          format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead", property, Q));
+    }
+}
+
 CoolPropDbl CoolProp::TabularBackend::calc_viscosity() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
@@ -599,6 +618,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity() {
         }
         return _HUGE;  // not needed, will never be hit, just to make compiler happy
     } else {
+        check_transport_property_defined(_Q, "Viscosity");
         if (is_mixture) {
             return phase_envelope_sat(phase_envelope, iviscosity, iP, _p);
         } else {
@@ -620,6 +640,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity() {
         }
         return _HUGE;  // not needed, will never be hit, just to make compiler happy
     } else {
+        check_transport_property_defined(_Q, "Thermal conductivity");
         if (is_mixture) {
             return phase_envelope_sat(phase_envelope, iconductivity, iP, _p);
         } else {
@@ -1412,7 +1433,9 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))) {
                     throw ValueError(format("vapor quality is not in (0,1) for %s: %g T: %g", get_parameter_information(otherkey, "short").c_str(),
                                             otherval, static_cast<double>(_T)));
-                } else if (!is_mixture) {
+                }
+                _phase = iphase_twophase;
+                if (!is_mixture) {
                     cached_saturation_iL = iL;
                     cached_saturation_iV = iV;
                     _p = pure_saturation.evaluate(iP, _T, _Q, iL, iV);
@@ -1529,7 +1552,10 @@ void CoolProp::TabularDataSet::load_tables(const std::string& path_to_tables, sh
     }
 };
 
+std::atomic<int> CoolProp::TabularDataSet::build_count{0};
+
 void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>& AS) {
+    build_count.fetch_add(1, std::memory_order_relaxed);
     // Pure or pseudo-pure fluid
     if (AS->get_mole_fractions().size() == 1) {
         pure_saturation.build(AS);
@@ -1545,7 +1571,8 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>&
     }
     single_phase_logph.build(AS);
     single_phase_logpT.build(AS);
-    tables_loaded = true;
+    // tables_loaded is published by TabularBackend::check_tables() once the
+    // tables are also packed and written, not here.
 }
 
 /// Return the set of tabular datasets and whether tables were already loaded
@@ -1557,6 +1584,11 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
     // of evicting each other.  The on-disk directory stays resolution-agnostic;
     // deserialize() rejects a mis-sized file and triggers a rebuild.
     const std::string key = path + "@" + std::to_string(Nx) + "x" + std::to_string(Ny);
+    // Concurrent first loads would otherwise race on the std::map insert and on
+    // the new entry's tables_loaded flag.  The lock also covers the disk load so
+    // a second thread never observes a half-loaded entry; load_tables() only
+    // touches this dataset and the caller's AbstractState, never the library.
+    std::scoped_lock lock(data_mutex);
     // Try to find tabular set if it is already loaded
     auto it = data.find(key);
     if (it != data.end()) {
@@ -1576,8 +1608,7 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
         return {&(it->second), it->second.tables_loaded};
     }
     // Not in the map -- build a fresh entry at the requested resolution
-    TabularDataSet set;
-    data.insert(std::pair<std::string, TabularDataSet>(key, set));
+    // TabularDataSet holds a mutex, so construct it in place
     TabularDataSet& dataset = data[key];
     dataset.set_grid(Nx, Ny);
     bool loaded = false;
@@ -1593,6 +1624,9 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
 }
 
 void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
+    // Every backend sharing this dataset calls this after check_tables(); the
+    // lock makes the first caller fill coeffs and the rest wait, then skip.
+    std::scoped_lock lock(build_mutex);
     if (!coeffs.empty()) {
         return;
     }

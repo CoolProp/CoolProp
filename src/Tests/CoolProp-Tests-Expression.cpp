@@ -8,8 +8,11 @@
 
 #    include <catch2/catch_all.hpp>
 
+#    include "LocaleGuard.h"
+
 #    include <chrono>
 #    include <cmath>
+#    include <cstdlib>
 #    include <cstddef>
 #    include <map>
 #    include <memory>
@@ -102,6 +105,86 @@ TEST_CASE("DSL scientific-notation evaluates; pow two-arg; trig", "[expression]"
     CHECK(compile("1e3 + 1", {}, {}).evaluate({}) == Catch::Approx(1001.0));
     CHECK(compile("pow(2, 10)", {}, {}).evaluate({}) == Catch::Approx(1024.0));
     CHECK(compile("sqrt(2)^2", {}, {}).evaluate({}) == Catch::Approx(2.0));
+}
+
+// A host program (Python, EES, Mathcad, ...) that calls setlocale() with a
+// decimal-comma locale must not change how fluid files are read.
+TEST_CASE("DSL number literals do not depend on the C locale", "[expression][locale]") {
+    using namespace CoolProp::expression;
+    double v8400 = 0, vhalf = 0, vsum = 0;
+    {
+        NumericLocaleGuard guard("de_DE.UTF-8");
+        // Also confirms the locale really uses a decimal comma, so the test can fail.
+        require_decimal_comma_locale(guard);
+        v8400 = compile("8.4e3", {}, {}).evaluate({});
+        vhalf = compile(".5", {}, {}).evaluate({});
+        vsum = compile("1.25 + 2.5E-1", {}, {}).evaluate({});
+    }
+    CHECK(v8400 == 8400.0);
+    CHECK(vhalf == 0.5);
+    CHECK(vsum == 1.5);
+}
+
+TEST_CASE("DSL number-literal syntax", "[expression][locale]") {
+    using namespace CoolProp::expression;
+    using Catch::Matchers::ContainsSubstring;
+    CHECK(compile("5.", {}, {}).evaluate({}) == 5.0);
+    CHECK(compile("0.125", {}, {}).evaluate({}) == 0.125);
+    CHECK(compile("2e+2", {}, {}).evaluate({}) == 200.0);
+    CHECK(compile("2E2", {}, {}).evaluate({}) == 200.0);
+    CHECK(compile("3e-1", {}, {}).evaluate({}) == 0.3);
+    CHECK(compile("1.e5", {}, {}).evaluate({}) == 1e5);
+    // The literal is exactly what an IEEE-correct decimal parse gives.
+    CHECK(compile("0.1", {}, {}).evaluate({}) == 0.1);
+    CHECK(compile("6.02214076e23", {}, {}).evaluate({}) == 6.02214076e23);
+    // An exponent marker with no digits is not part of the number: "2e" lexes
+    // as the number 2 followed by the identifier e (a parse error, since the
+    // grammar has no juxtaposition), not as a malformed number "2e".
+    {
+        const auto toks = CoolProp::expression::detail::lex("2e+");
+        REQUIRE(toks.size() >= 3);
+        CHECK(toks[0].type == CoolProp::expression::detail::TokenType::Number);
+        CHECK(toks[0].number == 2.0);
+        CHECK(toks[1].type == CoolProp::expression::detail::TokenType::Ident);
+        CHECK(toks[1].text == "e");
+    }
+    CHECK_THROWS_AS(compile("2e", {}, {}), CoolProp::ValueError);
+    // A lone '.' is not a number, nor is '.' followed by an exponent.
+    CHECK_THROWS_WITH(compile(".", {}, {}), ContainsSubstring("malformed number"));
+    CHECK_THROWS_WITH(compile(".e5", {}, {}), ContainsSubstring("malformed number"));
+    // Subnormals are inside the double range and load on every platform.
+    CHECK(compile("1e-310", {}, {}).evaluate({}) == 1e-310);
+    // Literals outside the double range are refused, not turned into inf/0.
+    CHECK_THROWS_WITH(compile("1e400", {}, {}), ContainsSubstring("out of range"));
+    CHECK_THROWS_WITH(compile("1e-400", {}, {}), ContainsSubstring("out of range"));
+    // Hexadecimal is not decimal-literal syntax.
+    CHECK_THROWS_AS(compile("0x10", {}, {}), CoolProp::ValueError);
+}
+
+// Fluid loading end to end under a decimal-comma locale: JSON parse (nlohmann is
+// locale-independent), the fluid-library build, and every expression block's
+// compile.  Novec649's expression formulas carry decimal-point literals
+// (1.16145, 0.14874, ...), which is what a decimal-comma strtod misreads.
+TEST_CASE("fluid with expression blocks loads identically under a decimal-comma locale", "[expression][locale]") {
+    using nlohmann::json;
+    json fluid = json::parse(CoolProp::get_fluid_param_string("Novec649", "JSON"))[0];
+    fluid["INFO"]["NAME"] = "NOVEC649_LOCALE_DE";
+    fluid["INFO"]["CAS"] = "999-99-93";
+    fluid["INFO"]["ALIASES"] = json::array({"NOVEC649_LOCALE_DE_ALIAS"});
+    const std::string doc = json::array({fluid}).dump();
+    // Guard against the fixture drifting away from what this test is about.
+    REQUIRE(doc.find(R"("type":"expression")") != std::string::npos);
+    REQUIRE(doc.find("1.16145") != std::string::npos);
+
+    const double v_ref = CoolProp::PropsSI("V", "T", 300.0, "Dmass", 1500.0, "Novec649");
+    const double l_ref = CoolProp::PropsSI("L", "T", 300.0, "Dmass", 1500.0, "Novec649");
+    {
+        NumericLocaleGuard guard("de_DE.UTF-8");
+        require_decimal_comma_locale(guard);
+        REQUIRE(CoolProp::add_fluids_as_JSON("HEOS", doc));
+    }
+    CHECK(CoolProp::PropsSI("V", "T", 300.0, "Dmass", 1500.0, "NOVEC649_LOCALE_DE") == v_ref);
+    CHECK(CoolProp::PropsSI("L", "T", 300.0, "Dmass", 1500.0, "NOVEC649_LOCALE_DE") == l_ref);
 }
 
 TEST_CASE("DSL let chaining: a let sees earlier lets, not itself", "[expression]") {
@@ -335,18 +418,23 @@ TEST_CASE("expression block compile path (constants+arrays) yields expected valu
 // Tolerances:
 //   * EVERY form matches to <1e-14 relative (the real completeness proof) at
 //     every grid point — asserted on all 8 forms.
-//   * Three forms (powers_of_Tr, collision_integral, polynomial_and_exponential)
-//     additionally match BIT-EXACTLY and are asserted with `got == expected`.
-//   * The other five (powers_of_T, modified_Batschinski_Hildebrand,
-//     ratio_of_polynomials, eta0_and_poly, residual polynomial) match to ~1-3
-//     ULP (observed max relative error ~2.4e-15) but NOT bit-for-bit.  The DSL
-//     and the routine perform the identical op sequence; the last-ULP
-//     divergence is FMA/`-ffp-contract`-class rounding (the optimized routine
-//     may fuse `a[i]*pow(...)`+accumulate; the DSL evaluator rounds each op
-//     separately).  This is a compiler codegen artifact, NOT an algebra
-//     difference, so we keep the 1e-14 assertion (which they pass with margin)
-//     rather than loosening it — and do NOT claim bit-exactness where it is
-//     not achieved.
+//   * No form is asserted BIT-EXACT.  The DSL and the routine perform the
+//     same op sequence modulo contraction, but the last-ULP result is
+//     compiler-codegen dependent: on FMA-capable targets (arm64; x86-64 only
+//     when FMA is enabled, e.g. -mfma or -march=x86-64-v3) the compiler may
+//     contract (clang default `-ffp-contract=on`, GCC `fast`) the routine's
+//     `summer += a[i]*pow(...)` into an FMA, while the DSL evaluator
+//     (virtual-dispatch tree walk) always rounds the multiply and the add
+//     separately.  Whether the routine fuses depends on contraction settings,
+//     target FMA support and code generation (scalar code can fuse; no
+//     unrolling needed) -- e.g. Apple clang 21 -O3 on arm64 emits a 4x-unrolled
+//     unfused main loop plus an `fmadd` remainder loop, so n-Pentane's 4-term
+//     powers_of_Tr happened to match bit-for-bit on one toolchain and differ
+//     by up to ~9 ULP (cancellation at T=120 K) on another.  Observed max
+//     relative error is ~2.4e-15, so the 1e-14 assertion has held with margin
+//     (an observation, not a proven bound: sum|terms|/|sum| is ~30 at
+//     n-Pentane T=120 K).  This is a codegen artifact, NOT an algebra
+//     difference.
 //
 // TEST-ONLY: no production code is touched.
 // ---------------------------------------------------------------------------
@@ -384,7 +472,7 @@ TEST_CASE("golden: viscosity dilute powers_of_T", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -412,7 +500,7 @@ TEST_CASE("golden: viscosity dilute powers_of_Tr", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
+            // not asserted bit-exact: FMA contraction in the routine is codegen-dependent
             ++checks;
         }
     }
@@ -451,7 +539,7 @@ TEST_CASE("golden: viscosity dilute collision_integral", "[expression][golden]")
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            CHECK(got == expected);  // bit-exact: ln/exp/sqrt/pow same order reproduces value exactly
+            // not asserted bit-exact: FMA contraction in the routine is codegen-dependent
             ++checks;
         }
     }
@@ -501,7 +589,7 @@ TEST_CASE("golden: viscosity higher_order modified_Batschinski_Hildebrand", "[ex
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -581,7 +669,7 @@ TEST_CASE("golden: conductivity dilute ratio_of_polynomials", "[expression][gold
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -617,7 +705,7 @@ TEST_CASE("golden: conductivity dilute eta0_and_poly", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -650,7 +738,7 @@ TEST_CASE("golden: conductivity residual polynomial", "[expression][golden]") {
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            // matches to ~1-3 ULP; not bit-exact (FMA/-ffp-contract-class rounding)
+            // matches to a few ULP; not bit-exact (FMA contraction, see -ffp-contract)
             ++checks;
         }
     }
@@ -688,7 +776,7 @@ TEST_CASE("golden: conductivity residual polynomial_and_exponential", "[expressi
             double got = p.evaluate(iv);
             CAPTURE(T, rho, expected, got);
             CHECK(got == Catch::Approx(expected).epsilon(1e-14));
-            CHECK(got == expected);  // bit-exact: same op sequence reproduces hardcoded value exactly
+            // not asserted bit-exact: FMA contraction in the routine is codegen-dependent
             ++checks;
         }
     }
@@ -843,11 +931,15 @@ TEST_CASE("expression end-to-end: JSON load + dispatch round-trip (dilute viscos
 
     // Compare viscosity of the expression-backed fluid vs the original over a
     // (T,rho) grid -- exercising the VISCOSITY_DILUTE_EXPRESSION dispatch arm.
+    // Half the grid is inside R123's dome, where viscosity now refuses to evaluate
+    // (#3446); impose a single phase so the correlation is still evaluated at (T, rho).
+    const double rhoc = CoolProp::PropsSI("rhomolar_critical", "", 0, "", 0, "R123");
     int checks = 0;
     for (double T : {250.0, 300.0, 400.0, 500.0}) {
         for (double rho : {0.1, 100.0, 5000.0}) {
-            double v_expr = CoolProp::PropsSI("V", "T", T, "Dmolar", rho, "R123_EXPR_E2E");
-            double v_orig = CoolProp::PropsSI("V", "T", T, "Dmolar", rho, "R123");
+            const std::string Dkey = rho > rhoc ? "Dmolar|liquid" : "Dmolar|gas";
+            double v_expr = CoolProp::PropsSI("V", "T", T, Dkey, rho, "R123_EXPR_E2E");
+            double v_orig = CoolProp::PropsSI("V", "T", T, Dkey, rho, "R123");
             CAPTURE(T, rho, v_expr, v_orig);
             REQUIRE(ValidNumber(v_expr));
             REQUIRE(ValidNumber(v_orig));

@@ -79,7 +79,7 @@ Main Developers
 The primary developers are:
 
 - `Ian Bell <mailto:ian.h.bell@gmail.com>`_, Bell Thermal Consultants
-- `Jorrit Wronski <mailto:jowr@ipu.dk>`_, `IPU Refrigeration and Energy Technology <https://www.ipu.dk/expertise/thermodynamics-energy-technology/>`_, Kgs. Lyngby, Denmark
+- `Jorrit Wronski <mailto:jow@cleanheatpartners.com>`_, `Clean Heat Partners <https://www.cleanheatpartners.com>`_, Denmark
 - `Sylvain Quoilin <mailto:squoilin@ulg.ac.be>`_, `Vincent Lemort <mailto:vincent.lemort@ulg.ac.be>`_, Thermodynamics Laboratory, University of Liege, Liege, Belgium
 
 Please be so kind and cite our work in your publication: :ref:`Citation information <citation>`.
@@ -92,7 +92,7 @@ Supporters
 .. image:: _static/logo_labothap.png
    :height: 100px
    :alt: labothap
-   :target: http://www.labothap.ulg.ac.be/
+   :target: https://www.labothap.uliege.be/
 
 .. image:: _static/logo_ORCNext.jpg
    :height: 100px
@@ -105,22 +105,12 @@ Supporters
    :alt: Herrick
    :target: https://engineering.purdue.edu/Herrick/index.html
 
-.. image:: _static/logo_maplesoft.png
-   :height: 100px
-   :alt: Maple
-   :target: https://www.maplesoft.com
-
 \
 
 .. image:: _static/logo_dtu_mekanik.png
    :height: 50px
    :alt: DTU Mechanical Engineering - Section for Thermal Energy
-   :target: https://www.mek.dtu.dk/english/Sections/TES
-
-.. image:: _static/logo_ipu.png
-   :height: 50px
-   :alt: IPU Refrigeration and Energy Technology
-   :target: https://www.ipu.dk
+   :target: https://construct.dtu.dk/Sections/thermal-energy
 
 
 License Information

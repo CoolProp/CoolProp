@@ -3993,6 +3993,81 @@
         ],
         "type": "empirical"
       }
+    },
+    "conductivity": {
+      "BibTeX": "Koutian-JPCRD-2017-Cyclohexane",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (6) of Koutian, Assael, Huber & Perkins, J. Phys. Chem. Ref. Data 46(1):013102 (2017), converted from mW/(m K) to W/(m K). Tc = 553.6 K is the paper's own value.",
+        "formula": "let Tr = T/Tc\n1e-3*sum(i: a[i]*Tr^i)/sum(i: b[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 553.6
+        },
+        "arrays": {
+          "a": [
+            6.52149,
+            -39.8399,
+            65.3275,
+            -202.857,
+            78.7909
+          ],
+          "b": [
+            -2.3043,
+            1.83274,
+            -2.66787,
+            1.0
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (7) and Table 2 of Koutian, Assael, Huber & Perkins, J. Phys. Chem. Ref. Data 46(1):013102 (2017), converted from mW/(m K) to W/(m K). Tc = 553.6 K and rhoc = 271.33 kg/m^3 are the paper's own reducing values.",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\n1e-3*sum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 553.6,
+          "rhoc": 271.33
+        },
+        "arrays": {
+          "B1": [
+            18.9732,
+            -62.7889,
+            100.748,
+            -47.7988,
+            7.32262
+          ],
+          "B2": [
+            2.14942,
+            31.5482,
+            -62.9082,
+            32.2047,
+            -4.87801
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Section 3.3 of Koutian, Assael, Huber & Perkins, J. Phys. Chem. Ref. Data 46(1):013102 (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.058, xi0 = 0.230e-9 m, qD^-1 = 6.68e-10 m, T_ref = 1.5 Tc = 830.4 K. All six parameters agree with the TK3 block of CYCLOHEX.FLD in REFPROP 10.0 and 10.1. The paper evaluated the enhancement with the Tariq et al. (2014) viscosity, the same model CoolProp uses. CoolProp's enhancement takes p_c from the EOS reducing state, which for this fluid is 4082.4 kPa (carried over from CoolProp 4.2), whereas the Zhou et al. (2014) EOS and REFPROP use 4080.5 kPa; at the paper's check point this lowers the enhancement by 1.3e-5 relative (0.0002 mW/(m K)), which is below the precision of the check value. The EOS itself is unchanged.",
+        "GAMMA": 0.058,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 1497005988.0239522,
+        "zeta0": 2.3e-10,
+        "T_ref": 830.4
+      }
     }
   }
 }

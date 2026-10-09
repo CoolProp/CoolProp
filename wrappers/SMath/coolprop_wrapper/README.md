@@ -22,7 +22,7 @@ CoolProp_get_global_param_string(ParamName)
 CoolProp_get_param_index(Name)
 ```
 *Return the index of a parameter.*
-* `Name`: The parameter name, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name`: The parameter name, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 
 ****
 ```
@@ -37,12 +37,12 @@ CoolProp_get_parameter_information_string(Key, Output)
 CoolProp_HAProps(Output, Name1, Prop1, Name2, Prop2, Name3, Prop3)
 ```
 *Return a humid air property.*
-* `Output` The output parameter, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
-* `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Output` The output parameter, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop1` The first state variable value
-* `Name2` The second state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name2` The second state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop2` The second state variable value
-* `Name3` The third state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name3` The third state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop3` The third state variable value
 
 ****
@@ -50,9 +50,9 @@ CoolProp_HAProps(Output, Name1, Prop1, Name2, Prop2, Name3, Prop3)
 CoolProp_Phase(Name1, Prop1, Name2, Prop2, FluidName)
 ```
 *Return a string representation of the phase.*
-* `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop1` The first state variable value
-* `Name2` The second state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name2` The second state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop2` The second state variable value
 * `FluidName` The fluid name
 
@@ -61,10 +61,10 @@ CoolProp_Phase(Name1, Prop1, Name2, Prop2, FluidName)
 CoolProp_Props(Output, Name1, Prop1, Name2, Prop2, FluidName)
 ```
 *Return a value that __depends__ on the thermodynamic state.*
-* `Output` The output parameter, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
-* `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Output` The output parameter, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop1` The first state variable value
-* `Name2` The second state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Name2` The second state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop2` The second state variable value
 * `FluidName` The fluid name
 
@@ -74,7 +74,7 @@ CoolProp_Props1(FluidName, Output)
 ```
 *Return a value that does __not depends__ on the thermodynamic state.*
 * `FluidName` The fluid name
-* `Output` The output parameter, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `Output` The output parameter, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 
 ****
 ```
@@ -82,9 +82,9 @@ CoolProp_saturation_ancillary(FluidName, output, Q, input, value)
 ```
 *Extract a value from the saturation ancillary.*
 * `FluidName` The name of the fluid to be used - HelmholtzEOS backend only
-* `output` The desired output variable (\"P\" for instance for [pressure](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table))
+* `output` The desired output variable (\"P\" for instance for [pressure](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table))
 * `Q` The mass vapor quality, 0 or 1
-* `input` The input variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
+* `input` The input variable name, one of `"T"`, `"D"`, `"H"`, [etc...](https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `value` The second state variable value
 
 ****

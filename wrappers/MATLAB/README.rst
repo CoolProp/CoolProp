@@ -15,10 +15,10 @@ Several things are required:
 2. A python release with the |numpy|_ and |CoolProp|_ packages installed. If you have several python environments/versions available, make sure that your MATLAB recognizes the desired executable using |pyversion|_.
 
 .. |numpy| replace:: ``numpy``
-.. _numpy: https://pypi.python.org/pypi/numpy
+.. _numpy: https://pypi.org/project/numpy/
 
 .. |CoolProp| replace:: ``CoolProp``
-.. _CoolProp: http://www.coolprop.org/coolprop/wrappers/Python/index.html
+.. _CoolProp: https://www.coolprop.org/coolprop/wrappers/Python/index.html
 
 .. |pyversion| replace:: ``pyversion``
 .. _pyversion: https://www.mathworks.com/help/matlab/ref/pyversion.html
@@ -34,9 +34,9 @@ Usage
 This tool is compatible with the 2- and 6-parameter syntax of ``PropsSI``.
 
 -  2-input short syntax (for `"trivial"
-   inputs <http://www.coolprop.org/coolprop/HighLevelAPI.html#trivial-inputs>`__):
+   inputs <https://www.coolprop.org/coolprop/HighLevelAPI.html#trivial-inputs>`__):
    ``PropsSI('Tcrit','Water')``.
--  6-input `standard <http://www.coolprop.org/coolprop/HighLevelAPI.html#sample-code>`__ syntax:
+-  6-input `standard <https://www.coolprop.org/coolprop/HighLevelAPI.html#sample-code>`__ syntax:
    ``PropsSI('D','T',298.15,'P',101325,'Air')``.
 -  The first input to ``PropsSI`` (representing the requested outputs) can be either a character vector or a cell array thereof, in either syntax. Whenever more than one output is requested, a 3D array will be returned.
 
@@ -44,7 +44,7 @@ The tool also provides a convenience method for calling the low-level ``Abstract
 
     [abState, CoolProp] = AbstractState('HEOS', 'Water');
 
-The returned ``abState`` object can then be used according to relevant `documentation <http://coolprop.sourceforge.net/coolprop/LowLevelAPI.html>`__.
+The returned ``abState`` object can then be used according to relevant `documentation <https://coolprop.sourceforge.net/coolprop/LowLevelAPI.html>`__.
 
 Troubleshooting
 ===============

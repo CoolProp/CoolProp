@@ -297,3 +297,33 @@ def test_known_guesses_match_the_fitter():
     assert sorted(_FALLBACK_GUESSES) == _FITTER_GUESSES, (
         "the fallback literals in this module have drifted from IncompressibleData's "
         "*_GUESS constants: {0} vs {1}".format(sorted(_FALLBACK_GUESSES), _FITTER_GUESSES))
+
+
+def test_every_committed_file_is_strict_json():
+    """No committed file may contain a bare NaN or Infinity token.
+
+    Python's json module accepts NaN, Infinity and -Infinity by default, even
+    though they are not valid JSON and the C++ loader has no reason to accept
+    them. Both writers pass allow_nan=False so they cannot emit one, and this
+    is the matching check on the FILES.
+
+    It exists as its own corpus-wide test because the other non-finite guards
+    all have a hole in them. test_all_coefficients_finite walks the six
+    property blocks, so it never sees a Chebyshev entry, Tbase, Trange, xbase
+    or NRMS. The digit-cap tests in test_writer_output.py skip the four
+    legacy DigitalFluids entirely, and for those four a non-finite value
+    would just be one more expected offender. This one reads every number in
+    every file, exemptions included.
+    """
+    def rejectConstant(token):
+        raise AssertionError("{0} is not valid JSON".format(token))
+
+    files = sorted(glob.glob(os.path.join(JSON_DIR, "*.json")))
+    assert files, "no fluid JSON files found in {0}".format(JSON_DIR)
+    for path in files:
+        with open(path) as fh:
+            text = fh.read()
+        try:
+            json.loads(text, parse_constant=rejectConstant)
+        except AssertionError as err:
+            raise AssertionError("{0}: {1}".format(os.path.basename(path), err))

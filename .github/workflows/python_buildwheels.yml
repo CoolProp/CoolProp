@@ -278,6 +278,17 @@ jobs:
         ls -R
         du -sh
 
+    - uses: actions/checkout@v7
+      with:
+        path: src
+        sparse-checkout: |
+          dev/ci/check_dist_notices.py
+          THIRD_PARTY_NOTICES.md
+        sparse-checkout-cone-mode: false
+
+    - name: Check every distribution ships THIRD_PARTY_NOTICES.md
+      run: python src/dev/ci/check_dist_notices.py Python src/THIRD_PARTY_NOTICES.md
+
     - name: Publish wheels to (Test)PyPI
       if: ${{ github.event_name != 'pull_request' }}
       env:

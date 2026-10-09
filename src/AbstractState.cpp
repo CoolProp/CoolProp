@@ -17,6 +17,7 @@
 #include "CoolProp/DataStructures.h"
 #include "qmass_conversions.h"
 #include "Backends/IF97/IF97Backend.h"
+#include "Backends/Bollengier/BollengierBackend.h"
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
@@ -106,6 +107,23 @@ class IF97BackendGenerator : public AbstractStateGenerator
 // but is out of this PR's scope.
 // NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<IF97BackendGenerator> if97_gen(IF97_BACKEND_FAMILY);
+
+class BollengierBackendGenerator : public AbstractStateGenerator
+{
+   public:
+    AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) override {
+        if (fluid_names.size() != 1) {
+            throw ValueError(format("The Bollengier backend does not support mixtures, only Water"));
+        }
+        const std::string& str = fluid_names[0];
+        if ((upper(str) == "WATER") || (upper(str) == "H2O")) {
+            return new BollengierBackend();
+        }
+        throw ValueError(format("The Bollengier backend returns Water props only; fluid name [%s] not allowed", fluid_names[0].c_str()));
+    };
+};
+// NOLINTNEXTLINE(cert-err58-cpp)
+static GeneratorInitializer<BollengierBackendGenerator> bollengier_gen(BOLLENGIER_BACKEND_FAMILY);
 class SRKGenerator : public AbstractStateGenerator
 {
    public:
@@ -886,6 +904,27 @@ void AbstractState::check_Qmass_pair_range(CoolProp::input_pairs pair, double v1
     if (!(Qmass_target >= 0 && Qmass_target <= 1)) {
         throw ValueError(format("Qmass out of range [0,1]: %g", Qmass_target));
     }
+}
+
+void AbstractState::check_input_quality_value(double Q) {
+    if (!is_in_closed_range(0.0, 1.0, Q)) {
+        throw OutOfRangeError(format("Input vapor quality [Q] must be between 0 and 1, got %g", Q));
+    }
+}
+
+void AbstractState::check_input_quality(CoolProp::input_pairs pair, double v1, double v2) {
+    if (CoolProp::is_Qmass_pair(pair)) {
+        check_Qmass_pair_range(pair, v1, v2);
+        return;
+    }
+    // Fail closed: a pair split_input_pair does not know (INPUT_PAIR_INVALID, an
+    // out-of-range value, or a newly added pair nobody registered) throws here
+    // rather than skip the quality check.  A known pair that a backend merely does
+    // not support passes through to that backend's own "not supported" error.
+    parameters p1, p2;
+    split_input_pair(pair, p1, p2);
+    if (p1 == iQ) check_input_quality_value(v1);
+    if (p2 == iQ) check_input_quality_value(v2);
 }
 
 void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {

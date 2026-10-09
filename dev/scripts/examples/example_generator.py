@@ -68,7 +68,7 @@ high_level_interface = [
     "",
     {
         "type": "comment",
-        "comment": "See http://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function for a list of inputs to high-level interface",
+        "comment": "See https://www.coolprop.org/coolprop/HighLevelAPI.html#table-of-string-inputs-to-propssi-function for a list of inputs to high-level interface",
         "EOL": True
     },
     {

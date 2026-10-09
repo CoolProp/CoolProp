@@ -829,7 +829,24 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     return initial_density + residual;
 }
 
+/// Transport properties are only defined for a single phase.  Inside the two-phase
+/// region the saturated liquid and vapor have different values and there is no
+/// meaningful bulk value, so refuse rather than evaluate a single-phase correlation
+/// at the overall density (#3446).  Q = 0 and Q = 1 are the saturated phases.  The
+/// tolerance matches the 1e-9 band in which the pure-fluid flashes already label a
+/// state two-phase, so a state on the saturation curve to within roundoff passes.
+/// Written so that a NaN quality throws.  A metastable value can still be had by
+/// imposing the phase with specify_phase().
+static void check_transport_property_defined(HelmholtzEOSMixtureBackend& HEOS, const char* property) {
+    const double Q_tol = 1e-9, Q = HEOS.Q();
+    if (HEOS.phase() == iphase_twophase && !(Q <= Q_tol || Q >= 1 - Q_tol)) {
+        throw ValueError(
+          format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead", property, Q));
+    }
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
+    check_transport_property_defined(*this, "Viscosity");
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_viscosity_contributions(dilute, initial_density, residual, critical);
@@ -840,6 +857,12 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            // The mixture's (T, rho) may fall inside the pure component's dome.  Relabel
+            // the phase so the two-phase check lets the correlation be evaluated there
+            // regardless (#3446).  Relabel after the update rather than imposing it before:
+            // a re-flash with an imposed phase would replace psat in p() by the EOS pressure,
+            // which the friction-theory viscosity models read.
+            HEOS->specify_phase(iphase_gas);
             summer += mole_fractions[i] * log(HEOS->viscosity());
         }
         return exp(summer);
@@ -847,6 +870,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
 }
 void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
                                                               CoolPropDbl& critical) {
+    check_transport_property_defined(*this, "Viscosity");
     if (is_pure_or_pseudopure) {
         // Reset the variables
         dilute = 0;
@@ -900,6 +924,9 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
                     critical = TransportRoutines::viscosity_heavywater_hardcoded(*this);
                     break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER_IAPWS2020:
+                    critical = TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(*this);
+                    break;
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
                     critical = TransportRoutines::viscosity_helium_hardcoded(*this);
                     break;
@@ -943,6 +970,7 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
 }
 void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
                                                                  CoolPropDbl& critical) {
+    check_transport_property_defined(*this, "Thermal conductivity");
     if (is_pure_or_pseudopure) {
         // Reset the variables
         dilute = 0;
@@ -982,6 +1010,9 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
                     break;
                 case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
                     initial_density = TransportRoutines::conductivity_hardcoded_heavywater(*this);
+                    break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER_IAPWS2021:
+                    initial_density = TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(*this);
                     break;
                 case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
                     initial_density = TransportRoutines::conductivity_hardcoded_R23(*this);
@@ -1084,6 +1115,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
     return lambda_residual;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
+    check_transport_property_defined(*this, "Thermal conductivity");
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_conductivity_contributions(dilute, initial_density, residual, critical);
@@ -1094,6 +1126,12 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            // The mixture's (T, rho) may fall inside the pure component's dome.  Relabel
+            // the phase so the two-phase check lets the correlation be evaluated there
+            // regardless (#3446).  Relabel after the update rather than imposing it before:
+            // a re-flash with an imposed phase would replace psat in p() by the EOS pressure,
+            // which the friction-theory viscosity models read.
+            HEOS->specify_phase(iphase_gas);
             summer += mole_fractions[i] * HEOS->conductivity();
         }
         return summer;
@@ -1500,6 +1538,11 @@ void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs& input_pair, C
 }
 
 void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Refuse a quality outside [0,1] (NaN included) before anything is touched:
+    // pre_update() clears the cached state, and a half-written _Q would pair with
+    // stale SatL/SatV to give a meaningless extrapolated hmass() etc. (#2195).
+    check_input_quality(input_pair, value1, value2);
+
     // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
     // before delegating to the molar-pair flash. Pure / pseudo-pure go through
     // mass_to_molar_inputs in the existing flow (handled below).
@@ -1585,42 +1628,27 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _smolar = value2;
             FlashRoutines::HS_flash(*this);
             break;
-        // Validate quality BEFORE assigning to _Q so a thrown exception
-        // does not leave the cached state half-mutated. Without this, a
-        // subsequent hmass() / smass() / etc. would use the stale SatL/
-        // SatV pointers from a prior valid update plus the new bad _Q
-        // and return a meaningless extrapolated value (#2195).
         case QT_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value1)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
             FlashRoutines::QT_flash(*this);
             break;
         case PQ_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value2)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _p = value1;
             _Q = value2;
             FlashRoutines::PQ_flash(*this);
             break;
         case QSmolar_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value1)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _smolar = value2;
             FlashRoutines::QS_flash(*this);
             break;
         case HmolarQ_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value2)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _hmolar = value1;
             _Q = value2;
             FlashRoutines::HQ_flash(*this);
             break;
         case DmolarQ_INPUTS:
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(value2)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _rhomolar = value1;
             _Q = value2;
             FlashRoutines::DQ_flash(*this);
@@ -1645,6 +1673,8 @@ const std::vector<CoolPropDbl> HelmholtzEOSMixtureBackend::calc_mass_fractions()
 
 void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2,
                                                      const GuessesStructure& guesses) {
+    check_input_quality(input_pair, value1, value2);
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
@@ -1675,22 +1705,16 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
         case DmolarQ_INPUTS:
             _rhomolar = value1;
             _Q = value2;
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::DQ_flash_with_guesses(*this, guesses);
             break;
         case HmolarQ_INPUTS:
             _hmolar = value1;
             _Q = value2;
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::HQ_flash_with_guesses(*this, guesses);
             break;
         case QSmolar_INPUTS:
             _Q = value1;
             _smolar = value2;
-            if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q)))
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::QS_flash_with_guesses(*this, guesses);
             break;
         default:

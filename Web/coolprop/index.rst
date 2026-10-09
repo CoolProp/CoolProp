@@ -14,6 +14,7 @@ This section includes information about the CoolProp software, listings of input
     SVDSBTL.rst
     BackendOptions.rst
     Configuration.rst
+    TransportExpressions.rst
     REFPROP.rst
     Cubics.rst
     PCSAFT.rst

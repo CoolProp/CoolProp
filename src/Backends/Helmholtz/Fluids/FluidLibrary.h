@@ -52,9 +52,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution.at("d"));
                 std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
                 std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution.at("l"));
-                assert(n.size() == d.size());
-                assert(n.size() == t.size());
-                assert(n.size() == l.size());
 
                 alphar.GenExp.add_Power(n, d, t, l);
             } else if (!type.compare("ResidualHelmholtzGaussian")) {
@@ -65,12 +62,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution.at("epsilon"));
                 std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution.at("beta"));
                 std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution.at("gamma"));
-                assert(n.size() == d.size());
-                assert(n.size() == t.size());
-                assert(n.size() == eta.size());
-                assert(n.size() == epsilon.size());
-                assert(n.size() == beta.size());
-                assert(n.size() == gamma.size());
                 alphar.GenExp.add_Gaussian(n, d, t, eta, epsilon, beta, gamma);
             } else if (!type.compare("ResidualHelmholtzGaoB")) {
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
@@ -81,13 +72,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution.at("gamma"));
                 std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution.at("epsilon"));
                 std::vector<CoolPropDbl> b = cpjson::get_long_double_array(contribution.at("b"));
-                assert(n.size() == t.size());
-                assert(n.size() == d.size());
-                assert(n.size() == eta.size());
-                assert(n.size() == epsilon.size());
-                assert(n.size() == beta.size());
-                assert(n.size() == gamma.size());
-                assert(n.size() == b.size());
                 alphar.GaoB = ResidualHelmholtzGaoB(n, t, d, eta, beta, gamma, epsilon, b);
             } else if (!type.compare("ResidualHelmholtzNonAnalytic")) {
                 if (alphar.NonAnalytic.N > 0) {
@@ -101,13 +85,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> B = cpjson::get_long_double_array(contribution.at("B"));
                 std::vector<CoolPropDbl> C = cpjson::get_long_double_array(contribution.at("C"));
                 std::vector<CoolPropDbl> D = cpjson::get_long_double_array(contribution.at("D"));
-                assert(n.size() == a.size());
-                assert(n.size() == b.size());
-                assert(n.size() == beta.size());
-                assert(n.size() == A.size());
-                assert(n.size() == B.size());
-                assert(n.size() == C.size());
-                assert(n.size() == D.size());
                 alphar.NonAnalytic = ResidualHelmholtzNonAnalytic(n, a, b, beta, A, B, C, D);
             } else if (!type.compare("ResidualHelmholtzLemmon2005")) {
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
@@ -115,10 +92,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
                 std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution.at("l"));
                 std::vector<CoolPropDbl> m = cpjson::get_long_double_array(contribution.at("m"));
-                assert(n.size() == d.size());
-                assert(n.size() == t.size());
-                assert(n.size() == l.size());
-                assert(n.size() == m.size());
                 alphar.GenExp.add_Lemmon2005(n, d, t, l, m);
             } else if (!type.compare("ResidualHelmholtzDoubleExponential")) {
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
@@ -128,13 +101,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> lt = cpjson::get_long_double_array(contribution.at("lt"));
                 std::vector<CoolPropDbl> gd = cpjson::get_long_double_array(contribution.at("gd"));
                 std::vector<CoolPropDbl> ld = cpjson::get_long_double_array(contribution.at("ld"));
-
-                assert(n.size() == d.size());
-                assert(n.size() == t.size());
-                assert(n.size() == gt.size());
-                assert(n.size() == lt.size());
-                assert(n.size() == gd.size());
-                assert(n.size() == ld.size());
                 alphar.GenExp.add_DoubleExponential(n, d, t, gd, ld, gt, lt);
             } else if (!type.compare("ResidualHelmholtzExponential")) {
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
@@ -142,10 +108,6 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution.at("t"));
                 std::vector<CoolPropDbl> g = cpjson::get_long_double_array(contribution.at("g"));
                 std::vector<CoolPropDbl> l = cpjson::get_long_double_array(contribution.at("l"));
-                assert(n.size() == d.size());
-                assert(n.size() == t.size());
-                assert(n.size() == g.size());
-                assert(n.size() == l.size());
                 alphar.GenExp.add_Exponential(n, d, t, g, l);
             } else if (!type.compare("ResidualHelmholtzAssociating")) {
                 if (alphar.SAFT.disabled == false) {
@@ -236,6 +198,8 @@ class JSONFluidLibrary
                 // Retrieve the values
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution.at("n"));
                 std::vector<CoolPropDbl> v = cpjson::get_long_double_array(contribution.at("v")), theta(n.size(), 0.0);
+                // theta is sized from n but filled from v, so a longer v would write out of bounds
+                check_coefficient_lengths("IdealGasHelmholtzPlanckEinsteinFunctionT", {n.size(), v.size()});
                 // Calculate theta
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 for (std::size_t i = 0; i < v.size(); ++i) {
@@ -255,7 +219,7 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution.at("theta"));
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 if (alpha0.GERG2004Cosh.is_enabled() == true) {
-                    alpha0.GERG2004Cosh.extend(n, theta);
+                    alpha0.GERG2004Cosh.extend(n, theta, Tc);
                 } else {
                     alpha0.GERG2004Cosh = IdealHelmholtzGERG2004Cosh(n, theta, Tc);
                 }
@@ -265,7 +229,7 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution.at("theta"));
                 double Tc = cpjson::get_double(contribution, "Tcrit");
                 if (alpha0.GERG2004Sinh.is_enabled() == true) {
-                    alpha0.GERG2004Sinh.extend(n, theta);
+                    alpha0.GERG2004Sinh.extend(n, theta, Tc);
                 } else {
                     alpha0.GERG2004Sinh = IdealHelmholtzGERG2004Sinh(n, theta, Tc);
                 }
@@ -289,6 +253,11 @@ class JSONFluidLibrary
             } else if (!type.compare("IdealGasHelmholtzCP0AlyLee")) {
 
                 std::vector<CoolPropDbl> constants = cpjson::get_long_double_array(contribution.at("c"));
+                // The Aly-Lee form has exactly five constants A..E, indexed directly below
+                if (constants.size() != 5) {
+                    throw ValueError(
+                      format("IdealGasHelmholtzCP0AlyLee requires exactly 5 constants in \"c\"; got %d", static_cast<int>(constants.size())));
+                }
                 CoolPropDbl Tc = cpjson::get_double(contribution, "Tc");
                 CoolPropDbl T0 = cpjson::get_double(contribution, "T0");
 
@@ -296,7 +265,7 @@ class JSONFluidLibrary
                 if (std::abs(constants[0]) > 1e-14) {
                     std::vector<CoolPropDbl> c(1, constants[0]), t(1, 0);
                     if (alpha0.CP0PolyT.is_enabled() == true) {
-                        alpha0.CP0PolyT.extend(c, t);
+                        alpha0.CP0PolyT.extend(c, t, Tc, T0);
                     } else {
                         alpha0.CP0PolyT = IdealHelmholtzCP0PolyT(c, t, Tc, T0);
                     }
@@ -809,6 +778,7 @@ class JSONFluidLibrary
     void parse_viscosity(const nlohmann::json& viscosity, CoolPropFluid& fluid) {
         // If an array, use the first one, and then stop;
         if (viscosity.is_array()) {
+            if (viscosity.empty()) throw ValueError(format("viscosity list is empty for fluid %s", fluid.name.c_str()));
             parse_viscosity(viscosity.front(), fluid);
             return;
         }
@@ -850,6 +820,9 @@ class JSONFluidLibrary
                 return;
             } else if (!target.compare("HeavyWater")) {
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER;
+                return;
+            } else if (!target.compare("HeavyWater-IAPWS-2020")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER_IAPWS2020;
                 return;
             } else if (!target.compare("Helium")) {
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM;
@@ -1042,6 +1015,15 @@ class JSONFluidLibrary
 
     /// Parse the thermal conductivity data
     void parse_thermal_conductivity(const nlohmann::json& conductivity, CoolPropFluid& fluid) {
+        // If an array, use the first one, and then stop; later entries are older models kept for reference and are never parsed (as for viscosity)
+        if (conductivity.is_array()) {
+            if (conductivity.empty()) {
+                throw ValueError(format("conductivity list is empty for fluid %s", fluid.name.c_str()));
+            }
+            parse_thermal_conductivity(conductivity.front(), fluid);
+            return;
+        }
+
         // Load the BibTeX key
         fluid.transport.BibTeX_conductivity = cpjson::get_string(conductivity, "BibTeX");
 
@@ -1058,6 +1040,9 @@ class JSONFluidLibrary
                 return;
             } else if (!target.compare("HeavyWater")) {
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER;
+                return;
+            } else if (!target.compare("HeavyWater-IAPWS-2021")) {
+                fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER_IAPWS2021;
                 return;
             } else if (!target.compare("Methane")) {
                 fluid.transport.hardcoded_conductivity = CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_METHANE;
@@ -1390,9 +1375,13 @@ class JSONFluidLibrary
                             double v_c_Lmol = 2.14107171795 * (vals.Tc / vals.pc * 1000) + 0.00773144012514;  // [L/mol]
                             ac->set_rhor(1 / (v_c_Lmol / 1000.0));
                         }
+                        // alpha_coeffs has exactly 3 entries for these types; the cubic schema enforces it
                         if (vals.alpha_type == "Twu") {
                             std::vector<double>& c = vals.alpha_coeffs;
                             ac->set_C_Twu(0, c[0], c[1], c[2]);
+                        } else if (vals.alpha_type == "Mathias-Copeman" || vals.alpha_type == "MathiasCopeman") {
+                            std::vector<double>& c = vals.alpha_coeffs;
+                            ac->set_C_MC(0, c[0], c[1], c[2]);
                         }
                         CoolPropFluid fluid;
                         fluid.CAS = vals.CAS;
@@ -1402,6 +1391,9 @@ class JSONFluidLibrary
                         // because it feeds all of mass_to_molar_inputs.
                         E.molar_mass = vals.molemass;
                         E.acentric = vals.acentric;
+                        // Same R the cubic above was built with; R_u defaults to 0, which
+                        // zeroed p and every other R-scaled property on this path
+                        E.R_u = get_config_double(R_U_CODATA);
                         E.sat_min_liquid.T = _HUGE;
                         E.sat_min_liquid.p = _HUGE;
                         E.reduce.T = vals.Tc;

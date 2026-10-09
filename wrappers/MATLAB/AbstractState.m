@@ -25,7 +25,7 @@ function [abState, CoolProp] = AbstractState(varargin)
 %      AbstractState( "HEOS", "Water" ); % ( >=R2016b syntax )
 % 
 % For more information on CoolProp's AbstractState class see:
-% 1. http://coolprop.sourceforge.net/coolprop/LowLevelAPI.html
+% 1. https://coolprop.sourceforge.net/coolprop/LowLevelAPI.html
 % 2. \CoolProp\include\AbstractState.h
 %
 % Copyright (C) 2017 Iliya Romm, under the MIT license.

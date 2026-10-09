@@ -218,19 +218,20 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         std::vector<std::string> fluid_parts = strsplit(fluid_string, '-');
         // Check it worked
         if (fluid_parts.size() != 2) {
-            throw ValueError(
-              format(R"(Format of incompressible solution string [%s] is invalid, should be like "EG-20%" or "EG-0.2" )", fluid_string.c_str()));
+            throw ValueError(format(R"(Format of incompressible solution string [%s] is invalid, should be like "EG-20%%")", fluid_string.c_str()));
         }
 
-        // Convert the concentration into a string
-        char* pEnd = nullptr;
-        x = strtod(fluid_parts[1].c_str(), &pEnd);
-
-        // Check if per cent or fraction syntax is used
-        if (strcmp(pEnd, "%") == 0) {
-            x *= 0.01;
+        // Convert the per-cent concentration, independent of the C locale.  With
+        // strtod a decimal-comma locale read "EG-20.5%" as 20 followed by ".5%",
+        // and a malformed "EG-abc%" silently gave 0.
+        const std::string& conc = fluid_parts[1];
+        const char* const last = conc.data() + conc.size();
+        const char* end = nullptr;
+        if (parse_double_C(conc.data(), last, x, end) != std::errc() || std::string(end, last) != "%") {
+            throw ValueError(format(R"(Concentration [%s] in incompressible solution string [%s] is invalid, should be like "EG-20%%")", conc.c_str(),
+                                    fluid_string.c_str()));
         }
-        fractions.push_back(x);
+        fractions.push_back(x * 0.01);
         if (get_debug_level() > 10)
             std::cout << format("%s:%d: Detected incompressible concentration of %s for %s.", __FILE__, __LINE__, vec_to_string(fractions).c_str(),
                                 fluid_parts[0].c_str());
@@ -1000,7 +1001,16 @@ static bool is_gerg_backend_string(const std::string& backend) {
 void set_reference_stateS(const std::string& FluidName, const std::string& reference_state) {
     std::string backend, fluid;
     extract_backend(FluidName, backend, fluid);
-    if (backend == "REFPROP") {
+    // Dispatch on the resolved backend FAMILY, not the literal token, so every
+    // factory spelling of HEOS ("HEOS", "HelmholtzEOSBackend", "HEOS?<options>")
+    // and of REFPROP reaches its arm.  The "?<options>" suffix is stripped with a
+    // plain substr for the reason given in is_gerg_backend_string.  A composed
+    // string ("BICUBIC&HEOS") names a tabular backend, not HEOS, so any '&'
+    // sends it to the refusal below.  No prefix at all ("?") means HEOS.
+    backend_families family = INVALID_BACKEND_FAMILY, second_family = INVALID_BACKEND_FAMILY;
+    extract_backend_families(backend.substr(0, backend.find('?')), family, second_family);
+    const bool single_family = (backend.find('&') == std::string::npos);
+    if (single_family && family == REFPROP_BACKEND_FAMILY) {
 
         int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
@@ -1020,7 +1030,7 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             hrf[hrf.size() - 1] = '\0';
         }
         REFPROP_SETREF(hrf.data(), ixflag, x0, h0, s0, t0, p0, ierr, herr.data(), 3, 255);
-    } else if (backend == "HEOS" || backend == "?") {
+    } else if (backend == "?" || (single_family && family == HEOS_BACKEND_FAMILY)) {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
         if (reference_state == "IIR") {
             if (HEOS.Ttriple() > 273.15) {
@@ -1099,32 +1109,25 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
           format("set_reference_stateS is not implemented for the %s backend. These backends fix h = s = 0 for the IDEAL GAS at 298.15 K and "
                  "101325 Pa; see the GERG documentation for how to compare them against HEOS.",
                  backend.c_str()));
+    } else {
+        // Every other prefix -- SRK, PR, VTPR, PCSAFT, INCOMP, IF97 and the
+        // tabular backends -- used to fall off the end of this chain and
+        // return having done NOTHING, without even validating reference_state.  A caller asking for a reference state
+        // and silently keeping the old one is the worst outcome for this
+        // function, so refuse instead.
+        // The message must keep the phrase "reference state" (and avoid "key"
+        // and "cannot use"): the Mathcad wrapper classifies this ValueError by
+        // substring (wrappers/MathCAD/CoolPropMathcad.cpp).
+        throw ValueError(format("Cannot set the reference state for the [%s] backend (fluid string [%s]); only the HEOS and REFPROP "
+                                "backends are supported (e.g. \"HEOS::\", \"REFPROP::\"), or no backend prefix for HEOS",
+                                backend.c_str(), FluidName.c_str()));
     }
-    // NOTE: two fail-open holes remain here, both PRE-EXISTING and neither
-    // widened by the GERG arm above.
-    //
-    // 1. Any other unrecognised backend prefix (SRK, PR, VTPR, PCSAFT,
-    //    INCOMP, ...) still falls off the end of this chain and silently does
-    //    nothing.  Making it throw would change behaviour for callers that
-    //    have relied on the no-op for years, so it needs its own decision.
-    //    Note this includes the HEOS arm's own literal comparison: the
-    //    registered BACKEND names "HelmholtzEOSBackend" and
-    //    "HelmholtzEOSMixtureBackend" are valid factory spellings that
-    //    `backend == "HEOS"` does not match, so
-    //    set_reference_stateS("HelmholtzEOSBackend::Methane", "NBP") is a
-    //    silent no-op today, as is the "?<options>" spelling
-    //    ("HEOS?::Water"), for the same reason: the HEOS arm compares the raw
-    //    prefix literally.  Those are unambiguously bugs rather than
-    //    preserved legacy behaviour, but fixing them changes HEOS behaviour
-    //    and does not belong in a GERG change.
-    //
-    // 2. A FluidName with no "::" at all resolves to backend "?" and takes the
-    //    HEOS arm above.  That is the documented default and cannot be
-    //    improved here -- the string genuinely carries no backend information
-    //    -- but it does mean set_reference_stateS("Methane", "NBP") adjusts
-    //    the HEOS fluid library and has no effect on a GERG state, silently.
-    //
-    // Both are bd CoolProp-mh1q.
+    // NOTE: one fail-open hole remains, and cannot be closed from inside this
+    // function: a FluidName with no "::" at all resolves to backend "?" and
+    // takes the HEOS arm above.  That is the documented default -- the string
+    // genuinely carries no backend information -- but it does mean
+    // set_reference_stateS("Methane", "NBP") adjusts the HEOS fluid library
+    // and has no effect on, say, a GERG or SRK state, silently.
 }
 void set_reference_stateD(const std::string& FluidName, double T, double rhomolar, double hmolar0, double smolar0) {
     // Same refusal, same reasoning, as the GERG arm of set_reference_stateS
@@ -1153,10 +1156,11 @@ void set_reference_stateD(const std::string& FluidName, double T, double rhomola
                      backend.c_str()));
         }
     }
-    // NOTE: the same two pre-existing fail-open holes documented at the end of
-    // set_reference_stateS apply here unchanged (bd CoolProp-mh1q): an
-    // unrecognised non-GERG backend prefix, and a bare FluidName with no "::",
-    // both still reach the HEOS path below.
+    // NOTE: unlike set_reference_stateS, a non-GERG backend prefix is not
+    // stripped here: the whole FluidName (e.g. "SRK::Propane") reaches the
+    // HEOS constructor below, which throws because no fluid of that name
+    // exists.  A bare FluidName with no "::" adjusts the HEOS fluid library,
+    // with no effect on a state of any other backend.
     std::vector<std::string> _comps(1, FluidName);
     CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
 

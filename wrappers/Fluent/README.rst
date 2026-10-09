@@ -92,7 +92,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:CoolProp_Build_directory
 
    a. After loading , go to the Materials tab and change the model of each property listed above to user-defined and select the corresponding function (libudf::water_viscosity, libudf::water_density, libudf::water_specificHeat or libudf::water_thermalConductivity)
    
-   b. The fluid is, by default, water. To change the working fluid, you have to change the FLUID[] variable in the CoolProp_Properties_of_Water.c UDF file BEFORE running compile.sh. A full list of fluids supported by Coolprop may be found here: http://www.coolprop.org/FluidInformation.html
+   b. The fluid is, by default, water. To change the working fluid, you have to change the FLUID[] variable in the CoolProp_Properties_of_Water.c UDF file BEFORE running compile.sh. A full list of fluids supported by Coolprop may be found here: https://www.coolprop.org/FluidInformation.html
    Another example is given in CoolProp_Properties_of_Brine.c, the FLUID[] is a mixture between chloride sodium with a 20% concentration
    
    c. If the operating pressure in your Fluent case is different than atmospheric (101325 Pa), you will also have to change gauge pressure variable in CoolProp_Properties_of_Water.c

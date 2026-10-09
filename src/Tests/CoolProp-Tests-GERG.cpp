@@ -1387,9 +1387,9 @@ namespace {
 
 /// The saturation curve of a GERG pure fluid is only reachable where BOTH
 /// limits agree it is: at or above the backend's Tmin (make_gerg_fluid's
-/// min(60 K, Tc) -- so helium and hydrogen, whose reducing temperatures are
+/// fixed 60 K -- so helium and hydrogen, whose reducing temperatures are
 /// 5.20 K and 33.19 K, have NO reachable saturation states at all, since
-/// Tmin == Tc for them) and at or above the low-temperature end of the fitted
+/// Tmin > Tc for them) and at or above the low-temperature end of the fitted
 /// ancillary range (EOS.sat_min_liquid.T, which for the heavy alkanes is far
 /// above 60 K because the saturation pressure there underflows). Returning
 /// false is a legitimate skip, not a silently weakened test: the count of
@@ -1634,8 +1634,8 @@ TEST_CASE("GERG pure fluid saturation converges", "[GERG]") {
 
 TEST_CASE("GERG saturation converges for every component whose dome is in range", "[GERG]") {
     // Sweeps both models. Helium and hydrogen are expected to be skipped
-    // entirely: make_gerg_fluid clamps Tmin to min(60 K, Tc), which for those
-    // two IS Tc, so they have no reachable subcritical state at all. The
+    // entirely: make_gerg_fluid sets Tmin to 60 K, which for those two is
+    // above Tc, so they have no reachable subcritical state at all. The
     // ran/skipped counts are asserted so that a future change which quietly
     // makes MOST fluids unreachable fails here instead of passing vacuously.
     int ran = 0, skipped = 0;
@@ -1949,15 +1949,11 @@ TEST_CASE("GERG refuses set_reference_stateS instead of silently ignoring it", "
     CHECK_THROWS_AS(CoolProp::set_reference_stateS("GERG2008?::Methane", "NBP"), CoolProp::NotImplementedError);
     // ...and a composed tabular string, whose SECOND half is the GERG family.
     CHECK_THROWS_AS(CoolProp::set_reference_stateS("BICUBIC&GERG2008::Methane", "NBP"), CoolProp::NotImplementedError);
-    // Non-GERG backends must NOT start throwing: a guard that over-matches
-    // would break set_reference_stateS for everyone else.  Note these two are
-    // currently silent no-ops for a SEPARATE pre-existing reason (they match
-    // no arm of the dispatch chain at all -- bd CoolProp-mh1q); the assertion
-    // here is only that the GERG guard does not claim them.  If mh1q is fixed
-    // so unrecognised prefixes throw, update these two lines rather than the
-    // GERG guard.
-    CHECK_NOTHROW(CoolProp::set_reference_stateS("SRK::Propane", "NBP"));
-    CHECK_NOTHROW(CoolProp::set_reference_stateS("BICUBIC&HEOS::Methane", "NBP"));
+    // The GERG guard must not over-match: other unsupported backends are
+    // refused by the generic final arm (a ValueError, not the GERG-specific
+    // NotImplementedError), which is what distinguishes the two here.
+    CHECK_THROWS_AS(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), CoolProp::ValueError);
+    CHECK_THROWS_AS(CoolProp::set_reference_stateS("BICUBIC&HEOS::Methane", "NBP"), CoolProp::ValueError);
 
     // ...and the throw is scoped to GERG: HEOS is untouched.  RESET is the
     // restore idiom, chosen because it zeroes the offset rather than setting
@@ -2005,12 +2001,13 @@ TEST_CASE("GERG rejects a non-finite pure-info row", "[GERG]") {
     // policed by the generator.  pure_info_2004()/pure_info_2008_overrides()
     // are an equally hand-transcribed table and had no such guard.
     //
-    // The specific reason it matters here: make_gerg_fluid's next use of
-    // Tc_K is `EOS.limits.Tmin = std::min(60.0, info.Tc_K)`, and std::min
-    // ABSORBS a NaN -- it returns 60.0, a perfectly ordinary-looking limit on
-    // a fluid whose reducing temperature is NaN.  Asserted directly on the
-    // helper, since the shipped tables are (and must remain) all finite, so
-    // there is no fluid name that reaches it.
+    // The specific reason it matters here: Tc_K goes straight into the
+    // reducing state and the ideal-gas integration constants, and the
+    // fluid's limits (the fixed 60-700 K range) do not depend on it, so a
+    // NaN would not show up there; every tau = Tc/T would be NaN with
+    // nothing pointing back at the table.  Asserted directly on the helper,
+    // since the shipped tables are (and must remain) all finite, so there is
+    // no fluid name that reaches it.
     const double nan = std::numeric_limits<double>::quiet_NaN();
     CHECK_NOTHROW(require_finite_pure_info("methane", PureInfo{10.139342719, 190.564, 16.04246}));
     CHECK_THROWS_AS(require_finite_pure_info("methane", PureInfo{nan, 190.564, 16.04246}), CoolProp::ValueError);
@@ -2019,8 +2016,9 @@ TEST_CASE("GERG rejects a non-finite pure-info row", "[GERG]") {
     // ...and infinities, not just NaN.
     const double inf = std::numeric_limits<double>::infinity();
     CHECK_THROWS_AS(require_finite_pure_info("methane", PureInfo{10.139342719, inf, 16.04246}), CoolProp::ValueError);
-    // The std::min-absorbs-NaN mechanism this guard is protecting, pinned so
-    // the comment above cannot rot into a false claim.
+    // std::min absorbs a NaN, so any limit derived from Tc with std::min
+    // would hide it too; pinned because an earlier version derived Tmin
+    // that way.
     CHECK(std::min(60.0, nan) == 60.0);
     // Every shipped row passes, both models.
     for (const auto& model : {GERGModel::GERG_2004, GERGModel::GERG_2008}) {
@@ -2117,7 +2115,7 @@ TEST_CASE("GERG acentric factors satisfy their own definition", "[GERG]") {
             const double T = 0.7 * Tc;
 
             // Helium (T_c = 5.1953 K) and hydrogen (T_c = 33.19 K) have
-            // EOS.limits.Tmin == T_c, so 0.7*T_c is below the range
+            // 0.7*T_c far below the enforced 60 K, so it is below the range
             // check_gerg_range_of_validity lets a caller reach.  That limit is
             // the published operating envelope of the MIXTURE model, not a
             // statement that the pure equation stops working, and omega is a

@@ -150,6 +150,12 @@ class IncompressibleFluid
 
     Polynomial2DFrac poly;
 
+    /// Build the error for a property this fluid carries no fit for.
+    /** Returned, not thrown, so each call site keeps its own throw statement.
+     *  See the definition in IncompressibleFluid.cpp for why.
+     */
+    ValueError notDefinedError(const std::string& property) const;
+
     // Forward declaration of the some internal functions
     //double h_u(double T, double p, double x);
     //double u_h(double T, double p, double x);

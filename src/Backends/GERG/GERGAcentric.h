@@ -25,9 +25,9 @@
 //     p_c/T_c and omega off the same fluid.
 //
 // See dev/gerg/compute_acentric.py for both judgement calls in full, and for
-// why helium and hydrogen -- whose enforced Tmin equals their T_c, so 0.7*T_c
-// is below the range a caller can reach -- are computed the same way as the
-// other 21 rather than left out.
+// why helium and hydrogen -- whose 0.7*T_c is far below the enforced 60 K
+// lower limit, so below the range a caller can reach -- are computed the same
+// way as the other 21 rather than left out.
 //
 // RECOMPUTE WHENEVER A GERG COEFFICIENT TABLE CHANGES.
 // dev/gerg/verify_transcription.py re-derives this whole table and diffs it

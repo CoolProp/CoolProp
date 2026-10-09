@@ -18,7 +18,7 @@ const inputs_to_get_global_param_string = ["version", "gitrevision", "errstring"
 Return a value that does not depend on the thermodynamic state - this is a convenience function that does the call `PropsSI(output, "", 0, "", 0, fluid)`.
 
 # Arguments
-* `fluid::AbstractString`: The name of the fluid that is part of CoolProp, for instance "n-Propane", to get a list of possible values types call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](http://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids), or simply type `?CoolProp_fluids`
+* `fluid::AbstractString`: The name of the fluid that is part of CoolProp, for instance "n-Propane", to get a list of possible values types call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](https://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids), or simply type `?CoolProp_fluids`
 * `output::AbstractString`: The name of parameter to evaluate. to see a list type `?CoolProp_parameters`
 
 # Example
@@ -45,7 +45,7 @@ Return a value that depends on the thermodynamic state.
 > For pure and pseudo-pure fluids, two state points are required to fix the state. The equations of state are based on T and ρ as state variables, so T, ρ will always be the fastest inputs. P, T will be a bit slower (3-10 times), and then comes inputs where neither T nor ρ are given, like p, h. They will be much slower. If speed is an issue, you can look into table-based interpolation methods using TTSE or bicubic interpolation.
 
 # Arguments
-* `fluid::AbstractString`: The name of the fluid that is part of CoolProp, for instance "n-Propane", to get a list of different passible fulid types call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](http://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids)
+* `fluid::AbstractString`: The name of the fluid that is part of CoolProp, for instance "n-Propane", to get a list of different passible fulid types call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](https://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids)
 * `output::AbstractString`: The name of parameter to evaluate. to see a list type `?CoolProp_parameters`
 * `name1::AbstractString`: The name of parameter for first state point
 * `value1::Real`: Value of the first state point
@@ -87,7 +87,7 @@ end
 Return a string representation of the phase. Valid states are: "liquid", "supercritical", "supercritical_gas", "supercritical_liquid", "critical_point", "gas", "twophase"
 
 # Arguments
-* `fluid::AbstractString`: The name of the fluid that is part of CoolProp, for instance "n-Propane", to get a list of different passible fulid types call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](http://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids)
+* `fluid::AbstractString`: The name of the fluid that is part of CoolProp, for instance "n-Propane", to get a list of different passible fulid types call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](https://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids)
 * `name1::AbstractString`: The name of parameter for first state point
 * `value1::Real`: Value of the first state point
 * `name2::AbstractString`: The name of parameter for second state point
@@ -403,7 +403,7 @@ end
 Get information for a parameter.
 
 # Arguments
-* `key`: A string represents parameter name, to see full list check "Table of string inputs to PropsSI function": http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table, or simply type `get_global_param_string("parameter_list")`
+* `key`: A string represents parameter name, to see full list check "Table of string inputs to PropsSI function": https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table, or simply type `get_global_param_string("parameter_list")`
 * `outtype="long"`: Output type, could be one of the `["IO", "short", "long", "units"]`, with a default value of "long"
 
 # Example
@@ -484,7 +484,7 @@ end
 Get the index as a long for a parameter "T", "P", etc, for `abstractstate_keyed_output()` function.
 
 # Arguments
-* `param`: A string represents parameter name, to see full list check "Table of string inputs to PropsSI function": http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table, or simply type `get_global_param_string("parameter_list")`
+* `param`: A string represents parameter name, to see full list check "Table of string inputs to PropsSI function": https://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table, or simply type `get_global_param_string("parameter_list")`
 """
 function get_param_index(param::AbstractString)
     val = ccall( (:get_param_index, "CoolProp"), Clong, (Cstring,), param)
@@ -694,7 +694,7 @@ Generate an AbstractState instance return an integer handle to the state class g
 
 # Arguments
 * `backend`: The backend you will use could be: `["HEOS", "REFPROP", "INCOMP", "IF97", "TREND", "HEOS&TTSE", "HEOS&BICUBIC", "SRK", "PR", "VTPR"]` etc.
-* `fluids`: '&' delimited list of fluids. To get a list of possible values call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](http://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids), or simply type `?CoolProp_fluids`
+* `fluids`: '&' delimited list of fluids. To get a list of possible values call `get_global_param_string(key)` with `key` one of the following: `["FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "predefined_mixtures"]`, also there is a list in CoolProp online documentation [List of Fluids](https://www.coolprop.org/fluid_properties/PurePseudoPure.html#list-of-fluids), or simply type `?CoolProp_fluids`
 
 # Example
 ```julia

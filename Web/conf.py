@@ -18,6 +18,8 @@
 # built documents.
 #
 
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -56,10 +58,32 @@ else:
 print("------------ Project information ------------")
 print("Detected version: %s" % version)
 print("Detected release: %s" % release)
-print("Public release  : %s" % "True" if isRelease else "False")
+print("Public release  : %s" % ("True" if isRelease else "False"))
 print("")
 
-extlinks = {'sfdownloads': (f'https://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
+# Release folder used by the :sfdownloads: role.  Development builds
+# (e.g. 8.1.0dev) have no folder on SourceForge, so point them at the latest
+# release instead: the highest git tag of the form vX.Y[.Z] (tags with a
+# non-numeric suffix such as v7.1.0bis, or not starting with "v", are skipped).
+sf_release_fallback = "8.0.0"  # used when git or the release tags are unavailable
+
+def latest_release_tag(default):
+    tags = []
+    try:
+        out = subprocess.run(['git', 'tag', '--list', 'v*'], capture_output=True,
+                             text=True, check=True, cwd=os.path.dirname(os.path.abspath(__file__))).stdout
+        tags = [t for t in out.split() if re.fullmatch(r'v\d+(\.\d+)*', t)]
+    except (OSError, subprocess.CalledProcessError) as e:
+        print("WARNING: could not list git tags (%s)" % e)
+    if tags:
+        return max(tags, key=lambda t: tuple(int(n) for n in t[1:].split('.')))[1:]
+    print("WARNING: no release tags found via git; using sf_release_fallback = %s" % default)
+    return default
+
+sf_release = release if isRelease else latest_release_tag(sf_release_fallback)
+print("SourceForge release folder for :sfdownloads: %s" % sf_release)
+
+extlinks = {'sfdownloads': (f'https://sourceforge.net/projects/coolprop/files/CoolProp/{sf_release}/%s', f'{sf_release} %s'),
             'sfnightly': ('https://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
             }
 import sys, os, datetime
@@ -181,9 +205,16 @@ copyright = u'2010-{0}, Ian H. Bell and the CoolProp Team'.format(d.year)
 # List of documents that shouldn't be included in the build.
 #unused_docs = []
 
-# List of directories, relative to source directory, that shouldn't be searched
-# for source files.
-exclude_trees = ['_build', 'sphinxext']
+# Patterns, relative to the source directory, that shouldn't be searched for
+# source files.  (This replaces the obsolete 'exclude_trees' option, which
+# current Sphinx ignores; without it _build/ was read as source.)
+exclude_patterns = ['_build', 'sphinxext',
+                    # Per-fluid consistency report fragments.  They are pulled into
+                    # the fluid pages with ``.. include::`` and are not pages of
+                    # their own: built standalone, their relative :download: paths
+                    # do not resolve and they are in no toctree.
+                    'fluid_properties/fluids/Consistencyplots/*-report.rst',
+                    'fluid_properties/fluids/Consistencyplots_REFPROP/*-report.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -217,6 +248,14 @@ autoclass_content = 'both'
 # Fix the bibtext extension
 bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
+# Modules that are not installed in the docs environment (wxPython GUI, the
+# Python 2 ConfigParser, pytest) or no longer exist in matplotlib (the wx and
+# Qt4 backends, and PyQt4) but are imported by modules that apidoc lists.
+# Mocking them lets autodoc import those modules instead of warning.
+autodoc_mock_imports = ['wx', 'ConfigParser', 'pytest',
+                        'matplotlib.backends.backend_wxagg',
+                        'matplotlib.backends.backend_qt4agg', 'PyQt4']
+
 # -- Options for the linkcheck builder -----------------------------------------
 # `make linkcheck` (also run non-blocking in CI) reports dead URLs.  Tune it so
 # the signal is useful and not drowned in false positives.
@@ -226,6 +265,19 @@ linkcheck_workers = 10
 # Don't check intra-page #anchors — many target sites are JS-rendered and report
 # spurious anchor-missing failures.
 linkcheck_anchors = False
+# Many publishers and project sites return 403 to the default "python-requests"
+# User-Agent but serve the same page to a browser.  Send browser-like headers to
+# every host so only genuinely broken links are reported.  (Do not also set
+# linkcheck_allowed_redirects: it turns every unlisted redirect into a warning.)
+linkcheck_request_headers = {
+    "*": {
+        "User-Agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"),
+        "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
+                   "image/avif,image/webp,*/*;q=0.8"),
+        "Accept-Language": "en-US,en;q=0.9",
+    },
+}
 linkcheck_ignore = [
     # Intentional placeholders that are not real URLs.
     r'https?://YOURUSERNAME\.pythonanywhere\.com.*',
@@ -239,6 +291,20 @@ linkcheck_ignore = [
     r'https?://www\.tandfonline\.com/.*',
     r'https?://braumeister\.org/.*',
     r'https?://.*\.amazonaws\.com/.*',
+    # Hosts that still return 403 to automated requests even with browser-like
+    # headers (bot detection); these are normal sites that open in a browser.
+    r'https?://([^/]+\.)?sourceforge\.net/.*',
+    r'https?://pubs\.aip\.org/.*',
+    r'https?://([^/]+\.)?onlinelibrary\.wiley\.com/.*',
+    r'https?://stackoverflow\.com/.*',
+    r'https?://bcbjournal\.org/.*',
+    r'https?://scholar\.google\.com/.*',
+    # doi.org links are checked as written, so ignore rules cannot see the
+    # publisher they redirect to.  Ignore the DOI prefixes of the publishers
+    # that answer 403 to automated requests: 10.1002 Wiley, 10.1063 AIP,
+    # 10.1103 APS, 10.2118 SPE/OnePetro.  (A dead DOI with one of these
+    # prefixes will not be reported; DOIs of other publishers are still checked.)
+    r'https?://(dx\.)?doi\.org/10\.(1002|1063|1103|2118)/.*',
 ]
 
 # -- Options for HTML output ---------------------------------------------------
