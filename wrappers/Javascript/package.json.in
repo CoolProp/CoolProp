@@ -22,10 +22,8 @@
   "type": "module",
   "main": "coolprop.js",
   "module": "coolprop.js",
-  "types": "coolprop.d.ts",
   "exports": {
     ".": {
-      "types": "./coolprop.d.ts",
       "import": "./coolprop.js",
       "default": "./coolprop.js"
     },
@@ -34,7 +32,6 @@
   "files": [
     "coolprop.js",
     "coolprop.wasm",
-    "coolprop.d.ts",
     "README.md"
   ],
   "engines": {

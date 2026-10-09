@@ -88,8 +88,8 @@ jobs:
     #     file_glob: false
 
   # Publishes the staged install tree (install_root/Javascript contains
-  # coolprop.js, coolprop.wasm, package.json, README.md, coolprop.d.ts and
-  # LICENSE) to npm as the 'coolprop' package -- gh discussion #2665.
+  # coolprop.js, coolprop.wasm, package.json, README.md and LICENSE) to npm
+  # as the 'coolprop' package -- gh discussion #2665.
   # Requires the NPM_TOKEN repository secret (an npm granular access token
   # with publish rights on the package).  Tag builds publish to the 'latest'
   # dist-tag; manual dispatch runs dry-run by default, and a non-tag manual

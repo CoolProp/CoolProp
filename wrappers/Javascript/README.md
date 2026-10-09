@@ -53,7 +53,7 @@ Full documentation of the high-level (`PropsSI`, `HAPropsSI`, ...) and
 low-level (`AbstractState`) interfaces is at
 <https://coolprop.github.io/coolprop/>, and a live demo in the
 [CoolPropJavascriptDemo](https://github.com/dvd101x/CoolPropJavascriptDemo)
-repository. TypeScript declarations are included (`coolprop.d.ts`).
+repository.
 
 ## License
 

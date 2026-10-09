@@ -2129,7 +2129,6 @@ if(COOLPROP_JAVASCRIPT_MODULE)
           DESTINATION Javascript)
   install(
     FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/README.md"
-          "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/coolprop.d.ts"
           "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
     DESTINATION Javascript)
 
