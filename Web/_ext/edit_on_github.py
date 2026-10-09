@@ -44,3 +44,7 @@ def setup(app):
     app.add_config_value('edit_on_github_branch', 'master', True)
     app.add_config_value('edit_on_github_path_prefix', '', True)
     app.connect('html-page-context', html_page_context)
+
+    # The extension only adds URLs to the page context at write time and keeps
+    # no state while reading, so it is safe for Sphinx's parallel build (-j).
+    return {'parallel_read_safe': True, 'parallel_write_safe': True}
