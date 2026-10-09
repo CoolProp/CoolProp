@@ -81,7 +81,8 @@ jobs:
           ./Web/fluid_properties/Incompressibles_mole-based-fluids.csv
           ./Web/fluid_properties/Incompressibles_volume-based-fluids.csv
           ./Web/fluid_properties/Incompressibles_pure-fluids.csv
-          ./Web/scripts/incompressibles_consistency
+          ./Web/_static/fluid_properties/incompressibles_consistency.jpg
+          ./Web/_static/fluid_properties/incompressibles_consistency.pdf
         # Key depends on the fluid list so adding/removing a fluid invalidates
         # the cache and triggers a consistency-plot refresh for the new fluid.
         # The restore-keys fallback still seeds the directory with prior plots
