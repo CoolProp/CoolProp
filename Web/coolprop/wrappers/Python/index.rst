@@ -10,7 +10,7 @@ PyFluids (3-party wrapper)
 ==========================
 
 It is a simple, full-featured, lightweight CoolProp wrapper for Python.
-PyFluids gets published on `PyPI <https://pypi.org/project/pyfluids/>`_,  so you can easily install it using: ::
+PyFluids gets published on `PyPI <https://pypi.org/project/pyfluids/>`__,  so you can easily install it using: ::
 
     pip install pyfluids
 
@@ -363,7 +363,7 @@ Getting the latest CoolProp version in Pyodide
 Historically, the Pyodide project has bundled CoolProp as part of the Pyodide distribution 
 (beginning with Pyodide 0.24.0). This locked the CoolProp version to the version
 bundled with Pyodide. Versions of Pyodide 0.28.x and later are able to load compiled Python 
-packages from `PyPI <https://pypi.org/>`_ as part of the implementation of 
+packages from `PyPI <https://pypi.org/>`__ as part of the implementation of 
 `PEP 783 <https://peps.python.org/pep-0783/>`_. Starting with 
 CoolProp 8.1.0, CoolProp WebAssembly wheels are provided on PyPI. However, for versions 
 of Pyodide that bundle CoolProp, the version of CoolProp needs to be specified as 
