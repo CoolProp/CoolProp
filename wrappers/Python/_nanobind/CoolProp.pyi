@@ -1534,7 +1534,7 @@ class Expression:
 
     Construct from the JSON text of a `"type": "expression"` block
     ({"formula": ..., "state_variables": [...], "constants": {...},
-     "arrays": {...}}), then evaluate it at a state.
+    "arrays": {...}}), then evaluate it at a state.
 
     `state_variables` lists the thermodynamic quantities the formula reads,
     in CoolProp's own spelling ("T", "P", "Dmolar", "Smolar_residual",
