@@ -10,7 +10,7 @@ CoolProp Wrapper for Legacy Mathcad (32-bit) - Discontinued
 Pre-compiled binaries (up to CoolProp v6.4.1)
 =============================================
 
-Pre-compiled binaries can be downloaded from :sfdownloads:`MathCAD15`.  These binaries are no longer generated as of CoolProp version 6.4.2 and there are no nightly builds.  If you have a perpetual Legacy Mathcad license, you can attempt to build your own User-Compiled Binary using the instructions further below.
+Pre-compiled binaries can be downloaded from `6.4.1 Mathcad 15 <https://sourceforge.net/projects/coolprop/files/CoolProp/6.4.1/MathCAD15/>`_.  These binaries are no longer generated as of CoolProp version 6.4.2 and there are no nightly builds.  If you have a perpetual Legacy Mathcad license, you can attempt to build your own User-Compiled Binary using the instructions further below.
 
 To Use
 ------

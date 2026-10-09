@@ -208,7 +208,13 @@ copyright = u'2010-{0}, Ian H. Bell and the CoolProp Team'.format(d.year)
 # Patterns, relative to the source directory, that shouldn't be searched for
 # source files.  (This replaces the obsolete 'exclude_trees' option, which
 # current Sphinx ignores; without it _build/ was read as source.)
-exclude_patterns = ['_build', 'sphinxext']
+exclude_patterns = ['_build', 'sphinxext',
+                    # Per-fluid consistency report fragments.  They are pulled into
+                    # the fluid pages with ``.. include::`` and are not pages of
+                    # their own: built standalone, their relative :download: paths
+                    # do not resolve and they are in no toctree.
+                    'fluid_properties/fluids/Consistencyplots/*-report.rst',
+                    'fluid_properties/fluids/Consistencyplots_REFPROP/*-report.rst']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

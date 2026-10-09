@@ -887,7 +887,7 @@ def render_rst(results_per_backend, counts_per_backend, timings, figure_paths_pe
     lines.append('')
     lines.append(
         'Conformance is measured against the '
-        ':ref:`IAPWS G13-15 Tables 8-13 <IAPWS-IF97>` (Kunick et al., 2015) '
+        '`IAPWS G13-15 Tables 8-13 <https://iapws.org/technical-guidance/release/SBTL>`__ (Kunick et al., 2015) '
         'protocol: for each IF97 region we draw {n} random :math:`(p, T)` '
         'samples log-uniform in :math:`p` and uniform in :math:`T`, '
         'classify them into the IF97 region atlas, compute '
