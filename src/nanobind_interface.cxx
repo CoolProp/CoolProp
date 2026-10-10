@@ -1199,7 +1199,7 @@ void init_CoolProp(nb::module_& m) {
                                             "A compiled transport-property expression block.\n\n"
                                             "Construct from the JSON text of a `\"type\": \"expression\"` block\n"
                                             "({\"formula\": ..., \"state_variables\": [...], \"constants\": {...},\n"
-                                            " \"arrays\": {...}}), then evaluate it at a state.\n\n"
+                                            "\"arrays\": {...}}), then evaluate it at a state.\n\n"
                                             "`state_variables` lists the thermodynamic quantities the formula reads,\n"
                                             "in CoolProp's own spelling (\"T\", \"P\", \"Dmolar\", \"Smolar_residual\",\n"
                                             "...).  It is opt-in: a name not declared there is never state, so a\n"

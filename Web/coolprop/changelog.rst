@@ -952,7 +952,7 @@ Pull requests merged:
 * `#2963 <https://github.com/CoolProp/CoolProp/pull/2963>`__ : fix(svdsbtl): atomic write-temp + rename for cache files (CoolProp-4no.2)
 * `#2964 <https://github.com/CoolProp/CoolProp/pull/2964>`__ : docs(svdsbtl): interactive SVDSBTL-vs-HEOS validation page (CoolProp-4no.4)
 * `#2965 <https://github.com/CoolProp/CoolProp/pull/2965>`__ : feat(svdsbtl): SaturationSurrogate cubic-spline cache for REFPROP source (CoolProp-077)
-* `#2966 <https://github.com/CoolProp/CoolProp/pull/2966>`__ : fix(svdsbtl): gate polish_patch_state_ to IF97 source only
+* `#2966 <https://github.com/CoolProp/CoolProp/pull/2966>`__ : fix(svdsbtl): gate ``polish_patch_state_`` to IF97 source only
 * `#2967 <https://github.com/CoolProp/CoolProp/pull/2967>`__ : feat(svdsbtl): NC near-critical sub-regions with POWER(β=1/3) axis (CoolProp-4u9)
 * `#2968 <https://github.com/CoolProp/CoolProp/pull/2968>`__ : feat(dev): SVDSBTL per-region sizing harness (CoolProp-6oe)
 * `#2970 <https://github.com/CoolProp/CoolProp/pull/2970>`__ : fix(wasm): pin emsdk to CI sha + add mixture set_mole_fractions test
