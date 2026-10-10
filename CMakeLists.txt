@@ -395,6 +395,21 @@ endif(DEFINED DARWIN_USE_LIBCPP)
 # match this version, so bump the variables above before tagging a release.
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
+# npm requires strict SemVer, so the PEP 440-style COOLPROP_VERSION above
+# cannot be used verbatim in package.json: "8.0.1dev" -> "8.0.1-dev.0",
+# "8.0.0b1" -> "8.0.0-b1.0", "" -> "8.0.1".  A dash suffix is a SemVer
+# prerelease, so pre-releases sort before the final release on npm,
+# mirroring PEP 440 ordering.  Used by wrappers/Javascript/package.json.in.
+if(COOLPROP_VERSION_REVISION STREQUAL "")
+  set(COOLPROP_VERSION_NPM
+      "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}"
+  )
+else()
+  set(COOLPROP_VERSION_NPM
+      "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}-${COOLPROP_VERSION_REVISION}.0"
+  )
+endif()
+
 string(TIMESTAMP COOLPROP_YEAR 2010-%Y)
 #set ( COOLPROP_YEAR "2010-2016" )
 set(COOLPROP_PUBLISHER "The CoolProp developers")
@@ -2102,6 +2117,21 @@ if(COOLPROP_JAVASCRIPT_MODULE)
           DESTINATION Javascript)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/coolprop.wasm"
           DESTINATION Javascript)
+
+  # npm package scaffolding (gh discussion #2665): package.json is
+  # configured with the SemVer version (COOLPROP_VERSION_NPM above) so the
+  # staged tree under install_root/Javascript is directly publishable with
+  # `npm publish` -- see the publish_npm job in javascript_builder.yml.
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/package.json.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/package.json" @ONLY)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/package.json"
+          DESTINATION Javascript)
+  install(
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Javascript/README.md"
+          "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+    DESTINATION Javascript)
+
   #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt" DESTINATION ${CMAKE_INSTALL_PREFIX}/Javascript)
   install(
     FILES

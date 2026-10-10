@@ -5,6 +5,36 @@ Javascript Wrapper
 ******************
 
 
+npm (recommended)
+=================
+
+The official WebAssembly build is published to npm as
+`coolprop <https://www.npmjs.com/package/coolprop>`_::
+
+    npm install coolprop
+
+.. code-block:: js
+
+    import Module from 'coolprop';
+
+    const coolprop = await Module();
+    console.log('NBP of water in K:', coolprop.PropsSI('T', 'P', 101325, 'Q', 0, 'Water'));
+
+The package ships ``coolprop.js`` (an ES6 module) and ``coolprop.wasm``, along
+with TypeScript declarations.  The wasm binary is resolved relative to the
+module with ``import.meta.url``, so bundlers like Vite and webpack pick it up
+automatically; if you serve the assets from a custom location, pass
+``locateFile`` to the module factory:
+
+.. code-block:: js
+
+    const coolprop = await Module({locateFile: (file) => `/wasm/${file}`});
+
+Publishing is done by CI on version tags (see
+`.github/workflows/javascript_builder.yml`), so published versions follow the
+CoolProp releases; maintainers only need the ``NPM_TOKEN`` secret configured
+in the repository settings.
+
 Pre-Compiled Binaries
 =====================
 
