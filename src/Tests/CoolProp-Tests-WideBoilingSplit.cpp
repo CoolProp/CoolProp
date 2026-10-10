@@ -26,6 +26,8 @@
 
 #    include "CoolProp/AbstractState.h"
 #    include "CoolProp/DataStructures.h"
+#    include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#    include "../Backends/Helmholtz/VLERoutines.h"
 
 #    include <algorithm>
 #    include <cmath>
@@ -298,6 +300,292 @@ TEST_CASE("Wide-boiling split: single-phase states off the envelope stay single-
         DYNAMIC_SECTION(c.backend << " " << c.fluids << " z0=" << c.z[0] << " T=" << c.T << " x" << c.factor << " of Q=" << c.Q_boundary
                                   << " pressure") {
             check_single_phase_off_boundary(c.backend, c.fluids, c.z, c.T, c.Q_boundary, c.factor);
+        }
+    }
+}
+
+// --- Sub-backend phase hygiene and state independence -------------------------------------------------
+// The SatL / SatV sub-backends are created with a liquid / gas phase imposed, and that imposed phase acts as a
+// branch selector for every density solve on them.  A flash that leaves them with no (or the wrong) imposed
+// phase -- e.g. a bare specify_phase()/unspecify_phase() pair, or one interrupted by a throw -- silently
+// changes every LATER flash on the same backend.  These tests pin both halves of that contract.
+
+namespace {
+
+// Natural-gas-like 5-component mixture whose benchmark sequence exposed the leak (GERG-2008).
+const char* const N2MIX_FLUIDS = "Nitrogen&Methane&Ethane&n-Butane&n-Pentane";
+const std::vector<double> N2MIX_Z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+const char* const AMARILLO_FLUIDS = "Methane&Nitrogen&CarbonDioxide&Ethane&Propane&IsoButane&n-Butane&Isopentane&n-Pentane&n-Hexane";
+const std::vector<double> AMARILLO_Z = {0.906724, 0.031284, 0.004676, 0.045279, 0.00828, 0.001037, 0.001563, 0.000321, 0.000443, 0.000393};
+
+struct TP
+{
+    double T, p;
+};
+// Exact states from the 2000-state benchmark sequence (seed 42).  N2MIX_THROWER is the flash whose
+// feed-density fallback threw and, before the fix, left SatL with a GAS phase imposed for good; the three
+// N2MIX_SPLITS are two-phase states that were then published single-phase.
+const TP N2MIX_THROWER = {193.6161018699774, 3264240.6120160879};
+const TP N2MIX_SPLITS[] = {
+  {105.53449217556991, 12240237.163369412}, {112.56308294554636, 12202073.496515781}, {115.91656425615635, 5090636.8002782827}};
+// Amarillo at ~180 K, 5-10 MPa: a near-pure n-hexane liquid trial reports instability (possibly a genuine
+// methane/n-hexane liquid-liquid split) that the split solver cannot follow ("lost a phase density solve").
+const TP AMARILLO_LLE[] = {{179.71102122230218, 9845253.2507431675},
+                           {186.17175133436808, 5170463.8953728043},
+                           {182.40775807259934, 6712188.8902760586},
+                           {181.83245805823532, 6415294.9663369628}};
+
+HelmholtzEOSMixtureBackend& as_heos(AbstractState& AS) {
+    auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(&AS);
+    REQUIRE(H != nullptr);
+    return *H;
+}
+
+void check_sub_backend_phases(HelmholtzEOSMixtureBackend& H) {
+    REQUIRE(H.SatL);
+    REQUIRE(H.SatV);
+    CHECK(H.SatL->imposed_phase() == iphase_liquid);
+    CHECK(H.SatV->imposed_phase() == iphase_gas);
+}
+
+void flash_ignoring_errors(AbstractState& AS, double T, double p) {
+    try {
+        AS.update(PT_INPUTS, p, T);
+    } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+        // a throwing flash is allowed here; what is under test is the state it leaves behind
+    }
+}
+
+}  // namespace
+
+TEST_CASE("Wide-boiling split: PT flash leaves the SatL / SatV imposed phases unchanged", "[flash][mixture]") {
+    SECTION("HEOS CO2/water, near-pure water liquid out of the gas") {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "CarbonDioxide&Water"));
+        AS->set_mole_fractions({0.98, 0.02});
+        check_sub_backend_phases(as_heos(*AS));
+        for (const double p : {1.0e5, 1.6e5, 5.0e5, 6.0e6}) {
+            flash_ignoring_errors(*AS, 298.0, p);
+            CAPTURE(p);
+            check_sub_backend_phases(as_heos(*AS));
+        }
+    }
+    SECTION("HEOS H2/n-decane, near-pure H2 vapour out of the liquid") {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Hydrogen&n-Decane"));
+        AS->set_mole_fractions({0.02, 0.98});
+        for (const double p : {1.0e6, 3.5e6, 7.3e6, 9.0e6}) {
+            flash_ignoring_errors(*AS, 300.0, p);
+            CAPTURE(p);
+            check_sub_backend_phases(as_heos(*AS));
+        }
+    }
+    SECTION("GERG-2008 N2/C1/C2/nC4/nC5, including a flash that throws inside the stability test") {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", N2MIX_FLUIDS));
+        AS->set_mole_fractions(N2MIX_Z);
+        // On the reference platform (Linux, GCC) this flash throws inside the stability test's feed-density
+        // fallback, the path that used to leak; elsewhere it may not throw, in which case this section only
+        // checks the normal path (the ScopedImposedPhase test below covers the unwinding contract directly).
+        flash_ignoring_errors(*AS, N2MIX_THROWER.T, N2MIX_THROWER.p);
+        check_sub_backend_phases(as_heos(*AS));
+        for (const auto& s : N2MIX_SPLITS) {
+            flash_ignoring_errors(*AS, s.T, s.p);
+            CAPTURE(s.T, s.p);
+            check_sub_backend_phases(as_heos(*AS));
+        }
+    }
+    SECTION("GERG-2008 Amarillo at the liquid-liquid-like states") {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", AMARILLO_FLUIDS));
+        AS->set_mole_fractions(AMARILLO_Z);
+        for (const auto& s : AMARILLO_LLE) {
+            flash_ignoring_errors(*AS, s.T, s.p);
+            CAPTURE(s.T, s.p);
+            check_sub_backend_phases(as_heos(*AS));
+        }
+    }
+}
+
+TEST_CASE("Wide-boiling split: ScopedImposedPhase restores the imposed phase, also when unwinding", "[flash][mixture]") {
+    // The exception-safety contract the stability test and the flash rely on, tested directly (the flash-level
+    // tests below depend on a particular state actually throwing, which can vary across platforms).
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Methane&Ethane"));
+    auto& H = as_heos(*AS);
+    REQUIRE(H.SatL);
+    HelmholtzEOSMixtureBackend& L = *H.SatL;
+    REQUIRE(L.imposed_phase() == iphase_liquid);
+    SECTION("normal exit") {
+        {
+            const ScopedImposedPhase gas(L, iphase_gas);
+            CHECK(L.imposed_phase() == iphase_gas);
+        }
+        CHECK(L.imposed_phase() == iphase_liquid);
+    }
+    SECTION("exit by exception") {
+        try {
+            const ScopedImposedPhase gas(L, iphase_gas);
+            throw CoolProp::ValueError("simulated density-solve failure");
+        } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+        }
+        CHECK(L.imposed_phase() == iphase_liquid);
+    }
+    SECTION("lifting the imposed phase, nested scopes, inactive scope") {
+        {
+            const ScopedImposedPhase none(L, iphase_not_imposed);
+            CHECK(L.imposed_phase() == iphase_not_imposed);
+            {
+                const ScopedImposedPhase gas(L, iphase_gas);
+                CHECK(L.imposed_phase() == iphase_gas);
+            }
+            CHECK(L.imposed_phase() == iphase_not_imposed);
+            const ScopedImposedPhase inactive(L, iphase_gas, false);
+            CHECK(L.imposed_phase() == iphase_not_imposed);
+        }
+        CHECK(L.imposed_phase() == iphase_liquid);
+    }
+}
+
+TEST_CASE("Wide-boiling split: PT flash result does not depend on the previous flash", "[flash][mixture]") {
+    // Fresh backend per state vs one backend that first ran the flash that used to leave SatL with a gas
+    // phase imposed: the three two-phase states must come out identically.
+    std::shared_ptr<AbstractState> seq(AbstractState::factory("GERG2008", N2MIX_FLUIDS));
+    seq->set_mole_fractions(N2MIX_Z);
+    flash_ignoring_errors(*seq, N2MIX_THROWER.T, N2MIX_THROWER.p);
+    for (const auto& s : N2MIX_SPLITS) {
+        std::shared_ptr<AbstractState> fresh(AbstractState::factory("GERG2008", N2MIX_FLUIDS));
+        fresh->set_mole_fractions(N2MIX_Z);
+        CAPTURE(s.T, s.p);
+        REQUIRE_NOTHROW(fresh->update(PT_INPUTS, s.p, s.T));
+        REQUIRE_NOTHROW(seq->update(PT_INPUTS, s.p, s.T));
+        CHECK(fresh->phase() == iphase_twophase);
+        CHECK(seq->phase() == fresh->phase());
+        CHECK(seq->Q() == Catch::Approx(fresh->Q()).epsilon(1e-9));
+        CHECK(seq->rhomolar() == Catch::Approx(fresh->rhomolar()).epsilon(1e-9));
+    }
+}
+
+TEST_CASE("Wide-boiling split: an instability the split solver cannot follow does not make the flash throw", "[flash][mixture]") {
+    // Before the near-pure stability trials these states were answered single-phase; a near-pure trial now
+    // reports an instability there, and the flash must fall back to an answer rather than throw.  Whether the
+    // state is truly single-phase (or a methane/n-hexane liquid-liquid split) is NOT asserted here.
+    for (const auto& s : AMARILLO_LLE) {
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", AMARILLO_FLUIDS));
+        AS->set_mole_fractions(AMARILLO_Z);
+        CAPTURE(s.T, s.p);
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+        CHECK(std::isfinite(AS->rhomolar()));
+        CHECK(AS->rhomolar() > 0);
+    }
+}
+
+TEST_CASE("Wide-boiling split: the stability test's density solve never returns an unstable-branch root", "[flash][mixture]") {
+    // GitHub #3448: for a water-rich liquid, solver_rho_Tp_global (on a backend with a phase imposed, as on
+    // SatL / SatV) returns the mechanically unstable middle root (~47.8 kmol/m3, dp/drho < 0) instead of the
+    // liquid root (~55.3 kmol/m3).  The guarded solve used by the stability test must return the latter, and
+    // must leave the backend's imposed phase as it found it.
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "CarbonDioxide&Water"));
+    auto& H = as_heos(*AS);
+    H.set_mole_fractions({1e-6, 1 - 1e-6});
+    const double T = 298.0, p = 1.5964e5;
+    double rho_liquid = -1;
+    {
+        const ScopedImposedPhase liquid(H, iphase_liquid);
+        rho_liquid = H.solver_rho_Tp(T, p);
+    }
+    REQUIRE(rho_liquid > 5.0e4);  // sanity: the phase-specified solve finds liquid water
+    for (const phases imposed : {iphase_liquid, iphase_gas}) {
+        CAPTURE(imposed);
+        const ScopedImposedPhase scope(H, imposed);
+        bool replaced = false;
+        const double rho = SaturationSolvers::solve_rho_Tp_global_stable(H, T, p, &replaced);
+        H.update_DmolarT_direct(rho, T);
+        // While #3448 is open the plain global solver returns the unstable root here, so the guard replaces
+        // it.  Not asserted, so this test keeps passing once #3448 is fixed; the INFO is reported only when a
+        // check below fails.
+        INFO("guard replaced the global root: " << replaced);
+        CHECK(H.first_partial_deriv(iP, iDmolar, iT) > 0);
+        CHECK(rho == Catch::Approx(rho_liquid).epsilon(1e-6));
+        CHECK(H.imposed_phase() == imposed);
+    }
+}
+
+TEST_CASE("Wide-boiling split: water drops out of compressed humid air without the flash throwing", "[flash][mixture]") {
+    // Humid air (x_w = 0.02, GERG-2008) at 360-400 K and 11-27 MPa: the water partial pressure is several times
+    // its saturation pressure, so ~1 % of the feed condenses as near-pure liquid water.  The stability test
+    // finds it with an ordinary Wilson trial, but the split solver's first Rachford-Rice step puts the vapor
+    // exactly on the feed, and a cold global density solve for it threw "One stationary point", so the flash
+    // threw "PT flash lost a phase density solve" (60 of 2000 states of the benchmark sequence, also on master).
+    // Each published phase is re-evaluated here at its own density: equal pressures and fugacities, and a
+    // closed material balance.
+    const char* const fluids = "Nitrogen&Oxygen&Argon&CarbonDioxide&Water";
+    const std::vector<double> z = {0.7654, 0.2053, 0.0090, 0.0003, 0.02};
+    const TP states[] = {{359.9932689, 14588684.14}, {376.4715673, 17787839.36}, {401.7300373, 27160874.81}};
+    for (const auto& s : states) {
+        CAPTURE(s.T, s.p);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", fluids));
+        AS->set_mole_fractions(z);
+        REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+        REQUIRE(AS->phase() == iphase_twophase);
+        const double Q = AS->Q();
+        CHECK(Q > 0.98);
+        CHECK(Q < 1.0);
+        std::vector<double> x, y;
+        for (auto v : AS->mole_fractions_liquid())
+            x.push_back(static_cast<double>(v));
+        for (auto v : AS->mole_fractions_vapor())
+            y.push_back(static_cast<double>(v));
+        REQUIRE(x.size() == z.size());
+        REQUIRE(y.size() == z.size());
+        CHECK(x[4] > 0.999);  // near-pure liquid water
+        std::shared_ptr<AbstractState> L(AbstractState::factory("GERG2008", fluids)), V(AbstractState::factory("GERG2008", fluids));
+        L->set_mole_fractions(x);
+        V->set_mole_fractions(y);
+        // Impose the phases so the D,T update evaluates the EOS at the published densities, without a flash.
+        L->specify_phase(iphase_liquid);
+        V->specify_phase(iphase_gas);
+        L->update(DmolarT_INPUTS, AS->saturated_liquid_keyed_output(iDmolar), s.T);
+        V->update(DmolarT_INPUTS, AS->saturated_vapor_keyed_output(iDmolar), s.T);
+        // 1e-7, not tighter: liquid water's stiffness amplifies the density solver's tolerance ~150x in pressure.
+        CHECK(L->p() == Catch::Approx(s.p).epsilon(1e-7));
+        CHECK(V->p() == Catch::Approx(s.p).epsilon(1e-7));
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            CAPTURE(i, x[i], y[i]);
+            const double lnfL = std::log(x[i] * L->fugacity_coefficient(i));
+            const double lnfV = std::log(y[i] * V->fugacity_coefficient(i));
+            CHECK(std::isfinite(lnfL));
+            CHECK(std::isfinite(lnfV));
+            CHECK(std::abs(lnfL - lnfV) < 1e-6);  // false for NaN
+            CHECK(std::abs((1 - Q) * x[i] + Q * y[i] - z[i]) < 1e-8);
+        }
+    }
+}
+
+TEST_CASE("Wide-boiling split: no trivial near-critical split of Amarillo natural gas from the Wilson recovery", "[flash][mixture]") {
+    // Dense single-phase Amarillo (GERG-2008) above its cricondenbar, where the PQ dew solve has no solution.
+    // The stability test calls these states stable, so the flash tries its speculative Wilson-seeded split; that
+    // refinement lands on the trivial solution (max|x - y| ~1.3e-6, rho_L / rho_V = 1.0000, beta = 1 - 1.6e-10) and
+    // the recovery's 1e-4 fugacity tolerance accepted it while the spread floor was a fixed 1e-6: a band about 1 K
+    // wide was published two-phase (all eight sections below fail without the fix).  Both seeds are states of Ian
+    // Bell's PT benchmark (seed 42, Amarillo).  The assertion is the invariant itself, whatever path the flash takes:
+    // a published split must have distinct phases -- so a correct future envelope reaching these states stays legal.
+    struct S
+    {
+        double T, p;
+    };
+    for (const S s : {S{243.1652681, 8594655.704}, S{246.7349277, 7987558.523}}) {
+        for (const double dT : {-1.0, -0.3, 0.0, 0.3}) {
+            DYNAMIC_SECTION("T=" << s.T + dT << " p=" << s.p) {
+                std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", AMARILLO_FLUIDS));
+                AS->set_mole_fractions(AMARILLO_Z);
+                REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T + dT));
+                if (AS->phase() == iphase_twophase) {
+                    double spread = 0;
+                    const auto x = AS->mole_fractions_liquid(), y = AS->mole_fractions_vapor();
+                    for (std::size_t i = 0; i < x.size(); ++i)
+                        spread = std::max(spread, std::abs(static_cast<double>(x[i] - y[i])));
+                    const double rL = AS->saturated_liquid_keyed_output(iDmolar), rV = AS->saturated_vapor_keyed_output(iDmolar);
+                    CAPTURE(AS->Q(), spread, rL, rV);
+                    CHECK(spread >= 1e-4);
+                    CHECK(std::abs(rL / rV - 1.0) > 1e-3);
+                }
+            }
         }
     }
 }

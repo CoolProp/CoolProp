@@ -10,6 +10,7 @@
 #    include <string>
 #    include <vector>
 #    include <sstream>
+#    include <iomanip>
 #    include <catch2/catch_all.hpp>
 #    include "../Backends/Helmholtz/VLERoutines.h"
 #    include <Eigen/Dense>
@@ -20,6 +21,62 @@
 using namespace CoolProp;
 
 namespace {
+
+// A published PT state of a HEOS mixture is valid: single phase with a positive density, or a genuine split -- two
+// distinct phases whose PUBLISHED densities reproduce the target pressure, at equal (finite) fugacity, with a Gibbs
+// energy no higher than the single-phase liquid's (the reference for the liquid-like states this is used on).
+// Used where a flash may legitimately find a (tiny) liquid-liquid split the model predicts, e.g. HEOS N2/C1/C2/C3 at
+// 80 K, 1 bar: a 0.23 % N2-rich liquid with dG = -4e-4 J/mol, verified mechanically and chemically converged with both
+// phases stable.  (That state was pinned to single phase after an earlier, ARTIFACT split there; these invariants
+// still reject that kind of split.)  The pressure and fugacity bounds (1e-6) are deliberately tighter than the flash's
+// own recovery acceptance (verify_split: 1e-3 in p, 1e-4 in ln f): the states this checks converge to ~1e-11, and a
+// split that only meets the loose recovery bounds should be looked at, not waved through.
+void check_valid_pt_state(AbstractState& AS, const std::string& fluids, const std::vector<double>& z, double T, double p) {
+    CHECK(AS.rhomolar() > 0);
+    if (AS.phase() != iphase_twophase) {
+        CHECK(AS.Q() == -1);
+        return;
+    }
+    CHECK(AS.Q() > 0);
+    CHECK(AS.Q() < 1);
+    const auto x = AS.mole_fractions_liquid(), y = AS.mole_fractions_vapor();
+    double spread = 0, dlnf = 0;
+    bool all_finite = true;
+    // Evaluate each phase AT ITS PUBLISHED DENSITY (no re-solve, so a published off-root density cannot hide behind a
+    // re-solved one); the imposed phase only labels the state so the fugacity coefficients are available.
+    auto phase_lnf = [&](const std::vector<CoolPropDbl>& c, double rho, std::vector<double>& lnf) {
+        std::shared_ptr<AbstractState> P(AbstractState::factory("HEOS", fluids));
+        P->set_mole_fractions(std::vector<double>(c.begin(), c.end()));
+        auto* H = dynamic_cast<HelmholtzEOSMixtureBackend*>(P.get());
+        REQUIRE(H != nullptr);
+        H->specify_phase(iphase_liquid);
+        H->update_DmolarT_direct(rho, T);
+        CAPTURE(rho, H->p());
+        CHECK(std::abs(H->p() / p - 1.0) < 1e-6);
+        lnf.resize(c.size());
+        for (std::size_t i = 0; i < c.size(); ++i)
+            lnf[i] = std::log(static_cast<double>(c[i])) + std::log(H->fugacity_coefficient(i));
+    };
+    std::vector<double> fx, fy;
+    phase_lnf(x, AS.saturated_liquid_keyed_output(iDmolar), fx);
+    phase_lnf(y, AS.saturated_vapor_keyed_output(iDmolar), fy);
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        spread = std::max(spread, std::abs(static_cast<double>(x[i] - y[i])));
+        if (x[i] == 0 && y[i] == 0) continue;  // absent from both phases
+        const double d = std::abs(fx[i] - fy[i]);
+        all_finite = all_finite && std::isfinite(d);  // std::max below would silently drop a NaN term
+        dlnf = std::max(dlnf, d);
+    }
+    std::shared_ptr<AbstractState> L(AbstractState::factory("HEOS", fluids));
+    L->set_mole_fractions(z);
+    L->specify_phase(iphase_liquid);
+    L->update(PT_INPUTS, p, T);
+    CAPTURE(AS.Q(), spread, dlnf, AS.gibbsmolar(), L->gibbsmolar());
+    CHECK(all_finite);
+    CHECK(spread > 1e-4);
+    CHECK(dlnf < 1e-6);
+    CHECK(AS.gibbsmolar() <= L->gibbsmolar() + 1e-9);
+}
 // Recompute the equal-fugacity equilibrium residual max_i |ln(f_i^V / f_i^L)| from a
 // converged two-phase flash result, by re-solving each reported phase composition as a
 // single-phase state at (p, T).  A correctly converged split drives this to ~0; the
@@ -718,8 +775,7 @@ TEST_CASE("Blind PT flash: N2/CH4/C2H6/C3H8 [0.1/0.5/0.25/0.15]", "[michelsen][b
         auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
         AS->set_mole_fractions(z);
         CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
-        CHECK(AS->Q() == -1);
-        CHECK(AS->rhomolar() > 0);
+        check_valid_pt_state(*AS, "Nitrogen&Methane&Ethane&Propane", z, 80.0, 1e5);
     }
 }
 
@@ -1129,7 +1185,9 @@ TEST_CASE("PE flash: N2/CH4/C2H6/C3H8 [0.1/0.5/0.25/0.15]", "[michelsen][phase_e
         auto ref = make_blind();
         CHECK_NOTHROW(AS->update(PT_INPUTS, 1e5, 80.0));
         ref->update(PT_INPUTS, 1e5, 80.0);
-        CHECK(AS->Q() == -1);
+        // The envelope path must agree with the blind flash, whatever that publishes (see check_valid_pt_state).
+        CHECK(AS->phase() == ref->phase());
+        CHECK(AS->Q() == Catch::Approx(ref->Q()).margin(1e-6));
         CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-6));
     }
 }
@@ -2840,6 +2898,89 @@ TEST_CASE("newton_raphson_twophase Jacobian matches finite differences (#3372)",
                 CHECK(worst < 1e-4);  // measured worst across these four states is 6.6e-7
             }
             restore();
+        }
+    }
+}
+
+TEST_CASE("Michelsen Phase 2: the Hessian shift guard cannot deadlock on a rounding error (COO-111 residual)", "[michelsen][flash][mixture]") {
+    // N2/C1/C2/nC4/nC5 (GERG-2008) splits into two liquids at these states (Q = 0.136 and 0.186, densities 4 % apart).
+    // Phase 2 meets an indefinite reduced Hessian and shifted its diagonal by (1e-8 - min_eig).  For these inputs the
+    // recomputed smallest eigenvalue rounded a hair below the 1e-8 floor; the next increment (~1e-24) vanished below
+    // the ULP of the shift (shift ~3.7e-5, ULP ~7e-21), so all 40 inner passes ran without taking a step, Phase 2
+    // reported a stall, and the flash published single phase -- while inputs 1e-10 away rounded the other way and
+    // converged.  The inputs are the exact doubles traced on x86-64 Linux / gcc; whether a given input hits the bad
+    // rounding is platform-dependent, so elsewhere this may pass without exercising the guard.  A failure on another
+    // platform still means a real (possibly different) Phase-2 or flash defect at these states.
+    struct S
+    {
+        double T, p, Q;
+    };
+    for (const S s : {S{112.56308295640963, 12202073.495216271, 0.1361}, S{112.56308293463886, 12202073.497307425, 0.1361},
+                      S{112.56308296476898, 12202073.499294188, 0.1361}, S{112.56308291325334, 12202073.497941729, 0.1361},
+                      S{112.59266059001008, 10743368.231995799, 0.1862}, S{112.59266053885793, 10743368.232025886, 0.1862},
+                      S{112.59266054850818, 10743368.237212962, 0.1862}, S{112.59266057405956, 10743368.233547488, 0.1862}}) {
+        DYNAMIC_SECTION("T=" << std::setprecision(17) << s.T << " p=" << s.p) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", "Nitrogen&Methane&Ethane&n-Butane&n-Pentane"));
+            AS->set_mole_fractions({0.3797, 0.3225, 0.278, 0.0014, 0.0184});
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == iphase_twophase);
+            CHECK(std::abs(AS->Q() - s.Q) < 2e-3);
+        }
+    }
+}
+
+TEST_CASE("Stability test: a warm trial root with non-finite fugacity coefficients is rejected (COO-111 residual)", "[michelsen][flash][mixture]") {
+    // N2/C1/C2/nC4/nC5 (GERG-2008) at 109.94 K, 1.126 MPa splits into two liquids (Q = 0.397).  The liquid-like Wilson
+    // trial starts as near-pure n-pentane (K_min ~ 8e-10), far below its triple point.  On its second step the warm
+    // local density solve converged onto a non-physical state that reproduced p with dp/drho > 0 (~7.5e13) and stayed
+    // inside the same-branch window, but had phi_i = 0 and inf; the NaN it put into the trial composition made the
+    // minimizer fail, the verdict became "stable (uncertain)", the Wilson recovery collapsed to the trivial split, and
+    // the flash published single phase -- while inputs 1e-10 away left the window and took the guarded global solve.
+    // The inputs are exact doubles traced on x86-64 Linux / gcc; elsewhere they may not reach that root.  A failure on
+    // another platform still means a real (possibly different) stability-test or flash defect at this state.
+    struct S
+    {
+        double T, p;
+    };
+    for (const S s : {S{109.93767656293615, 1126248.26364221}, S{109.93767657738596, 1126248.2635481248}, S{109.93767658364027, 1126248.2636381935},
+                      S{109.93767655158882, 1126248.263547299}, S{109.9376765767004, 1126248.2636315981}, S{109.93767656929494, 1126248.2637366799},
+                      S{109.93767654773808, 1126248.2636428429}, S{109.9376765646801, 1126248.2637800211}}) {
+        DYNAMIC_SECTION("T=" << std::setprecision(17) << s.T << " p=" << s.p) {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", "Nitrogen&Methane&Ethane&n-Butane&n-Pentane"));
+            AS->set_mole_fractions({0.3797, 0.3225, 0.278, 0.0014, 0.0184});
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, s.p, s.T));
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == iphase_twophase);
+            CHECK(std::abs(AS->Q() - 0.3973) < 2e-3);
+        }
+    }
+}
+
+TEST_CASE("Stability test: liquid-liquid probe finds the N2-rich second liquid (HEOS, 5 bar)", "[michelsen][flash][mixture]") {
+    // N2/C1/C2/nC4/nC5 (HEOS) at 5 bar, 0.5-1.2 K below the VLE bubble point.  The feed is unstable: the N2-rich liquid
+    // gives tm ~ -5e-3.  Neither Wilson trial finds it: the vapor-branch trial converges to tm > 0, and the z/K trial
+    // (near-pure n-pentane, ~46 K below its triple point) has no usable density root.  So the flash returned the
+    // metastable single liquid, while the bubble-point side (T_bub - 0.4 K and up) and GERG-2008 split.  The
+    // liquid-liquid probe (z*K on the liquid branch) proves the instability in 1-3 SS steps.
+    const std::string fluids = "Nitrogen&Methane&Ethane&n-Butane&n-Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    const double p = 5e5;
+    std::shared_ptr<AbstractState> B(AbstractState::factory("HEOS", fluids));
+    B->set_mole_fractions(z);
+    B->update(PQ_INPUTS, p, 0.0);
+    const double T_bub = B->T();
+    // -1.1 K, not the -1.2 K edge of the probed band, so a small platform shift in T_bub cannot move a section out.
+    for (const double dT : {-1.1, -1.0, -0.8, -0.6, -0.5}) {
+        DYNAMIC_SECTION("T_bub" << dT << " K") {
+            std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", fluids));
+            AS->set_mole_fractions(z);
+            REQUIRE_NOTHROW(AS->update(PT_INPUTS, p, T_bub + dT));
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == iphase_twophase);
+            const double ratio = AS->saturated_liquid_keyed_output(iDmolar) / AS->saturated_vapor_keyed_output(iDmolar);
+            CHECK(ratio < 1.5);  // both phases are liquids
+            check_valid_pt_state(*AS, fluids, z, T_bub + dT, p);
         }
     }
 }
