@@ -14,7 +14,12 @@ import pandas
 # Map raw class labels (as stored in the errors DataFrame) to summary columns.
 _CLASS_COL = {'INCONSISTENT': 'inconsistent', 'EXCEPTION': 'exceptions', 'BAD_PHASE': 'bad_phase'}
 _SUMMARY_COLS = ['pair', 'inconsistent', 'exceptions', 'bad_phase', 'total_failures']
-_CSV_COLS = ['fluid', 'backend', 'pair', 'phase_region', 'cls',
+# 'type' distinguishes a failure of the pair flash under test ('update') from a
+# grid point the backend would not define at all ('reference' -- the p,T or Q,T
+# flash that sets up the comparison threw), and 'setup' for a panel that could
+# not be built.  Without it a strict backend's domain refusals are indistinguishable
+# from flash defects in the published CSV.
+_CSV_COLS = ['fluid', 'backend', 'pair', 'phase_region', 'cls', 'type',
              'in1', 'val1', 'in2', 'val2', 'P', 'T', 'dev', 'err']
 
 
@@ -144,9 +149,16 @@ def write_stub_fragment(out_path, message):
 
 
 def write_consolidated_rst(combined_summary, out_path, backend,
-                           build_failures=None, date=None, orphan=False):
-    """Cross-fluid failure summary page (one row per fluid/pair with failures)."""
+                           build_failures=None, date=None, orphan=False,
+                           unavailable=None):
+    """Cross-fluid failure summary page (one row per fluid/pair with failures).
+
+    ``unavailable`` is an optional list of ``(fluid, reason)`` for fluids the
+    backend does not carry at all.  They are listed separately from
+    ``build_failures``: a fluid REFPROP has never heard of is a coverage gap, not
+    a defect, and conflating the two would make the failure list unreadable."""
     build_failures = build_failures or []
+    unavailable = unavailable or []
     date = date or _dt.date.today().isoformat()
     with codecs.open(out_path, 'w', encoding='utf-8') as fp:
         if orphan:
@@ -178,4 +190,12 @@ def write_consolidated_rst(combined_summary, out_path, backend,
             fp.write('Build failures\n--------------\n\n')
             for fluid, msg in build_failures:
                 fp.write('* {0}: {1}\n'.format(fluid, str(msg).replace('\n', ' ')))
+            fp.write('\n')
+        if unavailable:
+            fp.write('Not available in this backend\n')
+            fp.write('-----------------------------\n\n')
+            fp.write('{0} fluid(s) in the CoolProp fluid list have no {1} equivalent and were '
+                     'not evaluated.\n\n'.format(len(unavailable), backend))
+            for fluid, reason in unavailable:
+                fp.write('* {0}: {1}\n'.format(fluid, str(reason).replace('\n', ' ')))
             fp.write('\n')
