@@ -144,7 +144,7 @@ To build and install from source::
     pip install .
 
 Development with Editable Install
-++++++++++++++++++++++++++++++++++
+---------------------------------
 
 An editable install (also known as "development mode") allows you to make changes to the C++
 source code and have them take effect after a simple rebuild, without reinstalling the package.
