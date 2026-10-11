@@ -161,7 +161,12 @@ class PropertyPlot(BasePlot):
         lines = self.isolines.get(iso_type, [])
         for i in range(num):
             lines.append(IsoLine(iso_type, self._x_index, self._y_index, value=dim.to_SI(iso_range[i]), state=self._state, tracing=tracing))
-            lines[-1].calc_range(ixrange, iyrange)
+            if iso_type == CoolProp.iQ:
+                # Saturation and isoquality lines are defined by the fluid alone, so the axis
+                # ranges are not needed (calc_range would discard them and warn).
+                lines[-1].calc_sat_range(num=points)
+            else:
+                lines[-1].calc_range(ixrange, iyrange)
             lines[-1].sanitize_data()
         self.isolines[iso_type] = lines
         return
