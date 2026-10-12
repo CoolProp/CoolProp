@@ -189,6 +189,7 @@ class PropertyPlot(BasePlot):
                 for line in self.isolines[i]:
                     if line.value == 0.0: bub = line
                     elif line.value == 1.0: dew = line
+                interior = any(0.0 < line.value < 1.0 for line in self.isolines[i])
                 if dew is not None and bub is not None:
                     xmin, xmax, ymin, ymax = self.get_axis_limits()
                     xmin = dimx.to_SI(xmin)
@@ -222,7 +223,6 @@ class PropertyPlot(BasePlot):
                           x_points=x,
                           kind='cubic')
                         self.axis.plot(dimx.from_SI(x), dimy.from_SI(y), **sat_props)
-                        warnings.warn("Detected an incomplete phase envelope, fixing it numerically.")
                         xcrit = x[5]; ycrit = y[5]
                         #Tcrit = self.state.trivial_keyed_output(CoolProp.iT_critical)
                         #Dcrit = self.state.trivial_keyed_output(CoolProp.irhomass_critical)
@@ -234,6 +234,16 @@ class PropertyPlot(BasePlot):
                         #    xcrit = x[5]; ycrit = y[5]
                         #    pass
                         #self.axis.plot(dimx.from_SI(np.array([bub.x[bub_filter][-1], dew.x[dew_filter][-1]])),dimy.from_SI(np.array([bub.y[bub_filter][-1], dew.y[dew_filter][-1]])),'o')
+                    elif interior:
+                        # The bubble and dew lines end too far apart to bridge, so the critical point
+                        # is unknown and the interior quality lines below cannot be drawn.
+                        warnings.warn("Could not close the phase envelope; the quality lines between 0 and 1 were not drawn.", UserWarning)
+                else:
+                    # The interior quality lines are drawn up to a critical point that is only known
+                    # when both the Q=0 and Q=1 lines were calculated.
+                    if interior:
+                        warnings.warn("The quality lines between 0 and 1 were not drawn, because the Q=0 and Q=1 lines were not both calculated. "
+                                      "Include both in the iso_range (the default is [0, 1]).", UserWarning)
             for line in self.isolines[i]:
                 if line.i_index == CoolProp.iQ:
                     if line.value == 0.0 or line.value == 1.0:
