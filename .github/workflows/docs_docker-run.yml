@@ -159,9 +159,11 @@ jobs:
         source activate docs
         # Ensure the gitrevision.txt is used for the build
         python dev/generate_headers.py
-        # Build and install the wheel
-        pip -vv wheel .
-        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
+        # Build and install the wheel.  --no-deps keeps pip from also saving and
+        # installing CoolProp's dependencies (the newest numpy from PyPI), which would
+        # replace the numpy that conda solved for this image with one scipy rejects.
+        pip -vv wheel --no-deps .
+        pip install -vvv --no-deps --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
         # sphinx-design, plotly and joblib are in conda_environment.yml, but that
         # env is baked into the prebuilt docs container; the image isn't rebuilt
         # for PRs, so install them at runtime here (same escape hatch as the
