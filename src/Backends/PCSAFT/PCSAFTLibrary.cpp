@@ -108,74 +108,34 @@ int PCSAFTLibraryClass::add_many(const nlohmann::json& listing) {
 
             // If the fluid is ok...
 
-            // First check that none of the identifiers are already present
+            // Look for a fluid already in the library that shares an identifier with this one: the CAS
+            // number, the name or an alias, in the same order as the Helmholtz fluid library.  A match is
+            // replaced in place, at its own index, so every identifier of the old fluid resolves to the new
+            // one and no other fluid is touched.  Otherwise the fluid gets an index one past the largest in use.
+            std::vector<std::string> identifiers = {fluid.getCAS(), fluid_name, upper(fluid_name)};
+            for (const auto& alias : fluid.getAliases()) {
+                identifiers.push_back(alias);
+                identifiers.push_back(upper(alias));
+            }
+            std::size_t index = fluid_map.empty() ? 0 : fluid_map.rbegin()->first + 1;
             bool already_present = false;
-
-            if (string_to_index_map.find(fluid.getCAS()) != string_to_index_map.end()
-                || string_to_index_map.find(fluid_name) != string_to_index_map.end()
-                || string_to_index_map.find(upper(fluid_name)) != string_to_index_map.end()) {
-                already_present = true;
-            } else {
-                // Check the aliases
-                for (std::size_t i = 0; i < fluid.getAliases().size(); ++i) {
-                    if (string_to_index_map.find(fluid.getAliases()[i]) != string_to_index_map.end()) {
-                        already_present = true;
-                        break;
-                    }
-                    if (string_to_index_map.find(upper(fluid.getAliases()[i])) != string_to_index_map.end()) {
-                        already_present = true;
-                        break;
-                    }
+            for (const auto& identifier : identifiers) {
+                auto it = string_to_index_map.find(identifier);
+                if (it != string_to_index_map.end()) {
+                    index = it->second;
+                    already_present = true;
+                    break;
                 }
             }
 
-            if (already_present) {
-                if (!get_config_bool(OVERWRITE_FLUIDS)) {
-                    throw ValueError(format(
-                      "Cannot load fluid [%s:%s] because it is already in library; consider enabling the config boolean variable OVERWRITE_FLUIDS",
-                      fluid.getName().c_str(), fluid.getCAS().c_str()));
-                } else {
-                    // Remove the one(s) that are already there
-
-                    // Remove the actual fluid instance
-                    std::size_t index = string_to_index_map.find(fluid_name)->second;
-
-                    if (fluid_map.find(index) != fluid_map.end()) {
-                        fluid_map.erase(fluid_map.find(index));
-                    }
-
-                    if (string_to_index_map.find(fluid_name) != string_to_index_map.end()) {
-                        fluid_map.erase(fluid_map.find(index));
-                    }
-
-                    // Remove the identifiers pointing to that instance
-                    if (string_to_index_map.find(fluid.getCAS()) != string_to_index_map.end()) {
-                        string_to_index_map.erase(string_to_index_map.find(fluid.getCAS()));
-                    }
-                    if (string_to_index_map.find(fluid_name) != string_to_index_map.end()) {
-                        string_to_index_map.erase(string_to_index_map.find(fluid_name));
-                    }
-                    // Check the aliases
-                    for (std::size_t i = 0; i < fluid.getAliases().size(); ++i) {
-                        if (string_to_index_map.find(fluid.getAliases()[i]) != string_to_index_map.end()) {
-                            string_to_index_map.erase(string_to_index_map.find(fluid.getAliases()[i]));
-                        }
-                        if (string_to_index_map.find(upper(fluid.getAliases()[i])) != string_to_index_map.end()) {
-                            string_to_index_map.erase(string_to_index_map.find(upper(fluid.getAliases()[i])));
-                        }
-                    }
-                }
+            if (already_present && !get_config_bool(OVERWRITE_FLUIDS)) {
+                throw ValueError(
+                  format("Cannot load fluid [%s:%s] because it is already in library; consider enabling the config boolean variable OVERWRITE_FLUIDS",
+                         fluid.getName().c_str(), fluid.getCAS().c_str()));
             }
 
-            // By now, the library has been cleared of remnants of this fluid; safe to add the fluid now.
-
-            // Get the next index for this fluid
-            std::size_t index = fluid_map.size();
-
-            // Add index->fluid mapping
+            // Add (or replace) the index->fluid mapping
             fluid_map[index] = fluid;
-
-            // fluid_map[index] = cpjson::json2string(fluid_json);
 
             // Add CAS->index mapping
             string_to_index_map[fluid.getCAS()] = index;
