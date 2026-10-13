@@ -316,8 +316,6 @@ class PropertyPlot(BasePlot):
         >>> pp.show()
 
         """
-        warnings.warn("You called the function \"draw_process\", which is not tested.", UserWarning)
-
         # Default values
         line_opts = line_opts or {'color': 'r', 'lw': 1.5}
 
