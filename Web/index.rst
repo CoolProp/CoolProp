@@ -70,6 +70,7 @@ Projects Using CoolProp
 * `UH2SC <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
 * `Calcumber <https://calcumber.app/fluid-properties/>`_ – notebook-style unit-aware web calculator
 * `FluidProps <https://fluidprops.com>`_ - free fluid property calculators and steam tables built on CoolProp
+* `Thermoprops <https://luisbedoia.github.io/thermoprops/>`_ - web calculator for fluid states and p-h, T-s and other thermodynamic diagrams
 
 Main Developers
 ---------------
