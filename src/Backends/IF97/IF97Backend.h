@@ -113,7 +113,7 @@ class IF97Backend : public AbstractState
                         _phase = iphase_liquid;
                     } else if (_p < psat * (1.0 - epsilon)) {  //         below the saturation curve
                         _phase = iphase_gas;
-                    } else  //         exactly on saturation curve (within 1e-4 %)
+                    } else  //         exactly on saturation curve (within 3.3e-3 %)
                         _phase = iphase_twophase;
                 }
             }
@@ -133,25 +133,24 @@ class IF97Backend : public AbstractState
                     };
                     break;
                 case 2:  // IF97::REGION2
+                    // Same labels as the forward (T,p) branch: above Pcrit and Tcrit is "supercritical"
                     if (_T <= IF97::Tcrit) {
                         _phase = iphase_gas;
                     } else {
-                        _phase = iphase_supercritical_gas;
+                        _phase = (_p > IF97::Pcrit) ? iphase_supercritical : iphase_supercritical_gas;
                     };
                     break;
                 case 3:  // IF97::REGION3
-                    if (_T < IF97::Tsat97(_p)) {
-                        if (_p <= IF97::Pcrit) {
-                            _phase = iphase_liquid;
-                        } else {
-                            _phase = iphase_supercritical_liquid;
-                        };
+                    // There is no saturation curve above Pcrit (Tsat97 is not valid there),
+                    // so split on pressure first, mirroring the forward (T,p) branch.
+                    if (_p > IF97::Pcrit) {
+                        _phase = (_T <= IF97::Tcrit) ? iphase_supercritical_liquid : iphase_supercritical;
+                    } else if (_T < IF97::Tsat97(_p)) {
+                        _phase = iphase_liquid;
+                    } else if (_T <= IF97::Tcrit) {
+                        _phase = iphase_gas;
                     } else {
-                        if (_T <= IF97::Tcrit) {
-                            _phase = iphase_gas;
-                        } else {
-                            _phase = iphase_supercritical_gas;
-                        }
+                        _phase = iphase_supercritical_gas;
                     };
                     break;
                 case 4:                        // IF97::REGION4 (Saturation
