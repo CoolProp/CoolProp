@@ -214,7 +214,7 @@ class IF97Backend : public AbstractState
                         || imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) {
                         _phase = imposed_phase_index;
                     } else {
-                        throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%Lg Pa]",
+                        throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%g Pa]",
                                                 IF97::psat97(_T), _T, _p));
                     }
                 }
