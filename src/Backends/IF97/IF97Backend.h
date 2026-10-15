@@ -178,8 +178,6 @@ class IF97Backend : public AbstractState
         // "[Q] must be between 0 and 1" diagnostic every backend uses.
         check_input_quality(input_pair, value1, value2);
 
-        double H, S, hLmass, hVmass, sLmass, sVmass;
-
         // Reject non-finite inputs up front, for every pair.  IF97's region
         // selectors do not propagate NaN: HmassP / PSmass with p = NaN and
         // HmassSmass with h or s = NaN previously returned T = 273.15 K and a
@@ -192,6 +190,22 @@ class IF97Backend : public AbstractState
         }
 
         clear();  //clear the few cached values we are using
+
+        // A throw part-way through (T_phmass, Tsat97, psat97, p_hsmass, the
+        // region-5 check in set_phase()) must not leave a half-built state that
+        // later property calls would mix into a result.  Reset, then rethrow.
+        try {
+            update_state(input_pair, value1, value2);
+        } catch (...) {
+            clear();
+            throw;
+        }
+    };
+
+   protected:
+    /// Fill in the state for an already-validated, already-cleared update().  May throw.
+    void update_state(CoolProp::input_pairs input_pair, double value1, double value2) {
+        double H, S, hLmass, hVmass, sLmass, sVmass;
 
         switch (input_pair) {
             case PT_INPUTS:
@@ -302,6 +316,7 @@ class IF97Backend : public AbstractState
         }
     };
 
+   public:
     /*  We have to override some of the functions from the AbstractState.
      *  IF97 is only mass-based and does not support conversion
      *  from mass- to molar-specific quantities.
