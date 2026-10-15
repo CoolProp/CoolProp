@@ -10023,4 +10023,54 @@ TEST_CASE("IF97 reverse (h,p) and (p,s) phase labels match the forward (T,p) lab
     CHECK(rev->phase() == CoolProp::iphase_supercritical);
 }
 
+TEST_CASE("IF97 update() that throws leaves no half-built state", "[IF97][update]") {
+    auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    struct Bad
+    {
+        CoolProp::input_pairs pair;
+        double v1, v2;
+    };
+    const std::vector<Bad> bad = {
+      {CoolProp::HmassP_INPUTS, 1e9, 1e6},      // h far above the IF97 range
+      {CoolProp::PSmass_INPUTS, 1e6, 1e6},      // s far above the IF97 range
+      {CoolProp::HmassSmass_INPUTS, 1e9, 1e6},  // h, s far outside
+      {CoolProp::QT_INPUTS, 0.5, 700.0},        // T above Tcrit: no saturation state
+      {CoolProp::PQ_INPUTS, 30e6, 0.5},         // p above Pcrit: no saturation state
+    };
+    for (const auto& b : bad) {
+        CAPTURE(b.pair, b.v1, b.v2);
+        IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+        REQUIRE(IF->hmass() > 0);
+        CHECK_THROWS(IF->update(b.pair, b.v1, b.v2));
+        // The failed update must not leave the previous state, or a mix of the
+        // two, to be read back as if it were valid.
+        CHECK_THROWS(IF->hmass());
+        CHECK_THROWS(IF->smass());
+        CHECK_THROWS(IF->rhomass());
+        // The scalar getters must also agree with a never-updated object, not
+        // return the inputs of the failed update (QT left _Q = 0.5 and _T = 700).
+        for (auto get : {+[](CoolProp::AbstractState& a) { return a.T(); }, +[](CoolProp::AbstractState& a) { return a.p(); },
+                         +[](CoolProp::AbstractState& a) { return a.Q(); }}) {
+            auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+            bool fresh_throws = false, after_throws = false;
+            double fresh_v = 0, after_v = 0;
+            try {
+                fresh_v = get(*fresh);
+            } catch (...) {
+                fresh_throws = true;
+            }
+            try {
+                after_v = get(*IF);
+            } catch (...) {
+                after_throws = true;
+            }
+            CHECK(after_throws == fresh_throws);
+            if (!fresh_throws && !after_throws) CHECK(after_v == fresh_v);
+        }
+        // And the object is fully usable again afterward.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+    }
+}
+
 #endif
