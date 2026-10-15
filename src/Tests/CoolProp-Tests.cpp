@@ -9985,4 +9985,42 @@ TEST_CASE("Unreachable supercritical T+caloric inputs raise a CoolProp error, no
     }
 }
 
+TEST_CASE("IF97 reverse (h,p) and (p,s) phase labels match the forward (T,p) labels", "[IF97][phase]") {
+    // The backward branch classified region 2 and 3 states above the critical
+    // pressure from Tsat97(p), which is not valid there, so a compressed liquid
+    // at 30 MPa could be labeled gas.  Every single-phase state must get the
+    // same phase from HmassP / PSmass as from the (T,p) state that made it.
+    auto fwd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto rev = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int checked = 0;
+    for (double p : {1e6, 5e6, 16e6, 20e6, 22e6, 23e6, 30e6, 50e6, 90e6}) {
+        for (double T : {400.0, 550.0, 620.0, 630.0, 640.0, 646.0, 648.0, 660.0, 700.0, 800.0, 850.0}) {
+            CAPTURE(p, T);
+            try {
+                fwd->update(CoolProp::PT_INPUTS, p, T);
+            } catch (const CoolProp::CoolPropBaseError&) {
+                continue;  // on the saturation curve or outside IF97
+            }
+            const auto expected = fwd->phase();
+            const double h = fwd->hmass(), s = fwd->smass();
+            rev->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(rev->phase() == expected);
+            rev->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(rev->phase() == expected);
+            ++checked;
+        }
+    }
+    CHECK(checked > 60);
+    // The motivating states, stated explicitly
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 640.0);  // region 3, above Pcrit, below Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical_liquid);
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 800.0);  // region 3, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+    fwd->update(CoolProp::PT_INPUTS, 50e6, 1000.0);  // region 2, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 50e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+}
+
 #endif
