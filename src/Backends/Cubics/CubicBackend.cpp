@@ -1,6 +1,7 @@
 #include "CubicBackend.h"
 
 #include <cmath>
+#include <limits>
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
@@ -424,6 +425,45 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
 
     // Solving the cubic:
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
+    // Polish each root with Newton on the polynomial.  The closed-form solution loses digits when
+    // crho3 nearly cancels (well above Tc a spurious root runs off to ~-1e10 mol/m^3): SRK water at
+    // 4*Tc and 1.5*pc came back with p(rho) off by 5e-4.  The polynomial itself stays well
+    // conditioned at the physical root, so a few steps recover it.  A step is kept only if it
+    // shrinks the residual and moves less than half the gap to the nearest other distinct root, so a
+    // root near a double root (spinodal, Tc) cannot be polished onto its neighbour.
+    const double r_closed[3] = {rho0, rho1, rho2};
+    auto polish = [&](double& r) {
+        auto f = [&](double x) { return ((crho3 * x + crho2) * x + crho1) * x + crho0; };
+        double max_step = std::numeric_limits<double>::infinity();
+        for (double other : r_closed) {
+            if (other != r) {
+                max_step = std::min(max_step, 0.5 * std::abs(other - r));
+            }
+        }
+        double fr = f(r);
+        double moved = 0;
+        for (int i = 0; i < 3; ++i) {
+            const double fp = (3 * crho3 * r + 2 * crho2) * r + crho1;
+            if (!(std::abs(fp) > 0)) {
+                break;
+            }
+            const double step = fr / fp;
+            if (!(std::abs(moved + step) < max_step)) {
+                break;
+            }
+            const double r_new = r - step;
+            const double f_new = f(r_new);
+            if (!(std::abs(f_new) < std::abs(fr))) {
+                break;
+            }
+            r = r_new;
+            fr = f_new;
+            moved += step;
+        }
+    };
+    polish(rho0);
+    polish(rho1);
+    polish(rho2);
     sort3(rho0, rho1, rho2);
     return;
 }
@@ -694,7 +734,20 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 rho = rho2;
             }
         } else {
-            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+            // Above the critical pressure a cubic can still have three real roots at high T, but
+            // only one in the physical domain: the others are negative or have v + c < b (an
+            // untranslated volume below the covolume, past the repulsive pole).  Take that one.
+            const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+            int Nphysical = 0;
+            for (double r : {rho0, rho1, rho2}) {
+                if (r > 0 && r * b_minus_c < 1) {
+                    rho = r;
+                    ++Nphysical;
+                }
+            }
+            if (Nphysical != 1) {
+                throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+            }
         }
     } else {
         throw ValueError("Obtained neither 1 nor three roots");
