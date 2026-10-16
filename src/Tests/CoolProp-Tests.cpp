@@ -8792,6 +8792,73 @@ TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773
     CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
 }
 
+// The DQ/HQ/QS flashes (and their _with_guesses variants) used to call
+// specify_phase(iphase_twophase) and never undo it, so the next PT_INPUTS update
+// on the same AbstractState was forced two-phase: h = -2.2 MJ/kg for liquid water
+// at 20 MPa / 553.15 K, or "Bad phase to solver_rho_Tp_SRK" (GitHub #3468).
+TEST_CASE("Saturation flashes do not leave a phase imposed", "[3468]") {
+    const double p = 2e7, T = 553.15;
+    std::shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory("HEOS", "Water"));
+    fresh->update(CoolProp::PT_INPUTS, p, T);
+    const double h_fresh = fresh->hmolar();
+    REQUIRE(fresh->phase() == CoolProp::iphase_liquid);
+
+    // D and S targets from saturated vapor at 450 K.  h_g(T) peaks near 540 K, so
+    // the H target comes from 640 K, where h_g is below h_g(Ttriple) and has one T-root.
+    fresh->update(CoolProp::QT_INPUTS, 1.0, 450.0);
+    const double rhoV = fresh->rhomolar(), sV = fresh->smolar();
+    fresh->update(CoolProp::QT_INPUTS, 1.0, 640.0);
+    const double hV = fresh->hmolar();
+    fresh->update(CoolProp::QT_INPUTS, 0.1, 450.0);
+    const double rho_Q01 = fresh->rhomolar();
+    CoolProp::GuessesStructure g;
+    g.T = 450.0;
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    SECTION("DmolarQ, fractional Q") {
+        AS->update(CoolProp::DmolarQ_INPUTS, rho_Q01, 0.1);
+    }
+    SECTION("DmolarQ, Q=1") {
+        AS->update(CoolProp::DmolarQ_INPUTS, rhoV, 1.0);
+    }
+    SECTION("HmolarQ") {
+        AS->update(CoolProp::HmolarQ_INPUTS, hV, 1.0);
+    }
+    SECTION("QSmolar") {
+        AS->update(CoolProp::QSmolar_INPUTS, 1.0, sV);
+    }
+    SECTION("DmolarQ with guesses") {
+        AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rhoV, 1.0, g);
+    }
+    SECTION("HmolarQ with guesses") {
+        CoolProp::GuessesStructure gH;
+        gH.T = 640.0;
+        AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, hV, 1.0, gH);
+    }
+    SECTION("QSmolar with guesses") {
+        AS->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, sV, g);
+    }
+    CHECK(AS->phase() == CoolProp::iphase_twophase);
+
+    AS->update(CoolProp::PT_INPUTS, p, T);
+    CHECK(AS->phase() == CoolProp::iphase_liquid);
+    CHECK(AS->hmolar() == Catch::Approx(h_fresh).epsilon(1e-12));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101000, 373.15));
+}
+
+TEST_CASE("Saturation flashes keep a phase the caller imposed", "[3468]") {
+    // The fix must not clear a phase the user set themselves (#1027 semantics)
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS->update(CoolProp::QT_INPUTS, 1.0, 450.0);
+    const double rhoV = AS->rhomolar();
+    AS->specify_phase(CoolProp::iphase_gas);
+    AS->update(CoolProp::DmolarQ_INPUTS, rhoV, 1.0);
+    // Liquid-like (T, p) with gas imposed must still give the vapor-branch root
+    AS->update(CoolProp::PT_INPUTS, 1e5, 360.0);
+    CHECK(AS->phase() == CoolProp::iphase_gas);
+    CHECK(AS->rhomolar() < 100);  // vapor-like density, not ~53 kmol/m3 liquid
+}
+
 // Edge-case coverage gaps surfaced in PR #2835 review (S4):
 TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 
