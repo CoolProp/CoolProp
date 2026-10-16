@@ -123,9 +123,13 @@ recorded history of finished or abandoned work were dropped (they remain in
   "type not set" (#3441).  `get_superanc()` is null there too: the cubic's
   Chebyshev superancillary is reached only through the virtuals
   `superanc_saturation_at_p` / `calc_saturation_ancillary`.  Route
-  saturation lookups through those, not through `get_superanc()`.  The
-  cubic's iterative Q,T / P,Q solve is converged only to ~1e-7 in p near Tc;
-  build test references from superancillary densities via D,T.
+  saturation lookups through those, not through `get_superanc()`.  Cubic
+  Q,T / P,Q updates, and the gas/liquid root choice in `solver_rho_Tp`, read
+  the superancillary too (COO-136).  The old secant saturation solve is no
+  fallback: it is ~1e-7 in p near Tc and, out of the table's range, silently
+  returns the trivial or wrong root.  When you add a superancillary, check that every input pair that
+  needs saturation actually reaches it: the cubic one (#2739) sat unused by Q,T and
+  P,Q because `AbstractCubicBackend::update` intercepts both.
 - **HS cascade rules:** every cascade leg must be exception-guarded (a leg
   leaving the EOS domain otherwise aborts the cascade), and phase
   determination for two-phase (h,s) inputs is the dispatcher's job, done

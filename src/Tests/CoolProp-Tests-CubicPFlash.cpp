@@ -95,9 +95,8 @@ TEST_CASE("Cubic P+{H,S,U,D} flashes for pure fluids (#3441)", "[cubic][flash][3
         }
     }
     SECTION("inside the dome") {
-        // Build the reference from the superancillary densities via D,T rather than from a Q,T
-        // update: the cubic's iterative Q,T saturation is only converged to ~1e-7 in p near Tc,
-        // whereas the superancillary satisfies equal Gibbs energy to ~1e-15.
+        // Build the reference directly from the superancillary densities via D,T, so it does not
+        // depend on which solver the cubic's Q,T update uses.
         auto* cubic = dynamic_cast<AbstractCubicBackend*>(ref.get());
         REQUIRE(cubic != nullptr);
         for (double Tr : {0.6, 0.8, 0.95}) {
