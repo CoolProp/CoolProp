@@ -130,6 +130,30 @@ def test_consolidated_page(tmp_path):
     assert 'Foo: kaboom' in text
 
 
+def test_consolidated_unavailable_section(tmp_path):
+    """Fluids the backend does not carry are a coverage gap, listed apart from
+    the build failures so the failure list stays about real defects."""
+    out = tmp_path / 'ConsistencyReport_REFPROP.rst'
+    rpt.write_consolidated_rst(pandas.DataFrame(), str(out), 'REFPROP',
+                               build_failures=[('Foo', 'kaboom')],
+                               unavailable=[('SES36', 'Could not load these fluids: SES36')],
+                               date='2026-05-26', orphan=True)
+    text = out.read_text(encoding='utf-8')
+    assert text.startswith(':orphan:')
+    assert 'Not available in this backend' in text
+    assert '1 fluid(s) in the CoolProp fluid list have no REFPROP equivalent' in text
+    assert 'SES36: Could not load these fluids: SES36' in text
+    # The two lists stay distinct.
+    assert 'SES36' not in text.split('Not available in this backend')[0]
+    assert 'Foo: kaboom' in text.split('Not available in this backend')[0]
+
+
+def test_consolidated_no_unavailable_section_when_empty(tmp_path):
+    out = tmp_path / 'ConsistencyReport.rst'
+    rpt.write_consolidated_rst(pandas.DataFrame(), str(out), 'HEOS', date='2026-05-26')
+    assert 'Not available in this backend' not in out.read_text(encoding='utf-8')
+
+
 def test_consolidated_empty(tmp_path):
     out = tmp_path / 'ConsistencyReport.rst'
     rpt.write_consolidated_rst(pandas.DataFrame(), str(out), 'HEOS', date='2026-05-26')
@@ -180,6 +204,123 @@ def test_panel_timing_annotation():
     assert annotated > 0
     import matplotlib.pyplot as plt
     plt.close(ff.fig)
+
+
+def test_lowest_valid_T_prefers_the_equation_minimum():
+    """The grid floor is the colder of the two limits the backend reports, not the
+    triple point alone: REFPROP publishes a true triple point below the range its
+    equation is fitted over."""
+    from CoolProp.Plots.ConsistencyPlots import lowest_valid_T
+    import CoolProp.CoolProp as CP
+
+    class Fake(object):
+        def __init__(self, T_triple, T_min):
+            self._t, self._m = T_triple, T_min
+
+        def keyed_output(self, key):
+            if key == CP.iT_triple:
+                return self._t
+            if key == CP.iT_min:
+                return self._m
+            raise KeyError(key)
+
+    assert lowest_valid_T(Fake(89.54, 120.0)) == 120.0   # REFPROP R14
+    assert lowest_valid_T(Fake(273.16, 251.165)) == 273.16  # REFPROP Water (extended range)
+    assert lowest_valid_T(Fake(200.0, 200.0)) == 200.0   # HEOS: the two coincide
+
+    class NoTmin(Fake):
+        def keyed_output(self, key):
+            if key == CP.iT_triple:
+                return self._t
+            raise ValueError('T_min not available for this backend')
+
+    # A backend with no T_min at all must degrade to the triple point, not throw.
+    assert lowest_valid_T(NoTmin(150.0, None)) == 150.0
+
+
+def test_setup_failure_frame_is_one_visible_exception():
+    """A panel that cannot be set up must be reported, not silently empty --
+    an empty frame is indistinguishable from a clean panel."""
+    from CoolProp.Plots.ConsistencyPlots import ConsistencyFigure
+    import matplotlib
+    matplotlib.use('Agg')
+    ff = ConsistencyFigure('Water', backend='HEOS',
+                           NT_1phase=3, Np_1phase=3, NT_2phase=3, NQ_2phase=3)
+    df = ff.axes_list[0].setup_failure_frame('no usable P_min')
+    assert len(df) == 1
+    assert df['cls'].iloc[0] == 'EXCEPTION'
+    assert df['pair'].iloc[0] == ff.axes_list[0].pair
+    assert 'no usable P_min' in df['err'].iloc[0]
+    import matplotlib.pyplot as plt
+    plt.close(ff.fig)
+
+
+def test_good_only_timing_is_recorded_separately():
+    """The annotation keeps the all-points mean; the GOOD-only twin exists for a
+    backend-to-backend comparison, where counting throw-fast points as fast lies."""
+    from CoolProp.Plots.ConsistencyPlots import ConsistencyFigure
+    import matplotlib
+    matplotlib.use('Agg')
+    ff = ConsistencyFigure('Water', backend='HEOS',
+                           NT_1phase=4, Np_1phase=4, NT_2phase=3, NQ_2phase=3)
+    good = [a.mean_elapsed_1phase_good for a in ff.axes_list
+            if getattr(a, 'mean_elapsed_1phase_good', None) is not None]
+    assert good and all(m > 0 for m in good)
+    import matplotlib.pyplot as plt
+    plt.close(ff.fig)
+
+
+def test_phases_disagree_excludes_only_the_refprop_supercritical_family():
+    """REFPROPMixtureBackend::GetRPphase derives the phase from the _Q sentinel the DLL
+    returned, so which member of the supercritical family comes back is a property of the
+    flash routine called, not of the state.  That one class is convention; nothing else is."""
+    from CoolProp.Plots.ConsistencyPlots import phases_disagree
+    import CoolProp.CoolProp as CP
+    sc, scg, scl = CP.iphase_supercritical, CP.iphase_supercritical_gas, CP.iphase_supercritical_liquid
+    # The convention class, REFPROP only.
+    assert not phases_disagree('REFPROP', scg, sc)
+    assert not phases_disagree('REFPROP', sc, scl)
+    # Same labels are never a disagreement, on any backend.
+    assert not phases_disagree('HEOS', sc, sc)
+    # HEOS gets no exclusion: it distinguishes these deliberately.
+    assert phases_disagree('HEOS', scg, sc)
+    # Crossing OUT of the family is a real disagreement even for REFPROP.
+    assert phases_disagree('REFPROP', CP.iphase_twophase, CP.iphase_liquid)
+    assert phases_disagree('REFPROP', CP.iphase_gas, sc)
+    assert phases_disagree('REFPROP', CP.iphase_twophase, scl)
+
+
+def test_message_class_keeps_exception_types_and_strips_pair_tags():
+    """err_text() prepends the exception type for a non-ValueError precisely so a library
+    defect stays distinguishable; the prefix strip must not undo that."""
+    from consistency_backend_report import message_class
+    # Input-pair tags are noise and go.
+    assert message_class('DmolarSmolar: [DSFLSH error 207] rho 1.5') == '[DSFLSH error #] rho #'
+    assert message_class('HmolarP: something') == 'something'
+    # Exception types are the signal and stay -- including ones not ending Error/Exception.
+    for exc in ('RuntimeError', 'ValueError', 'StopIteration', 'KeyboardInterrupt', 'SystemExit'):
+        assert message_class(exc + ': boom').startswith(exc + ':'), exc
+    # A message with no prefix is untouched apart from number masking.
+    assert message_class('no prefix here') == 'no prefix here'
+    # Bad-phase messages are named, not masked: the numbers ARE the content.
+    assert message_class('phase 2 instead of 1') == 'phase supercritical_gas instead of supercritical'
+
+
+def test_describe_exit_calls_only_fault_signals_a_crash():
+    """A CI timeout TERMs the process group; reporting that as 'died in native code' across
+    every in-flight fluid would be a wall of false alarms about the one signal that has to
+    stay trustworthy."""
+    from consistency_backend_compare import describe_exit
+    for sig, name in ((11, 'SIGSEGV'), (6, 'SIGABRT')):
+        crashed, text = describe_exit(-sig)
+        assert crashed and 'CRASHED' in text and name in text
+    for sig in (15, 2):  # SIGTERM, SIGINT
+        crashed, text = describe_exit(-sig)
+        assert not crashed and 'CRASHED' not in text
+    assert describe_exit(-999) == (False, 'killed by signal 999 (signal 999)')
+    assert describe_exit(1) == (False, 'worker exited 1')
+    assert describe_exit(2) == (False, 'worker exited 2')  # argparse, not a crash
+    assert describe_exit(0)[0] is False
 
 
 if __name__ == '__main__':
