@@ -261,12 +261,11 @@ autoclass_content = 'both'
 # Fix the bibtext extension
 bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
-# Modules that are not installed in the docs environment (wxPython GUI, the
-# Python 2 ConfigParser, pytest) or no longer exist in matplotlib (the wx and
-# Qt4 backends, and PyQt4) but are imported by modules that apidoc lists.
+# Modules that are not installed in the docs environment (the Python 2
+# ConfigParser, pytest) or no longer exist in matplotlib (the Qt4 backend, and
+# PyQt4) but are imported by modules that apidoc lists.
 # Mocking them lets autodoc import those modules instead of warning.
-autodoc_mock_imports = ['wx', 'ConfigParser', 'pytest',
-                        'matplotlib.backends.backend_wxagg',
+autodoc_mock_imports = ['ConfigParser', 'pytest',
                         'matplotlib.backends.backend_qt4agg', 'PyQt4']
 
 # -- Options for the linkcheck builder -----------------------------------------
