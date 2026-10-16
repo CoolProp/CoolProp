@@ -36,11 +36,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
 
+# Least privilege (#3304).  Every job declares its own `permissions:` block;
+# this workflow-level default only covers a job added later without one.  The
+# artifact upload and cache actions authenticate with the Actions runtime
+# token, not GITHUB_TOKEN, so `contents: read` is enough for them.
+permissions:
+  contents: read
+
 jobs:
   asan:
     name: address sanitizer
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
     # default cap; when a test runs away the job is silently reported as
     # `cancelled` rather than a real failure (that is exactly how the
@@ -231,6 +240,8 @@ jobs:
     # If you need to test the workflow on a branch, open a draft PR.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -275,6 +286,8 @@ jobs:
     # retroactively. Open a draft PR to exercise it on a branch.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -473,6 +486,8 @@ jobs:
     # and local runs see the same check set.  When ubuntu-latest moves, this
     # job does not move with it.
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -660,6 +675,8 @@ jobs:
     # Triggers: PR + workflow_dispatch + Sunday cron (skip Thursday codeql cron).
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '15 8 * * 0')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -716,6 +733,8 @@ jobs:
     # Triggers: push master + PR + workflow_dispatch + Sunday cron.
     if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -774,6 +793,8 @@ jobs:
     # source-built CoolProp and runs in the wheel-build workflow, not here.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -828,6 +849,8 @@ jobs:
     # dev/scripts/check_superanc_release_pin.py.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -891,6 +914,8 @@ jobs:
     # to downstream consumers at compile time.  Real gate — no continue-on-error.
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -929,6 +954,8 @@ jobs:
     # filter so this can be a required check without deadlocking unrelated PRs.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
