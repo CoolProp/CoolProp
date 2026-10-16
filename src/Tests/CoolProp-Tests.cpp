@@ -5433,6 +5433,41 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superan
     }
 }
 
+TEST_CASE("Cubic PT at supercritical pressure and high temperature", "[cubic][cubic_supercritical_roots]") {
+    // Well above Tc the cubic in rho can have three real roots even for p > pc, but only one is
+    // physical: the others are negative or lie beyond the 1/(b - c) pole.  The no-guess root
+    // selector used to count all three and throw.
+    int n_three_root_states = 0;
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB_ptr = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB_ptr != nullptr);
+            auto& ACB = *ACB_ptr;
+            const double pc = AS->p_critical(), Tc = AS->T_critical();
+            for (double Tr : {1.5, 2.5, 4.0, 6.0}) {
+                for (double pr : {1.5, 3.0}) {
+                    CAPTURE(backend, fluid, Tr, pr);
+                    const double p = pr * pc, T = Tr * Tc;
+                    int Nsoln = 0;
+                    double r0 = 0, r1 = 0, r2 = 0;
+                    ACB.rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+                    n_three_root_states += (Nsoln == 3) ? 1 : 0;
+                    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, p, T));
+                    CHECK(AS->rhomolar() > 0);
+                    CHECK(AS->rhomolar() < AS->rhomolar_critical() * 4);
+                    // The returned root must reproduce the input pressure.
+                    std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                    chk->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+                    CHECK(chk->p() == Catch::Approx(p).epsilon(1e-10));
+                }
+            }
+        }
+    }
+    // Guard against the grid drifting out of the three-root regime, which would make this test vacuous.
+    CHECK(n_three_root_states >= 8);
+}
+
 TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic][cubic_DmolarT][2673]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
