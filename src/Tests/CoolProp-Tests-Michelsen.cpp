@@ -2844,4 +2844,72 @@ TEST_CASE("newton_raphson_twophase Jacobian matches finite differences (#3372)",
     }
 }
 
+TEST_CASE("HSU_P flash solves in quality for wide-boiling mixture (#3342)", "[michelsen][flash][HSU_P][saturation]") {
+    // PR #3357 repairs the PT split solver, but repeated blind PT flashes in the inverse
+    // solve can still fail. These cases exercise the near-dew
+    // regression and bubble states below the mixture's nominal Tmin.
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    for (double p : {1e5, 8e5}) {
+        auto sat = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        sat->set_mole_fractions(z);
+        sat->update(PQ_INPUTS, p, 0.0);
+        const double T_bub = sat->T();
+        sat->update(PQ_INPUTS, p, 1.0);
+        const double T_dew = sat->T();
+        for (double frac : {0.001, 0.002, 0.005, 0.995, 0.998, 0.999}) {
+            const double T = T_bub + frac * (T_dew - T_bub);
+            auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+            ref->set_mole_fractions(z);
+            ref->update(PT_INPUTS, p, T);
+            REQUIRE(ref->phase() == iphase_twophase);
+            for (auto pair : {HmassP_INPUTS, PSmass_INPUTS, PUmass_INPUTS}) {
+                DYNAMIC_SECTION("p=" << p << " frac=" << frac << " pair=" << pair) {
+                    auto inverse = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+                    inverse->set_mole_fractions(z);
+                    if (pair == HmassP_INPUTS) {
+                        REQUIRE_NOTHROW(inverse->update(pair, ref->hmass(), p));
+                    } else if (pair == PSmass_INPUTS) {
+                        REQUIRE_NOTHROW(inverse->update(pair, p, ref->smass()));
+                    } else {
+                        REQUIRE_NOTHROW(inverse->update(pair, p, ref->umass()));
+                    }
+                    CHECK(std::abs(inverse->T() - T) < 1e-4);
+                    CHECK(inverse->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-5));
+                    CHECK(std::abs(inverse->Q() - ref->Q()) < 1e-5);
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("HSU_P mixture quality route preserves imposed phase", "[michelsen][flash][HSU_P]") {
+    const std::string fluids = "Nitrogen&Methane&Ethane&Butane&Pentane";
+    const std::vector<double> z = {0.3797, 0.3225, 0.278, 0.0014, 0.0184};
+    for (auto phase : {iphase_gas, iphase_liquid}) {
+        auto ref = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+        ref->set_mole_fractions(z);
+        ref->specify_phase(phase);
+        ref->update(PT_INPUTS, 3e5, 150.0);
+        for (auto pair : {HmassP_INPUTS, PSmass_INPUTS, PUmass_INPUTS}) {
+            DYNAMIC_SECTION("phase=" << phase << " pair=" << pair) {
+                auto inverse = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", fluids));
+                inverse->set_mole_fractions(z);
+                inverse->specify_phase(phase);
+                if (pair == HmassP_INPUTS) {
+                    REQUIRE_NOTHROW(inverse->update(pair, ref->hmass(), 3e5));
+                } else if (pair == PSmass_INPUTS) {
+                    REQUIRE_NOTHROW(inverse->update(pair, 3e5, ref->smass()));
+                } else {
+                    REQUIRE_NOTHROW(inverse->update(pair, 3e5, ref->umass()));
+                }
+                CHECK(std::abs(inverse->T() - 150.0) < 1e-4);
+                CHECK(inverse->phase() == phase);
+                CHECK(inverse->Q() == -1.0);
+                CHECK(inverse->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-5));
+            }
+        }
+    }
+}
+
 #endif
