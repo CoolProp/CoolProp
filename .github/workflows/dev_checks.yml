@@ -281,7 +281,7 @@ jobs:
             path: clang_format.patch
 
   nanobind-wheels:
-    name: nanobind wheels (build the publish matrix, test 3.9-3.14)
+    name: nanobind wheels (build the publish matrix, test 3.11-3.14)
     # PR-only (same rationale as clang-format above): avoid master going red
     # retroactively. Open a draft PR to exercise it on a branch.
     if: github.event_name == 'pull_request'
@@ -294,16 +294,16 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Build the nanobind wheel matrix (3.9-3.11 per-version + cp312-abi3)
+      - name: Build the nanobind wheel matrix (3.11 per-version + cp312-abi3)
         shell: bash
         run: |
           set -euo pipefail
-          # Mirror the published v8 matrix (bd CoolProp-r9sq.6): per-version wheels
-          # for 3.9-3.11 (below nanobind's stable-ABI floor) and ONE cp312-abi3
+          # Mirror the published v8 matrix (bd CoolProp-r9sq.6): a per-version wheel
+          # for 3.11 (below nanobind's stable-ABI floor) and ONE cp312-abi3
           # wheel for 3.12+. COOLPROP_NANOBIND=ON drives both the nanobind CMake
           # build and (on Py>=3.12) the abi3 wheel tag via the pyproject overrides.
           # Release: the wheel compiles the whole core (incl. SVDSBTL); Debug is slow.
-          for PY in 3.9 3.10 3.11 3.12; do
+          for PY in 3.11 3.12; do
             echo "::group::build nanobind wheel on Python $PY"
             uv venv --python "$PY" ".venv-build-$PY"
             source ".venv-build-$PY/bin/activate"
@@ -329,10 +329,10 @@ jobs:
           done
           ls -l dist/
           # Hard-gate EVERY expected wheel (under `set -e` a missing/mis-tagged one
-          # fails the step): the per-version wheels for 3.9-3.11 AND the cp312-abi3
+          # fails the step): the per-version wheel for 3.11 AND the cp312-abi3
           # wheel. Without this, a per-version tagging regression would only warn in
           # the test step below (whose final guard is just `ran > 0`).
-          for tag in cp39 cp310 cp311; do
+          for tag in cp311; do
             ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl >/dev/null
           done
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
@@ -378,19 +378,19 @@ jobs:
           fi
           echo "Committed nanobind stub is in sync."
 
-      - name: Run the pytest suite on 3.9-3.14 against the matching wheel
+      - name: Run the pytest suite on 3.11-3.14 against the matching wheel
         shell: bash
         run: |
           set -euo pipefail
-          # 3.9-3.11 use their own per-version wheel; 3.12/3.13/3.14 all install the
+          # 3.11 uses its own per-version wheel; 3.12/3.13/3.14 all install the
           # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
           ran_abi3=0   # legs that ran the cp312-abi3 wheel (3.12/3.13/3.14)
           ran_mpl=0    # legs where matplotlib installed, i.e. the Plots suite ran
-          for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
+          for PY in 3.11 3.12 3.13 3.14; do
             is_abi3=0
             case "$PY" in
-              3.9 | 3.10 | 3.11)
+              3.11)
                 tag="cp${PY/./}"
                 WHL=$(ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl 2>/dev/null || true)
                 ;;
@@ -440,7 +440,7 @@ jobs:
           test "$ran" -gt 0 || { echo "::error::no Python interpreter could run a nanobind wheel"; exit 1; }
           # The cp312-abi3 wheel is the v8 crux (one wheel for 3.12/3.13/3.14); it must
           # actually be exercised on at least one of them, else a broken abi3 wheel
-          # could green the job on the 3.9-3.11 per-version legs alone (CoolProp-1tbe.12).
+          # could green the job on the 3.11 per-version leg alone (CoolProp-1tbe.12).
           test "$ran_abi3" -gt 0 || { echo "::error::the cp312-abi3 wheel ran on NO interpreter (3.12/3.13/3.14) -- it is the v8 crux and must be tested"; exit 1; }
           test "$ran_mpl" -gt 0 || { echo "::error::matplotlib installed on NO interpreter -- the whole Plots suite importorskipped and this job proves nothing about it"; exit 1; }
 
