@@ -233,9 +233,7 @@ jobs:
       shell: bash
       run: |
         source activate docs
-        # CoolProp/GUI is a wxPython app that has not imported since 2015
-        # (Ph and Ts were removed from CoolProp.Plots.Plots), so leave it out.
-        sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp ../wrappers/Python/CoolProp/GUI
+        sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
         make html
 
     - name: Check documentation links (non-blocking)
