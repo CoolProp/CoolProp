@@ -5,15 +5,17 @@ name: Python cibuildwheel
 #     publish it to PyPI.
 #   • The nightly schedule builds the full matrix and publishes it to
 #     TestPyPI, but only if master has moved since the last successful
-#     nightly; otherwise the whole run is skipped.  workflow_dispatch does
-#     the same unconditionally.
+#     nightly; otherwise the whole run is skipped.  workflow_dispatch on
+#     master does the same unconditionally (use it to check the full matrix
+#     before tagging a release); on another branch it builds but does not
+#     publish, so a feature branch can never become the newest TestPyPI build.
 #   • Branch pushes (master included) and PRs build a representative subset
 #     (1 Linux x86_64, 1 Linux aarch64, 1 Windows AMD64, 1 macOS arm64 —
-#     abi3 Python only) and publish nothing.  Publishing on every merge put
+#     abi3 Python only, plus the two Pyodide wheels) and publish nothing.  Publishing on every merge put
 #     ~two full matrices a day on TestPyPI, whose pruning is manual.
 # Adding the `full-wheels` label to an open PR triggers a fresh full
 # build (via the `labeled` event type); other label changes are ignored
-# by the gate in `set-matrix`.
+# by the gate in `set-version`.
 
 on:
   push:
@@ -66,7 +68,11 @@ jobs:
         run: |
           set -euo pipefail
           run=true
-          if [[ "$EVENT_NAME" == "schedule" ]]; then
+          if [[ "$EVENT_NAME" == "schedule" && "$REPO" != "CoolProp/CoolProp" ]]; then
+            # A fork with Actions enabled has no TestPyPI token to publish with.
+            run=false
+            echo "nightly runs only in CoolProp/CoolProp; skipping in $REPO"
+          elif [[ "$EVENT_NAME" == "schedule" ]]; then
             if last=$(gh api "repos/$REPO/actions/workflows/python_buildwheels.yml/runs?event=schedule&status=success&branch=master&per_page=1" \
                         --jq '.workflow_runs[0].head_sha // ""'); then
               echo "This commit: $SHA; last successful nightly: ${last:-none}"
@@ -329,7 +335,7 @@ jobs:
     # header.  Check that the matrix really was the full one, so a subset can
     # never be published as if it were a complete release.
     - name: Publish wheels to (Test)PyPI
-      if: ${{ needs.set-matrix.outputs.full == 'true' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+      if: ${{ needs.set-matrix.outputs.full == 'true' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')) }}
       env:
         TWINE_USERNAME: __token__
       run: python -m twine upload --verbose --skip-existing Python/*.whl Python/*.tar.gz

@@ -41,6 +41,10 @@ the CoolProp library.
   to a scheduled release.    
 * **Push to master**: Merge your changes to the *master* branch and wait for the 
   CI system to complete the work. Only proceed if all builds finish successfully.
+  A push to master builds only a subset of the Python wheels, so before tagging
+  also run the *Python cibuildwheel* workflow on master by hand (Actions ->
+  Run workflow) or wait for a green nightly: that builds the full wheel matrix
+  the tag will build, and publishes it to TestPyPI.
   If anything goes wrong, you should be able to debug the workflows locally
   using act (https://github.com/nektos/act/).
 * **Tag a release**: Tag the master branch for using ``vX.X.X`` and wait once more 
