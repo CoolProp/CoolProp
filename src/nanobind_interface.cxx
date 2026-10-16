@@ -1225,6 +1225,14 @@ void init_CoolProp(nb::module_& m) {
 
 #    if defined(COOLPROP_NANOBIND_MODULE)
 NB_MODULE(CoolProp, m) {
+#        ifdef NDEBUG
+    // nanobind reports instances, types and functions still alive at interpreter
+    // shutdown.  They are freed by the OS at exit and the report is not actionable
+    // for users, so release builds (the PyPI wheels) silence it; debug builds keep
+    // it for development.  See https://nanobind.readthedocs.io/en/latest/refleaks.html
+    // and GitHub #3354.
+    nb::set_leak_warnings(false);
+#        endif
     init_CoolProp(m);
     // Export the State C-ABI table so the frozen Cython `State` shim can forward
     // through it (PDSim cimport compatibility without a Cython AbstractState).
