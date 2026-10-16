@@ -118,6 +118,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   fluids** (it returns nullptr only for a pure fluid that has none); guard it
   with `is_pure()`.  H,S flashes without a superancillary (pseudo-pure, or
   pure without one) use the dome-free legs of `hs_cascade` (PR #3182).
+- **Cubic backends have no classic ancillaries.** `components[0].ancillaries`
+  (pL, pV, hL, ...) is empty on SRK/PR, so any path that reaches it throws
+  "type not set" (#3441).  `get_superanc()` is null there too: the cubic's
+  Chebyshev superancillary is reached only through the virtuals
+  `superanc_saturation_at_p` / `calc_saturation_ancillary`.  Route
+  saturation lookups through those, not through `get_superanc()`.  The
+  cubic's iterative Q,T / P,Q solve is converged only to ~1e-7 in p near Tc;
+  build test references from superancillary densities via D,T.
 - **HS cascade rules:** every cascade leg must be exception-guarded (a leg
   leaving the EOS domain otherwise aborts the cascade), and phase
   determination for two-phase (h,s) inputs is the dispatcher's job, done
