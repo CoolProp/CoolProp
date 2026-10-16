@@ -319,6 +319,23 @@ std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::g
     return components[0].EOS().get_superanc();
 }
 
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_p(CoolPropDbl p) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl pmax_num = superanc.get_pmax();
+    if (p > pmax_num) {
+        throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", p, pmax_num));
+    }
+    const double Tsat = superanc.get_T_from_p(p);
+    return SuperancSatPoint{Tsat, superanc.eval_sat(Tsat, 'D', 0), superanc.eval_sat(Tsat, 'D', 1)};
+}
+
 void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     if (!is_pure()) {
         return;
@@ -1861,19 +1878,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     else if (_p >= components[0].EOS().ptriple * 0.9999 && _p <= psat_max) {
 
         // First try the superancillaries, use them to determine the state if you can
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                CoolPropDbl pmax_num = superanc.get_pmax();
-                if (_p > pmax_num) {
-                    throw ValueError(
-                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
-                }
-                auto Tsat = superanc.get_T_from_p(_p);
-                auto rhoL = superanc.eval_sat(Tsat, 'D', 0);
-                auto rhoV = superanc.eval_sat(Tsat, 'D', 1);
+        {
+            const auto sat = superanc_saturation_at_p(_p);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto Tsat = sat->T;
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
                 auto psat = _p;
 
                 if (other == iT) {

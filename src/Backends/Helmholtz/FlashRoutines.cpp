@@ -3596,19 +3596,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Tmin = std::max(HEOS.Tmin(), HEOS.Ttriple());
                     } else {
 
-                        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                            auto superanc_ptr = HEOS.get_superanc();
-                            if (superanc_ptr) {
-                                auto& superanc = *superanc_ptr;
-                                CoolPropDbl pmax_num = superanc.get_pmax();
-                                if (HEOS._p > pmax_num) {
-                                    throw ValueError(
-                                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p,
-                                             pmax_num));
-                                }
-                                Tmin = superanc.get_T_from_p(HEOS._p);
-                                break;
-                            }
+                        if (const auto sat = HEOS.superanc_saturation_at_p(HEOS._p)) {
+                            Tmin = sat->T;
+                            break;
                         }
                         if (saturation_called) {
                             Tmin = HEOS.SatV->T();
@@ -3627,18 +3617,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Tmin = HEOS.Tmin() - 1e-3;
                     }
 
-                    if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                        auto superanc_ptr = HEOS.get_superanc();
-                        if (superanc_ptr) {
-                            auto& superanc = *superanc_ptr;
-                            CoolPropDbl pmax_num = superanc.get_pmax();
-                            if (HEOS._p > pmax_num) {
-                                throw ValueError(format(
-                                  "Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
-                            }
-                            Tmax = superanc.get_T_from_p(HEOS._p);
-                            break;
-                        }
+                    if (const auto sat = HEOS.superanc_saturation_at_p(HEOS._p)) {
+                        Tmax = sat->T;
+                        break;
                     }
 
                     if (saturation_called) {

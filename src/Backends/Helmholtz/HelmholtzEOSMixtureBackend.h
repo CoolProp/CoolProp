@@ -11,6 +11,7 @@
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/Configuration.h"
 
+#include <optional>
 #include <vector>
 
 namespace CoolProp {
@@ -121,6 +122,19 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// nullptr if no SuperAncillary ships with this fluid.  Throws
     /// ValueError on mixtures / pseudo-pure fluids.
     std::shared_ptr<EquationOfState::SuperAncillary_t> get_superanc();
+
+    /// Saturation temperature and coexisting densities at pressure p, from a superancillary.
+    struct SuperancSatPoint
+    {
+        CoolPropDbl T, rhomolarL, rhomolarV;
+    };
+    /// Evaluate the saturation state at pressure p from this backend's superancillary, or
+    /// return std::nullopt if it has none, in which case the caller falls back to the
+    /// classic ancillaries.  The base implementation uses the EOS-level superancillary
+    /// (when ENABLE_SUPERANCILLARIES is on); backends with their own superancillary
+    /// (e.g. the cubics, #3441) override it.  Throws ValueError if p is above the
+    /// superancillary's numerical critical pressure.
+    virtual std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p);
 
     /// Lazily build saturation superancillaries for caloric properties (h_sat, s_sat,
     /// both liquid and vapor branches) using the existing rho_sat superancillary's
