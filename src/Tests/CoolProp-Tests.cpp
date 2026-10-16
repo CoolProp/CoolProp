@@ -4149,12 +4149,13 @@ struct OverwriteFluidsGuard
 };
 
 // A one-fluid JSON listing for add_fluids_as_JSON("PCSAFT", ...); sigma tells the records apart.
-// add_fluids_as_JSON("PCSAFT", ...) returns true and only prints when loading fails, so the tests
-// check every registration through a lookup, which throws if the fluid is missing.
-std::string record(const std::string& name, const std::string& CAS, double sigma) {
+// The aliases default to the name alone.  add_fluids_as_JSON("PCSAFT", ...) returns true and only
+// prints when loading fails, so the tests check every registration through a lookup, which throws
+// if the fluid is missing.
+std::string record(const std::string& name, const std::string& CAS, double sigma, const std::vector<std::string>& aliases = {}) {
     json fluid = {{"name", name},
                   {"CAS", CAS},
-                  {"aliases", json::array({name})},
+                  {"aliases", aliases.empty() ? json::array({name}) : json(aliases)},
                   {"m", 1.5255},
                   {"sigma", sigma},
                   {"sigma_units", "Angstrom"},
@@ -4265,6 +4266,90 @@ TEST_CASE("PC-SAFT library: a duplicate is rejected without side effects when OV
     CHECK(snapshot() == before);
     CHECK(library.get("PCSAFTLibTestDup").getSigma() == 3.0);
     CHECK_THROWS_AS(library.get("PCSAFTLibTestDupOther"), ValueError);
+}
+
+TEST_CASE("PC-SAFT library: a record matching two different fluids is rejected without side effects", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestConfA", "9999-86-6", 3.0));
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestConfB", "9999-87-7", 3.1));
+    REQUIRE(library.get("PCSAFTLibTestConfA").getSigma() == 3.0);
+    REQUIRE(library.get("PCSAFTLibTestConfB").getSigma() == 3.1);
+    const auto before = snapshot();
+
+    // Records that match both A and B, as a typo or a copy-paste would give, under either setting: the
+    // name of A with the CAS number of B, and the CAS number of B with an alias that matches A only once
+    // upper-cased.  Replacing B would leave A reachable through its own identifiers and the other way round.
+    for (bool overwrite : {true, false}) {
+        CAPTURE(overwrite);
+        set_config_bool(OVERWRITE_FLUIDS, overwrite);
+        for (const std::string& conflicting :
+             {record("PCSAFTLibTestConfA", "9999-87-7", 3.2), record("PCSAFTLibTestConfC", "9999-87-7", 3.2, {"pcsaftlibtestconfa"})}) {
+            CAPTURE(conflicting);
+            CHECK_THROWS_WITH(library.add_many(json::parse(conflicting)),
+                              Catch::Matchers::ContainsSubstring("match 2 different fluids")
+                                && Catch::Matchers::ContainsSubstring("(PCSAFTLibTestConfA, PCSAFTLibTestConfB)"));
+        }
+        CHECK(snapshot() == before);
+        CHECK_THROWS_AS(library.get("PCSAFTLibTestConfC"), ValueError);
+        for (const std::string& identifier : {"PCSAFTLibTestConfA", "PCSAFTLIBTESTCONFA", "9999-86-6"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == "PCSAFTLibTestConfA");
+            CHECK(library.get(identifier).getSigma() == 3.0);
+        }
+        for (const std::string& identifier : {"PCSAFTLibTestConfB", "PCSAFTLIBTESTCONFB", "9999-87-7"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == "PCSAFTLibTestConfB");
+            CHECK(library.get(identifier).getSigma() == 3.1);
+        }
+    }
+}
+
+TEST_CASE("PC-SAFT library: a record sharing only an alias with a fluid replaces only that fluid", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestAliasD", "9999-88-8", 3.0, {"PCSAFTLibTestAliasShared"}));
+    REQUIRE(library.get("PCSAFTLibTestAliasShared").getName() == "PCSAFTLibTestAliasD");
+    const auto before = snapshot();
+    const std::size_t index_D = index_of(before, "PCSAFTLibTestAliasD");
+
+    // Each new record has its own name and CAS number, so an alias is the only identifier it shares with
+    // the fluid in place: D's alias as written; the same alias in lower case, which matches only once
+    // upper-cased; and D's name, which is not stored upper-cased, so it matches only as written.
+    struct Replacement
+    {
+        std::string name, CAS, alias;
+        double sigma;
+    };
+    for (const Replacement& r : {Replacement{"PCSAFTLibTestAliasE", "9999-89-9", "PCSAFTLibTestAliasShared", 3.1},
+                                 Replacement{"PCSAFTLibTestAliasF", "9999-90-0", "pcsaftlibtestaliasshared", 3.2},
+                                 Replacement{"PCSAFTLibTestAliasG", "9999-91-1", "PCSAFTLibTestAliasD", 3.3}}) {
+        CAPTURE(r.name, r.alias);
+        CoolProp::add_fluids_as_JSON("PCSAFT", record(r.name, r.CAS, r.sigma, {r.alias}));
+        const auto after = snapshot();
+        CHECK(after.size() == before.size());
+        for (const auto& [index, ids] : before) {
+            CAPTURE(index, ids.first);
+            REQUIRE(after.count(index) == 1);
+            if (index == index_D) {
+                CHECK(after.at(index) == std::make_pair(r.name, r.CAS));
+            } else {
+                CHECK(after.at(index) == ids);
+            }
+        }
+        CHECK(library.get(r.name).getSigma() == r.sigma);
+        CHECK(library.get(r.alias).getName() == r.name);
+        // As in the first test, every identifier of the replaced fluid, its CAS number included, now
+        // resolves to the new one.
+        for (const std::string& identifier : {"PCSAFTLibTestAliasD", "9999-88-8", "PCSAFTLibTestAliasShared", "PCSAFTLIBTESTALIASSHARED"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == r.name);
+        }
+    }
 }
 
 TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pressure]") {

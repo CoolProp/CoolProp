@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <set>
 #include "PCSAFTLibrary.h"
 #include "all_pcsaft_JSON.h"                   // Makes a std::string variable called all_pcsaft_JSON
 #include "pcsaft_fluids_schema_JSON.h"         // Makes a std::string variable called pcsaft_fluids_schema_JSON
@@ -108,25 +109,36 @@ int PCSAFTLibraryClass::add_many(const nlohmann::json& listing) {
 
             // If the fluid is ok...
 
-            // Look for a fluid already in the library that shares an identifier with this one: the CAS
-            // number, the name or an alias, in the same order as the Helmholtz fluid library.  A match is
-            // replaced in place, at its own index, so every identifier of the old fluid resolves to the new
-            // one and no other fluid is touched.  Otherwise the fluid gets an index one past the largest in use.
+            // Look for the fluids already in the library that share an identifier with this one: the CAS
+            // number, or the name or an alias, as given or upper-cased.  Every identifier is checked, so the
+            // order does not matter.  A record that matches two different fluids (the name of one and the CAS
+            // number of another, say) is ambiguous: replacing either would leave the other reachable through
+            // some of the same identifiers, so it is rejected whatever OVERWRITE_FLUIDS says, before anything
+            // is changed.  With OVERWRITE_FLUIDS on, a record that matches exactly one fluid replaces it in
+            // place, at its own index, so every identifier of the old fluid resolves to the new one and no
+            // other fluid is touched.  A new fluid gets an index one past the largest in use.
             std::vector<std::string> identifiers = {fluid.getCAS(), fluid_name, upper(fluid_name)};
             for (const auto& alias : fluid.getAliases()) {
                 identifiers.push_back(alias);
                 identifiers.push_back(upper(alias));
             }
-            std::size_t index = fluid_map.empty() ? 0 : fluid_map.rbegin()->first + 1;
-            bool already_present = false;
+            std::set<std::size_t> matches;
             for (const auto& identifier : identifiers) {
                 auto it = string_to_index_map.find(identifier);
                 if (it != string_to_index_map.end()) {
-                    index = it->second;
-                    already_present = true;
-                    break;
+                    matches.insert(it->second);
                 }
             }
+            if (matches.size() > 1) {
+                std::string matched;
+                for (std::size_t i : matches) {
+                    matched += (matched.empty() ? "" : ", ") + fluid_map.at(i).getName();
+                }
+                throw ValueError(format("Cannot load fluid [%s:%s] because its identifiers match %zu different fluids already in library (%s)",
+                                        fluid.getName().c_str(), fluid.getCAS().c_str(), matches.size(), matched.c_str()));
+            }
+            const bool already_present = !matches.empty();
+            const std::size_t index = already_present ? *matches.begin() : (fluid_map.empty() ? 0 : fluid_map.rbegin()->first + 1);
 
             if (already_present && !get_config_bool(OVERWRITE_FLUIDS)) {
                 throw ValueError(
