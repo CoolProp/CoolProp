@@ -587,9 +587,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CoolPropJSONVisibility)
 
 message(STATUS "Looking for Python")
-# The floor is 3.9, matching requires-python in pyproject.toml: the build runs
-# dev/generate_headers.py to embed the fluid data, and that script uses builtin
-# generics such as list[Path], which are a syntax error before 3.9.
+# The floor is 3.9: the build runs dev/generate_headers.py to embed the fluid
+# data, and that script uses builtin generics such as list[Path], which are a
+# syntax error before 3.9.  This is the build-tool floor, deliberately lower
+# than requires-python in pyproject.toml, which is the floor for the Python
+# package.
 #
 # Stating the floor here makes CMake skip an interpreter that is too old and
 # keep looking.  Without it, a distribution whose default python3 predates 3.9

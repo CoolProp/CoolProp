@@ -330,8 +330,9 @@ jobs:
           ls -l dist/
           # Hard-gate EVERY expected wheel (under `set -e` a missing/mis-tagged one
           # fails the step): the per-version wheel for 3.11 AND the cp312-abi3
-          # wheel. Without this, a per-version tagging regression would only warn in
-          # the test step below (whose final guard is just `ran > 0`).
+          # wheel. Without this, a per-version tagging regression would surface only
+          # as a "no wheel found" warning in the test step below, ahead of its
+          # ran_pv / ran_abi3 guards.
           for tag in cp311; do
             ls dist/coolprop-*-"${tag}"-"${tag}"-*.whl >/dev/null
           done
@@ -386,6 +387,7 @@ jobs:
           # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
           ran_abi3=0   # legs that ran the cp312-abi3 wheel (3.12/3.13/3.14)
+          ran_pv=0     # legs that ran a per-version (non-abi3) wheel (3.11)
           ran_mpl=0    # legs where matplotlib installed, i.e. the Plots suite ran
           for PY in 3.11 3.12 3.13 3.14; do
             is_abi3=0
@@ -433,7 +435,7 @@ jobs:
             python -c "import sys; print('Python', sys.version.split()[0])"
             pytest wrappers/Python/pytest -q
             ran=$((ran + 1))
-            if [ "$is_abi3" -eq 1 ]; then ran_abi3=$((ran_abi3 + 1)); fi
+            if [ "$is_abi3" -eq 1 ]; then ran_abi3=$((ran_abi3 + 1)); else ran_pv=$((ran_pv + 1)); fi
             deactivate
             echo "::endgroup::"
           done
@@ -441,6 +443,10 @@ jobs:
           # The cp312-abi3 wheel is the v8 crux (one wheel for 3.12/3.13/3.14); it must
           # actually be exercised on at least one of them, else a broken abi3 wheel
           # could green the job on the 3.11 per-version leg alone (CoolProp-1tbe.12).
+          # Likewise the per-version wheel: it is the only one built without
+          # nanobind's stable ABI, and with a single 3.11 leg one transient
+          # test-deps failure would otherwise leave it untested on a green job.
+          test "$ran_pv" -gt 0 || { echo "::error::the per-version (3.11) wheel ran on NO interpreter -- it must be tested"; exit 1; }
           test "$ran_abi3" -gt 0 || { echo "::error::the cp312-abi3 wheel ran on NO interpreter (3.12/3.13/3.14) -- it is the v8 crux and must be tested"; exit 1; }
           test "$ran_mpl" -gt 0 || { echo "::error::matplotlib installed on NO interpreter -- the whole Plots suite importorskipped and this job proves nothing about it"; exit 1; }
 
