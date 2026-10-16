@@ -7,6 +7,7 @@
 #include "Backends/Helmholtz/VLERoutines.h"
 #include "Backends/Helmholtz/MixtureDerivatives.h"
 #include <Eigen/Dense>
+#include "boost/math/tools/toms748_solve.hpp"
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
@@ -1001,6 +1002,74 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters
         throw NotImplementedError(
           format("calc_saturation_ancillary: unsupported param=%s for cubic EOS", get_parameter_information(param, "short").c_str()));
     }
+}
+
+std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_p(CoolPropDbl p) {
+    const int eos_code = get_superanc_eos_code();
+    if (!is_pure_or_pseudopure || eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        return HelmholtzEOSMixtureBackend::superanc_saturation_at_p(p);
+    }
+    if (!(p > 0)) {
+        throw ValueError(format("superanc_saturation_at_p: pressure (%Lg Pa) must be positive", p));
+    }
+    const std::vector<double> x = {1.0};
+    const double R = cubic->get_R_u(), Tr = cubic->get_Tr(), bm = cubic->bm_term(x);
+    using namespace CubicSuperAncillary;
+    // The superancillary is tabulated in Ttilde = R*T*b/a(T); a(T) carries the alpha function, so
+    // T(Ttilde) has no closed form and every inversion below is a 1-D solve in T.  Ttilde rises
+    // monotonically with T from zero.
+    auto Ttilde_of_T = [&](double T) { return R * T * bm / cubic->am_term(Tr / T, x, 0); };
+    auto ln_psat_of_T = [&](double T) { return log(supercubic(eos_code, P_CODE, Ttilde_of_T(T)) * cubic->am_term(Tr / T, x, 0) / (bm * bm)); };
+    const int bits = 50;
+    std::uintmax_t max_iter = 100;
+    // T at which Ttilde equals Ttilde_bound.  The converged bracket end that lies INSIDE the
+    // superancillary domain is returned, so later evaluations never step off it by an ulp
+    // (calc_superanc_Tmax() inverts with a(Tc) and can overshoot Ttilde_max slightly).
+    auto T_at_Ttilde = [&](double Ttilde_bound, bool inside_is_above) {
+        auto f = [&](double T) { return Ttilde_of_T(T) - Ttilde_bound; };
+        double Ta = 0.5 * T_critical(), Tb = 2 * T_critical();
+        for (int i = 0; i < 20 && !(f(Ta) < 0); ++i) {
+            Ta *= 0.5;
+        }
+        for (int i = 0; i < 20 && !(f(Tb) > 0); ++i) {
+            Tb *= 2;
+        }
+        max_iter = 100;
+        const auto bracket = boost::math::tools::toms748_solve(f, Ta, Tb, boost::math::tools::eps_tolerance<double>(bits), max_iter);
+        if (max_iter >= 100) {
+            throw ValueError("superanc_saturation_at_p: Ttilde inversion did not converge");
+        }
+        return inside_is_above ? bracket.second : bracket.first;
+    };
+    const double Tmin = T_at_Ttilde(get_Ttilde_min(eos_code), true);
+    const double Tmax = T_at_Ttilde(get_Ttilde_max(eos_code), false);
+
+    const double ln_p = log(static_cast<double>(p));
+    const double g_Tmax = ln_psat_of_T(Tmax) - ln_p;
+    // Written as !(... >= 0) so that a NaN from am_term or the Chebyshev evaluation throws
+    // rather than slipping past both range checks.
+    if (!(g_Tmax >= 0)) {
+        throw ValueError(
+          format("Pressure [%0.8Lg Pa] may not be above the maximum pressure of the cubic superancillary (%0.15g Pa)", p, exp(g_Tmax + ln_p)));
+    }
+    const double g_Tmin = ln_psat_of_T(Tmin) - ln_p;
+    if (!(g_Tmin <= 0)) {
+        throw ValueError(format("Pressure [%0.8Lg Pa] is below the minimum pressure of the cubic superancillary (%0.15g Pa)", p, exp(g_Tmin + ln_p)));
+    }
+    double Tsat = Tmax;
+    if (g_Tmax > 0) {
+        max_iter = 100;
+        auto g = [&](double T) { return ln_psat_of_T(T) - ln_p; };
+        const auto bracket =
+          boost::math::tools::toms748_solve(g, Tmin, Tmax, g_Tmin, g_Tmax, boost::math::tools::eps_tolerance<double>(bits), max_iter);
+        if (max_iter >= 100) {
+            throw ValueError(format("superanc_saturation_at_p: Tsat inversion did not converge for p = %0.8Lg Pa", p));
+        }
+        Tsat = 0.5 * (bracket.first + bracket.second);
+    }
+    const double Ttilde = Ttilde_of_T(Tsat);
+    return SuperancSatPoint{Tsat, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
+                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm)};
 }
 
 void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
