@@ -18,13 +18,11 @@ authors = [
 ]
 description = "Open-source thermodynamic and transport properties database"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -113,7 +111,7 @@ provider-path = "dev"
 #      sidecars (State, _constants) limited-API -- so nanobind's STABLE_ABI core
 #      and the sidecars are all abi3 and ONE wheel covers 3.12/3.13/3.14.
 #
-# Gating (2) on Py>=3.12 leaves the legacy wheel and the 3.9-3.11 per-version
+# Gating (2) on Py>=3.12 leaves the legacy wheel and the 3.11 per-version
 # nanobind fallback (below nanobind's stable-ABI floor) untouched.
 [[tool.scikit-build.overrides]]
 if.env.COOLPROP_NANOBIND = true
@@ -126,7 +124,7 @@ wheel.py-api = "cp312"
 
 [tool.cibuildwheel]
 # Build for multiple Python versions (CPython only)
-build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+build = "cp311-* cp312-* cp313-* cp314-*"
 
 # Skip musllinux for now
 skip = "*-musllinux_*"
