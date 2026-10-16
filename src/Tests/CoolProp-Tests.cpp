@@ -5396,6 +5396,18 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superan
             }
         }
 
+        SECTION(backend + " caloric properties on a fresh state") {
+            // SatL/SatV are filled by update_TDmolarP_unchecked, which skips pre_update(); the
+            // cubic's cached reducing state must already be seeded or h is evaluated at tau = inf.
+            const double T = 0.8 * Tc_sa;
+            AS->update_QT_pure_superanc(0.5, T);
+            const double h_superanc = AS->hmolar();
+            const double rho = AS->rhomolar();
+            std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+            ref->update(CoolProp::DmolarT_INPUTS, rho, T);
+            CHECK(h_superanc == Catch::Approx(ref->hmolar()).epsilon(1e-9));
+        }
+
         SECTION(backend + " update_QT_pure_superanc Q=0 and Q=1 densities bracket Q=0.5") {
             double T = 0.8 * Tc_sa;
             AS->update_QT_pure_superanc(0.0, T);

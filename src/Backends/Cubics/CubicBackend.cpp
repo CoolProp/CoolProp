@@ -26,6 +26,10 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     }
     // Now set the reducing function for the mixture
     Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
+    // Seed the cached reducing state, as HelmholtzEOSMixtureBackend::set_components does.  Otherwise
+    // it is only filled by pre_update(), and a SatL/SatV populated through update_TDmolarP_unchecked()
+    // before ever seeing a full update() evaluates h, s, u at tau = inf.
+    _reducing = calc_reducing_state_nocache(mole_fractions);
 
     // Set the alpha function based on the components in use
     set_alpha_from_components();
