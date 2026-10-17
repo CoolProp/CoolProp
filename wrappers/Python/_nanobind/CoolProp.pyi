@@ -5,6 +5,8 @@ from typing import Annotated, TypeAlias, overload
 import numpy
 from numpy.typing import NDArray
 
+from . import Plot as Plot
+
 
 import numpy
 from numpy.typing import NDArray

@@ -227,3 +227,34 @@ recorded history of finished or abandoned work were dropped (they remain in
   mixtures follow the trivial solution past the critical point to GPa
   pressures, and heavy traces underflow to NaN.  Use these cases when
   judging a replacement tracer.
+
+## Property plots (CoolProp::Plot)
+
+- **`src/CoolPropPlot.cpp` is a port of CoolPlot's numerics** (the Python
+  package: `thermo/isolines.py`, `tracer.py`, `stepping.py`, `fluid.py` of
+  CoolPlot 0.7+).  Names and the order of steps follow the Python files on
+  purpose; fix a numerics bug in both.  CoolPlot uses the port through
+  `CoolProp.CoolProp.Plot` when it is present and falls back to its Python
+  copy, which its tests treat as the reference.
+- **The nanobind submodule lives at `CoolProp.CoolProp.Plot`**, not
+  `CoolProp.Plot`: the package `__init__` is kept identical to the legacy
+  one (import-tree parity gate), and `CoolProp.Plots` is the old Python
+  plotting package.  `nanobind_add_stub` writes one module per call, so
+  `wrappers/Python/_nanobind/Plot.pyi` is a committed copy (command in
+  `wrappers/Python/CMakeLists.txt`); the drift gate covers `CoolProp.pyi`
+  only, `wrappers/Python/pytest/test_stub.py` checks `Plot.pyi` by name.
+- **Releasing the GIL** in `AbstractState.update` and
+  `PropertyPlot.calc_isolines` is safe: neither touches Python objects
+  (the `std::vector<double>` argument is converted before the call).
+  Every other binding keeps the GIL; add `nb::call_guard<nb::gil_scoped_release>()`
+  only to calls that never re-enter Python.
+- **The mixture H-p flash on master refuses two-phase states 8.0.0 solved**
+  (R32/R125 70/30 at h = 4e5 J/kg, p = 9.65 bar: the residual gate after the
+  temperature search throws "the (T,p) flash is misclassifying the phase").
+  Tests of the tracer against the flash compare only where the flash
+  converges; the isoline tracer itself never needs that flash.
+- **Building the Python wheel offline:** the catch build fills
+  `.cpm_cache/` in the repo; `pip wheel .` configures a fresh tree, so pass
+  `CMAKE_ARGS="-DCPM_SOURCE_CACHE=$PWD/.cpm_cache"` (plus the valijson
+  source if downloads are blocked) or Eigen is fetched again (gitlab
+  returns 429 quickly).
