@@ -333,7 +333,23 @@ std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureB
         throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", p, pmax_num));
     }
     const double Tsat = superanc.get_T_from_p(p);
-    return SuperancSatPoint{Tsat, superanc.eval_sat(Tsat, 'D', 0), superanc.eval_sat(Tsat, 'D', 1)};
+    return SuperancSatPoint{Tsat, superanc.eval_sat(Tsat, 'D', 0), superanc.eval_sat(Tsat, 'D', 1), p};
+}
+
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+    if (T > Tcrit_num) {
+        throw ValueError(format("Temperature [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+    }
+    return SuperancSatPoint{T, superanc.eval_sat(T, 'D', 0), superanc.eval_sat(T, 'D', 1), superanc.eval_sat(T, 'P', 1)};
 }
 
 void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
@@ -2318,14 +2334,13 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         }
     } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                auto rhoL = superanc.eval_sat(_T, 'D', 0);
-                auto rhoV = superanc.eval_sat(_T, 'D', 1);
-                auto psat = superanc.eval_sat(_T, 'P', 1);
+        {
+            const auto sat = superanc_saturation_at_T(_T);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
+                auto psat = sat->p;
                 _rhoLanc = rhoL;
                 _rhoVanc = rhoV;
                 _rhoLmolar = rhoL;

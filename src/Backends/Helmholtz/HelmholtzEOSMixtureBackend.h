@@ -123,10 +123,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// ValueError on mixtures / pseudo-pure fluids.
     std::shared_ptr<EquationOfState::SuperAncillary_t> get_superanc();
 
-    /// Saturation temperature and coexisting densities at pressure p, from a superancillary.
+    /// A saturation point from a superancillary: temperature, coexisting densities and pressure.
     struct SuperancSatPoint
     {
-        CoolPropDbl T, rhomolarL, rhomolarV;
+        CoolPropDbl T, rhomolarL, rhomolarV, p;
     };
     /// Evaluate the saturation state at pressure p from this backend's superancillary, or
     /// return std::nullopt if it has none, in which case the caller falls back to the
@@ -137,6 +137,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// table's minimum pressure, and maps p in the ~1e-9-wide gap between the end of the SRK
     /// table and pc onto the end of the table.
     virtual std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p);
+    /// The same at temperature T.  The base implementation uses the EOS-level superancillary
+    /// (when ENABLE_SUPERANCILLARIES is on) and throws ValueError above its numerical critical
+    /// temperature; the cubic override throws outside its table.
+    virtual std::optional<SuperancSatPoint> superanc_saturation_at_T(CoolPropDbl T);
 
     /// Lazily build saturation superancillaries for caloric properties (h_sat, s_sat,
     /// both liquid and vapor branches) using the existing rho_sat superancillary's
