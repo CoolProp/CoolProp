@@ -1270,7 +1270,38 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     }
     const double Ttilde = Ttilde_of_T(Tsat);
     return SuperancSatPoint{Tsat, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
-                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm)};
+                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm), p};
+}
+
+std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    const int eos_code = get_superanc_eos_code();
+    if (!is_pure_or_pseudopure || eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        return HelmholtzEOSMixtureBackend::superanc_saturation_at_T(T);
+    }
+    using namespace CubicSuperAncillary;
+    if (T > T_critical() * (1 + 4 * DBL_EPSILON)) {
+        throw ValueError(format("Temperature [%0.8Lg K] may not be above the critical temperature of the cubic", T));
+    }
+    const std::vector<double> x = {1.0};
+    const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+    // The SRK table stops 8e-10 in Ttilde short of the critical point; in that gap, up to Tc, take
+    // its end.  Anything further above the table (a non-monotone alpha) is not clamped: it throws.
+    const double Ttilde_max = get_Ttilde_max(eos_code);
+    if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-8)) {
+        Ttilde = Ttilde_max;
+    }
+    if (Ttilde > Ttilde_max) {
+        throw ValueError(format("Temperature [%0.8Lg K] maps above the end of the cubic superancillary", T));
+    }
+    // Written as !(>=) so that a NaN temperature throws too.
+    if (!(Ttilde >= get_Ttilde_min(eos_code))) {
+        throw ValueError(format("Temperature [%0.8Lg K] is below the minimum temperature of the cubic superancillary", T));
+    }
+    // A volume translation moves no pressure, so p~ needs no correction.
+    return SuperancSatPoint{T, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
+                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm),
+                            supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm)};
 }
 
 void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {

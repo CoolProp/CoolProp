@@ -4003,6 +4003,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
     else if ((HEOS._phase == iphase_liquid) || (HEOS._phase == iphase_supercritical_liquid)) {
         CoolPropDbl ymelt = NAN, yL = NAN, y = NAN;
         CoolPropDbl rhomelt = HEOS.components[0].triple_liquid.rhomolar;
+        // Backends without a triple point (the cubics) leave it at _HUGE (+inf), which put the seed
+        // evaluation at delta = inf.  Use the backend's own upper density bound instead.
+        if (!ValidNumber(rhomelt)) {
+            rhomelt = HEOS.calc_rhomolar_max_bound();
+        }
         // Self-contained seed evaluation: prefer the cached ancillary set by
         // upstream phase-determination, otherwise fall through to superancillary
         // (numerical-critical-point accurate), then to the polynomial ancillary.
@@ -4011,18 +4016,18 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         CoolPropDbl rhoL = NAN;
         if (HEOS._rhoLanc) {
             rhoL = static_cast<double>(HEOS._rhoLanc);
-        } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto superanc_ptr = HEOS.get_superanc();
-            if (superanc_ptr) {
-                // get_superanc() only reports cache existence, not domain coverage —
-                // eval_sat() can still throw near the numerical critical point or a
-                // domain edge. Swallow the throw so the polynomial fallback below stays
-                // reachable for previously valid subcritical flashes.
-                try {
-                    rhoL = superanc_ptr->eval_sat(HEOS._T, 'D', 0);
-                } catch (...) {
-                    rhoL = NAN;
+        } else {
+            // superanc_saturation_at_T also covers backends with their own superancillary (the
+            // cubics, whose classic ancillaries are empty: an imposed-phase T-input flash reaches
+            // here without T_phase_determination having set _rhoLanc).  It can throw near the
+            // numerical critical point or a domain edge; swallow that so the polynomial fallback
+            // below stays reachable for previously valid subcritical flashes.
+            try {
+                if (const auto sat = HEOS.superanc_saturation_at_T(HEOS._T)) {
+                    rhoL = sat->rhomolarL;
                 }
+            } catch (...) {
+                rhoL = NAN;
             }
         }
         if (!ValidNumber(rhoL)) {
@@ -4067,15 +4072,14 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         CoolPropDbl rhoV = NAN;
         if (HEOS._rhoVanc) {
             rhoV = static_cast<double>(HEOS._rhoVanc);
-        } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto superanc_ptr = HEOS.get_superanc();
-            if (superanc_ptr) {
-                // See companion try/catch in the liquid branch above.
-                try {
-                    rhoV = superanc_ptr->eval_sat(HEOS._T, 'D', 1);
-                } catch (...) {
-                    rhoV = NAN;
+        } else {
+            // See companion block in the liquid branch above.
+            try {
+                if (const auto sat = HEOS.superanc_saturation_at_T(HEOS._T)) {
+                    rhoV = sat->rhomolarV;
                 }
+            } catch (...) {
+                rhoV = NAN;
             }
         }
         if (!ValidNumber(rhoV)) {
