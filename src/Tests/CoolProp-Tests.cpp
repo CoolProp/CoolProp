@@ -5627,6 +5627,29 @@ TEST_CASE("Cubic TP root choice above Tc below pc", "[cubic][cubic_superanc][COO
     CHECK(n_three_root >= 4);
 }
 
+TEST_CASE("Cubic T,P phase label follows the new density", "[cubic][cubic_pt_phase]") {
+    // solver_rho_Tp labelled the phase before _rhomolar was assigned, so the label came from the
+    // previous state's density (a fresh state read as gas).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Propane", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double T = 0.6 * AS->T_critical();
+            const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+            // Fresh state straight to a compressed liquid.
+            AS->update(CoolProp::PT_INPUTS, 2 * psat, T);
+            CHECK(AS->phase() == iphase_liquid);
+            // Liquid -> gas -> liquid on the same instance.
+            AS->update(CoolProp::PT_INPUTS, 0.5 * psat, T);
+            CHECK(AS->phase() == iphase_gas);
+            AS->update(CoolProp::PT_INPUTS, 2 * psat, T);
+            CHECK(AS->phase() == iphase_liquid);
+        }
+    }
+}
+
 TEST_CASE("Cubic QT and PQ with volume translation", "[cubic][cubic_superanc][COO-136]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
