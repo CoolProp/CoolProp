@@ -20,11 +20,12 @@ import CoolProp.CoolProp as CP
 
 _PKG = os.path.dirname(CP.__file__)
 _PYI = os.path.join(_PKG, "CoolProp.pyi")
+_PLOT_PYI = os.path.join(_PKG, "Plot.pyi")   # the CoolProp.CoolProp.Plot submodule
 
 
-def _stub_toplevel_names():
+def _stub_toplevel_names(path=_PYI):
     names = set()
-    with open(_PYI, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         tree = ast.parse(f.read())
     for n in tree.body:
         if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
@@ -33,6 +34,10 @@ def _stub_toplevel_names():
             names.add(n.target.id)
         elif isinstance(n, ast.Assign):
             names.update(t.id for t in n.targets if isinstance(t, ast.Name))
+        elif isinstance(n, ast.ImportFrom) and n.level == 1:
+            # A submodule re-exported as ``from . import Plot as Plot`` is a
+            # symbol of the module too; stubgen writes it that way.
+            names.update(a.asname or a.name for a in n.names)
     return names
 
 
@@ -48,6 +53,17 @@ def test_stub_symbol_parity_with_runtime():
     runtime = {n for n in dir(CP) if not n.startswith("__")}
     missing = sorted(runtime - names)
     assert not missing, "runtime symbols missing from the stub: %s" % missing
+
+
+def test_plot_stub_ships_and_matches_runtime():
+    """The submodule stub is a committed copy, so check it against the runtime by hand."""
+    assert os.path.exists(_PLOT_PYI), "Plot.pyi not shipped in the wheel"
+    names = _stub_toplevel_names(_PLOT_PYI)
+    runtime = {n for n in dir(CP.Plot) if not n.startswith("_")}
+    missing = sorted(runtime - names)
+    assert not missing, "runtime symbols of CoolProp.CoolProp.Plot missing from Plot.pyi: %s" % missing
+    stale = sorted(n for n in names - runtime - {"Sequence", "enum", "overload", "CoolProp"})
+    assert not stale, "Plot.pyi names symbols the runtime does not have: %s" % stale
 
 
 def test_stub_overloads_typecheck():

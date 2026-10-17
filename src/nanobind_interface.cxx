@@ -9,6 +9,7 @@
 #    include "CoolProp/detail/state_capi.h"
 #    include "CoolProp/expression/ExpressionBlock.h"
 #    include "CoolProp/superancillary/superancillary.h"
+#    include "CoolProp/plotting/CoolPropPlot.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
 
 #    include <nanobind/nanobind.h>
@@ -381,6 +382,8 @@ static void init_superancillary(nb::module_& m) {
         nb::arg("T"), nb::arg("prop"), nb::arg("Q"), nb::arg("y"));
 }
 
+void init_plot(nb::module_& m);
+
 void init_CoolProp(nb::module_& m) {
     using namespace CoolProp;
 
@@ -672,7 +675,9 @@ void init_CoolProp(nb::module_& m) {
       .def("mole_fractions_vapor_double", &AbstractState::mole_fractions_vapor_double)
       .def("get_mole_fractions", &AbstractState::get_mole_fractions)
       .def("get_mass_fractions", &AbstractState::get_mass_fractions)
-      .def("update", &AbstractState::update)
+      // The GIL is released while CoolProp solves: a chart can be computed on
+      // a worker thread while the window stays responsive (CoolPlot does this).
+      .def("update", &AbstractState::update, nb::call_guard<nb::gil_scoped_release>())
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
       .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25
@@ -1221,6 +1226,88 @@ void init_CoolProp(nb::module_& m) {
 
     // Chebyshev rootfinding + SuperAncillary saturation evaluator classes.
     init_superancillary(m);
+
+    init_plot(m);
+}
+
+/// CoolProp.Plot: the numerics of property diagrams (isolines through the
+/// two-phase region, the dome, the T-p box of a chart), see
+/// include/CoolProp/plotting/CoolPropPlot.h.  CoolPlot (the Python plotting
+/// package) uses it when it is present and keeps its own Python copy as the
+/// fallback.
+void init_plot(nb::module_& m) {
+    using namespace CoolProp::Plot;
+    nb::module_ plot = m.def_submodule("Plot", "Numerics of property diagrams: isolines, the dome and the limits of a chart");
+
+    nb::enum_<Scale>(plot, "Scale").value("Lin", Scale::Lin).value("Log", Scale::Log);
+    nb::enum_<TPLimits>(plot, "TPLimits")
+      .value("NONE", TPLimits::None)
+      .value("DEF", TPLimits::Def)
+      .value("ACHP", TPLimits::Achp)
+      .value("ORC", TPLimits::Orc);
+
+    nb::class_<Range>(plot, "Range")
+      .def(nb::init<double, double>(), nb::arg("min"), nb::arg("max"))
+      .def_rw("min", &Range::min)
+      .def_rw("max", &Range::max)
+      .def("__repr__", [](const Range& r) { return "Range(" + std::to_string(r.min) + ", " + std::to_string(r.max) + ")"; });
+
+    nb::class_<CalcSettings>(plot, "CalcSettings",
+                             "How the isolines are computed: points per line, the solver (auto, tracer or flash), "
+                             "the margin to the critical point and the spacing of the quality lines (critical or linear).")
+      .def(nb::init<>())
+      .def_rw("points", &CalcSettings::points)
+      .def_rw("saturation_points", &CalcSettings::saturation_points)
+      .def_rw("solver", &CalcSettings::solver)
+      .def_rw("critical_margin", &CalcSettings::critical_margin)
+      .def_rw("saturation_spacing", &CalcSettings::saturation_spacing);
+
+    nb::class_<Isoline>(plot, "Isoline", "One computed line: x and y in SI units with NaN for a gap, and how it was computed.")
+      .def_ro("x", &Isoline::x)
+      .def_ro("y", &Isoline::y)
+      .def_ro("value", &Isoline::value)
+      .def_ro("n_failed", &Isoline::n_failed)
+      .def_ro("n_fallback", &Isoline::n_fallback)
+      .def_ro("n_inserted", &Isoline::n_inserted)
+      .def_ro("n_evaluated", &Isoline::n_evaluated)
+      .def_ro("n_outside", &Isoline::n_outside)
+      .def_ro("method", &Isoline::method)
+      .def_ro("reason", &Isoline::reason)
+      .def("size", &Isoline::size)
+      .def("n_valid", &Isoline::n_valid)
+      .def("n_gaps", &Isoline::n_gaps)
+      .def("__len__", &Isoline::size);
+
+    nb::class_<PropertyPlot::Axis>(plot, "Axis")
+      .def_ro("scale", &PropertyPlot::Axis::scale)
+      .def_prop_ro("min", [](const PropertyPlot::Axis& a) { return a.range.min; })
+      .def_prop_ro("max", [](const PropertyPlot::Axis& a) { return a.range.max; });
+
+    nb::class_<PropertyPlot>(plot, "PropertyPlot",
+                             "A property diagram of one fluid: its T-p box, its axes and the isolines it can compute.\n"
+                             "The property keys are CoolProp.parameters (iT, iP, iHmass, iSmass, iDmass, iUmass, iQ).")
+      .def(nb::init<const std::string&, CoolProp::parameters, CoolProp::parameters, TPLimits>(), nb::arg("fluid_name"), nb::arg("ykey"),
+           nb::arg("xkey"), nb::arg("tp_limits") = TPLimits::Def)
+      .def(nb::init<const std::string&, CoolProp::parameters, CoolProp::parameters, double, double, double, double>(), nb::arg("fluid_name"),
+           nb::arg("ykey"), nb::arg("xkey"), nb::arg("T_min_K"), nb::arg("T_max_K"), nb::arg("p_min_Pa"), nb::arg("p_max_Pa"))
+      .def_ro("xaxis", &PropertyPlot::xaxis)
+      .def_ro("yaxis", &PropertyPlot::yaxis)
+      .def("isoline_range", &PropertyPlot::isoline_range, nb::arg("key"))
+      .def("calc_isolines", nb::overload_cast<CoolProp::parameters, const std::vector<double>&, int>(&PropertyPlot::calc_isolines, nb::const_),
+           nb::arg("key"), nb::arg("values"), nb::arg("points") = 250, nb::call_guard<nb::gil_scoped_release>())
+      .def("calc_isolines",
+           nb::overload_cast<CoolProp::parameters, const std::vector<double>&, const CalcSettings&>(&PropertyPlot::calc_isolines, nb::const_),
+           nb::arg("key"), nb::arg("values"), nb::arg("settings"), nb::call_guard<nb::gil_scoped_release>())
+      .def("supported_isoline_keys", &PropertyPlot::supported_isoline_keys)
+      .def("sweep_key", &PropertyPlot::sweep_key, nb::arg("key"))
+      .def("value_at", &PropertyPlot::value_at, nb::arg("key"), nb::arg("xvalue"), nb::arg("yvalue"), nb::arg("phase") = CoolProp::iphase_not_imposed)
+      .def("tp_box", &PropertyPlot::tp_box)
+      .def("is_mixture", &PropertyPlot::is_mixture);
+
+    plot.def("generate_values_in_range", nb::overload_cast<Scale, const Range&, int>(&generate_values_in_range), nb::arg("scale"), nb::arg("range"),
+             nb::arg("count"));
+    plot.def("generate_values_in_range", nb::overload_cast<CoolProp::parameters, const Range&, int>(&generate_values_in_range), nb::arg("type"),
+             nb::arg("range"), nb::arg("count"));
 }
 
 #    if defined(COOLPROP_NANOBIND_MODULE)

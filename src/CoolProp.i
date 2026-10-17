@@ -56,6 +56,7 @@
 #include "CoolProp/Configuration.h"
 #undef SWIG
 #include "CoolProp/HumidAirProp.h"
+#include "CoolProp/plotting/CoolPropPlot.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 %}
 
@@ -65,6 +66,7 @@
 %include "CoolProp/fluids/PhaseEnvelope.h"
 %include "CoolProp/Configuration.h"
 %include "CoolProp/HumidAirProp.h"
+%include "CoolProp/plotting/CoolPropPlot.h"
 namespace CoolProp {
 void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule);
 }
