@@ -106,7 +106,15 @@
     X(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, "SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB", static_cast<int>(512),                                                 \
       "Maximum total estimated resident size, in MB, of the process-wide SVDSBTL in-memory surface cache.  Evicted LRU-first alongside the entry-"   \
       "count cap in SVDSBTL_SURFACE_CACHE_MAX_ENTRIES -- whichever limit is hit first triggers eviction.  Needed because surface size varies "       \
-      "widely with the NT/NR/rank build options, so an entry count alone can't bound memory.")
+      "widely with the NT/NR/rank build options, so an entry count alone can't bound memory.")                                                       \
+    X(INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC, "INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC", true,                                                      \
+      "If true (the default), an incompressible fluid that ships Chebyshev caloric entries (density_cheb / specific_heat_cheb) uses them for "       \
+      "density and specific heat, giving exact enthalpy and entropy integrals.  Set false to fall back to the classic centred-polynomial "           \
+      "equations for those two properties even where the Chebyshev fits exist, which is how the library behaved before the Chebyshev backend "       \
+      "landed.  Read while a fluid is parsed, so it takes effect for fluids registered AFTER it is set: the shipped library is parsed once on "      \
+      "first use, so to change the shipped fluids this must be set before any incompressible fluid is touched -- most reliably through the "         \
+      "COOLPROP_INCOMPRESSIBLE_PREFER_CHEBYSHEV_CALORIC environment variable, which is applied when the configuration is first constructed.  "       \
+      "Fluids added later through add_fluids_as_JSON(\"INCOMP\", ...) always honour the current value.")
 
 // Use preprocessor to create the Enum
 enum configuration_keys
