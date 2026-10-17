@@ -850,6 +850,9 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         throw ValueError("Obtained neither 1 nor three roots");
     }
     if (is_pure_or_pseudopure) {
+        // recalculate_singlephase_phase() reads rhomolar(); the caller only assigns _rhomolar from our
+        // return value, so set it first or the label comes from the previous state's density.
+        _rhomolar = rho;
         this->recalculate_singlephase_phase();
     } else {
         if (rho < rhomolar_reducing()) {
