@@ -277,6 +277,21 @@ class Fluid
         return envelope_.get();
     }
 
+    /// The highest stable critical temperature CoolProp finds for the fluid
+    /// (all_critical_points, seconds to minutes for a blend with a wide
+    /// glide), computed once; NaN if there is none.
+    double dome_critical_T() {
+        if (!dome_critical_tried_) {
+            dome_critical_tried_ = true;
+            try {
+                for (const CoolProp::CriticalState& c : state_->all_critical_points())
+                    if (c.stable && !(c.T <= dome_critical_T_)) dome_critical_T_ = c.T;
+            } catch (...) {
+            }
+        }
+        return dome_critical_T_;
+    }
+
     bool has_critical_point() {
         if (!critical_tried_) {
             try {
@@ -400,7 +415,8 @@ class Fluid
     std::vector<double> fractions_;
     bool mass_basis_ = false;
     std::shared_ptr<CoolProp::AbstractState> state_, current_, guide_;
-    bool guide_tried_ = false, envelope_tried_ = false, critical_tried_ = false, has_critical_ = false;
+    bool guide_tried_ = false, envelope_tried_ = false, critical_tried_ = false, has_critical_ = false, dome_critical_tried_ = false;
+    double dome_critical_T_ = NaN;
     std::unique_ptr<Envelope> envelope_;
     CriticalPoint critical_;
 };
@@ -464,8 +480,8 @@ class IsoLineTracer
         return i1 == CoolProp::iT || i2 == CoolProp::iT || i1 == CoolProp::iP || i2 == CoolProp::iP;
     }
 
-    IsoLineTracer(const Fluid& fluid, CoolProp::parameters index1, CoolProp::parameters index2, CoolProp::parameters iso_index)
-      : i1_(index1), i2_(index2) {
+    IsoLineTracer(Fluid& fluid, CoolProp::parameters index1, CoolProp::parameters index2, CoolProp::parameters iso_index)
+      : i1_(index1), i2_(index2), critical_T_(fluid.dome_critical_T()) {
         if (index1 == index2) throw CoolProp::ValueError("The two inputs of an isoline cannot be the same property.");
         if (!supports(index1, index2))
             throw CoolProp::ValueError("An isoline whose inputs include neither temperature nor pressure cannot be traced.");
@@ -541,6 +557,7 @@ class IsoLineTracer
     };
 
     CoolProp::parameters i1_, i2_, sat_index_;
+    double critical_T_;  // the highest stable critical temperature of the fluid, NaN if none (cached by the Fluid)
     std::shared_ptr<CoolProp::AbstractState> sat_, sp_;
     CoolProp::AbstractState* out_ = nullptr;
     std::map<CoolProp::parameters, double> eos_bounds_;
@@ -602,14 +619,25 @@ class IsoLineTracer
             }
         } catch (...) {
         }
+        // The outer bound: the largest critical point of the components, when
+        // every one of them can be looked up (Props1SI reports a failure as an
+        // infinite value, not an exception; then the envelope's bound stays).
         std::map<CoolProp::parameters, double> outer = envelope;
         try {
+            std::map<CoolProp::parameters, double> components;
+            bool complete = true;
             for (auto pair : {std::make_pair(CoolProp::iT, "Tcrit"), std::make_pair(CoolProp::iP, "pcrit")}) {
                 double largest = 0.0;
-                for (const std::string& fluid : sat_->fluid_names())
-                    largest = std::max(largest, CoolProp::Props1SI(fluid, pair.second));
-                outer[pair.first] = std::max(outer.count(pair.first) ? outer[pair.first] : 0.0, largest);
+                for (const std::string& fluid : sat_->fluid_names()) {
+                    double v = CoolProp::Props1SI(fluid, pair.second);
+                    complete = complete && finite(v) && v < 1e300;
+                    largest = std::max(largest, v);
+                }
+                components[pair.first] = largest;
             }
+            if (complete)
+                for (auto& kv : components)
+                    outer[kv.first] = std::max(outer.count(kv.first) ? outer[kv.first] : 0.0, kv.second);
         } catch (...) {
         }
         auto clean = [&](const std::map<CoolProp::parameters, double>& candidate, double margin) {
@@ -654,14 +682,8 @@ class IsoLineTracer
             }
         } catch (...) {
         }
-        double critical = NaN;
-        try {
-            for (const CoolProp::CriticalState& c : sat_->all_critical_points())
-                if (c.stable && !(c.T <= critical)) critical = c.T;
-        } catch (...) {
-        }
-        if (finite(critical)) {
-            dome_T_limit_ = critical * DOME_MARGIN;
+        if (finite(critical_T_)) {
+            dome_T_limit_ = critical_T_ * DOME_MARGIN;
             return;
         }
         auto found = saturation_bounds_.find(CoolProp::iT);
@@ -1914,7 +1936,8 @@ size_t Isoline::n_gaps() const {
 }
 
 std::vector<double> generate_values_in_range(Scale scale, const Range& range, int count) {
-    size_t n = static_cast<size_t>(std::max(count, 1));
+    if (count <= 1) return {range.min};
+    size_t n = static_cast<size_t>(count);
     if (scale == Scale::Log) return logspace(range.min, range.max, n);
     return linspace(range.min, range.max, n);
 }
@@ -1958,6 +1981,9 @@ void PropertyPlot::init(const std::string& fluid_name) {
     yaxis.scale = Detail::default_scale(ykey_);
     double o1 = 0.0, o2 = 0.0;
     axis_pair_ = CoolProp::generate_update_pair(xkey_, 0.0, ykey_, 1.0, o1, o2);
+    if (axis_pair_ == CoolProp::INPUT_PAIR_INVALID)
+        throw CoolProp::ValueError("CoolProp has no flash for the axes " + CoolProp::get_parameter_information(ykey_, "short") + " over "
+                                   + CoolProp::get_parameter_information(xkey_, "short") + ".");
     swap_axis_inputs_for_update_ = (o1 == 1.0);
 }
 
@@ -1981,7 +2007,12 @@ void PropertyPlot::finish_limits(double T_min, double T_max, double p_min, doubl
     if (std::isfinite(v = fluid_->T_max_K())) T_hi = std::min(T_hi, v);
     if (std::isfinite(v = fluid_->p_min_Pa())) p_lo = std::max(p_lo, v);
     if (std::isfinite(v = fluid_->p_max_Pa())) p_hi = std::min(p_hi, v);
-    if (!(T_lo < T_hi && p_lo < p_hi)) throw CoolProp::ValueError("Empty plotting region.");
+    if (!(T_lo < T_hi && p_lo < p_hi)) {
+        std::ostringstream text;
+        text << "Empty plotting region: T = " << T_lo << ".." << T_hi << " K, p = " << p_lo << ".." << p_hi
+             << " Pa after clamping to the equation of state.";
+        throw CoolProp::ValueError(text.str());
+    }
     T_min_K_ = T_lo;
     T_max_K_ = T_hi;
     p_min_Pa_ = p_lo;
@@ -2041,8 +2072,14 @@ Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector
     return calc_isolines(key, values, settings);
 }
 
-Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, const CalcSettings& settings) const {
+Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, const CalcSettings& given) const {
     Detail::Metric metric = {xaxis.range, yaxis.range, xaxis.scale == Scale::Log, yaxis.scale == Scale::Log};
+    // At least two points per line, at most a million: the stepper's budget
+    // and the quality grid are sized from it
+    const int MAX_POINTS = 1000000;
+    CalcSettings settings = given;
+    settings.points = std::min(std::max(settings.points, 2), MAX_POINTS);
+    settings.saturation_points = std::min(std::max(settings.saturation_points, 2), MAX_POINTS);
     Isolines lines;
     for (double value : values) {
         if (key == CoolProp::iQ)
@@ -2060,15 +2097,18 @@ double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yv
     try {
         if (swap_axis_inputs_for_update_) std::swap(xvalue, yvalue);
         CoolProp::AbstractState& st = *fluid_->state();
-        st.specify_phase(phase);
+        // Backends without a phase to impose (incompressibles) throw on specify_phase
+        if (phase != CoolProp::iphase_not_imposed) st.specify_phase(phase);
         st.update(axis_pair_, xvalue, yvalue);
         double v = st.keyed_output(key);
-        st.unspecify_phase();
+        if (phase != CoolProp::iphase_not_imposed) st.unspecify_phase();
         return v;
     } catch (...) {
-        try {
-            fluid_->state()->unspecify_phase();
-        } catch (...) {
+        if (phase != CoolProp::iphase_not_imposed) {
+            try {
+                fluid_->state()->unspecify_phase();
+            } catch (...) {
+            }
         }
         return Detail::NaN;
     }
@@ -2355,6 +2395,15 @@ TEST_CASE("Absolute limits and a fluid without a critical point", "[Plot]") {
     CoolProp::Plot::PropertyPlot incomp("INCOMP::MEG[0.5]", CoolProp::iHmass, CoolProp::iT, 270.0, 350.0, 1e5, 1e6);
     CHECK(incomp.calc_isolines(CoolProp::iP, {5e5}, 20).front().n_valid() >= 10);
     CHECK_THROWS_AS(incomp.calc_isolines(CoolProp::iQ, {0.5}, 20), CoolProp::ValueError);
+    // The cursor readout works without a phase to impose (a p-T chart: x = T, y = p)
+    CoolProp::Plot::PropertyPlot incomp_pT("INCOMP::MEG[0.5]", CoolProp::iP, CoolProp::iT, 270.0, 350.0, 1e5, 1e6);
+    CHECK_THAT(incomp_pT.value_at(CoolProp::iDmass, 300.0, 5e5), WithinRel(CoolProp::PropsSI("D", "T", 300.0, "P", 5e5, "INCOMP::MEG[0.5]"), 1e-9));
+    CHECK_THAT(incomp_pT.value_at(CoolProp::iHmass, 300.0, 5e5), WithinRel(CoolProp::PropsSI("H", "T", 300.0, "P", 5e5, "INCOMP::MEG[0.5]"), 1e-9));
+    // Axes CoolProp has no flash for are refused at construction
+    CHECK_THROWS_AS(CoolProp::Plot::PropertyPlot("HEOS::R134a", CoolProp::iHmass, CoolProp::iUmass, CoolProp::Plot::TPLimits::Achp),
+                    CoolProp::ValueError);
+    CHECK(CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 0) == std::vector<double>{1e5});
+    CHECK(CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 1) == std::vector<double>{1e5});
 }
 
 #endif  // ENABLE_CATCH

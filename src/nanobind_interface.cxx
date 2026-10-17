@@ -675,9 +675,25 @@ void init_CoolProp(nb::module_& m) {
       .def("mole_fractions_vapor_double", &AbstractState::mole_fractions_vapor_double)
       .def("get_mole_fractions", &AbstractState::get_mole_fractions)
       .def("get_mass_fractions", &AbstractState::get_mass_fractions)
-      // The GIL is released while CoolProp solves: a chart can be computed on
-      // a worker thread while the window stays responsive (CoolPlot does this).
-      .def("update", &AbstractState::update, nb::call_guard<nb::gil_scoped_release>())
+      // The GIL is released while CoolProp solves, so that a chart can be
+      // computed on a worker thread while the window stays responsive
+      // (CoolPlot does this). Two things follow. A state shared by several
+      // threads is no longer serialised by the GIL: use one state per
+      // thread. REFPROP is not reentrant (its calls must be serialised, see
+      // dev/agent-notes.md), so a REFPROP state keeps the GIL.
+      .def(
+        "update",
+        [](AbstractState& st, input_pairs pair, double value1, double value2) {
+            if (st.backend_name().rfind("REFPROP", 0) == 0) {
+                st.update(pair, value1, value2);
+                return;
+            }
+            nb::gil_scoped_release release;
+            st.update(pair, value1, value2);
+        },
+        "Set the state from an input pair and its two values.\n\n"
+        "The interpreter lock is released while CoolProp solves (not for REFPROP, "
+        "which is not reentrant), so use one AbstractState per thread.")
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
       .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25
