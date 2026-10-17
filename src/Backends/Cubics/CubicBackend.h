@@ -398,6 +398,18 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// table and for NaN, and maps T in the 8e-10-wide gap between the end of the SRK table and Tc
     /// onto the table's end.
     std::optional<SuperancSatPoint> superanc_saturation_at_T(CoolPropDbl T) override;
+
+   private:
+    /// Evaluate the cubic superancillary at T (pure fluid with a superancillary code).  Returns false,
+    /// without throwing, when T lies outside the table (below its low-T end, above it beyond the
+    /// 8e-10 SRK end gap, or NaN); the gap itself maps onto the end of the table unless map_end_gap
+    /// is false, in which case it counts as outside.  The one place the cubic evaluates the table at
+    /// a temperature.
+    bool cubic_superanc_eval(double T, SuperancSatPoint& out, bool map_end_gap = true);
+    /// cubic_superanc_eval that throws ValueError above Tc and outside the table.
+    SuperancSatPoint cubic_superanc_at_T(double T);
+
+   public:
 };
 
 class SRKBackend : public AbstractCubicBackend
