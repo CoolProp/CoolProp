@@ -1091,7 +1091,12 @@ class AbstractState:
 
     def get_mass_fractions(self) -> list[float]: ...
 
-    def update(self, arg0: input_pairs, arg1: float, arg2: float, /) -> None: ...
+    def update(self, arg0: input_pairs, arg1: float, arg2: float, /) -> None:
+        """
+        Set the state from an input pair and its two values.
+
+        The interpreter lock is released while CoolProp solves (not for REFPROP, which is not reentrant), so use one AbstractState per thread.
+        """
 
     def update_with_guesses(self, arg0: input_pairs, arg1: float, arg2: float, arg3: GuessesStructure, /) -> None: ...
 
