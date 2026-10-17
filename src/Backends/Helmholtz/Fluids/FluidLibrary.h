@@ -773,9 +773,9 @@ class JSONFluidLibrary
         const double x_crossover = cpjson::get_double(viscosity, "x_crossover");
         // The logistic switch is 1/2 at x = x_crossover and x -> 0 in the dilute gas, so
         // x_crossover <= 0 puts at least half of the liquid branch into the zero-density
-        // limit and eta no longer tends to eta_dilute.  Written so that NaN is rejected too.
-        if (!(x_crossover > 0)) {
-            throw ValueError(format("rhosr-CS x_crossover must be positive, got %g for fluid %s", x_crossover, fluid.name.c_str()));
+        // limit and eta no longer tends to eta_dilute.  NaN and infinity are rejected too.
+        if (!ValidNumber(x_crossover) || x_crossover <= 0) {
+            throw ValueError(format("rhosr-CS x_crossover must be positive and finite, got %g for fluid %s", x_crossover, fluid.name.c_str()));
         }
         fluid.transport.viscosity_rhosr.x_crossover = x_crossover;
         fluid.transport.viscosity_using_rhosr = true;

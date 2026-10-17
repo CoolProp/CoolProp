@@ -1509,7 +1509,7 @@ TEST_CASE("rhosr-CS viscosity rejects a non-positive x_crossover", "[viscosity],
         Probe probe;
         CoolProp::CoolPropFluid f;
         f.name = "Probe";
-        for (double bad : {0.0, -2.0, std::nan("")}) {
+        for (double bad : {0.0, -2.0, std::nan(""), std::numeric_limits<double>::infinity()}) {
             CAPTURE(bad);
             json visc = shipped["TRANSPORT"]["viscosity"];
             visc["x_crossover"] = bad;
