@@ -1078,6 +1078,9 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     auto ln_psat_of_T = [&](double T) { return log(supercubic(eos_code, P_CODE, Ttilde_of_T(T)) * cubic->am_term(Tr / T, x, 0) / (bm * bm)); };
     const int bits = 50;
     std::uintmax_t max_iter = 100;
+    // toms748_solve reports the iterations it used, so running out and converging on the last
+    // allowed iteration look the same; judge convergence by whether the bracket meets the tolerance.
+    boost::math::tools::eps_tolerance<double> tol(bits);
     // T at which Ttilde equals Ttilde_bound.  The converged bracket end that lies INSIDE the
     // superancillary domain is returned, so later evaluations never step off it by an ulp
     // (calc_superanc_Tmax() inverts with a(Tc) and can overshoot Ttilde_max slightly).
@@ -1090,9 +1093,15 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
         for (int i = 0; i < 20 && !(f(Tb) > 0); ++i) {
             Tb *= 2;
         }
+        // Verify the search found a sign change with finite ends: otherwise boost would throw an
+        // opaque std::domain_error, or a NaN end would steer the bracket by its sign bit.
+        const double fa = f(Ta), fb = f(Tb);
+        if (!(fa < 0 && fb > 0)) {
+            throw ValueError("superanc_saturation_at_p: unable to bracket the cubic superancillary's Ttilde range");
+        }
         max_iter = 100;
-        const auto bracket = boost::math::tools::toms748_solve(f, Ta, Tb, boost::math::tools::eps_tolerance<double>(bits), max_iter);
-        if (max_iter >= 100) {
+        const auto bracket = boost::math::tools::toms748_solve(f, Ta, Tb, fa, fb, tol, max_iter);
+        if (!tol(bracket.first, bracket.second)) {
             throw ValueError("superanc_saturation_at_p: Ttilde inversion did not converge");
         }
         return inside_is_above ? bracket.second : bracket.first;
@@ -1116,12 +1125,15 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     if (g_Tmax > 0) {
         max_iter = 100;
         auto g = [&](double T) { return ln_psat_of_T(T) - ln_p; };
-        const auto bracket =
-          boost::math::tools::toms748_solve(g, Tmin, Tmax, g_Tmin, g_Tmax, boost::math::tools::eps_tolerance<double>(bits), max_iter);
-        if (max_iter >= 100) {
+        const auto bracket = boost::math::tools::toms748_solve(g, Tmin, Tmax, g_Tmin, g_Tmax, tol, max_iter);
+        if (!tol(bracket.first, bracket.second)) {
             throw ValueError(format("superanc_saturation_at_p: Tsat inversion did not converge for p = %0.8Lg Pa", p));
         }
         Tsat = 0.5 * (bracket.first + bracket.second);
+        // A bracket can also close onto the edge of a NaN region rather than a root.
+        if (!std::isfinite(g(Tsat))) {
+            throw ValueError(format("superanc_saturation_at_p: non-finite residual at Tsat = %g K for p = %0.8Lg Pa", Tsat, p));
+        }
     }
     const double Ttilde = Ttilde_of_T(Tsat);
     return SuperancSatPoint{Tsat, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
