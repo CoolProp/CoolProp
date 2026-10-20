@@ -1062,7 +1062,8 @@ struct Trace
     std::vector<double> u;
     std::vector<Sample> samples;
     int n_evaluated = 0, n_outside = 0, n_failed = 0;
-    int n_ok = 0;  // evaluations that gave a state: a failed look while scanning outside counts as outside, not failed
+    int n_ok = 0;          // evaluations that gave a state: a failed look while scanning outside counts as outside, not failed
+    int n_outside_ok = 0;  // evaluations that gave a state outside the domain (n_outside also counts the failed looks)
     std::string stopped;
 
     void add(double at, const Sample& sample) {
@@ -1159,6 +1160,7 @@ class Walk
                 ++trace.n_outside;
         } else if (!out.inside) {
             ++trace.n_outside;
+            ++trace.n_outside_ok;
         }
         return ok;
     }
@@ -1568,6 +1570,20 @@ std::vector<Crossing> envelope_crossings(Envelope& envelope, CoolProp::parameter
 }
 
 /// Assembles one isoline from stepped parts.
+/// Why a line has fewer than two points, from the counts of its evaluations; empty for two or more points.
+/// A state computed outside the axes is not a point of the line, so it is told apart from a failure.
+std::string short_line_reason(size_t n, int n_evaluated, int n_ok, int n_outside_ok) {
+    if (n >= 2) return "";
+    std::ostringstream text;
+    if (n_evaluated > 0 && n_ok == 0)
+        text << "none of the " << n_evaluated << " states of the line could be computed";
+    else if (n_outside_ok > 0)
+        text << n << " point(s) of the line lie in the area the axes show";
+    else
+        text << "only " << n << " point(s) of the line could be computed";
+    return text.str();
+}
+
 class Line
 {
    public:
@@ -1577,7 +1593,8 @@ class Line
 
     std::vector<Sample> samples;
     int n_inserted = 0, n_evaluated = 0, n_outside = 0, n_failed = 0;
-    int n_ok = 0;  // evaluations that gave a state, see Trace::n_ok
+    int n_ok = 0;          // evaluations that gave a state, see Trace::n_ok
+    int n_outside_ok = 0;  // of those, the states outside the domain
     std::string stopped;
 
     void through_the_dome() {
@@ -1627,16 +1644,7 @@ class Line
         out.n_evaluated = n_evaluated;
         out.n_outside = n_outside;
         out.reason = stopped;
-        if (n < 2 && out.reason.empty()) {
-            std::ostringstream text;
-            if (n_evaluated > 0 && n_ok == 0)
-                text << "none of the " << n_evaluated << " states of the line could be computed";
-            else if (n_failed == 0 && n_outside > 0)
-                text << n << " point(s) of the line lie in the area the axes show";
-            else
-                text << "only " << n << " point(s) of the line could be computed";
-            out.reason = text.str();
-        }
+        if (out.reason.empty()) out.reason = short_line_reason(n, n_evaluated, n_ok, n_outside_ok);
         return out;
     }
 
@@ -1655,6 +1663,7 @@ class Line
         n_outside += found.n_outside;
         n_failed += found.n_failed;
         n_ok += found.n_ok;
+        n_outside_ok += found.n_outside_ok;
         if (!found.stopped.empty() && found.stopped.rfind("the end of the range", 0) != 0) stopped = found.stopped;
     }
 
@@ -1689,7 +1698,10 @@ class Line
             ++n_evaluated;
             if (saturation_sample(fluid_, iso_key_, value_, q, xkey_, ykey_, &metric_, sweep_.key, s)) {
                 ++n_ok;
-                if (!s.inside) ++n_outside;
+                if (!s.inside) {
+                    ++n_outside;
+                    ++n_outside_ok;
+                }
                 ends.emplace_back(q, s);
             }
         }
@@ -2419,6 +2431,28 @@ TEST_CASE("The quality lines of a pure fluid end at the critical point", "[Plot]
     // The bubble line's enthalpy rises with the pressure
     for (size_t k = 1; k < lines[0].x.size(); ++k)
         CHECK(lines[0].x[k] > lines[0].x[k - 1]);
+}
+
+TEST_CASE("States computed outside the axes are told apart from failures", "[Plot]") {
+    using namespace CoolProp::Plot::Detail;
+    // The first, careful look fails; every other state lies above the chart
+    Evaluate evaluate = [](double u, bool /*careful*/, Sample& out) {
+        if (u == 0.0) return false;
+        out.valid = true;
+        out.x = u;
+        out.y = 2.0;
+        out.inside = false;
+        return true;
+    };
+    Metric metric = {{0.0, 1.0}, {0.0, 1.0}, false, false};
+    Trace found = trace(evaluate, metric, 20);
+    CHECK(found.n_failed >= 1);
+    CHECK(found.n_outside_ok >= 1);
+    CHECK(std::none_of(found.samples.begin(), found.samples.end(), [](const Sample& s) { return s.valid; }));
+    CHECK(short_line_reason(0, found.n_evaluated, found.n_ok, found.n_outside_ok).find("lie in the area the axes show") != std::string::npos);
+    CHECK(short_line_reason(0, 5, 0, 0).rfind("none of the 5 states", 0) == 0);
+    CHECK(short_line_reason(1, 5, 1, 0).rfind("only 1 point(s)", 0) == 0);
+    CHECK(short_line_reason(2, 5, 2, 0).empty());
 }
 
 TEST_CASE("Gaps count only inside a line", "[Plot]") {
