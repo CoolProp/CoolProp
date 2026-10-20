@@ -254,7 +254,11 @@ recorded history of finished or abandoned work were dropped (they remain in
   to C++ before the call (the settings are copied, see the binding) and
   the results after it.  `AbstractState.update` keeps the GIL: existing
   code that shares one state between Python threads relies on the GIL to
-  serialise the calls.  Every other binding keeps the GIL; add
+  serialise the calls.  `AbstractState.update_nogil` is the opt-in that
+  releases it, for code that gives each thread its own state (CoolProp's
+  lazily built shared data, the mixture parameters and the
+  superancillaries, is built under `std::call_once` or a mutex, so
+  distinct states are safe in parallel).  Every other binding keeps the GIL; add
   `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
   re-enter Python.  A REFPROP plot is safe without the GIL too: the
   backend serialises its calls through `REFPROP_mutex()`.  But another
@@ -263,6 +267,12 @@ recorded history of finished or abandoned work were dropped (they remain in
   with `set_binary_interaction_*`, a reference state or a custom `.MIX`
   composition are lost when that other state loads different fluids
   (see `REFPROPMixtureBackend.h`).
+- **Every isoline tracer builds its own phase envelope**, about a quarter
+  of the time of a traced line for a blend.  Do not share or cache that
+  saturation state between tracers: the mixture saturation flashes take
+  their guesses from it, so a line would depend on the lines computed
+  before it, and lines are cached and computed one by one in any order
+  (tried in COO-142 and reverted; CoolPlot's `tracer.py` has the same note).
 - **A `PropertyPlot` serialises its own calls**: every line of a plot is
   computed with the plot's one `AbstractState`, updated in place, so
   `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they

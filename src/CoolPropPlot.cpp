@@ -452,7 +452,11 @@ bool phases_are_distinct(CoolProp::AbstractState& st) {
         rho_liq = st.saturated_liquid_keyed_output(CoolProp::iDmolar);
         rho_vap = st.saturated_vapor_keyed_output(CoolProp::iDmolar);
     } catch (...) {
-        return true;
+        // Every mixture backend (HEOS and the cubics, REFPROP, tabular) gives
+        // these outputs, so a failure is a failed state: count it as not
+        // distinct.  That costs the caller a fallback flash or a gap, never a
+        // collapsed state taken as a point.
+        return false;
     }
     if (!(finite(rho_liq) && finite(rho_vap)) || rho_liq <= 0.0 || rho_vap <= 0.0) return false;
     return (rho_liq - rho_vap) > TRIVIAL_SOLUTION_RTOL * std::max(rho_liq, rho_vap);
@@ -621,6 +625,12 @@ class IsoLineTracer
     void find_saturation_bounds() {
         std::map<CoolProp::parameters, double> envelope;
         bool closed = false;
+        // Building the envelope on sat_ is also what makes the mixture saturation
+        // flashes on it converge (they take their guesses from it), so every
+        // tracer builds its own and none is shared or cached: with a shared
+        // state a line would depend on the lines computed before it, and lines
+        // are cached and computed one by one in any order.  It costs about a
+        // quarter of the time of a traced line (CoolPlot's tracer.py, same note).
         try {
             sat_->build_phase_envelope("none");
             const CoolProp::PhaseEnvelopeData& data = sat_->get_phase_envelope_data();
@@ -1014,6 +1024,8 @@ class IsoLineTracer
         } catch (...) {
             undecided = "the saturation solver did not converge";
         }
+        // std::max would drop a NaN p_vap and check p_liq alone
+        if (undecided.empty() && !(finite(p_liq) && finite(p_vap))) undecided = "the saturation solver returned a pressure that is not a number";
         if (undecided.empty() && !is_plausible_saturation(T, std::max(p_liq, p_vap))) undecided = "the saturation solver left the dome behind";
         if (undecided.empty() && !phases_are_distinct(*sat_)) undecided = "the saturation states are not on their own branches";
         if (!undecided.empty()) {
@@ -1502,6 +1514,11 @@ Sample crossing_sample(const std::vector<double>& found, double w, double qualit
     return s;
 }
 
+/// Whether two sweep values are the same up to rounding (relative 1e-9).
+bool same_sweep_value(double a, double b) {
+    return std::fabs(a - b) <= 1e-9 * std::max(std::fabs(a), std::fabs(b));
+}
+
 /// The sweep value in [a, b] where the saturation state has iso_key == value: regula falsi (Illinois).
 bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameters ykey, CoolProp::parameters iso_key, double value,
                     CoolProp::parameters sweep_key, double a, double b, double quality, const Metric* metric, Crossing& out) {
@@ -1518,15 +1535,13 @@ bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameter
         return true;
     }
     if (fa * fb > 0.0) return false;
-    bool found = false;
     for (int i = 0; i < 60; ++i) {
         double c = b - fb * (b - a) / (fb - fa);
         std::vector<double> state;
         if (!saturation_state(fluid, sweep_key, c, quality, xkey, ykey, iso_key, state)) return false;
         double fc = state[0] - value;
         out = {c, quality, crossing_sample(state, c, quality, metric, "flash")};
-        found = true;
-        if (fc == 0.0 || std::fabs(b - a) <= 1e-12 * std::fabs(c)) break;
+        if (fc == 0.0 || std::fabs(b - a) <= 1e-12 * std::fabs(c)) return true;
         if (fc * fb < 0.0) {
             a = b;
             fa = fb;
@@ -1535,9 +1550,11 @@ bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameter
         }
         b = c;
         fb = fc;
-        if (std::fabs(fc) <= 1e-10 * std::max(std::fabs(value), 1.0)) break;
+        if (std::fabs(fc) <= 1e-10 * std::max(std::fabs(value), 1.0)) return true;
     }
-    return found;
+    // Not converged in 60 steps: the last iterate is not a crossing to put on
+    // the line (the caller falls back to the phase envelope)
+    return false;
 }
 
 /// Where an isoline crosses the phase envelope of a mixture, interpolated linearly.
@@ -1716,8 +1733,12 @@ class Line
                 if (found.count(q) != 0) ends.emplace_back(q, found[q].sample);
         }
         if (ends.size() != 2) return false;
+        // The bubble and dew states of a pure fluid have the same sweep value,
+        // but computed apart they can differ in the last bits; a bit-exact
+        // compare would then order them by that noise.  (Two elements, so the
+        // tolerance cannot break the ordering's transitivity.)
         std::sort(ends.begin(), ends.end(), [this](const std::pair<double, Sample>& a, const std::pair<double, Sample>& b) {
-            if (a.second.w != b.second.w) return a.second.w < b.second.w;
+            if (!same_sweep_value(a.second.w, b.second.w)) return a.second.w < b.second.w;
             return sweep_.key == CoolProp::iT ? a.first < b.first : a.first > b.first;
         });
         return true;
@@ -1873,6 +1894,8 @@ Isoline mixture_quality_line(Fluid& fluid, CoolProp::parameters xkey, CoolProp::
     out.n_failed = found.n_failed;
     out.n_evaluated = found.n_evaluated;
     out.reason = found.stopped.rfind("the end of the range", 0) == 0 ? "" : found.stopped;
+    // The top of the envelope is always on the line, so count the drawable points
+    if (out.reason.empty()) out.reason = short_line_reason(out.n_valid(), found.n_evaluated, found.n_ok, found.n_outside_ok);
     return out;
 }
 
@@ -1915,6 +1938,8 @@ Isoline compute_quality_line(Fluid& fluid, CoolProp::parameters xkey, CoolProp::
         }
     }
     out.n_evaluated = static_cast<int>(u.size());
+    // Judged before the critical point is appended: a line of that one point says nothing
+    out.reason = short_line_reason(out.n_valid(), out.n_evaluated, out.n_evaluated - out.n_failed, 0);
     if (fluid.is_pure()) {
         const CriticalPoint& crit = fluid.critical();
         double xc = crit.get(xkey), yc = crit.get(ykey);
@@ -2018,6 +2043,12 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
 PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, double T_min_K, double T_max_K,
                            double p_min_Pa, double p_max_Pa)
   : xkey_(xkey), ykey_(ykey) {
+    // An infinite limit means "the limit of the equation of state"; NaN is a
+    // mistake in the caller and would silently be read as the same
+    for (double limit : {T_min_K, T_max_K, p_min_Pa, p_max_Pa})
+        if (std::isnan(limit))
+            throw CoolProp::ValueError("A limit of the plotting region is not a number; give a value, or an infinite one for the limit of "
+                                       "the equation of state.");
     init(fluid_name);
     finish_limits(T_min_K, T_max_K, p_min_Pa, p_max_Pa, false);
 }
@@ -2453,6 +2484,24 @@ TEST_CASE("States computed outside the axes are told apart from failures", "[Plo
     CHECK(short_line_reason(0, 5, 0, 0).rfind("none of the 5 states", 0) == 0);
     CHECK(short_line_reason(1, 5, 1, 0).rfind("only 1 point(s)", 0) == 0);
     CHECK(short_line_reason(2, 5, 2, 0).empty());
+}
+
+TEST_CASE("Review fixes: limits, sweep values, trivial solutions", "[Plot]") {
+    using namespace CoolProp::Plot::Detail;
+    const double nan = std::nan("");
+    const double inf = std::numeric_limits<double>::infinity();
+    // A NaN limit is a mistake and throws; an infinite one is the limit of the equation of state
+    CHECK_THROWS_AS(CoolProp::Plot::PropertyPlot("HEOS::R134a", CoolProp::iP, CoolProp::iHmass, nan, 400.0, 1e5, 1e7), CoolProp::ValueError);
+    CHECK_NOTHROW(CoolProp::Plot::PropertyPlot("HEOS::R134a", CoolProp::iP, CoolProp::iHmass, 200.0, inf, 1e5, 1e7));
+    // Sweep values equal up to rounding order the dome ends by quality, not by noise
+    CHECK(same_sweep_value(300.0, 300.0 * (1.0 + 1e-15)));
+    CHECK_FALSE(same_sweep_value(300.0, 300.001));
+    // A state whose saturated outputs throw is not a pair of distinct phases (the check fails closed;
+    // the incompressible backend has no saturated outputs at all, so its call throws)
+    Fluid liquid("INCOMP::MEG[0.3]");
+    CoolProp::AbstractState& brine = liquid.update(CoolProp::iT, 300.0, CoolProp::iP, 1e5);
+    CHECK_THROWS(brine.saturated_liquid_keyed_output(CoolProp::iDmolar));
+    CHECK_FALSE(phases_are_distinct(brine));
 }
 
 TEST_CASE("Gaps count only inside a line", "[Plot]") {

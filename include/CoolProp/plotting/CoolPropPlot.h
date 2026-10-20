@@ -145,6 +145,9 @@ std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& 
  * value_at) hold a lock: on one plot they run one after the other, also
  * from several threads (the Python module releases the GIL in all three).
  * To compute in parallel, give each thread its own plot.
+ *
+ * A plot can be moved but not copied; a moved-from plot holds no fluid and
+ * no lock, and may only be assigned to or destroyed.
  */
 class PropertyPlot
 {
@@ -172,6 +175,7 @@ class PropertyPlot
     PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey,
                  CoolProp::Plot::TPLimits tp_limits = CoolProp::Plot::TPLimits::Def);
     /// The same, with absolute limits: ``T_min_K, T_max_K, p_min_Pa, p_max_Pa`` (an incompressible fluid needs them).
+    /// An infinite limit stands for the limit of the equation of state; a NaN limit throws.
     PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, double T_min_K, double T_max_K, double p_min_Pa,
                  double p_max_Pa);
     ~PropertyPlot();

@@ -676,6 +676,14 @@ void init_CoolProp(nb::module_& m) {
       .def("get_mole_fractions", &AbstractState::get_mole_fractions)
       .def("get_mass_fractions", &AbstractState::get_mass_fractions)
       .def("update", &AbstractState::update)
+      // update keeps the GIL: code that shares one state between Python threads
+      // relies on it.  update_nogil is the opt-in that releases it (COO-141).
+      .def("update_nogil", &AbstractState::update, nb::arg("input_pair"), nb::arg("value1"), nb::arg("value2"),
+           nb::call_guard<nb::gil_scoped_release>(),
+           "update() with the GIL released, so that other Python threads run while CoolProp computes.\n\n"
+           "Use it only on a state that no other thread uses at the same time: CoolProp does not lock the\n"
+           "state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct\n"
+           "states, also of the same fluid, can be updated in parallel.")
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
       .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25

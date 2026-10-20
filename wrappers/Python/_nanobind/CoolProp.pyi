@@ -1093,6 +1093,15 @@ class AbstractState:
 
     def update(self, arg0: input_pairs, arg1: float, arg2: float, /) -> None: ...
 
+    def update_nogil(self, input_pair: input_pairs, value1: float, value2: float) -> None:
+        """
+        update() with the GIL released, so that other Python threads run while CoolProp computes.
+
+        Use it only on a state that no other thread uses at the same time: CoolProp does not lock the
+        state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct
+        states, also of the same fluid, can be updated in parallel.
+        """
+
     def update_with_guesses(self, arg0: input_pairs, arg1: float, arg2: float, arg3: GuessesStructure, /) -> None: ...
 
     def available_in_high_level(self) -> bool: ...
