@@ -610,7 +610,9 @@ class IsoLineTracer
     }
 
     bool envelope_is_closed(const CoolProp::PhaseEnvelopeData& data, size_t& hot) const {
-        if (data.T.empty() || data.rhomolar_liq.size() != data.T.size() || data.rhomolar_vap.size() != data.T.size()) return false;
+        if (data.T.empty() || data.rhomolar_liq.size() != data.T.size() || data.rhomolar_vap.size() != data.T.size()
+            || data.Q.size() != data.T.size())
+            return false;
         hot = static_cast<size_t>(std::max_element(data.T.begin(), data.T.end()) - data.T.begin());
         double rho_liq = data.rhomolar_liq[hot], rho_vap = data.rhomolar_vap[hot];
         return std::fabs(rho_liq - rho_vap) <= ENVELOPE_CLOSED_RTOL * std::max(rho_liq, rho_vap);
@@ -2131,6 +2133,15 @@ Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector
             throw CoolProp::ValueError(fluid_->name()
                                        + " has no two-phase region (CoolProp provides no critical point for it), so lines of constant "
                                          "quality cannot be drawn.");
+        // For a pure fluid the margin is taken off both ends of the saturation
+        // range (from the triple point up and from the critical point down): it
+        // must leave some range, or the lines would run backwards. A mixture's
+        // lines follow its phase envelope up to the envelope's hottest point,
+        // which the margin does not bound, so they are not checked here.
+        if (fluid_->is_pure()) {
+            Range T_sat = fluid_->saturation_range(CoolProp::iT, given.critical_margin);
+            if (!(T_sat.min < T_sat.max)) throw CoolProp::ValueError("The critical margin leaves no saturation range for " + fluid_->name() + ".");
+        }
     } else if (sweep_key(key) == CoolProp::iundefined_parameter) {
         throw CoolProp::ValueError("Lines of constant " + CoolProp::get_parameter_information(key, "short") + " cannot be drawn in this diagram.");
     }
@@ -2471,6 +2482,8 @@ TEST_CASE("Settings are checked up front and a failing line keeps its reason", "
     settings.critical_margin = std::numeric_limits<double>::quiet_NaN();
     CHECK_THROWS_AS(plot.calc_isolines(CoolProp::iQ, {0.5}, settings), CoolProp::ValueError);
     settings.critical_margin = 0.5;
+    CHECK_THROWS_AS(plot.calc_isolines(CoolProp::iQ, {0.5}, settings), CoolProp::ValueError);
+    settings.critical_margin = 0.4;  // below 0.5, but more than half the saturation range of R134a
     CHECK_THROWS_AS(plot.calc_isolines(CoolProp::iQ, {0.5}, settings), CoolProp::ValueError);
     CHECK_THROWS_AS(plot.calc_isolines(CoolProp::iQ, {0.5, 1.5}, 10), CoolProp::ValueError);
     // A value no state can have: that line comes back empty with its reason, the other one is drawn

@@ -243,13 +243,20 @@ recorded history of finished or abandoned work were dropped (they remain in
   `wrappers/Python/_nanobind/Plot.pyi` is a committed copy (command in
   `wrappers/Python/CMakeLists.txt`); the drift gate covers `CoolProp.pyi`
   only, `wrappers/Python/pytest/test_stub.py` checks `Plot.pyi` by name.
-- **Releasing the GIL** in `PropertyPlot.calc_isolines` is safe for
-  Python objects: the arguments are converted to C++ before the call
-  (the settings are copied, see the binding).  `AbstractState.update`
-  keeps the GIL: existing code that shares one state between Python
-  threads relies on the GIL to serialise the calls.
-  Every other binding keeps the GIL; add `nb::call_guard<nb::gil_scoped_release>()`
-  only to calls that never re-enter Python.
+- **Releasing the GIL** in `PropertyPlot.calc_isolines`, `isoline_range`
+  and `value_at` is safe for Python objects: the arguments are converted
+  to C++ before the call (the settings are copied, see the binding) and
+  the results after it.  `AbstractState.update` keeps the GIL: existing
+  code that shares one state between Python threads relies on the GIL to
+  serialise the calls.  Every other binding keeps the GIL; add
+  `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
+  re-enter Python.  A REFPROP plot is safe without the GIL too: the
+  backend serialises its calls through `REFPROP_mutex()`.  But another
+  thread's REFPROP state can now run between two calls of a plot, and
+  REFPROP keeps one set of loaded fluids: interaction parameters set
+  with `set_binary_interaction_*`, a reference state or a custom `.MIX`
+  composition are lost when that other state loads different fluids
+  (see `REFPROPMixtureBackend.h`).
 - **A `PropertyPlot` serialises its own calls**: every line of a plot is
   computed with the plot's one `AbstractState`, updated in place, so
   `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they

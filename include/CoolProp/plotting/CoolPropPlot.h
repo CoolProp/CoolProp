@@ -143,8 +143,8 @@ std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& 
  * Every line is computed with the plot's one AbstractState, updated in
  * place, so the calls that use it (calc_isolines, isoline_range and
  * value_at) hold a lock: on one plot they run one after the other, also
- * from several threads (the Python module releases the GIL in
- * calc_isolines). To compute in parallel, give each thread its own plot.
+ * from several threads (the Python module releases the GIL in all three).
+ * To compute in parallel, give each thread its own plot.
  */
 class PropertyPlot
 {
@@ -184,7 +184,8 @@ class PropertyPlot
     Range isoline_range(CoolProp::parameters key) const;
     /// The lines of constant ``key`` at the given values in SI units, with the resolution ``points``.
     /// A line that cannot be computed comes back without points and with its ``reason``; invalid
-    /// arguments (a key the diagram cannot draw, a quality outside 0..1, unknown settings) throw.
+    /// arguments (a key the diagram cannot draw, a quality outside 0..1 or for a fluid without a critical
+    /// point, unknown settings, a critical margin that leaves no saturation range) throw.
     [[nodiscard]] Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
     /// The same with every calculation setting.
     [[nodiscard]] Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, const CalcSettings& settings) const;
