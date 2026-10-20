@@ -135,6 +135,11 @@ std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& 
  *         std::cout << isotherms[0].x[i] << " J/kg, " << isotherms[0].y[i] << " Pa\n";
  *     }
  * \endcode
+ *
+ * A plot is not safe to use from several threads at once: every line is
+ * computed with the plot's one AbstractState, which calc_isolines updates
+ * in place (also through the Python module, which releases the GIL while
+ * it runs). Give each thread its own PropertyPlot.
  */
 class PropertyPlot
 {

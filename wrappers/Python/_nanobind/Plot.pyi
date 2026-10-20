@@ -134,6 +134,8 @@ class PropertyPlot:
     """
     A property diagram of one fluid: its T-p box, its axes and the isolines it can compute.
     The property keys are CoolProp.parameters (iT, iP, iHmass, iSmass, iDmass, iUmass, iQ).
+    Not safe to use from several threads at once (calc_isolines updates the plot's state and
+    releases the GIL); give each thread its own PropertyPlot.
     """
 
     @overload

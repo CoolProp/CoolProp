@@ -1301,7 +1301,9 @@ void init_plot(nb::module_& m) {
 
     nb::class_<PropertyPlot>(plot, "PropertyPlot",
                              "A property diagram of one fluid: its T-p box, its axes and the isolines it can compute.\n"
-                             "The property keys are CoolProp.parameters (iT, iP, iHmass, iSmass, iDmass, iUmass, iQ).")
+                             "The property keys are CoolProp.parameters (iT, iP, iHmass, iSmass, iDmass, iUmass, iQ).\n"
+                             "Not safe to use from several threads at once (calc_isolines updates the plot's state and\n"
+                             "releases the GIL); give each thread its own PropertyPlot.")
       .def(nb::init<const std::string&, CoolProp::parameters, CoolProp::parameters, TPLimits>(), nb::arg("fluid_name"), nb::arg("ykey"),
            nb::arg("xkey"), nb::arg("tp_limits") = TPLimits::Def)
       .def(nb::init<const std::string&, CoolProp::parameters, CoolProp::parameters, double, double, double, double>(), nb::arg("fluid_name"),

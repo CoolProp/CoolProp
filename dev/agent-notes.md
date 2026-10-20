@@ -248,6 +248,11 @@ recorded history of finished or abandoned work were dropped (they remain in
   (the `std::vector<double>` argument is converted before the call).
   Every other binding keeps the GIL; add `nb::call_guard<nb::gil_scoped_release>()`
   only to calls that never re-enter Python.
+- **A `PropertyPlot` is not thread-safe**, and with the GIL released two
+  Python threads really do run `calc_isolines` at once: every line of a
+  plot is computed with the plot's one `AbstractState`, updated in place.
+  Callers keep one plot per thread (CoolPlot's adapter does, after a
+  review of its thread workers found the shared plot).
 - **The mixture H-p flash on master refuses two-phase states 8.0.0 solved**
   (R32/R125 70/30 at h = 4e5 J/kg, p = 9.65 bar: the residual gate after the
   temperature search throws "the (T,p) flash is misclassifying the phase").
