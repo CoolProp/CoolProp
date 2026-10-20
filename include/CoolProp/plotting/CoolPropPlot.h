@@ -22,7 +22,9 @@
  */
 
 #include "CoolProp/AbstractState.h"
+#include <limits>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -41,7 +43,9 @@ struct Range
 };
 
 /// The region of temperature and pressure a chart covers, as in CoolPlot's TpLimits presets.
-enum class TPLimits
+// The default int base type is kept on purpose: this public enum predates the clang-tidy
+// check, and a narrower base type would change the binary interface of PropertyPlot.
+enum class TPLimits  // NOLINT(performance-enum-size)
 {
     None,
     Def,
@@ -101,9 +105,9 @@ class Isoline
         return x.size();
     }
     /// The number of points with finite x and y.
-    size_t n_valid() const;
+    [[nodiscard]] size_t n_valid() const;
     /// Invalid points between the first and the last valid one.
-    size_t n_gaps() const;
+    [[nodiscard]] size_t n_gaps() const;
 };
 
 using Isolines = std::vector<Isoline>;
@@ -136,10 +140,11 @@ std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& 
  *     }
  * \endcode
  *
- * A plot is not safe to use from several threads at once: every line is
- * computed with the plot's one AbstractState, which calc_isolines updates
- * in place (also through the Python module, which releases the GIL while
- * it runs). Give each thread its own PropertyPlot.
+ * Every line is computed with the plot's one AbstractState, updated in
+ * place, so the calls that use it (calc_isolines, isoline_range and
+ * value_at) hold a lock: on one plot they run one after the other, also
+ * from several threads (the Python module releases the GIL in
+ * calc_isolines). To compute in parallel, give each thread its own plot.
  */
 class PropertyPlot
 {
@@ -155,8 +160,8 @@ class PropertyPlot
                 double min, max;
             };
         };
-    } xaxis,  ///< The horizontal axis: scale and range in SI units
-      yaxis;  ///< The vertical axis
+    } xaxis{},  ///< The horizontal axis: scale and range in SI units
+      yaxis{};  ///< The vertical axis
 
     /**
      * @param fluid_name A CoolProp fluid string, e.g. "HEOS::R134a", "R32[0.7]&R125[0.3]" or "INCOMP::MEG[0.3]"
@@ -172,35 +177,43 @@ class PropertyPlot
     ~PropertyPlot();
     PropertyPlot(const PropertyPlot&) = delete;
     PropertyPlot& operator=(const PropertyPlot&) = delete;
+    PropertyPlot(PropertyPlot&&) noexcept;
+    PropertyPlot& operator=(PropertyPlot&&) noexcept;
 
     /// The range of values a line of constant ``key`` can take over the region, in SI units.
     Range isoline_range(CoolProp::parameters key) const;
     /// The lines of constant ``key`` at the given values in SI units, with the resolution ``points``.
-    Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
+    /// A line that cannot be computed comes back without points and with its ``reason``; invalid
+    /// arguments (a key the diagram cannot draw, a quality outside 0..1, unknown settings) throw.
+    [[nodiscard]] Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
     /// The same with every calculation setting.
-    Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, const CalcSettings& settings) const;
+    [[nodiscard]] Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, const CalcSettings& settings) const;
     /// The quantities that can be drawn as lines in this diagram.
     std::vector<CoolProp::parameters> supported_isoline_keys() const;
     /// The quantity that is stepped along a line of constant ``key`` (``iT`` or ``iP``), or ``iundefined_parameter``.
-    CoolProp::parameters sweep_key(CoolProp::parameters key) const;
+    [[nodiscard]] CoolProp::parameters sweep_key(CoolProp::parameters key) const;
     /// The value of ``key`` at a point of the diagram (the state under the cursor), NaN if there is none.
     double value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
     /// The temperature and pressure region in SI units: T_min, T_max, p_min, p_max.
-    std::vector<double> tp_box() const;
+    [[nodiscard]] std::vector<double> tp_box() const;
     /// Whether the fluid is a mixture.
-    bool is_mixture() const;
+    [[nodiscard]] bool is_mixture() const;
 
    private:
     std::unique_ptr<Detail::Fluid> fluid_;
+    // Held by the calls that update fluid_'s state; behind a pointer so that the plot can be moved
+    std::unique_ptr<std::mutex> lock_ = std::make_unique<std::mutex>();
     CoolProp::parameters xkey_;
     CoolProp::parameters ykey_;
-    CoolProp::input_pairs axis_pair_;
-    bool swap_axis_inputs_for_update_;
-    double T_min_K_, T_max_K_, p_min_Pa_, p_max_Pa_;
+    CoolProp::input_pairs axis_pair_ = CoolProp::INPUT_PAIR_INVALID;
+    bool swap_axis_inputs_for_update_ = false;
+    // Set by the constructors (finish_limits); NaN until then
+    double T_min_K_ = std::numeric_limits<double>::quiet_NaN(), T_max_K_ = std::numeric_limits<double>::quiet_NaN();
+    double p_min_Pa_ = std::numeric_limits<double>::quiet_NaN(), p_max_Pa_ = std::numeric_limits<double>::quiet_NaN();
 
     void init(const std::string& fluid_name);
     void finish_limits(double T_min, double T_max, double p_min, double p_max, bool relative);
-    Range axis_range(CoolProp::parameters key) const;
+    [[nodiscard]] Range axis_range(CoolProp::parameters key) const;
 };
 
 }  // namespace Plot

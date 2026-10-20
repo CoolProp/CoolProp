@@ -243,16 +243,19 @@ recorded history of finished or abandoned work were dropped (they remain in
   `wrappers/Python/_nanobind/Plot.pyi` is a committed copy (command in
   `wrappers/Python/CMakeLists.txt`); the drift gate covers `CoolProp.pyi`
   only, `wrappers/Python/pytest/test_stub.py` checks `Plot.pyi` by name.
-- **Releasing the GIL** in `AbstractState.update` and
-  `PropertyPlot.calc_isolines` is safe: neither touches Python objects
-  (the `std::vector<double>` argument is converted before the call).
+- **Releasing the GIL** in `PropertyPlot.calc_isolines` is safe for
+  Python objects: the arguments are converted to C++ before the call
+  (the settings are copied, see the binding).  `AbstractState.update`
+  keeps the GIL: existing code that shares one state between Python
+  threads relies on the GIL to serialise the calls.
   Every other binding keeps the GIL; add `nb::call_guard<nb::gil_scoped_release>()`
   only to calls that never re-enter Python.
-- **A `PropertyPlot` is not thread-safe**, and with the GIL released two
-  Python threads really do run `calc_isolines` at once: every line of a
-  plot is computed with the plot's one `AbstractState`, updated in place.
-  Callers keep one plot per thread (CoolPlot's adapter does, after a
-  review of its thread workers found the shared plot).
+- **A `PropertyPlot` serialises its own calls**: every line of a plot is
+  computed with the plot's one `AbstractState`, updated in place, so
+  `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they
+  release the GIL, and two Python threads really do call them at once).
+  Parallel work needs one plot per thread (CoolPlot's adapter keeps one
+  per thread, after a review of its thread workers found a shared plot).
 - **The mixture H-p flash on master refuses two-phase states 8.0.0 solved**
   (R32/R125 70/30 at h = 4e5 J/kg, p = 9.65 bar: the residual gate after the
   temperature search throws "the (T,p) flash is misclassifying the phase").

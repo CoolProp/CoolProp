@@ -675,25 +675,7 @@ void init_CoolProp(nb::module_& m) {
       .def("mole_fractions_vapor_double", &AbstractState::mole_fractions_vapor_double)
       .def("get_mole_fractions", &AbstractState::get_mole_fractions)
       .def("get_mass_fractions", &AbstractState::get_mass_fractions)
-      // The GIL is released while CoolProp solves, so that a chart can be
-      // computed on a worker thread while the window stays responsive
-      // (CoolPlot does this). Two things follow. A state shared by several
-      // threads is no longer serialised by the GIL: use one state per
-      // thread. REFPROP is not reentrant (its calls must be serialised, see
-      // dev/agent-notes.md), so a REFPROP state keeps the GIL.
-      .def(
-        "update",
-        [](AbstractState& st, input_pairs pair, double value1, double value2) {
-            if (st.backend_name().rfind("REFPROP", 0) == 0) {
-                st.update(pair, value1, value2);
-                return;
-            }
-            nb::gil_scoped_release release;
-            st.update(pair, value1, value2);
-        },
-        "Set the state from an input pair and its two values.\n\n"
-        "The interpreter lock is released while CoolProp solves (not for REFPROP, "
-        "which is not reentrant), so use one AbstractState per thread.")
+      .def("update", &AbstractState::update)
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
       .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25
@@ -1302,23 +1284,31 @@ void init_plot(nb::module_& m) {
     nb::class_<PropertyPlot>(plot, "PropertyPlot",
                              "A property diagram of one fluid: its T-p box, its axes and the isolines it can compute.\n"
                              "The property keys are CoolProp.parameters (iT, iP, iHmass, iSmass, iDmass, iUmass, iQ).\n"
-                             "Not safe to use from several threads at once (calc_isolines updates the plot's state and\n"
-                             "releases the GIL); give each thread its own PropertyPlot.")
+                             "calc_isolines, isoline_range and value_at hold a lock on the plot and release the GIL: on one\n"
+                             "plot they run one after the other; to compute in parallel, give each thread its own PropertyPlot.")
       .def(nb::init<const std::string&, CoolProp::parameters, CoolProp::parameters, TPLimits>(), nb::arg("fluid_name"), nb::arg("ykey"),
            nb::arg("xkey"), nb::arg("tp_limits") = TPLimits::Def)
       .def(nb::init<const std::string&, CoolProp::parameters, CoolProp::parameters, double, double, double, double>(), nb::arg("fluid_name"),
            nb::arg("ykey"), nb::arg("xkey"), nb::arg("T_min_K"), nb::arg("T_max_K"), nb::arg("p_min_Pa"), nb::arg("p_max_Pa"))
       .def_ro("xaxis", &PropertyPlot::xaxis)
       .def_ro("yaxis", &PropertyPlot::yaxis)
-      .def("isoline_range", &PropertyPlot::isoline_range, nb::arg("key"))
+      .def("isoline_range", &PropertyPlot::isoline_range, nb::arg("key"), nb::call_guard<nb::gil_scoped_release>())
       .def("calc_isolines", nb::overload_cast<CoolProp::parameters, const std::vector<double>&, int>(&PropertyPlot::calc_isolines, nb::const_),
            nb::arg("key"), nb::arg("values"), nb::arg("points") = 250, nb::call_guard<nb::gil_scoped_release>())
-      .def("calc_isolines",
-           nb::overload_cast<CoolProp::parameters, const std::vector<double>&, const CalcSettings&>(&PropertyPlot::calc_isolines, nb::const_),
-           nb::arg("key"), nb::arg("values"), nb::arg("settings"), nb::call_guard<nb::gil_scoped_release>())
+      .def(
+        "calc_isolines",
+        [](const PropertyPlot& self, CoolProp::parameters key, const std::vector<double>& values, const CalcSettings& settings) {
+            // The settings object belongs to Python and another thread may
+            // change it once the GIL is released: work on a copy
+            CalcSettings copy = settings;
+            nb::gil_scoped_release release;
+            return self.calc_isolines(key, values, copy);
+        },
+        nb::arg("key"), nb::arg("values"), nb::arg("settings"))
       .def("supported_isoline_keys", &PropertyPlot::supported_isoline_keys)
       .def("sweep_key", &PropertyPlot::sweep_key, nb::arg("key"))
-      .def("value_at", &PropertyPlot::value_at, nb::arg("key"), nb::arg("xvalue"), nb::arg("yvalue"), nb::arg("phase") = CoolProp::iphase_not_imposed)
+      .def("value_at", &PropertyPlot::value_at, nb::arg("key"), nb::arg("xvalue"), nb::arg("yvalue"), nb::arg("phase") = CoolProp::iphase_not_imposed,
+           nb::call_guard<nb::gil_scoped_release>())
       .def("tp_box", &PropertyPlot::tp_box)
       .def("is_mixture", &PropertyPlot::is_mixture);
 
