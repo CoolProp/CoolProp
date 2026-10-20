@@ -685,7 +685,8 @@ void init_CoolProp(nb::module_& m) {
            "state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct\n"
            "HEOS, cubic and GERG states, also of the same fluid, can be updated in parallel; REFPROP states\n"
            "are safe but run one at a time. Not safe while another thread changes the configuration\n"
-           "(set_config_*) or builds the tables of a tabular state (its first update).")
+           "(set_config_*) or builds tabular tables (creates a TTSE or BICUBIC state, or sets its\n"
+           "fractions, when its tables are not on disk yet).")
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
       .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25

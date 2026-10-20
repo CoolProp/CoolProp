@@ -260,8 +260,10 @@ recorded history of finished or abandoned work were dropped (they remain in
   superancillaries) is built under `std::call_once` or a mutex, so distinct
   HEOS, cubic and GERG states are safe in parallel.  Not safe: a thread
   that changes the configuration (`set_config_*` writes a global without a
-  lock), and the first update of a tabular state, whose table build
-  toggles `DONT_CHECK_PROPERTY_LIMITS` globally (`TabularBackends.cpp`).
+  lock), and a thread that builds tabular tables (creating a TTSE or
+  BICUBIC state, or setting its fractions, when its tables are not on
+  disk yet): the build toggles `DONT_CHECK_PROPERTY_LIMITS` globally
+  (`TabularBackends.cpp`, COO-144).
   REFPROP states are serialised by `REFPROP_mutex()`.  Every other binding keeps the GIL; add
   `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
   re-enter Python.  A REFPROP plot is safe without the GIL too: the

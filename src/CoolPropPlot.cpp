@@ -452,10 +452,11 @@ bool phases_are_distinct(CoolProp::AbstractState& st) {
         rho_liq = st.saturated_liquid_keyed_output(CoolProp::iDmolar);
         rho_vap = st.saturated_vapor_keyed_output(CoolProp::iDmolar);
     } catch (...) {
-        // The mixture backends a plot can reach (HEOS, the cubics and GERG,
-        // REFPROP) give these outputs after a quality flash, so a failure is a
-        // failed state: count it as not distinct.  That costs the caller a
-        // fallback flash or a gap, never a collapsed state taken as a point.
+        // HEOS, the cubics, GERG and REFPROP give these outputs after a
+        // quality flash, so a failure there is a failed state.  A backend
+        // without saturated outputs (IF97, PC-SAFT) throws every time.  Both
+        // count as not distinct: that costs the caller a fallback flash or a
+        // gap, never a collapsed state taken as a point.
         return false;
     }
     if (!(finite(rho_liq) && finite(rho_vap)) || rho_liq <= 0.0 || rho_vap <= 0.0) return false;
@@ -1521,6 +1522,16 @@ bool same_sweep_value(double a, double b) {
     return std::fabs(a - b) <= 1e-9 * std::max(std::fabs(a), std::fabs(b));
 }
 
+/// Whether the dome end at sweep value w_a and quality q_a comes before the one at (w_b, q_b).
+/// The bubble and dew states of a pure fluid have the same sweep value, but computed apart
+/// they can differ in the last bits; a bit-exact compare would then order them by that noise.
+/// Equal up to rounding, the quality decides: liquid first when the sweep is in temperature
+/// (liquid_first, an isobar), vapour first when it is in pressure (an isotherm).
+bool dome_end_comes_first(double w_a, double q_a, double w_b, double q_b, bool liquid_first) {
+    if (!same_sweep_value(w_a, w_b)) return w_a < w_b;
+    return liquid_first ? q_a < q_b : q_a > q_b;
+}
+
 /// The sweep value in [a, b] where the saturation state has iso_key == value: regula falsi (Illinois).
 bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameters ykey, CoolProp::parameters iso_key, double value,
                     CoolProp::parameters sweep_key, double a, double b, double quality, const Metric* metric, Crossing& out) {
@@ -1736,14 +1747,9 @@ class Line
                 if (found.count(q) != 0) ends.emplace_back(q, found[q].sample);
         }
         if (ends.size() != 2) return false;
-        // The bubble and dew states of a pure fluid have the same sweep value,
-        // but computed apart they can differ in the last bits; a bit-exact
-        // compare would then order them by that noise.  (Two elements, so the
-        // tolerance cannot break the ordering's transitivity.)
-        std::sort(ends.begin(), ends.end(), [this](const std::pair<double, Sample>& a, const std::pair<double, Sample>& b) {
-            if (!same_sweep_value(a.second.w, b.second.w)) return a.second.w < b.second.w;
-            return sweep_.key == CoolProp::iT ? a.first < b.first : a.first > b.first;
-        });
+        // Two ends, so a swap orders them (see dome_end_comes_first)
+        if (!dome_end_comes_first(ends[0].second.w, ends[0].first, ends[1].second.w, ends[1].first, sweep_.key == CoolProp::iT))
+            std::swap(ends[0], ends[1]);
         return true;
     }
 
@@ -2499,6 +2505,10 @@ TEST_CASE("Review fixes: limits, sweep values, trivial solutions", "[Plot]") {
     // Sweep values equal up to rounding order the dome ends by quality, not by noise
     CHECK(same_sweep_value(300.0, 300.0 * (1.0 + 1e-15)));
     CHECK_FALSE(same_sweep_value(300.0, 300.001));
+    const double w_noisy = 300.0 * (1.0 + 1e-15);                        // the liquid end, a few bits above the vapour end
+    CHECK(dome_end_comes_first(w_noisy, 0.0, 300.0, 1.0, true));         // sweep in T: liquid first
+    CHECK_FALSE(dome_end_comes_first(w_noisy, 0.0, 300.0, 1.0, false));  // sweep in p: vapour first
+    CHECK(dome_end_comes_first(300.0, 1.0, 300.001, 0.0, true));         // distinct sweep values decide
     // A state whose saturated outputs throw is not a pair of distinct phases (the check fails closed;
     // the incompressible backend has no saturated outputs at all, so its call throws)
     Fluid liquid("INCOMP::MEG[0.3]");

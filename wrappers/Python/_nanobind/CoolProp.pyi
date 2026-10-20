@@ -1101,7 +1101,8 @@ class AbstractState:
         state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct
         HEOS, cubic and GERG states, also of the same fluid, can be updated in parallel; REFPROP states
         are safe but run one at a time. Not safe while another thread changes the configuration
-        (set_config_*) or builds the tables of a tabular state (its first update).
+        (set_config_*) or builds tabular tables (creates a TTSE or BICUBIC state, or sets its
+        fractions, when its tables are not on disk yet).
         """
 
     def update_with_guesses(self, arg0: input_pairs, arg1: float, arg2: float, arg3: GuessesStructure, /) -> None: ...
