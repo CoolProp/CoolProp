@@ -42,7 +42,7 @@ class Range:
 
 class CalcSettings:
     """
-    How the isolines are computed: points per line, the solver (auto, tracer or flash), the margin to the critical point and the spacing of the quality lines (critical or linear).
+    How the isolines are computed: the resolution points (a straight line across the chart gets about points / 2), the solver (auto, tracer or flash), the margin to the critical point and the spacing of the quality lines (critical or linear).
     """
 
     def __init__(self) -> None: ...

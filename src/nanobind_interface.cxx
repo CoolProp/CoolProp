@@ -1251,7 +1251,8 @@ void init_plot(nb::module_& m) {
       .def("__repr__", [](const Range& r) { return "Range(" + std::to_string(r.min) + ", " + std::to_string(r.max) + ")"; });
 
     nb::class_<CalcSettings>(plot, "CalcSettings",
-                             "How the isolines are computed: points per line, the solver (auto, tracer or flash), "
+                             "How the isolines are computed: the resolution points (a straight line across the chart gets about points / 2), "
+                             "the solver (auto, tracer or flash), "
                              "the margin to the critical point and the spacing of the quality lines (critical or linear).")
       .def(nb::init<>())
       .def_rw("points", &CalcSettings::points)

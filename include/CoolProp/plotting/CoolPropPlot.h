@@ -56,9 +56,9 @@ enum class TPLimits  // NOLINT(performance-enum-size)
 /**
  * How lines are calculated.
  *
- * ``points`` is the resolution of a line: about the number of points a
- * line gets that runs across the whole chart; bends get more, straight
- * parts fewer. ``solver`` is "auto" (trace mixtures, flash pure fluids),
+ * ``points`` is the resolution of the adaptive step: a straight line
+ * across the whole chart gets about ``points / 2`` points; bends get
+ * more. ``solver`` is "auto" (trace mixtures, flash pure fluids),
  * "tracer" or "flash". ``critical_margin`` is the relative distance kept
  * from the triple point and the critical point on the saturation curve.
  * ``saturation_spacing`` of the quality lines of a pure fluid is
