@@ -1569,7 +1569,6 @@ std::vector<Crossing> envelope_crossings(Envelope& envelope, CoolProp::parameter
     return found;
 }
 
-/// Assembles one isoline from stepped parts.
 /// Why a line has fewer than two points, from the counts of its evaluations; empty for two or more points.
 /// A state computed outside the axes is not a point of the line, so it is told apart from a failure.
 std::string short_line_reason(size_t n, int n_evaluated, int n_ok, int n_outside_ok) {
@@ -1584,6 +1583,7 @@ std::string short_line_reason(size_t n, int n_evaluated, int n_ok, int n_outside
     return text.str();
 }
 
+/// Assembles one isoline from stepped parts.
 class Line
 {
    public:
