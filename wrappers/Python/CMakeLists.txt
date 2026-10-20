@@ -292,8 +292,8 @@ if(WIN32)
 endif()
 
 # ---- PEP 561 type stub for the nanobind core (parity with the legacy wheel) ----
-# The stub is shipped as a COMMITTED copy (wrappers/Python/_nanobind/CoolProp.pyi)
-# and installed verbatim below -- the wheel build does NOT regenerate it.  This is
+# The stubs are shipped as COMMITTED copies (wrappers/Python/_nanobind/CoolProp.pyi, Plot.pyi)
+# and installed verbatim below -- the wheel build does NOT regenerate them.  This is
 # load-bearing for CROSS-COMPILED wheels: nanobind's stubgen *imports* the
 # freshly-built CoolProp.abi3.so to introspect it, which the host interpreter
 # cannot do when the .so targets another arch (macOS x86_64 on an arm64 runner,
@@ -306,16 +306,41 @@ endif()
 # for NATIVE builds only -- the CI drift gate sets it so a binding change that was
 # not reflected in the committed .pyi is caught by a diff -- and must NEVER be set
 # for a cross build (it reintroduces the import-the-target-arch-.so failure above).
+#
+# The module has a submodule, CoolProp.CoolProp.Plot, so the stubs form a stub
+# package: CoolProp/CoolProp/__init__.pyi and CoolProp/CoolProp/Plot.pyi.  A
+# type checker then maps the submodule to its real import path (a stub module
+# CoolProp/CoolProp.pyi would make "from . import Plot" mean CoolProp.Plot, which
+# does not exist).  The committed copies keep their names, CoolProp.pyi and
+# Plot.pyi, and are installed under the package names below.
 option(COOLPROP_NANOBIND_REGEN_STUB
-    "Regenerate the committed nanobind CoolProp.pyi via stubgen (native builds only; used by the CI drift gate)"
+    "Regenerate the committed nanobind stubs (CoolProp.pyi, Plot.pyi) via stubgen (native builds only; used by the CI drift gate)"
     OFF)
 if(COOLPROP_NANOBIND_REGEN_STUB)
+    # stubgen must import the module under its installed name, CoolProp.CoolProp:
+    # imported as a top-level "CoolProp" it would name the types of the Plot
+    # submodule CoolProp.<type>, which the package does not export.  A staging
+    # package holds a copy of the built module and an empty __init__.py for that
+    # one import (the real package __init__ needs the State shim and the constants).
+    set(_nb_stub_stage "${CMAKE_CURRENT_BINARY_DIR}/stub_stage")
+    add_custom_command(
+        OUTPUT "${_nb_stub_stage}/CoolProp/__init__.py"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_nb_stub_stage}/CoolProp"
+        COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:CoolProp_module>" "${_nb_stub_stage}/CoolProp/"
+        COMMAND ${CMAKE_COMMAND} -E touch "${_nb_stub_stage}/CoolProp/__init__.py"
+        DEPENDS CoolProp_module
+        VERBATIM)
+    # RECURSIVE writes one file per module: stubs/CoolProp/__init__.pyi for
+    # CoolProp.CoolProp and stubs/CoolProp/Plot.pyi for its Plot submodule
     nanobind_add_stub(
         CoolProp_stub
-        MODULE CoolProp
-        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi"
-        PYTHON_PATH "$<TARGET_FILE_DIR:CoolProp_module>"
-        DEPENDS CoolProp_module
+        MODULE CoolProp.CoolProp
+        RECURSIVE
+        OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/stubs"
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/CoolProp/__init__.pyi"
+               "${CMAKE_CURRENT_BINARY_DIR}/stubs/CoolProp/Plot.pyi"
+        PYTHON_PATH "${_nb_stub_stage}"
+        DEPENDS CoolProp_module "${_nb_stub_stage}/CoolProp/__init__.py"
         MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/py.typed"
         # INCLUDE_PRIVATE emits underscore-named members (e.g. the _capi capsule);
         # the pattern file replaces the auto PropsSI/HAPropsSI overloads
@@ -324,13 +349,15 @@ if(COOLPROP_NANOBIND_REGEN_STUB)
         INCLUDE_PRIVATE
         PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/stub_patterns.txt"
     )
-    # Ship the freshly regenerated stub so the gate can extract it from the wheel
-    # and diff against the committed copy.
-    set(_nb_stub_pyi "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.pyi")
+    # Ship the freshly regenerated stubs so the gate can extract them from the
+    # wheel and diff them against the committed copies.
+    set(_nb_stub_pyi "${CMAKE_CURRENT_BINARY_DIR}/stubs/CoolProp/__init__.pyi")
+    set(_nb_stub_plot_pyi "${CMAKE_CURRENT_BINARY_DIR}/stubs/CoolProp/Plot.pyi")
     set(_nb_stub_pytyped "${CMAKE_CURRENT_BINARY_DIR}/py.typed")
 else()
-    # Default / publish / cross builds: ship the committed copy, no import needed.
+    # Default / publish / cross builds: ship the committed copies, no import needed.
     set(_nb_stub_pyi "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/CoolProp.pyi")
+    set(_nb_stub_plot_pyi "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/Plot.pyi")
     set(_nb_stub_pytyped "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/py.typed")
 endif()
 
@@ -441,20 +468,15 @@ install(FILES
 # HumidAirProp re-export shim (SI surface from the core; non-SI HAProps removed)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/HumidAirProp.py"
     DESTINATION CoolProp)
-# PEP 561 type stub for the nanobind core + py.typed marker.  Source resolved
-# above: the committed copy by default (cross-safe -- no stubgen import), or the
-# freshly regenerated one under COOLPROP_NANOBIND_REGEN_STUB (bd CoolProp-1gas).
-install(FILES "${_nb_stub_pyi}" "${_nb_stub_pytyped}"
-    DESTINATION CoolProp)
-# Stub of the CoolProp.CoolProp.Plot submodule (the C++ CoolProp::Plot numerics
-# of property diagrams).  nanobind_add_stub writes one module per call, so this
-# one is a committed copy, regenerated by hand after a binding change with
-#   python -m nanobind.stubgen -m CoolProp.CoolProp -r -O <dir> --include-private \
-#       -p wrappers/Python/_nanobind/stub_patterns.txt
-# and copied from <dir>/CoolProp/Plot.pyi (the drift gate covers CoolProp.pyi only;
-# wrappers/Python/pytest/test_stub.py checks this one against the runtime).
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/_nanobind/Plot.pyi"
-    DESTINATION CoolProp)
+# PEP 561 type stubs for the nanobind core + py.typed marker.  Sources resolved
+# above: the committed copies by default (cross-safe -- no stubgen import), or
+# the freshly regenerated ones under COOLPROP_NANOBIND_REGEN_STUB (bd CoolProp-1gas).
+# The stubs form the stub package CoolProp/CoolProp/ (see the option above); a
+# folder that holds only .pyi files does not shadow the extension module
+# CoolProp/CoolProp.abi3.so at runtime, since Python does not import .pyi files.
+install(FILES "${_nb_stub_pyi}" DESTINATION CoolProp/CoolProp RENAME __init__.pyi)
+install(FILES "${_nb_stub_plot_pyi}" DESTINATION CoolProp/CoolProp)
+install(FILES "${_nb_stub_pytyped}" DESTINATION CoolProp)
 # Pure-Python submodules, shipped unchanged from the source package so the v8
 # import tree matches the legacy one (CoolProp.Plots/BibtexParser/tests; the
 # dead wxPython CoolProp.GUI was removed in #3472).

@@ -59,7 +59,7 @@ recorded history of finished or abandoned work were dropped (they remain in
   executes notebooks with `jupyter nbconvert --execute` after `pip wheel .`;
   it does not build the C++ test runner.  Figures in doc notebooks must come
   from the Python API alone, never from Catch2 test output.
-- **nanobind `CoolProp.pyi` drift gate is reproducible locally**, but only
+- **nanobind stub drift gate is reproducible locally**, but only
   with the pinned pair, not the ambient interpreter:
 
   ```bash
@@ -68,11 +68,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   COOLPROP_NANOBIND=ON VIRTUAL_ENV=/tmp/stubvenv uv build --wheel --no-build-isolation \
     --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
     --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON --out-dir /tmp/stubdist .
-  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp.pyi' -d /tmp/stubcheck
-  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp.pyi
+  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp/*.pyi' -d /tmp/stubcheck
+  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp/__init__.pyi
+  diff -u wrappers/Python/_nanobind/Plot.pyi /tmp/stubcheck/CoolProp/CoolProp/Plot.pyi
   ```
 
-  Take the generated stub verbatim; never hand-edit it.
+  Take the generated stubs verbatim; never hand-edit them.  A default value
+  that stubgen writes with a name the stub does not define (an enum of the
+  core in `Plot.pyi`) is fixed in the binding with `nb::arg(...).sig("...")`.
 - **TestPyPI pruning is manual** (since 2025-11-14, PyPI's new-device email
   verification blocks unattended TOTP logins).  Stay logged into TestPyPI in
   a browser, then `python3 dev/testpypi_delete.py --keep 10` (dry run) and
@@ -239,10 +242,13 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **The nanobind submodule lives at `CoolProp.CoolProp.Plot`**, not
   `CoolProp.Plot`: the package `__init__` is kept identical to the legacy
   one (import-tree parity gate), and `CoolProp.Plots` is the old Python
-  plotting package.  `nanobind_add_stub` writes one module per call, so
-  `wrappers/Python/_nanobind/Plot.pyi` is a committed copy (command in
-  `wrappers/Python/CMakeLists.txt`); the drift gate covers `CoolProp.pyi`
-  only, `wrappers/Python/pytest/test_stub.py` checks `Plot.pyi` by name.
+  plotting package.  Its stubs are a stub package,
+  `CoolProp/CoolProp/__init__.pyi` and `CoolProp/CoolProp/Plot.pyi`: a stub
+  module `CoolProp/CoolProp.pyi` cannot have submodules, and a `Plot.pyi`
+  next to it types the non-existent `CoolProp.Plot`.  The regeneration
+  imports the built module as `CoolProp.CoolProp` from a staging package;
+  imported as a top-level `CoolProp`, stubgen names the types in `Plot.pyi`
+  `CoolProp.<type>`, which do not resolve.
 - **Releasing the GIL** in `PropertyPlot.calc_isolines`, `isoline_range`
   and `value_at` is safe for Python objects: the arguments are converted
   to C++ before the call (the settings are copied, see the binding) and

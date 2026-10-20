@@ -1308,7 +1308,10 @@ void init_plot(nb::module_& m) {
         nb::arg("key"), nb::arg("values"), nb::arg("settings"))
       .def("supported_isoline_keys", &PropertyPlot::supported_isoline_keys)
       .def("sweep_key", &PropertyPlot::sweep_key, nb::arg("key"))
-      .def("value_at", &PropertyPlot::value_at, nb::arg("key"), nb::arg("xvalue"), nb::arg("yvalue"), nb::arg("phase") = CoolProp::iphase_not_imposed,
+      // The default is spelled out for the stub: stubgen would write "phases.iphase_not_imposed",
+      // a name the Plot submodule's stub does not define
+      .def("value_at", &PropertyPlot::value_at, nb::arg("key"), nb::arg("xvalue"), nb::arg("yvalue"),
+           nb::arg("phase").sig("CoolProp.CoolProp.phases.iphase_not_imposed") = CoolProp::iphase_not_imposed,
            nb::call_guard<nb::gil_scoped_release>())
       .def("tp_box", &PropertyPlot::tp_box)
       .def("is_mixture", &PropertyPlot::is_mixture);
