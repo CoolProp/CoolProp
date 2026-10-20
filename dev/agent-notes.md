@@ -255,10 +255,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   the results after it.  `AbstractState.update` keeps the GIL: existing
   code that shares one state between Python threads relies on the GIL to
   serialise the calls.  `AbstractState.update_nogil` is the opt-in that
-  releases it, for code that gives each thread its own state (CoolProp's
-  lazily built shared data, the mixture parameters and the
-  superancillaries, is built under `std::call_once` or a mutex, so
-  distinct states are safe in parallel).  Every other binding keeps the GIL; add
+  releases it, for code that gives each thread its own state.  CoolProp's
+  lazily built shared data (the fluid and mixture libraries, the caloric
+  superancillaries) is built under `std::call_once` or a mutex, so distinct
+  HEOS, cubic and GERG states are safe in parallel.  Not safe: a thread
+  that changes the configuration (`set_config_*` writes a global without a
+  lock), and the first update of a tabular state, whose table build
+  toggles `DONT_CHECK_PROPERTY_LIMITS` globally (`TabularBackends.cpp`).
+  REFPROP states are serialised by `REFPROP_mutex()`.  Every other binding keeps the GIL; add
   `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
   re-enter Python.  A REFPROP plot is safe without the GIL too: the
   backend serialises its calls through `REFPROP_mutex()`.  But another

@@ -452,10 +452,10 @@ bool phases_are_distinct(CoolProp::AbstractState& st) {
         rho_liq = st.saturated_liquid_keyed_output(CoolProp::iDmolar);
         rho_vap = st.saturated_vapor_keyed_output(CoolProp::iDmolar);
     } catch (...) {
-        // Every mixture backend (HEOS and the cubics, REFPROP, tabular) gives
-        // these outputs, so a failure is a failed state: count it as not
-        // distinct.  That costs the caller a fallback flash or a gap, never a
-        // collapsed state taken as a point.
+        // The mixture backends a plot can reach (HEOS, the cubics and GERG,
+        // REFPROP) give these outputs after a quality flash, so a failure is a
+        // failed state: count it as not distinct.  That costs the caller a
+        // fallback flash or a gap, never a collapsed state taken as a point.
         return false;
     }
     if (!(finite(rho_liq) && finite(rho_vap)) || rho_liq <= 0.0 || rho_vap <= 0.0) return false;
@@ -1024,8 +1024,10 @@ class IsoLineTracer
         } catch (...) {
             undecided = "the saturation solver did not converge";
         }
-        // std::max would drop a NaN p_vap and check p_liq alone
-        if (undecided.empty() && !(finite(p_liq) && finite(p_vap))) undecided = "the saturation solver returned a pressure that is not a number";
+        // A NaN would slip through both checks below: std::max drops a NaN
+        // p_vap, and a NaN density makes the inside-the-dome test false
+        if (undecided.empty() && !(finite(p_liq) && finite(p_vap) && finite(rho_liq) && finite(rho_vap)))
+            undecided = "the saturation solver returned a value that is not a number";
         if (undecided.empty() && !is_plausible_saturation(T, std::max(p_liq, p_vap))) undecided = "the saturation solver left the dome behind";
         if (undecided.empty() && !phases_are_distinct(*sat_)) undecided = "the saturation states are not on their own branches";
         if (!undecided.empty()) {
@@ -1553,7 +1555,8 @@ bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameter
         if (std::fabs(fc) <= 1e-10 * std::max(std::fabs(value), 1.0)) return true;
     }
     // Not converged in 60 steps: the last iterate is not a crossing to put on
-    // the line (the caller falls back to the phase envelope)
+    // the line.  A mixture line then takes the phase-envelope crossing; a
+    // pure fluid's line goes on without a point at the dome.
     return false;
 }
 

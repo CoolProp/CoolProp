@@ -1099,7 +1099,9 @@ class AbstractState:
 
         Use it only on a state that no other thread uses at the same time: CoolProp does not lock the
         state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct
-        states, also of the same fluid, can be updated in parallel.
+        HEOS, cubic and GERG states, also of the same fluid, can be updated in parallel; REFPROP states
+        are safe but run one at a time. Not safe while another thread changes the configuration
+        (set_config_*) or builds the tables of a tabular state (its first update).
         """
 
     def update_with_guesses(self, arg0: input_pairs, arg1: float, arg2: float, arg3: GuessesStructure, /) -> None: ...

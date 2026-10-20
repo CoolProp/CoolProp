@@ -683,7 +683,9 @@ void init_CoolProp(nb::module_& m) {
            "update() with the GIL released, so that other Python threads run while CoolProp computes.\n\n"
            "Use it only on a state that no other thread uses at the same time: CoolProp does not lock the\n"
            "state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct\n"
-           "states, also of the same fluid, can be updated in parallel.")
+           "HEOS, cubic and GERG states, also of the same fluid, can be updated in parallel; REFPROP states\n"
+           "are safe but run one at a time. Not safe while another thread changes the configuration\n"
+           "(set_config_*) or builds the tables of a tabular state (its first update).")
       .def("update_with_guesses", &AbstractState::update_with_guesses)
       .def("available_in_high_level", &AbstractState::available_in_high_level)
       .def("build_options_json", &AbstractState::build_options_json)  // bd CoolProp-r9sq.25
