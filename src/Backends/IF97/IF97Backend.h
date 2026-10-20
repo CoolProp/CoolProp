@@ -236,7 +236,7 @@ class IF97Backend : public AbstractState
                 // IF97 is mass based so convert hmolar input to hmass
                 _hmass = value1 / molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
                 _p = value2;
-                // Fall thru to mass basis inputs
+                [[fallthrough]];  // fallthrough is explicit to mass basis inputs
             case HmassP_INPUTS:
                 if (!(_hmass)) _hmass = value1;  // don't set if already set above
                 _p = value2;
@@ -258,10 +258,10 @@ class IF97Backend : public AbstractState
                 // IF97 is mass based so convert smolar input to smass
                 _p = value1;
                 _smass = value2 / molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
-                // Fall thru to mass basis inputs
+                [[fallthrough]];                 // fallthrough is explicit to mass basis inputs
             case PSmass_INPUTS:
                 _p = value1;
-                if (!(_smass)) _smass = value2;
+                if (!(_smass)) _smass = value2;  // don't set if already set above
                 _reverse = 1.0;
                 _T = IF97::T_psmass(_p, _smass);
                 _Q = -1;
@@ -280,10 +280,10 @@ class IF97Backend : public AbstractState
                 // IF97 is mass based so convert smolar input to smass
                 _hmass = value1 / molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
                 _smass = value2 / molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
-                // Fall thru to mass basis inputs
+                [[fallthrough]];                 // fallthrough is explicit to mass basis inputs
             case HmassSmass_INPUTS:
-                _hmass = value1;
-                _smass = value2;
+                if (!(_hmass)) _hmass = value1;  // don't set if already set above
+                if (!(_smass)) _smass = value2;  // don't set if already set above
                 _p = IF97::p_hsmass(_hmass, _smass);
                 _T = IF97::T_phmass(_p, _hmass);
                 // ...if in the vapor dome (Region 4), calculate Quality...
@@ -291,7 +291,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bount between 0 and 1
+                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     _Q = -1;

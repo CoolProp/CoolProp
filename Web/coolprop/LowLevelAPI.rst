@@ -270,7 +270,7 @@ A few notes:
   costs ~10–50 ms. This is amortized across all subsequent calls. To
   pre-build, you can call ``HEOS.update_with_guesses(...)`` once at startup,
   or rely on the lazy path. The build is repeated when
-  :cpapi:`CoolProp::set_reference_state` is called for the fluid, so the
+  :cpapi:`CoolProp::set_reference_stateS` is called for the fluid, so the
   cached coefficients always match the active reference state.
 
 If you call plain ``update`` (without guesses) and the input lies in a

@@ -12,6 +12,20 @@ with default isolines and spacing. Here is a brief example to demonstrate
 how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane 
 (R-290) with automatic isoline spacing:
 
+.. The default isolines sweep densities and entropies across the whole pressure
+   axis, so many points have no valid state (for example, above the maximum
+   temperature). PropertyPlot reports each one as a UserWarning and leaves a gap
+   in the line, which is the intended result here. The two hidden plot blocks
+   below ignore those warnings for this one example, so that a warning from any
+   other plot in the build is still visible.
+
+.. plot::
+    :nofigs:
+    :show-source-link: false
+
+    import warnings
+    warnings.filterwarnings("ignore", message="An error occurred for inputs", category=UserWarning)
+
 .. plot::
     :include-source:
 
@@ -20,6 +34,25 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
     plot = PropertyPlot('R290', 'ph')
     plot.calc_isolines()
     plot.show()
+
+.. plot::
+    :nofigs:
+    :show-source-link: false
+
+    import warnings
+    warnings.filters[:] = [f for f in warnings.filters
+                           if not (f[1] is not None and f[1].pattern.startswith("An error occurred for inputs"))]
+
+.. note::
+
+    Running the example above in your own environment will print many ``UserWarning`` messages
+    (*over 1,000*) that start with "An error occurred for inputs". This is expected and does not
+    mean anything is wrong with your installation. To draw complete isolines,
+    CoolProp calculates points right up to, and beyond, the temperature and
+    pressure limits of the fluid. Where the fluid has no valid state, that point
+    is skipped and the line simply has a gap there. If you would rather not see
+    the messages, you can ignore them in your script with
+    ``warnings.filterwarnings("ignore", message="An error occurred for inputs")``.
 
 The following example can be used to create a temperature-entropy (:math:`T,s`) plot for
 propane (R290) with isolines for the vapour quality in steps of 0.2:
