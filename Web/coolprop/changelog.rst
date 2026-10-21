@@ -22,6 +22,7 @@ Breaking Changes:
   ``FetchContent`` builds no longer add CoolProp install rules by default.
   See the detailed CMake behavior changes below.
 * The prebuilt Java wrapper is built again, for Windows, Linux and macOS, and its generated classes are in the ``org.coolprop`` package instead of the default package, so Java code that uses them needs ``import org.coolprop.*;``.  A wrapper built from source keeps the default package unless it is configured with ``-DCOOLPROP_SWIG_OPTIONS="-package org.coolprop"`` (`#3245 <https://github.com/CoolProp/CoolProp/pull/3245>`__, `#3267 <https://github.com/CoolProp/CoolProp/pull/3267>`__, `#3319 <https://github.com/CoolProp/CoolProp/pull/3319>`__).
+* C++ ``CoolProp::Plot``: the ``points`` of ``PropertyPlot::calc_isolines`` is now the resolution of an adaptive step, not the number of points of a line (a straight line across the whole chart gets about ``points / 2``, bends get more), and a line can be cut where it leaves the plotted region; read ``Isoline::size()``.  A ``PropertyPlot`` can be moved but no longer copied (`#3345 <https://github.com/CoolProp/CoolProp/issues/3345>`__).
 
 Highlights:
 
@@ -86,6 +87,8 @@ Highlights:
 
 New features:
 
+* ``CoolProp::Plot`` computes isolines with the numerics of the CoolPlot package: an adaptive step along the line, a phase-envelope tracer for mixtures instead of a cold flash per point, and isotherms and isobars followed through the two-phase region in vapour quality.  ``Isoline`` reports why a line has gaps (``n_failed``, ``n_outside``, ``reason``), and the new ``CalcSettings`` choose the solver and the spacing of the saturation lines.  Python gets it as ``CoolProp.CoolProp.Plot``, which CoolPlot uses when it is present; ``calc_isolines``, ``isoline_range`` and ``value_at`` release the GIL and hold a lock on the plot.  The type stubs of ``CoolProp.CoolProp`` are now a stub package (``CoolProp/CoolProp/__init__.pyi`` and ``Plot.pyi``), so type checkers find the submodule at ``CoolProp.CoolProp.Plot`` (`#3345 <https://github.com/CoolProp/CoolProp/issues/3345>`__).
+* Python: ``AbstractState.update_nogil`` is ``update`` with the GIL released, so that other Python threads run while CoolProp computes.  It is for code that gives each thread its own HEOS, cubic or GERG state; ``update`` itself keeps the GIL, a state must not be used from two threads at once, and it is not safe while another thread changes the configuration or builds the tables of a TTSE or BICUBIC state.
 * R-1132a: Akasaka, Low and Lemmon, *Int. J. Thermophys.* **47**:128 (2026) (`#3248 <https://github.com/CoolProp/CoolProp/pull/3248>`__).
 * Lead-bismuth eutectic (``INCOMP::LBE``), 400-1100 K (`#3193 <https://github.com/CoolProp/CoolProp/pull/3193>`__).
 * ``HFORMATION``: standard ideal-gas enthalpy of formation at 298.15 K, from ATcT for HEOS (`#3309 <https://github.com/CoolProp/CoolProp/pull/3309>`__) and from ``HEATFRMdll`` for REFPROP (`#3349 <https://github.com/CoolProp/CoolProp/pull/3349>`__).
