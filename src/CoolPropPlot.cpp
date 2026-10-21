@@ -3,6 +3,8 @@
 #include "CoolProp/numerics/numerics.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <map>
@@ -23,6 +25,29 @@ const double NaN = std::numeric_limits<double>::quiet_NaN();
 
 inline bool finite(double v) {
     return std::isfinite(v);
+}
+
+/// Whether two doubles are the same input, bit for bit.  A cache keyed on an
+/// input value uses it: a tolerance would hand back the result of another input.
+inline std::uint64_t bits_of(double v) {
+    static_assert(sizeof(double) == sizeof(std::uint64_t), "a double has 64 bits");
+    std::uint64_t bits = 0;
+    std::memcpy(&bits, &v, sizeof bits);
+    return bits;
+}
+inline bool same_bits(double a, double b) {
+    return bits_of(a) == bits_of(b);
+}
+
+/// Whether v is exactly zero, of either sign: an exact root, or a denominator that
+/// vanished.  A classification, not a comparison; NaN is not zero.
+inline bool is_zero(double v) {
+    return std::fpclassify(v) == FP_ZERO;
+}
+
+/// -1, 0 or +1: the sign of v, so that sign tests are integer comparisons.
+inline int sign_of(double v) {
+    return static_cast<int>(v > 0.0) - static_cast<int>(v < 0.0);
 }
 
 Scale default_scale(CoolProp::parameters key) {
@@ -64,9 +89,9 @@ class Envelope
         double rho_liq = data.rhomolar_liq[hot], rho_vap = rhomolar[hot];
         closed = std::fabs(rho_liq - rho_vap) <= CLOSED_RTOL * std::max(rho_liq, rho_vap);
         bool has_bubble = false, has_dew = false;
-        for (double q : Q) {
-            has_bubble = has_bubble || q == 0.0;
-            has_dew = has_dew || q == 1.0;
+        for (double q : Q) {  // each point is flagged Q = 0 (bubble) or Q = 1 (dew)
+            has_bubble = has_bubble || q < 0.5;
+            has_dew = has_dew || q > 0.5;
         }
         if (!(has_bubble && has_dew)) throw CoolProp::ValueError("The phase envelope has no bubble or no dew line.");
     }
@@ -88,7 +113,7 @@ class Envelope
                 continue;
             }
             try {
-                work_->specify_phase(Q[i] == 0.0 ? CoolProp::iphase_liquid : CoolProp::iphase_gas);
+                work_->specify_phase(Q[i] < 0.5 ? CoolProp::iphase_liquid : CoolProp::iphase_gas);  // flag Q = 0: bubble side
                 work_->update(CoolProp::DmolarT_INPUTS, rhomolar[i], T[i]);
                 out[i] = work_->keyed_output(key);
             } catch (...) {  // NOLINT(bugprone-empty-catch)
@@ -691,10 +716,13 @@ class IsoLineTracer
     }
 
     void dome_density_table(const CoolProp::PhaseEnvelopeData& data) {
-        for (double quality : {1.0, 0.0}) {
+        // The envelope flags each point with Q = 1 or Q = 0 (PhaseEnvelopeData::store_variables):
+        // first the points flagged 1, then those flagged 0, told apart by side, not by value
+        for (bool flagged_one : {true, false}) {
             std::vector<std::pair<double, double>> rows;
             for (size_t i = 0; i < data.T.size(); ++i)
-                if (data.Q[i] == quality && finite(data.T[i]) && finite(data.rhomolar_vap[i])) rows.emplace_back(data.T[i], data.rhomolar_vap[i]);
+                if ((data.Q[i] > 0.5) == flagged_one && finite(data.T[i]) && finite(data.rhomolar_vap[i]))
+                    rows.emplace_back(data.T[i], data.rhomolar_vap[i]);
             std::sort(rows.begin(), rows.end());
             std::vector<double> T, rho;
             for (auto& row : rows) {
@@ -750,7 +778,7 @@ class IsoLineTracer
         double sat_value = targets.at(sat_index_);
         CoolProp::parameters target_index = sat_index_ == i1_ ? i2_ : i1_;
         double target = targets.at(target_index);
-        if (!have_sat_value_ || sat_value != sat_value_) {
+        if (!have_sat_value_ || !same_bits(sat_value, sat_value_)) {
             bracket_failure_.clear();
             cached_is_null_ = true;
             try {
@@ -815,7 +843,7 @@ class IsoLineTracer
         try {
             sp_->update(CoolProp::DmolarT_INPUTS, liquid_end.rhomolar, liquid_end.T);
             double slope = sp_->first_partial_deriv(target_index, CoolProp::iDmolar, sat_index_);
-            return (finite(slope) && slope != 0.0) ? slope : NaN;
+            return (finite(slope) && !is_zero(slope)) ? slope : NaN;
         } catch (...) {
             return NaN;
         }
@@ -874,7 +902,8 @@ class IsoLineTracer
                 quality = q1;
                 return true;
             }
-            if (f1 == f0) return false;
+            // No usable slope when the residual did not change (to below the smallest normal double)
+            if (!(std::fabs(f1 - f0) >= std::numeric_limits<double>::min())) return false;
             slope = (f1 - f0) / (q1 - q0);
             q0 = q1;
             f0 = f1;
@@ -901,7 +930,7 @@ class IsoLineTracer
             }
             b = quality;
             fb = fq;
-            if (fq == 0.0 || std::fabs(b - a) < QUALITY_XTOL) {
+            if (is_zero(fq) || std::fabs(b - a) < QUALITY_XTOL) {
                 converged = true;
                 break;
             }
@@ -946,7 +975,7 @@ class IsoLineTracer
             double J21 = sp_->first_partial_deriv(i2_, CoolProp::iT, CoolProp::iDmolar);
             double J22 = sp_->first_partial_deriv(i2_, CoolProp::iDmolar, CoolProp::iT);
             double det = J11 * J22 - J12 * J21;
-            if (!finite(det) || det == 0.0) throw CoolProp::ValueError("The Newton iteration hit a singular Jacobian.");
+            if (!finite(det) || is_zero(det)) throw CoolProp::ValueError("The Newton iteration hit a singular Jacobian.");
             double dT = (J12 * f2 - J22 * f1) / det, dD = (J21 * f1 - J11 * f2) / det;
             if (!(finite(dT) && finite(dD))) throw CoolProp::ValueError("The Newton iteration produced a non-finite step.");
             if (std::fabs(dT) <= NEWTON_RTOL * T && std::fabs(dD) <= NEWTON_RTOL * rhomolar) {
@@ -1127,7 +1156,7 @@ class Walk
     void run() {
         double u = u_lo_;
         Sample sample;
-        bool inside = sample_at(u, true, sample) && sample.inside;
+        bool inside = sample_at(u, true, sample, true, false) && sample.inside;
         if (inside) accept(u, sample);
         while (u < u_hi_ && !over_budget()) {
             if (inside)
@@ -1156,12 +1185,14 @@ class Walk
     std::pair<double, double> direction_;
     double last_length_ = 0.0, last_turn_ = 1.0;
 
-    bool sample_at(double u, bool careful, Sample& out) {
-        if (start_ && u == u_lo_) {
+    /// The sample at u.  The caller says whether u is the start or the end of the
+    /// range: there the sample given by the caller of trace() is used, if any.
+    bool sample_at(double u, bool careful, Sample& out, bool at_start = false, bool at_end = false) {
+        if (start_ && at_start) {
             out = *start_;
             return true;
         }
-        if (end_ && u == u_hi_) {
+        if (end_ && at_end) {
             out = *end_;
             return true;
         }
@@ -1232,9 +1263,10 @@ class Walk
         double du = span_ / points_;
         double min_du = span_ * MIN_STEP;
         while (u < u_hi_ && !over_budget()) {
-            double u_try = std::min(u + du, u_hi_);
+            bool at_end = !(u + du < u_hi_);
+            double u_try = at_end ? u_hi_ : u + du;
             Sample sample;
-            if (!sample_at(u_try, true, sample)) {
+            if (!sample_at(u_try, true, sample, false, at_end)) {
                 if (skip_failures_) {
                     u = u_try;
                     du = std::min(du * 2.0, span_ * MAX_STEP);
@@ -1293,9 +1325,10 @@ class Walk
     void scan_outside(double& u, bool& inside) {
         double du = span_ * SCAN_STEP;
         while (u < u_hi_ && !over_budget()) {
-            double u_try = std::min(u + du, u_hi_);
+            bool at_end = !(u + du < u_hi_);
+            double u_try = at_end ? u_hi_ : u + du;
             Sample sample;
-            if (sample_at(u_try, false, sample) && sample.inside) {
+            if (sample_at(u_try, false, sample, false, at_end) && sample.inside) {
                 enter_domain(u, u_try, sample);
                 u = u_try;
                 inside = true;
@@ -1311,8 +1344,9 @@ class Walk
         have_previous_ = false;
         have_direction_ = false;
         Sample edge;
+        // bisect_edge returns a valid sample only when it moved away from u_in
         double u_edge = bisect_edge(u_in, u_out, edge);
-        if (edge.valid && u_edge != u_in) accept(u_edge, edge);
+        if (edge.valid) accept(u_edge, edge);
         accept(u_in, sample);
     }
 };
@@ -1380,7 +1414,8 @@ class LineSolver
       : fluid_(fluid), value_(value), xkey_(xkey), ykey_(ykey), metric_(metric) {
         double o1 = 0.0, o2 = 0.0;
         pair_ = CoolProp::generate_update_pair(iso_key, 0.0, sweep_key, 1.0, o1, o2);
-        constant_first_ = (o1 == 0.0);
+        // generate_update_pair hands back the markers 0 and 1 in the order of the pair
+        constant_first_ = o1 < 0.5;
         CoolProp::parameters first = constant_first_ ? iso_key : sweep_key, second = constant_first_ ? sweep_key : iso_key;
         if (use_tracer(fluid, solver) && IsoLineTracer::supports(first, second)) {
             try {
@@ -1539,11 +1574,11 @@ bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameter
     if (!saturation_state(fluid, sweep_key, a, quality, xkey, ykey, iso_key, end_a)) return false;
     if (!saturation_state(fluid, sweep_key, b, quality, xkey, ykey, iso_key, end_b)) return false;
     double fa = end_a[0] - value, fb = end_b[0] - value;
-    if (fa == 0.0) {
+    if (is_zero(fa)) {
         out = {a, quality, crossing_sample(end_a, a, quality, metric, "flash")};
         return true;
     }
-    if (fb == 0.0) {
+    if (is_zero(fb)) {
         out = {b, quality, crossing_sample(end_b, b, quality, metric, "flash")};
         return true;
     }
@@ -1554,7 +1589,7 @@ bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameter
         if (!saturation_state(fluid, sweep_key, c, quality, xkey, ykey, iso_key, state)) return false;
         double fc = state[0] - value;
         out = {c, quality, crossing_sample(state, c, quality, metric, "flash")};
-        if (fc == 0.0 || std::fabs(b - a) <= 1e-12 * std::fabs(c)) return true;
+        if (is_zero(fc) || std::fabs(b - a) <= 1e-12 * std::fabs(c)) return true;
         if (fc * fb < 0.0) {
             a = b;
             fa = fb;
@@ -1581,8 +1616,12 @@ std::vector<Crossing> envelope_crossings(Envelope& envelope, CoolProp::parameter
     std::vector<Crossing> found;
     for (size_t i = 0; i + 1 < k.size(); ++i) {
         double a = k[i] - value, b = k[i + 1] - value;
-        if (!(finite(a) && finite(b)) || a * b > 0.0 || a == b) continue;
-        if (b == 0.0 && i + 1 < k.size() - 1) continue;
+        if (!(finite(a) && finite(b))) continue;
+        // No crossing when both residuals have the same sign or both are zero; a crossing
+        // exactly on a table point is counted once, at the start of the next interval
+        int sa = sign_of(a), sb = sign_of(b);
+        if (sa * sb > 0 || (sa == 0 && sb == 0)) continue;
+        if (sb == 0 && i + 1 < k.size() - 1) continue;
         double t = a / (a - b);
         std::vector<double> point(6);
         bool ok = true;
@@ -1700,9 +1739,10 @@ class Line
 
     void extend(const std::vector<Sample>& found) {
         for (const Sample& s : found) {
-            if (s.valid && !samples.empty() && samples.back().valid && samples.back().source == s.source && samples.back().w == s.w
-                && samples.back().x == s.x && samples.back().y == s.y)
-                continue;  // the end of one part is the start of the next
+            // The end of one part is the start of the next: the same sample, copied
+            if (s.valid && !samples.empty() && samples.back().valid && samples.back().source == s.source && same_bits(samples.back().w, s.w)
+                && same_bits(samples.back().x, s.x) && same_bits(samples.back().y, s.y))
+                continue;
             if (!s.valid && (samples.empty() || !samples.back().valid)) continue;
             samples.push_back(s);
         }
@@ -1740,11 +1780,18 @@ class Line
             ends.clear();
             Envelope* envelope = fluid_.envelope();
             if (!envelope) return false;
-            std::map<double, Crossing> found;
-            for (const Crossing& c : envelope_crossings(*envelope, xkey_, ykey_, iso_key_, value_, sweep_.key, &metric_, nullptr))
-                if (found.count(c.quality) == 0) found[c.quality] = c;
-            for (double q : {0.0, 1.0})
-                if (found.count(q) != 0) ends.emplace_back(q, found[q].sample);
+            // The first crossing on each side of the envelope: [0] bubble (flag Q = 0), [1] dew (flag Q = 1)
+            Crossing first_found[2];
+            bool have[2] = {false, false};
+            for (const Crossing& c : envelope_crossings(*envelope, xkey_, ykey_, iso_key_, value_, sweep_.key, &metric_, nullptr)) {
+                int side = c.quality > 0.5 ? 1 : 0;
+                if (!have[side]) {
+                    first_found[side] = c;
+                    have[side] = true;
+                }
+            }
+            for (int side : {0, 1})
+                if (have[side]) ends.emplace_back(side == 1 ? 1.0 : 0.0, first_found[side].sample);
         }
         if (ends.size() != 2) return false;
         // Two ends, so a swap orders them (see dome_end_comes_first)
@@ -1763,7 +1810,9 @@ class Line
         Trace found = trace(evaluate, metric_, points_, 0.0, 1.0, &sample_a, &sample_b, true);
         count(found);
         for (const Sample& s : found.samples)
-            if (s.valid && ((s.w == sample_a.w && s.Q == sample_a.Q) || (s.w == sample_b.w && s.Q == sample_b.Q))) ++n_inserted;
+            // the two saturation states, copied into the trace as its start and end
+            if (s.valid && ((same_bits(s.w, sample_a.w) && same_bits(s.Q, sample_a.Q)) || (same_bits(s.w, sample_b.w) && same_bits(s.Q, sample_b.Q))))
+                ++n_inserted;
         extend(found.samples);
     }
 
@@ -1822,13 +1871,13 @@ Isoline envelope_line(Fluid& fluid, CoolProp::parameters xkey, CoolProp::paramet
     Envelope* envelope = fluid.envelope();
     if (!envelope) return out;
     std::vector<size_t> dew, bubble;
-    for (size_t i = 0; i < envelope->Q.size(); ++i) {
-        if (envelope->Q[i] == 1.0) dew.push_back(i);
-        if (envelope->Q[i] == 0.0) bubble.push_back(i);
+    for (size_t i = 0; i < envelope->Q.size(); ++i) {  // each point is flagged Q = 0 or Q = 1
+        if (envelope->Q[i] > 0.5) dew.push_back(i);
+        if (envelope->Q[i] < 0.5) bubble.push_back(i);
     }
     if (dew.size() < 2 || bubble.size() < 2) return out;
     std::vector<size_t> rows;
-    if (quality == 1.0)
+    if (quality >= 1.0)  // the caller passes quality 0 or 1
         rows = dew;
     else if (dew.back() + 1 == bubble.front()) {
         rows.push_back(dew.back());
@@ -1916,7 +1965,7 @@ Isoline compute_quality_line(Fluid& fluid, CoolProp::parameters xkey, CoolProp::
                                    + " has no two-phase region (CoolProp provides no critical point for it), so lines of constant "
                                      "quality cannot be drawn.");
     if (!fluid.is_pure()) {
-        if (quality == 0.0 || quality == 1.0) {
+        if (quality <= 0.0 || quality >= 1.0) {  // the bubble or the dew line (quality is in [0, 1], checked above)
             bool ok = false;
             Isoline line = envelope_line(fluid, xkey, ykey, quality, ok);
             if (ok) return line;
@@ -2075,7 +2124,8 @@ void PropertyPlot::init(const std::string& fluid_name) {
     if (axis_pair_ == CoolProp::INPUT_PAIR_INVALID)
         throw CoolProp::ValueError("CoolProp has no flash for the axes " + CoolProp::get_parameter_information(ykey_, "short") + " over "
                                    + CoolProp::get_parameter_information(xkey_, "short") + ".");
-    swap_axis_inputs_for_update_ = (o1 == 1.0);
+    // generate_update_pair hands back the markers 0 and 1 in the order of the pair
+    swap_axis_inputs_for_update_ = o1 > 0.5;
 }
 
 /// Resolve the limits: a value below 10 with ``relative`` is a factor of the
@@ -2260,6 +2310,7 @@ double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yv
 
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
+using Catch::Matchers::WithinULP;
 
 namespace {
 
@@ -2395,8 +2446,9 @@ TEST_CASE("The dome of a mixture comes from the phase envelope", "[Plot]") {
     CHECK(bubble.n_failed == 0);
     CHECK(dew.n_failed == 0);
     // The dome closes: the bubble line starts where the dew line ends
-    CHECK(bubble.x.front() == dew.x.back());
-    CHECK(bubble.y.front() == dew.y.back());
+    // the same point, to the last bit (0 units in the last place)
+    CHECK_THAT(bubble.x.front(), WithinULP(dew.x.back(), 0));
+    CHECK_THAT(bubble.y.front(), WithinULP(dew.y.back(), 0));
     // Every point is an envelope state: in a T-rho chart the bubble line
     // runs through the envelope's temperatures and bulk densities (CoolProp
     // keeps the bulk phase in the "vap" fields on both branches)
@@ -2408,7 +2460,7 @@ TEST_CASE("The dome of a mixture comes from the phase envelope", "[Plot]") {
     CoolProp::Plot::Isoline trho = trho_plot.calc_isolines(CoolProp::iQ, {0.0}, 50).front();
     size_t k = 1;
     for (size_t i = 0; i < data.T.size(); ++i) {
-        if (data.Q[i] != 0.0) continue;
+        if (data.Q[i] > 0.5) continue;  // dew point
         REQUIRE(k < trho.x.size());
         CHECK_THAT(trho.y[k], WithinRel(data.T[i], 1e-12));
         CHECK_THAT(trho.x[k], WithinRel(data.rhomolar_vap[i] * state->molar_mass(), 1e-12));
@@ -2437,10 +2489,10 @@ TEST_CASE("The lines of a blend meet the dome near the critical point", "[Plot]"
     state->set_mole_fractions({0.7, 0.3});
     state->build_phase_envelope("veryfine");
     const CoolProp::PhaseEnvelopeData& data = state->get_phase_envelope_data();
-    for (double quality : {0.0, 1.0}) {
+    for (bool dew : {false, true}) {
         std::vector<std::pair<double, double>> branch;
         for (size_t i = 0; i < data.T.size(); ++i)
-            if (data.Q[i] == quality) branch.emplace_back(data.T[i], data.p[i]);
+            if ((data.Q[i] > 0.5) == dew) branch.emplace_back(data.T[i], data.p[i]);
         std::sort(branch.begin(), branch.end());
         REQUIRE(branch.size() >= 2);
         size_t j = 1;
@@ -2477,7 +2529,7 @@ TEST_CASE("States computed outside the axes are told apart from failures", "[Plo
     using namespace CoolProp::Plot::Detail;
     // The first, careful look fails; every other state lies above the chart
     Evaluate evaluate = [](double u, bool /*careful*/, Sample& out) {
-        if (u == 0.0) return false;
+        if (u <= 0.0) return false;
         out.valid = true;
         out.x = u;
         out.y = 2.0;
@@ -2505,6 +2557,19 @@ TEST_CASE("Review fixes: limits, sweep values, trivial solutions", "[Plot]") {
     // Sweep values equal up to rounding order the dome ends by quality, not by noise
     CHECK(same_sweep_value(300.0, 300.0 * (1.0 + 1e-15)));
     CHECK_FALSE(same_sweep_value(300.0, 300.001));
+    // Sign tests and cache keys without floating-point equality
+    CHECK(sign_of(-2.0) == -1);
+    CHECK(sign_of(0.0) == 0);
+    CHECK(sign_of(-0.0) == 0);
+    CHECK(sign_of(3.0) == 1);
+    CHECK(same_bits(300.0, 300.0));
+    CHECK_FALSE(same_bits(300.0, std::nextafter(300.0, 400.0)));
+    CHECK(same_bits(nan, nan));  // the same failed input is the same cache entry
+    CHECK_FALSE(same_bits(0.0, -0.0));
+    CHECK(is_zero(0.0));
+    CHECK(is_zero(-0.0));
+    CHECK_FALSE(is_zero(std::numeric_limits<double>::denorm_min()));
+    CHECK_FALSE(is_zero(nan));
     const double w_noisy = 300.0 * (1.0 + 1e-15);                        // the liquid end, a few bits above the vapour end
     CHECK(dome_end_comes_first(w_noisy, 0.0, 300.0, 1.0, true));         // sweep in T: liquid first
     CHECK_FALSE(dome_end_comes_first(w_noisy, 0.0, 300.0, 1.0, false));  // sweep in p: vapour first
@@ -2549,9 +2614,10 @@ TEST_CASE("The axes and the supported isolines of a plot", "[Plot]") {
     CHECK(box[1] < 493.15);
     CHECK_THAT(box[2], WithinAbs(0.25e5, 1e-9));
     CHECK_THAT(box[3], WithinRel(2.25 * CoolProp::PropsSI("pcrit", "T", 0, "P", 0, "R134a"), 1e-6));
-    CHECK(plot.yaxis.min == box[2]);         // NOLINT(cppcoreguidelines-pro-type-union-access)
-    CHECK(plot.yaxis.max == box[3]);         // NOLINT(cppcoreguidelines-pro-type-union-access)
-    CHECK(plot.xaxis.min < plot.xaxis.max);  // NOLINT(cppcoreguidelines-pro-type-union-access)
+    // the axis is the box itself, to the last bit (0 units in the last place)
+    CHECK_THAT(plot.yaxis.min, WithinULP(box[2], 0));  // NOLINT(cppcoreguidelines-pro-type-union-access)
+    CHECK_THAT(plot.yaxis.max, WithinULP(box[3], 0));  // NOLINT(cppcoreguidelines-pro-type-union-access)
+    CHECK(plot.xaxis.min < plot.xaxis.max);            // NOLINT(cppcoreguidelines-pro-type-union-access)
     std::vector<CoolProp::parameters> keys = plot.supported_isoline_keys();
     CHECK(keys == std::vector<CoolProp::parameters>{CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass, CoolProp::iUmass, CoolProp::iQ});
     CHECK(plot.sweep_key(CoolProp::iT) == CoolProp::iP);
@@ -2559,8 +2625,8 @@ TEST_CASE("The axes and the supported isolines of a plot", "[Plot]") {
     CHECK(plot.sweep_key(CoolProp::iP) == CoolProp::iundefined_parameter);
     CHECK_THROWS_AS(plot.calc_isolines(CoolProp::iP, {1e5}, 10), CoolProp::ValueError);
     CoolProp::Plot::Range range = plot.isoline_range(CoolProp::iT);
-    CHECK(range.min == box[0]);
-    CHECK(range.max == box[1]);
+    CHECK_THAT(range.min, WithinULP(box[0], 0));
+    CHECK_THAT(range.max, WithinULP(box[1], 0));
     std::vector<double> values = CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 3);
     REQUIRE(values.size() == 3);
     CHECK_THAT(values[1], WithinRel(1e6, 1e-9));
@@ -2595,10 +2661,17 @@ TEST_CASE("Settings are checked up front and a failing line keeps its reason", "
     CHECK(plots.back().calc_isolines(CoolProp::iT, {300.0}, 20).front().n_valid() >= 10);
 }
 
+/// Each element the same double, to the last bit (0 units in the last place)
+void check_exactly(const std::vector<double>& got, const std::vector<double>& want) {
+    REQUIRE(got.size() == want.size());
+    for (size_t i = 0; i < got.size(); ++i)
+        CHECK_THAT(got[i], WithinULP(want[i], 0));
+}
+
 TEST_CASE("Absolute limits and a fluid without a critical point", "[Plot]") {
     CoolProp::Plot::PropertyPlot plot("HEOS::Water", CoolProp::iP, CoolProp::iHmass, 300.0, 600.0, 1e5, 1e7);
     std::vector<double> box = plot.tp_box();
-    CHECK(box == std::vector<double>{300.0, 600.0, 1e5, 1e7});
+    check_exactly(box, {300.0, 600.0, 1e5, 1e7});
     CHECK(plot.calc_isolines(CoolProp::iT, {400.0}, 20).front().n_valid() >= 10);
     // An incompressible fluid has no saturation curve: relative limits cannot be resolved
     CHECK_THROWS_AS(CoolProp::Plot::PropertyPlot("INCOMP::MEG[0.5]", CoolProp::iP, CoolProp::iT, CoolProp::Plot::TPLimits::Def),
@@ -2613,8 +2686,8 @@ TEST_CASE("Absolute limits and a fluid without a critical point", "[Plot]") {
     // Axes CoolProp has no flash for are refused at construction
     CHECK_THROWS_AS(CoolProp::Plot::PropertyPlot("HEOS::R134a", CoolProp::iHmass, CoolProp::iUmass, CoolProp::Plot::TPLimits::Achp),
                     CoolProp::ValueError);
-    CHECK(CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 0) == std::vector<double>{1e5});
-    CHECK(CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 1) == std::vector<double>{1e5});
+    check_exactly(CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 0), {1e5});
+    check_exactly(CoolProp::Plot::generate_values_in_range(CoolProp::iP, {1e5, 1e7}, 1), {1e5});
 }
 
 #endif  // ENABLE_CATCH

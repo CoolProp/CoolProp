@@ -279,6 +279,20 @@ recorded history of finished or abandoned work were dropped (they remain in
   their guesses from it, so a line would depend on the lines computed
   before it, and lines are cached and computed one by one in any order
   (tried in COO-142 and reverted; CoolPlot's `tracer.py` has the same note).
+- **No `==` or `!=` between doubles in the plot numerics**, and no
+  tolerance in their place where an exact answer is meant.  The envelope's
+  Q flags (exactly 0 or 1) and the markers of `generate_update_pair` are
+  compared by side (`Q > 0.5`); an exact root or a vanished denominator is
+  `is_zero` (a classification); sign tests use `sign_of` (integers); a
+  cache key or a copied sample is `same_bits`; the start and end of a
+  stepped range are passed as flags, not found by comparing `u`; tests
+  that mean "the same double" use `WithinULP(x, 0)`.  `-Wfloat-equal` on
+  `src/CoolPropPlot.cpp` is clean (the warnings left come from the bundled
+  fmt).  The rewrite was checked bit-identical on about 1100 isolines of
+  pure fluids, blends and an incompressible.  CoolPlot has the same
+  helpers in `coolplot/thermo/floats.py`; its `is_zero` classifies the
+  bits too, since `abs(v) < math.ulp(0.0)` is false for 0.0 when an
+  extension built with fast-math sets denormals-are-zero.
 - **A `PropertyPlot` serialises its own calls**: every line of a plot is
   computed with the plot's one `AbstractState`, updated in place, so
   `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they
