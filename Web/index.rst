@@ -68,9 +68,10 @@ Projects Using CoolProp
 * `HydDown <https://andr1976.github.io/HydDown/>`_ - calculating hydrogen pressure vessel filling and discharge
 * `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_ - hydrogen and other alternative fuels risk assessment models
 * `UH2SC <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
-* `Calcumber <https://calcumber.app/fluid-properties/>`_ – notebook-style unit-aware web calculator
+* `Calcumber <https://calcumber.app/fluid-properties/>`_ - notebook-style unit-aware web calculator
 * `FluidProps <https://fluidprops.com>`_ - free fluid property calculators and steam tables built on CoolProp
 * `Thermoprops <https://luisbedoia.github.io/thermoprops/>`_ - web calculator for fluid states and p-h, T-s and other thermodynamic diagrams
+* `TESPy <https://tespy.readthedocs.io>`_ - thermodynamic process simulator for heat pumps, ORCs etc.
 
 Main Developers
 ---------------
