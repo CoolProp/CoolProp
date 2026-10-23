@@ -3957,8 +3957,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
             } else {
                 Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100);
             }
-        } else if (y < yc) {
-            // Increase rhomelt until it bounds the solution
+        } else if ((y - yc) * (yc - ymin) > 0) {
+            // y lies beyond yc on the side away from ymin, so a higher density can bracket it: increase
+            // rhoc until it does.  Written for either sign of dy/drho -- for the usual decreasing u, s or h
+            // this is y < yc, but above T* = Tc(1 + 1/m)^2 the Soave alpha makes u rise with density, and
+            // dense cubic T,U states threw "input not in range" (stack review).
             int step_count = 0;
             while (!is_in_closed_range(ymin, yc, y)) {
                 rhoc *= 1.1;  // Increase density by a few percent
@@ -4027,6 +4030,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
                     rhoL = sat->rhomolarL;
                 }
             } catch (...) {
+                // With no polynomial ancillary to fall back on (the cubics), the hook's own error is
+                // the informative one; swallowing it only turned it into "type not set".
+                if (!HEOS.components[0].ancillaries.rhoL.enabled()) {
+                    throw;
+                }
                 rhoL = NAN;
             }
         }
@@ -4079,6 +4087,9 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
                     rhoV = sat->rhomolarV;
                 }
             } catch (...) {
+                if (!HEOS.components[0].ancillaries.rhoV.enabled()) {
+                    throw;
+                }
                 rhoV = NAN;
             }
         }
