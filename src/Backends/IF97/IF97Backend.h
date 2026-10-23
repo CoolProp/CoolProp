@@ -294,23 +294,27 @@ class IF97Backend : public AbstractState
                 _hmass = value1 / molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
                 _smass = value2 / molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
                 [[fallthrough]];                 // fallthrough is explicit to mass basis inputs
-            case HmassSmass_INPUTS:
+            case HmassSmass_INPUTS: {
                 if (!(_hmass)) _hmass = value1;  // don't set if already set above
                 if (!(_smass)) _smass = value2;  // don't set if already set above
-                _p = IF97::p_hsmass(_hmass, _smass);
-                _T = IF97::T_phmass(_p, _hmass);
-                // ...if in the vapor dome (Region 4), calculate Quality...
-                if (IF97::BackwardRegion(_p, _hmass, IF97_HMASS) == 4) {
-                    H = _hmass;
-                    hVmass = IF97::hvap_p(_p);
-                    hLmass = IF97::hliq_p(_p);
-                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bound between 0 and 1
+                // ...if in the vapor dome (Region 4), Region_hs also returns p, T, and Q from one solve...
+                // Region_hs is consistent with p_hsmass, including states on a saturation edge.
+                // Region_ph(p_hsmass(h,s), h) is not: round-off in p can put an edge state just
+                // outside Region 4, and near Pcrit the single-phase path is far off in h.
+                double p_dome = 0, T_dome = 0, Q_dome = 0;
+                if (IF97::Region_hs(_hmass, _smass, p_dome, T_dome, Q_dome) == 4) {
+                    _p = p_dome;
+                    _T = T_dome;
+                    _Q = bounded_quality(Q_dome);  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
+                    _p = IF97::p_hsmass(_hmass, _smass);
+                    _T = IF97::T_phmass(_p, _hmass);
                     _Q = -1;
                     set_phase();
                 };
                 break;
+            }
             default:
                 throw ValueError("This pair of inputs is not yet supported");
         }

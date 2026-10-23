@@ -10073,4 +10073,39 @@ TEST_CASE("IF97 update() that throws leaves no half-built state", "[IF97][update
     }
 }
 
+TEST_CASE("IF97 HmassSmass resolves the vapor dome below s'' at T23min", "[IF97][HS]") {
+    // IAPWS has no backward T(h,s) for the part of the dome with s < SgT23 (5210.9
+    // J/kg/K).  IF97 v2.4.0 solves that part iteratively from the forward saturation
+    // equations; before it, p_hsmass threw "Entropy out of range" there.
+    auto a = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto b = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int solved = 0;
+    for (double p : {1e3, 1e4, 1e5, 1e6, 5e6, 1e7, 1.5e7, 2e7, 2.2e7}) {
+        for (double Q : {0.0, 1e-9, 1e-6, 0.01, 0.1, 0.5, 0.9, 0.99, 1 - 1e-9, 1.0}) {
+            CAPTURE(p, Q);
+            a->update(CoolProp::PQ_INPUTS, p, Q);
+            const double h = a->hmass(), s = a->smass();
+            if (s >= 5210.887825) continue;  // library's own region; accuracy is IAPWS's, not ours
+            CHECK_NOTHROW(b->update(CoolProp::HmassSmass_INPUTS, h, s));
+            CHECK(b->phase() == CoolProp::iphase_twophase);
+            CHECK(b->p() == Catch::Approx(p).epsilon(1e-8));
+            CHECK(b->Q() == Catch::Approx(Q).margin(1e-8));
+            CHECK(b->hmass() == Catch::Approx(h).epsilon(1e-9));
+            CHECK(b->smass() == Catch::Approx(s).epsilon(1e-9));
+            ++solved;
+        }
+    }
+    CHECK(solved > 50);
+    // Single-phase states with s < SgT23 are not claimed by the dome solver.
+    a->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_liquid);
+    CHECK(b->p() == Catch::Approx(1e6).epsilon(5e-3));
+    a->update(CoolProp::PT_INPUTS, 3e7, 640.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_supercritical_liquid);
+    // A state that is neither in the dome nor in IF97's range still throws.
+    CHECK_THROWS(b->update(CoolProp::HmassSmass_INPUTS, 1e9, 1.0));
+}
+
 #endif
