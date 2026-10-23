@@ -10108,4 +10108,88 @@ TEST_CASE("IF97 HmassSmass resolves the vapor dome below s'' at T23min", "[IF97]
     CHECK_THROWS(b->update(CoolProp::HmassSmass_INPUTS, 1e9, 1.0));
 }
 
+TEST_CASE("IF97 fast_evaluate rejects non-finite inputs and handles the dome like update()", "[IF97][fast_evaluate]") {
+    shared_ptr<CoolProp::AbstractState> b(CoolProp::AbstractState::factory("IF97", "Water"));
+    shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("IF97", "Water"));
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const double M = ref->molar_mass();
+
+    // A non-finite h or p must flag out of range with an all-NaN row, not return a made-up state
+    // (T_phmass(p, NaN) used to return a Region 1 temperature with status ok).  The finite
+    // points on either side must be unaffected.
+    {
+        ref->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+        const double h_ok = ref->hmass();
+        const double h_in[5] = {h_ok, nan, h_ok, inf, -inf};
+        const double p_in[5] = {1e6, 1e6, nan, 1e6, 1e6};
+        const CoolProp::parameters outs[3] = {CoolProp::iT, CoolProp::iHmass, CoolProp::iDmass};
+        for (CoolProp::input_pairs ip : {CoolProp::HmassP_INPUTS, CoolProp::HmolarP_INPUTS}) {
+            double h_v[5];
+            for (int k = 0; k < 5; ++k)
+                h_v[k] = (ip == CoolProp::HmolarP_INPUTS) ? h_in[k] * M : h_in[k];
+            double out[15];
+            int st[5] = {-1, -1, -1, -1, -1};
+            b->fast_evaluate(ip, h_v, p_in, 5, outs, 3, out, 15, st, 5);
+            CHECK(st[0] == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(400.0).margin(0.05));
+            for (int k = 1; k < 5; ++k) {
+                CAPTURE(k, ip);
+                CHECK(st[k] == CoolProp::fast_evaluate_out_of_range);
+                for (int o = 0; o < 3; ++o)
+                    CHECK(std::isnan(out[k * 3 + o]));
+            }
+        }
+    }
+
+    // On a saturation line update() returns the saturated-phase cp, cv, speed of sound,
+    // viscosity, conductivity, and Prandtl number; fast_evaluate must agree.
+    const CoolProp::parameters props[8] = {CoolProp::iCpmass,       CoolProp::iCvmass,  CoolProp::ispeed_sound, CoolProp::iviscosity,
+                                           CoolProp::iconductivity, CoolProp::iPrandtl, CoolProp::iCpmolar,     CoolProp::iCvmolar};
+    for (double p : {1e5, 1e6, 5e6, 1.5e7}) {
+        for (double Qedge : {0.0, 1.0}) {
+            CAPTURE(p, Qedge);
+            ref->update(CoolProp::PQ_INPUTS, p, Qedge);
+            const double h = ref->hmass();
+            double out[8];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, props, 8, out, 8, &st, 1);
+            REQUIRE(st == CoolProp::fast_evaluate_ok);
+            for (int o = 0; o < 8; ++o) {
+                CAPTURE(o);
+                CHECK(out[o] == Catch::Approx(ref->keyed_output(props[o])).epsilon(1e-12));
+            }
+        }
+    }
+
+    // Strictly inside the dome cp, cv, speed of sound, viscosity, conductivity, and Prandtl number
+    // are not defined for a two-phase mixture (update() throws), so only those columns are NaN.
+    // The lever-rule properties keep their values in the same row and the status is ok.
+    {
+        const double p = 1e6;
+        ref->update(CoolProp::PQ_INPUTS, p, 0.5);
+        const double h = ref->hmass();
+        for (CoolProp::parameters bad : props) {
+            CAPTURE(bad);
+            const CoolProp::parameters outs[3] = {CoolProp::iT, bad, CoolProp::iQ};
+            double out[3];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, outs, 3, out, 3, &st, 1);
+            CHECK(st == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+            CHECK(std::isnan(out[1]));
+            CHECK(out[2] == Catch::Approx(0.5).epsilon(1e-9));
+        }
+        const CoolProp::parameters ok_outs[4] = {CoolProp::iT, CoolProp::iQ, CoolProp::iHmass, CoolProp::iDmass};
+        double out[4];
+        int st = -1;
+        b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, ok_outs, 4, out, 4, &st, 1);
+        CHECK(st == CoolProp::fast_evaluate_ok);
+        CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+        CHECK(out[1] == Catch::Approx(0.5).epsilon(1e-9));
+        CHECK(out[2] == Catch::Approx(h).epsilon(1e-12));
+        CHECK(out[3] == Catch::Approx(ref->rhomass()).epsilon(1e-9));
+    }
+}
+
 #endif

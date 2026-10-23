@@ -797,6 +797,15 @@ class IF97Backend : public AbstractState
             const double v1 = val1[k];
             const double v2 = val2[k];
 
+            // A non-finite input must not reach the backward solvers: T_phmass(p, NaN) does not
+            // throw, because every NaN comparison is false and the region tests fall through to
+            // Region 1, so it returns a plausible T and the row would come back with status ok.
+            if (!std::isfinite(v1) || !std::isfinite(v2)) {
+                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                fill_nan_row(k);
+                continue;
+            }
+
             double T_k, p_k;
             const double hmass_k = is_HmassP ? v1 : (is_HmolarP ? (v1 / M) : 0.0);
             bool dome_hit = false;
@@ -870,6 +879,13 @@ class IF97Backend : public AbstractState
             }
 
             bool eval_failed = false;
+            // On the saturation lines (Q within 1e-10 of 0 or 1) update() returns the saturated
+            // liquid or vapor value for cp, cv, speed of sound, viscosity, conductivity, and
+            // Prandtl number, so do the same.  Strictly inside the dome (0 < Q < 1) those are not
+            // defined for a two-phase mixture, so only their columns are NaN; the properties that
+            // follow the lever rule (T, p, Q, h, rho, s, u) keep their values and the status is ok.
+            const bool at_sat_liq = dome_hit && std::abs(Q_k) < 1e-10;
+            const bool at_sat_vap = dome_hit && std::abs(Q_k - 1) < 1e-10;
             // Two-phase Q-blend cache (lazy fill — only touched if a
             // property that needs sat-line endpoints is requested while
             // dome_hit is true).
@@ -951,9 +967,38 @@ class IF97Backend : public AbstractState
                             case ispeed_sound:
                             case iviscosity:
                             case iconductivity:
-                            case iPrandtl:
-                                val = NaN;
+                            case iPrandtl: {
+                                if (!at_sat_liq && !at_sat_vap) {
+                                    val = NaN;
+                                    break;
+                                }
+                                double v;
+                                switch (out_key) {
+                                    case iCpmass:
+                                    case iCpmolar:
+                                        v = at_sat_liq ? IF97::cpliq_p(p_k) : IF97::cpvap_p(p_k);
+                                        break;
+                                    case iCvmass:
+                                    case iCvmolar:
+                                        v = at_sat_liq ? IF97::cvliq_p(p_k) : IF97::cvvap_p(p_k);
+                                        break;
+                                    case ispeed_sound:
+                                        v = at_sat_liq ? IF97::speed_soundliq_p(p_k) : IF97::speed_soundvap_p(p_k);
+                                        break;
+                                    case iviscosity:
+                                        v = at_sat_liq ? IF97::viscliq_p(p_k) : IF97::viscvap_p(p_k);
+                                        break;
+                                    case iconductivity:
+                                        v = at_sat_liq ? IF97::tcondliq_p(p_k) : IF97::tcondvap_p(p_k);
+                                        break;
+                                    default:  // iPrandtl
+                                        v = at_sat_liq ? IF97::prandtlliq_p(p_k) : IF97::prandtlvap_p(p_k);
+                                        break;
+                                }
+                                const bool molar = (out_key == iCpmolar || out_key == iCvmolar);
+                                val = molar ? v * M : v;
                                 break;
+                            }
                             default:
                                 val = NaN;
                                 eval_failed = true;
