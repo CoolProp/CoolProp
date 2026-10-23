@@ -395,8 +395,10 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
 
     void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) override;
 
-    /// Return the maximum temperature [K] supported by the cubic superancillary.
-    /// Inverts Ttilde_max = R*T*b/a(T) analytically using am evaluated at T=Tc.
+    /// Approximate maximum temperature [K] of the cubic superancillary: inverts
+    /// Ttilde_max = R*T*b/a(T) using a evaluated at Tc instead of at T.  Since the table ends at the
+    /// critical point this is Tc to round-off for the in-tree alphas; the library itself no longer
+    /// uses it (the range checks work in Ttilde), only tests do.
     double calc_superanc_Tmax();
 
     /// Saturation state at pressure p from the cubic Chebyshev superancillary, found by inverting
@@ -413,10 +415,10 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
 
    private:
     /// Evaluate the cubic superancillary at T (pure fluid with a superancillary code).  Returns false,
-    /// without throwing, when T lies outside the table (below its low-T end, above it beyond the
-    /// 8e-10 SRK end gap, or NaN); the gap itself maps onto the end of the table unless map_end_gap
-    /// is false, in which case it counts as outside.  The one place the cubic evaluates the table at
-    /// a temperature.
+    /// without throwing, when T lies outside the table (below its low-T end, above its end -- the
+    /// critical point -- by more than round-off, or NaN).  T within round-off above the end maps onto
+    /// it unless map_end_gap is false, in which case it counts as outside.  The one place the cubic
+    /// evaluates the table at a temperature.
     bool cubic_superanc_eval(double T, SuperancSatPoint& out, bool map_end_gap = true);
     /// cubic_superanc_eval that throws ValueError above Tc and outside the table.
     SuperancSatPoint cubic_superanc_at_T(double T);

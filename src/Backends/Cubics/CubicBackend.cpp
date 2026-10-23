@@ -1181,8 +1181,8 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     // allowed iteration look the same; judge convergence by whether the bracket meets the tolerance.
     boost::math::tools::eps_tolerance<double> tol(bits);
     // T at which Ttilde equals Ttilde_bound.  The converged bracket end that lies INSIDE the
-    // superancillary domain is returned, so later evaluations never step off it by an ulp
-    // (calc_superanc_Tmax() inverts with a(Tc) and can overshoot Ttilde_max slightly).
+    // superancillary domain is returned, so later evaluations never step off it by an ulp.
+    // (calc_superanc_Tmax() is no substitute: it inverts with a(Tc) rather than a(T).)
     auto T_at_Ttilde = [&](double Ttilde_bound, bool inside_is_above) {
         auto f = [&](double T) { return Ttilde_of_T(T) - Ttilde_bound; };
         double Ta = 0.5 * T_critical(), Tb = 2 * T_critical();
@@ -1292,7 +1292,8 @@ bool CoolProp::AbstractCubicBackend::cubic_superanc_eval(double T, SuperancSatPo
 
 CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint CoolProp::AbstractCubicBackend::cubic_superanc_at_T(double T) {
     if (T > T_critical() * (1 + 4 * DBL_EPSILON)) {
-        throw ValueError(format("Temperature [%0.10g K] may not be above the critical temperature of the cubic, %0.10g K", T, static_cast<double>(T_critical())));
+        throw ValueError(
+          format("Temperature [%0.10g K] may not be above the critical temperature of the cubic, %0.10g K", T, static_cast<double>(T_critical())));
     }
     SuperancSatPoint sat{};
     if (!cubic_superanc_eval(T, sat)) {
