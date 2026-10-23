@@ -640,10 +640,11 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
             const std::vector<double> x = {1.0};
             const double am = cubic->am_term(cubic->get_Tr() / _T, x, 0), bm = cubic->bm_term(x);
             double Ttilde = cubic->get_R_u() * _T * bm / am;
-            // The SRK table stops 8e-10 in Ttilde short of the critical point; in that gap, up to Tc, take
-            // its end.  Anything further above the table (a non-monotone alpha) is not clamped: it throws.
+            // The table ends at the exact critical point, Ttilde_c = Omega_b/Omega_a (#3515), so T == Tc
+            // can land a few ulp above its end; absorb that round-off.  Anything further above the table
+            // (a non-monotone alpha) is not clamped: it throws.
             const double Ttilde_max = get_Ttilde_max(eos_code);
-            if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-8)) {
+            if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
                 Ttilde = Ttilde_max;
             }
             if (Ttilde > Ttilde_max) {
@@ -851,8 +852,11 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 } else if (n_phys == 3) {
                     // Vapour-like, unstable and liquid-like roots.  Inside the superancillary compare p
                     // with psat(T) read straight off the table: no p -> Tsat inversion, so any p works,
-                    // however small.  Outside it (below its low-T end, or the 8e-10 gap at the top of
-                    // the SRK table) take the root of lower Gibbs energy, as solver_rho_Tp_global does.
+                    // however small.  Below p_sat the stable root is the vapour-like one, phys[0]: no
+                    // comparison with the table's rho_V, which near Tc differs from the EOS root by more
+                    // than any fixed slack (the stack review's stress sweep hit that for 12 PR fluids).
+                    // Outside the table (below its low-T end) take the root of lower Gibbs energy, as
+                    // solver_rho_Tp_global does.
                     using namespace CubicSuperAncillary;
                     const std::vector<double> x = {1.0};
                     const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
@@ -860,8 +864,7 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                     if (Ttilde >= get_Ttilde_min(eos_code) && Ttilde <= get_Ttilde_max(eos_code)) {
                         const double psat = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
                         if (p < psat) {
-                            // Slack of 1e-10 so a p a few ulp below psat still finds the vapour root.
-                            rho = gas_root(untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm) * (1 + 1e-10));
+                            rho = phys[0];
                         } else {
                             rho = phys[2];
                         }
@@ -872,6 +875,10 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                         }
                         rho = (g_liq < g_vap) ? phys[2] : phys[0];
                     }
+                } else if (!(p > 0)) {
+                    throw CoolProp::ValueError(format("T,P for a pure cubic needs p > 0 (got p = %g Pa at T = %g K); the tensile "
+                                                      "(negative-pressure) liquid is not supported",
+                                                      p, T));
                 } else {
                     throw CoolProp::ValueError(format("Cubic has %d physical density roots at T: %g K, p: %g Pa", static_cast<int>(n_phys), T, p));
                 }
@@ -1227,9 +1234,10 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
 
     const double ln_p = log(static_cast<double>(p));
     double g_Tmax = ln_psat_of_T(Tmax) - ln_p;
-    // The SRK table stops ~1e-9 in p short of the critical point.  A pressure in that sliver, up to
-    // pc itself, is the critical point to within the table's own accuracy: take the end of the table.
-    if (g_Tmax < 0 && p <= p_critical() * (1 + 4 * DBL_EPSILON)) {
+    // The table ends at the exact critical point (#3515), so psat at its end is pc to round-off and
+    // p == pc can land just above it.  Absorb that round-off, and no more: the width check keeps a
+    // subclass whose p_critical() is not its EOS's own critical pressure from being clamped silently.
+    if (g_Tmax < 0 && g_Tmax > -1e-10 && p <= p_critical() * (1 + 4 * DBL_EPSILON)) {
         g_Tmax = 0;
     }
     // Written as !(... >= 0) so that a NaN from am_term or the Chebyshev evaluation throws

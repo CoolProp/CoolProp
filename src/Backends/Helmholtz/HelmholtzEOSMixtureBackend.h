@@ -134,8 +134,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// (when ENABLE_SUPERANCILLARIES is on); backends with their own superancillary
     /// (e.g. the cubics, #3441) override it.  Throws ValueError if p is above the
     /// superancillary's numerical critical pressure.  The cubic override also throws below the
-    /// table's minimum pressure, and maps p in the ~1e-9-wide gap between the end of the SRK
-    /// table and pc onto the end of the table.
+    /// table's minimum pressure, and maps p within round-off below pc onto the end of the
+    /// table (the critical point).
     virtual std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p);
 
     /// Lazily build saturation superancillaries for caloric properties (h_sat, s_sat,

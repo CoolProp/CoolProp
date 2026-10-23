@@ -5479,14 +5479,26 @@ TEST_CASE("Cubic QT and PQ updates use the superancillary", "[cubic][cubic_super
             }
 
             CAPTURE(backend, fluid);
-            // The table runs to the critical point.
-            CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, 0.5, AS->T_critical()));
-            CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, AS->p_critical(), 0.5));
-            // The SRK table ends 8e-10 short of the critical point.
-            CHECK(AS->T() == Catch::Approx(AS->T_critical()).epsilon(1e-8));
-            // A P-input flash at exactly pc reaches the same end-of-table clamp.
-            const double h_crit = AS->hmolar();
-            CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, h_crit, AS->p_critical()));
+            // The table runs to the exact critical point (#3515): Q,T at Tc gives pc and P,Q at pc gives
+            // Tc, both to round-off-level accuracy, not merely without throwing.
+            REQUIRE_NOTHROW(AS->update(CoolProp::QT_INPUTS, 0.5, AS->T_critical()));
+            CHECK(AS->p() == Catch::Approx(AS->p_critical()).epsilon(1e-10));
+            REQUIRE_NOTHROW(AS->update(CoolProp::PQ_INPUTS, AS->p_critical(), 0.5));
+            CHECK(AS->T() == Catch::Approx(AS->T_critical()).epsilon(1e-10));
+            // P-input flashes at exactly pc go through the same end of the table (the critical point).
+            // States just off the critical point round-trip; the critical state itself is singular
+            // (infinite cp, flat isotherm) and is not asked for.
+            for (double Tr : {0.99, 1.01}) {
+                CAPTURE(Tr);
+                std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, fluid));
+                ref->update(CoolProp::PT_INPUTS, AS->p_critical(), Tr * AS->T_critical());
+                REQUIRE_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, ref->hmolar(), AS->p_critical()));
+                CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-8));
+                REQUIRE_NOTHROW(AS->update(CoolProp::PSmolar_INPUTS, AS->p_critical(), ref->smolar()));
+                CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-8));
+            }
+            // Just above pc is out of range for a saturation call, by more than the round-off allowance.
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, AS->p_critical() * (1 + 1e-6), 0.5));
             // Out-of-range inputs throw rather than reaching the secant solve.
             CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, 1.01 * AS->T_critical()));
             CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.01 * AS->p_critical(), 0.5));
@@ -5514,7 +5526,7 @@ TEST_CASE("Cubic QT and PQ below the superancillary range", "[cubic][cubic_super
     }
 }
 
-TEST_CASE("Cubic T,P root choice at very low pressure", "[cubic][cubic_superanc][COO-136]") {
+TEST_CASE("Cubic TP root choice at very low pressure", "[cubic][cubic_superanc][COO-136]") {
     // The gas/liquid root choice used to invert p -> Tsat, which cannot reach pressures below the
     // superancillary's minimum; it now compares p with psat(T).  1e-8 Pa at 300 K is an ideal gas.
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
@@ -5547,7 +5559,41 @@ TEST_CASE("Cubic T,P root choice at very low pressure", "[cubic][cubic_superanc]
     }
 }
 
-TEST_CASE("Cubic T,P root choice above Tc below pc", "[cubic][cubic_superanc][COO-136]") {
+TEST_CASE("Cubic TP root choice just below Tc and psat", "[cubic][cubic_superanc][COO-136]") {
+    // Within ~1e-6 of Tc the table's rho_V and the EOS vapour root differ by more than any fixed
+    // slack, so comparing the root with rho_V threw "Unable to find gaseous density" for 12 PR fluids
+    // in the stack review's stress sweep (e.g. PR acetone at Tc(1 - 1e-6), p = psat(1 - 1e-10)).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"Acetone", "R134a", "Propane", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            for (double dT : {1e-6, 1e-8}) {
+                const double T = AS->T_critical() * (1 - dT);
+                const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                const double rhoV = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+                const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+                CAPTURE(dT);
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, psat * (1 - 1e-10), T));
+                CHECK(AS->rhomolar() < 0.5 * (rhoV + rhoL));  // the vapour-side root
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, psat * (1 + 1e-10), T));
+                CHECK(AS->rhomolar() > 0.5 * (rhoV + rhoL));  // the liquid-side root
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic TP at non-positive pressure is rejected", "[cubic][cubic_superanc][COO-136]") {
+    // p <= 0 has no vapour root (the tensile liquid is not supported): a clear error, not a root.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, -1e5, 0.6 * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+    }
+}
+
+TEST_CASE("Cubic TP root choice above Tc below pc", "[cubic][cubic_superanc][COO-136]") {
     // Above Tc at p < pc the cubic can have three real roots, one beyond the repulsive pole (where the
     // Gibbs energy is NaN).  Only one root is physical, and it must be returned.
     int n_three_root = 0;

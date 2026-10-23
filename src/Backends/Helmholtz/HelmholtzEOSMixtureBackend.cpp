@@ -1925,6 +1925,40 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     default:
                         throw ValueError(format("bad input for other"));
                 }
+                // At the critical point itself (p == pc, which a superancillary maps onto the end of its
+                // table) the saturated states coincide, and Q is 0/0, +-inf, or a huge number whose sign is
+                // rounding noise in y_V - y_L.  It used to fall through as two-phase with rho = NaN (SRK CO2,
+                // P,H at exactly pc, on x86-64 where rhoL == rhoV to the bit), or could misclassify a liquid
+                // as gas elsewhere.  Decide on the state, not the bits: where the saturated densities coincide
+                // to 1e-10 (the tables agree to ~1e-12 at their critical end, and the sign of y_V - y_L is
+                // reliable well inside 1e-10; for a cubic the band is ~1e-20 in 1 - T/Tc, i.e. p within a few
+                // ulp of pc), classify as the p > psat_max branch above does, against the critical value.  A
+                // non-finite tabulated density is an error, not a critical point.
+                if (!ValidNumber(rhoL) || !ValidNumber(rhoV)) {
+                    throw ValueError(format("superancillary saturated densities are not finite at p = %g Pa", static_cast<double>(_p)));
+                }
+                if (!std::isfinite(Q) || !(std::abs(rhoV - rhoL) > 1e-10 * std::abs(rhoL))) {
+                    bool gas_like = false;
+                    switch (other) {
+                        case iDmolar:
+                            gas_like = value < rhomolar_crit_;
+                            break;
+                        case iSmolar:
+                            gas_like = value > smolar_critical();
+                            break;
+                        case iHmolar:
+                            gas_like = value > hmolar_critical();
+                            break;
+                        default:  // iUmolar; any other key already threw above
+                            gas_like = value > umolar_critical();
+                            break;
+                    }
+                    this->_phase = gas_like ? iphase_supercritical_gas : iphase_supercritical_liquid;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = 1e9;
+                    return;
+                }
                 // Start off by setting variables based on assumption that the state is two-phase
                 if (Q < -1e-9) {
                     this->_phase = iphase_liquid;
