@@ -5402,10 +5402,18 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superan
             const double T = 0.8 * Tc_sa;
             AS->update_QT_pure_superanc(0.5, T);
             const double h_superanc = AS->hmolar();
-            const double rho = AS->rhomolar();
-            std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
-            ref->update(CoolProp::DmolarT_INPUTS, rho, T);
-            CHECK(h_superanc == Catch::Approx(ref->hmolar()).epsilon(1e-9));
+            // Independent reference: h_L and h_V from separate full D,T updates at the saturated
+            // densities (phase imposed, so the EOS is evaluated directly), combined by the lever rule.
+            auto h_at = [&](double rho, CoolProp::phases phase) {
+                std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+                ref->specify_phase(phase);
+                ref->update(CoolProp::DmolarT_INPUTS, rho, T);
+                return ref->hmolar();
+            };
+            const double hL = h_at(AS->saturated_liquid_keyed_output(CoolProp::iDmolar), CoolProp::iphase_liquid);
+            const double hV = h_at(AS->saturated_vapor_keyed_output(CoolProp::iDmolar), CoolProp::iphase_gas);
+            CHECK(std::isfinite(h_superanc));
+            CHECK(h_superanc == Catch::Approx(0.5 * hL + 0.5 * hV).epsilon(1e-9));
         }
 
         SECTION(backend + " update_QT_pure_superanc Q=0 and Q=1 densities bracket Q=0.5") {
