@@ -3342,6 +3342,25 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             return (x < Tmin || x > Tmax);
         }
     };
+    // solver_resid's constructor imposes the phase, and every normal and error exit below unspecifies
+    // it -- except a throw from the bracket-end evaluations resid.call(Tmin/Tmax), which run outside the
+    // try blocks.  That left the phase imposed, so a later T,P update on the same object silently picked
+    // the wrong root (stress sweep of the cubic superancillary stack).  Unspecify on every exit, exactly
+    // as the other exits already do (so a phase the caller imposed before the flash is cleared, as before).
+    struct ImposedPhaseClearer
+    {
+        HelmholtzEOSMixtureBackend& H;
+        explicit ImposedPhaseClearer(HelmholtzEOSMixtureBackend& H) : H(H) {}
+        ImposedPhaseClearer(const ImposedPhaseClearer&) = delete;
+        ImposedPhaseClearer& operator=(const ImposedPhaseClearer&) = delete;
+        ImposedPhaseClearer(ImposedPhaseClearer&&) = delete;
+        ImposedPhaseClearer& operator=(ImposedPhaseClearer&&) = delete;
+        // What HelmholtzEOSMixtureBackend::calc_unspecify_phase() does, without the virtual call (whose
+        // AbstractState default throws), so the destructor cannot throw.
+        ~ImposedPhaseClearer() {
+            H.imposed_phase_index = iphase_not_imposed;
+        }
+    } clear_imposed_phase(HEOS);
     solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax, direct_path_enabled);
 
     class resid_2D : public FuncWrapperND

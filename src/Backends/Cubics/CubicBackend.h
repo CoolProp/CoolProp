@@ -392,6 +392,13 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// to are never populated for a cubic, so this is used regardless of ENABLE_SUPERANCILLARIES,
     /// just as update_DmolarT() does.
     std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p) override;
+
+   private:
+    /// Temperatures at the low and high ends of the superancillary table, cached by
+    /// superanc_saturation_at_p (which re-validates them on every use).  NaN until first needed.
+    double superanc_Tmin_cache = NAN, superanc_Tmax_cache = NAN;
+
+   public:
 };
 
 class SRKBackend : public AbstractCubicBackend

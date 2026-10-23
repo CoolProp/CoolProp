@@ -65,7 +65,7 @@ void check_all_p_pairs(AbstractState& AS, AbstractState& ref) {
 
 }  // namespace
 
-TEST_CASE("Cubic P+{H,S,U,D} flashes for pure fluids (#3441)", "[cubic][flash][3441]") {
+TEST_CASE("Cubic P-input flashes for pure fluids (#3441)", "[cubic][flash][3441]") {
     const auto backend = GENERATE(as<std::string>{}, "SRK", "PR");
     const auto fluid = GENERATE(as<std::string>{}, "CO2", "Propane", "Water");
     const bool superanc_flag = GENERATE(true, false);
@@ -141,6 +141,37 @@ TEST_CASE("Cubic P+{H,S,U,D} flashes for pure fluids (#3441)", "[cubic][flash][3
     SECTION("supercritical pressure") {
         ref->update(PT_INPUTS, 1.5 * pc, 1.2 * Tc);
         check_all_p_pairs(*AS, *ref);
+    }
+}
+
+TEST_CASE("Cubic superancillary hook: cached table bounds follow parameter changes", "[cubic][3441]") {
+    // superanc_saturation_at_p caches the temperatures at the ends of the table.  Changing the alpha
+    // function on an instance that has already filled that cache must give the same answer as a fresh
+    // instance with the new alpha.
+    for (const auto& backend : std::vector<std::string>{"SRK", "PR"}) {
+        CAPTURE(backend);
+        std::unique_ptr<AbstractState> AS(AbstractState::factory(backend, "Propane"));
+        auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(cubic != nullptr);
+        const double p = 0.3 * AS->p_critical();
+        const auto before = cubic->superanc_saturation_at_p(p);  // fills the cache
+        REQUIRE(before.has_value());
+
+        AS->set_cubic_alpha_C(0, "MC", 0.9, -0.3, 0.2);
+        std::unique_ptr<AbstractState> fresh(AbstractState::factory(backend, "Propane"));
+        fresh->set_cubic_alpha_C(0, "MC", 0.9, -0.3, 0.2);
+        auto* fresh_cubic = dynamic_cast<AbstractCubicBackend*>(fresh.get());
+        REQUIRE(fresh_cubic != nullptr);
+
+        const auto after = cubic->superanc_saturation_at_p(p);
+        const auto expected = fresh_cubic->superanc_saturation_at_p(p);
+        REQUIRE(after.has_value());
+        REQUIRE(expected.has_value());
+        if (after && expected && before) {
+            CHECK(after->T == Catch::Approx(expected->T).epsilon(1e-13));
+            CHECK(after->rhomolarL == Catch::Approx(expected->rhomolarL).epsilon(1e-12));
+            CHECK(std::abs(after->T / before->T - 1) > 1e-4);  // the alpha change really moved Tsat
+        }
     }
 }
 

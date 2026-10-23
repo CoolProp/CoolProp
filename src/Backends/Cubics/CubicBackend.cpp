@@ -1075,7 +1075,10 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     // T(Ttilde) has no closed form and every inversion below is a 1-D solve in T.  Ttilde rises
     // monotonically with T from zero.
     auto Ttilde_of_T = [&](double T) { return R * T * bm / cubic->am_term(Tr / T, x, 0); };
-    auto ln_psat_of_T = [&](double T) { return log(supercubic(eos_code, P_CODE, Ttilde_of_T(T)) * cubic->am_term(Tr / T, x, 0) / (bm * bm)); };
+    auto ln_psat_of_T = [&](double T) {
+        const double am = cubic->am_term(Tr / T, x, 0);  // once: it dominates the cost
+        return log(supercubic(eos_code, P_CODE, R * T * bm / am) * am / (bm * bm));
+    };
     const int bits = 50;
     std::uintmax_t max_iter = 100;
     // toms748_solve reports the iterations it used, so running out and converging on the last
@@ -1106,8 +1109,25 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
         }
         return inside_is_above ? bracket.second : bracket.first;
     };
-    const double Tmin = T_at_Ttilde(get_Ttilde_min(eos_code), true);
-    const double Tmax = T_at_Ttilde(get_Ttilde_max(eos_code), false);
+    // Tmin/Tmax depend only on the EOS parameters, so cache them -- but validate on every use rather
+    // than invalidating in setters: the cubic's parameters can also be changed directly through
+    // get_cubic().  Ttilde at a cached bound must still sit at the matching end of the table to 1e-12
+    // (2 am_term calls instead of ~30); any parameter change moves it far more and forces a re-solve.
+    const double Ttilde_min = get_Ttilde_min(eos_code), Ttilde_max = get_Ttilde_max(eos_code);
+    auto cache_valid = [&](double T, double Ttilde_bound, bool inside_is_above) {
+        if (!std::isfinite(T)) {
+            return false;
+        }
+        const double Tt = Ttilde_of_T(T);
+        return inside_is_above ? (Tt >= Ttilde_bound && Tt <= Ttilde_bound * (1 + 1e-12)) : (Tt <= Ttilde_bound && Tt >= Ttilde_bound * (1 - 1e-12));
+    };
+    if (!cache_valid(superanc_Tmin_cache, Ttilde_min, true)) {
+        superanc_Tmin_cache = T_at_Ttilde(Ttilde_min, true);
+    }
+    if (!cache_valid(superanc_Tmax_cache, Ttilde_max, false)) {
+        superanc_Tmax_cache = T_at_Ttilde(Ttilde_max, false);
+    }
+    const double Tmin = superanc_Tmin_cache, Tmax = superanc_Tmax_cache;
 
     const double ln_p = log(static_cast<double>(p));
     const double g_Tmax = ln_psat_of_T(Tmax) - ln_p;
