@@ -826,13 +826,16 @@ double AbstractCubic::d3_alphar_dxidxjdxk(double tau, double delta, const std::v
 }
 
 double SRK::a0_ii(std::size_t i) {
-    // Exact value: 1/(9*(2^(1/3)-1)); see Bell and Deiters, IECR, 2021
-    double a = 0.42748023335403414043900347952220 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
+    // Exact value: 1/(9*(2^(1/3)-1)); see Bell and Deiters, IECR, 2021.  Digits computed in
+    // 50-digit arithmetic, not transcribed; the test "Cubic Omega constants reproduce the critical
+    // point" checks them.  (#2745 had typed these with doubled digits, putting SRK's own critical
+    // point ~8e-10 below the input Tc and ~1.2e-9 below the input pc.)
+    double a = 0.4274802335403414043909907 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
     return a;
 }
 double SRK::b0_ii(std::size_t i) {
-    // Exact value: (2^(1/3)-1)/3; see Bell and Deiters, IECR, 2021
-    double b = 0.08664034999649577215890158147700 * R_u * Tc[i] / pc[i];
+    // Exact value: (2^(1/3)-1)/3; see Bell and Deiters, IECR, 2021.  Computed, as for a0_ii.
+    double b = 0.08664034996495772158907020 * R_u * Tc[i] / pc[i];
     return b;
 }
 double SRK::m_ii(std::size_t i) {
@@ -843,13 +846,14 @@ double SRK::m_ii(std::size_t i) {
 }
 
 double PengRobinson::a0_ii(std::size_t i) {
-    // Exact value; see Bell and Deiters, IECR, 2021
-    double a = 0.45723552892138218938000849856422 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
+    // Exact value from the critical conditions dp/dv = d2p/dv2 = 0 (Bell and Deiters, IECR,
+    // 2021), solved in 60-digit arithmetic; Z_c = 0.30740130869870384800938509665.
+    double a = 0.4572355289213821893834602 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
     return a;
 }
 double PengRobinson::b0_ii(std::size_t i) {
-    // Exact value; see Bell and Deiters, IECR, 2021
-    double b = 0.07779607390388455972148597969400 * R_u * Tc[i] / pc[i];
+    // Exact value, computed as for a0_ii (#2745 had dropped a digit: off by 5e-14).
+    double b = 0.07779607390388845597184471 * R_u * Tc[i] / pc[i];
     return b;
 }
 double PengRobinson::m_ii(std::size_t i) {

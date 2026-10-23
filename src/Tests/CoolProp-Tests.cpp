@@ -5349,6 +5349,36 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
     }
 }
 
+TEST_CASE("Cubic Omega constants reproduce the critical point", "[cubic][cubic_omega][2745]") {
+    // The Omega_a/Omega_b literals in GeneralizedCubic.cpp must make (Tc, pc) the EOS's own critical
+    // point.  #2745 transcribed them with doubled/dropped digits (SRK off by ~4e-10, PR Omega_b by
+    // 5e-14), which these checks catch; they test the defining property, not the digits.
+    for (const auto& [backend, Zc] : std::vector<std::pair<std::string, double>>{{"SRK", 1.0 / 3.0}, {"PR", 0.30740130869870384800938509665}}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        auto cubic = ACB->get_cubic();
+        const std::vector<double> x = {1.0};
+        const double Tc = AS->T_critical(), pc = AS->p_critical(), R = cubic->get_R_u();
+
+        // (1) The reduced critical temperature Ttilde_c = R Tc b / a(Tc) = Omega_b/Omega_a is where the
+        //     superancillary tables end (they were built from the exact constants).
+        const double Ttilde_c = R * Tc * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / Tc, x, 0);
+        CHECK(Ttilde_c == Catch::Approx(CubicSuperAncillary::get_Ttilde_max(ACB->get_superanc_eos_code())).epsilon(1e-14));
+
+        // (2) Independent of the tables: at (Tc, rho_c = pc/(Zc R Tc)) the EOS gives p = pc with
+        //     dp/drho = d2p/drho2 = 0.
+        const double rhoc = pc / (Zc * R * Tc);
+        AS->specify_phase(iphase_gas);  // evaluate the EOS directly, no phase determination
+        AS->update(CoolProp::DmolarT_INPUTS, rhoc, Tc);
+        CHECK(AS->p() == Catch::Approx(pc).epsilon(1e-12));
+        CHECK(std::abs(AS->first_partial_deriv(iP, iDmolar, iT)) * rhoc / pc < 1e-10);
+        CHECK(std::abs(AS->second_partial_deriv(iP, iDmolar, iT, iDmolar, iT)) * rhoc * rhoc / pc < 1e-10);
+        AS->unspecify_phase();
+    }
+}
+
 TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
