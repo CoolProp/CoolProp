@@ -155,8 +155,9 @@ void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double& rhom
         // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
         double v_c_Lmol = 2.14107171795 * (Tc[i] / pc[i] * 1000) + 0.00773144012514;  // [L/mol]
         // A volume translation leaves Tc alone but moves each component's critical volume by -c_i,
-        // so the linear volume average has to be taken on the translated volumes to stay consistent
-        // with calc_rhomolar_critical().
+        // so the linear volume average has to be taken on the translated volumes, the same shift
+        // calc_rhomolar_critical() applies.  (For a pure SRK/PR that now uses the EOS's own Z_c rather
+        // than this fit; these linear parameters only set search and scaling ranges.)
         v_r += mole_fractions[i] * (v_c_Lmol / 1000.0 - cubic->get_cm(i));
     }
     if (!(v_r > 0)) {

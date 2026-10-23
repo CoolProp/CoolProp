@@ -174,10 +174,22 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     }
     CoolPropDbl calc_rhomolar_critical() override {
         if (is_pure_or_pseudopure) {
-            // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
-            double v_c_Lmol = 2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514;  // [L/mol]
+            // The EOS's own critical volume, v_c = Z_c R Tc / pc with Z_c = 1/3 (SRK) or
+            // 0.307401308698703848... (PR, from dp/dv = d2p/dv2 = 0; see GeneralizedCubic.cpp).  The
+            // curve fit used before (A. Kazakov's, over CoolProp's Helmholtz fluids) is a real-fluid
+            // estimate, 15-25% above the cubic's value, and it decides gas vs liquid in
+            // recalculate_singlephase_phase: compressed liquids within ~0.5% of Tc were labelled gas.
+            // Kept for cubics without a superancillary code.
+            double v_c_untranslated;
+            const int code = get_superanc_eos_code();
+            if (code == CubicSuperAncillary::SRK_CODE || code == CubicSuperAncillary::PR_CODE) {
+                const double Zc = (code == CubicSuperAncillary::SRK_CODE) ? 1.0 / 3.0 : 0.30740130869870384800938509665;
+                v_c_untranslated = Zc * cubic->get_R_u() * cubic->get_Tc()[0] / cubic->get_pc()[0];
+            } else {
+                v_c_untranslated = (2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514) / 1000.0;
+            }
             // A volume translation leaves Tc and pc alone but moves the critical volume by -c.
-            const double v_c = v_c_Lmol / 1000.0 - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
+            const double v_c = v_c_untranslated - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
             if (!(v_c > 0)) {
                 throw ValueError(format("Volume translation is too large: the translated critical molar volume (%g m^3/mol) is not positive", v_c));
             }

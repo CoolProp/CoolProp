@@ -471,7 +471,7 @@ TEST_CASE("Cubic volume translation: the critical and reducing volumes move with
         ASptr ref = make_translated(backend, "n-Propane", 0.0);
         ASptr trn = make_translated(backend, "n-Propane", c);
 
-        // calc_rhomolar_critical(): the Kazakov correlation returns an UNtranslated critical volume,
+        // calc_rhomolar_critical(): the EOS's untranslated critical volume Z_c R Tc / pc,
         // so the translated one is exactly c smaller.  An identity, not an approximation.
         CHECK(close_to(1.0 / trn->rhomolar_critical(), 1.0 / ref->rhomolar_critical() - c, 1e-12, 1e-20));
 
