@@ -1,5 +1,6 @@
 #include "CoolProp/numerics/numerics.h"
 #include "CoolProp/numerics/MatrixMath.h"
+#include <algorithm>
 #include <cmath>
 #include <unsupported/Eigen/Polynomials>
 
@@ -106,29 +107,39 @@ void solve_cubic(double a, double b, double c, double d, int& N, double& x0, dou
     double p = (3 * a * c - b * b) / (3 * a * a);
     double q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a);
 
-    if (DELTA < 0) {
-        // One real root
-        double t0 = NAN;
-        if (4 * p * p * p + 27 * q * q > 0 && p < 0) {
-            t0 = -2.0 * std::abs(q) / q * sqrt(-p / 3.0) * cosh(1.0 / 3.0 * acosh(-3.0 * std::abs(q) / (2.0 * p) * sqrt(-3.0 / p)));
-        } else {
-            t0 = -2.0 * sqrt(p / 3.0) * sinh(1.0 / 3.0 * asinh(3.0 * q / (2.0 * p) * sqrt(3.0 / p)));
-        }
+    // Near a multiple root (e.g. a cubic EOS within ~1e-9 of its critical point) the acos/acosh
+    // arguments below can round just outside their domains and p can round to exactly zero, which
+    // returned NaN roots.  Branch on the sign of p, clamp the arguments, and treat p == 0 directly.
+    const double shift = b / (3 * a);
+    if (p == 0) {
+        // t^3 + q = 0: one real root (a triple root if q == 0 too)
+        const double t0 = std::cbrt(-q);
         N = 1;
-        x0 = t0 - b / (3 * a);
-        x1 = t0 - b / (3 * a);
-        x2 = t0 - b / (3 * a);
-    } else  //(DELTA>0)
-    {
-        // Three real roots
-        double t0 = 2.0 * sqrt(-p / 3.0) * cos(1.0 / 3.0 * acos(3.0 * q / (2.0 * p) * sqrt(-3.0 / p)) - 0 * 2.0 * M_PI / 3.0);
-        double t1 = 2.0 * sqrt(-p / 3.0) * cos(1.0 / 3.0 * acos(3.0 * q / (2.0 * p) * sqrt(-3.0 / p)) - 1 * 2.0 * M_PI / 3.0);
-        double t2 = 2.0 * sqrt(-p / 3.0) * cos(1.0 / 3.0 * acos(3.0 * q / (2.0 * p) * sqrt(-3.0 / p)) - 2 * 2.0 * M_PI / 3.0);
-
+        x0 = t0 - shift;
+        x1 = x0;
+        x2 = x0;
+    } else if (DELTA < 0 || p > 0) {
+        // One real root (p > 0 always has exactly one; DELTA >= 0 with p > 0 is only rounding)
+        double t0 = NAN;
+        if (p < 0) {
+            const double arg = std::max(-3.0 * std::abs(q) / (2.0 * p) * sqrt(-3.0 / p), 1.0);
+            t0 = -2.0 * std::copysign(1.0, q) * sqrt(-p / 3.0) * cosh(1.0 / 3.0 * acosh(arg));
+        } else if (p > 0) {
+            t0 = -2.0 * sqrt(p / 3.0) * sinh(1.0 / 3.0 * asinh(3.0 * q / (2.0 * p) * sqrt(3.0 / p)));
+        }  // p NaN: t0 stays NaN
+        N = 1;
+        x0 = t0 - shift;
+        x1 = x0;
+        x2 = x0;
+    } else {
+        // Three real roots (p < 0)
+        const double arg = std::min(1.0, std::max(-1.0, 3.0 * q / (2.0 * p) * sqrt(-3.0 / p)));
+        const double theta = 1.0 / 3.0 * acos(arg);
+        const double amp = 2.0 * sqrt(-p / 3.0);
         N = 3;
-        x0 = t0 - b / (3 * a);
-        x1 = t1 - b / (3 * a);
-        x2 = t2 - b / (3 * a);
+        x0 = amp * cos(theta) - shift;
+        x1 = amp * cos(theta - 2.0 * M_PI / 3.0) - shift;
+        x2 = amp * cos(theta - 4.0 * M_PI / 3.0) - shift;
     }
 }
 void solve_quartic(double a, double b, double c, double d, double e, int& N, double& x0, double& x1, double& x2, double& x3) {

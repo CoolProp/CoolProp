@@ -210,7 +210,8 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T,
     AbstractCubic* cubic = get_cubic().get();
     double tau = cubic->get_Tr() / T;
     double delta = rhomolar / cubic->get_rhor();
-    return _rhomolar * gas_constant() * _T * (1 + delta * cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
+    // Use the arguments, not the members _rhomolar/_T: the result was right only when they coincided.
+    return rhomolar * gas_constant() * T * (1 + delta * cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }
 void CoolProp::AbstractCubicBackend::update_DmolarT() {
     if (this->imposed_phase_index != iphase_not_imposed) {
@@ -425,45 +426,100 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
 
     // Solving the cubic:
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
-    // Polish each root with Newton on the polynomial.  The closed-form solution loses digits when
-    // crho3 nearly cancels (well above Tc a spurious root runs off to ~-1e10 mol/m^3): SRK water at
-    // 4*Tc and 1.5*pc came back with p(rho) off by 5e-4.  The polynomial itself stays well
-    // conditioned at the physical root, so a few steps recover it.  A step is kept only if it
+    // Polish each root with Newton on p(rho) - p, evaluated in the EOS form
+    // p = RT/(v + d1) - a/((v + d2)(v + d3)) rather than from the expanded coefficients, whose
+    // formation cancels digits.  The closed-form solution loses digits when crho3 nearly cancels (well
+    // above Tc a spurious root runs off to ~-1e10 mol/m^3): SRK water at 4*Tc and 1.5*pc came back with
+    // p(rho) off by 5e-4.  Within ~1e-9 of the critical point the coefficients themselves cancel and the
+    // polynomial's own root is ~2e-3 off.  The EOS form stays well conditioned at the physical root,
+    // so a few Newton steps recover it.  A step is kept only if it
     // shrinks the residual and moves less than half the gap to the nearest other distinct root, so a
-    // root near a double root (spinodal, Tc) cannot be polished onto its neighbour.
+    // root near a double root (spinodal) cannot be polished onto its neighbour.  Roots closer than
+    // 1e-3 relative count as one cluster: near the critical point the closed form returns spurious
+    // near-coincident roots (~2e-4 apart), which the cap would otherwise freeze in place.  Merging a close pair is harmless: near
+    // a spinodal the pair is the metastable and unstable root, and the stable root stays distinct.
     const double r_closed[3] = {rho0, rho1, rho2};
     auto polish = [&](double& r) {
-        auto f = [&](double x) { return ((crho3 * x + crho2) * x + crho1) * x + crho0; };
+        auto f = [&](double x) {
+            const double v = 1 / x;
+            return R * T / (v + d1) - am / ((v + d2) * (v + d3)) - p;
+        };
+        auto fprime = [&](double x) {
+            const double v = 1 / x, A = (v + d2) * (v + d3);
+            const double dpdv = -R * T / ((v + d1) * (v + d1)) + am * (2 * v + d2 + d3) / (A * A);
+            return -dpdv / (x * x);
+        };
         double max_step = std::numeric_limits<double>::infinity();
         for (double other : r_closed) {
-            if (other != r) {
+            if (std::abs(other - r) > 1e-3 * std::max(std::abs(other), std::abs(r))) {
                 max_step = std::min(max_step, 0.5 * std::abs(other - r));
             }
         }
+        const double r0_closed = r;
+        // Never move a root out of its region (rho < 0, physical (0, 1/(b - c)), past the pole): the
+        // EOS-form residual is smooth across those boundaries for Newton, and a spurious root carried
+        // into the physical domain would duplicate the physical one and corrupt the root count.
+        // A root within round-off of zero (the gas root at very low p, ~p/RT) belongs to neither side:
+        // the closed form returns it with either sign, so it may settle wherever the residual says.
+        auto region = [&](double x) { return (x <= 0) ? 0 : ((x * (-d1) < 1) ? 1 : 2); };
+        const double scale = std::max({std::abs(r_closed[0]), std::abs(r_closed[1]), std::abs(r_closed[2])});
+        const int region0 = (std::abs(r) <= 1e-10 * scale) ? -1 : region(r);
         double fr = f(r);
-        double moved = 0;
-        for (int i = 0; i < 3; ++i) {
-            const double fp = (3 * crho3 * r + 2 * crho2) * r + crho1;
+        for (int i = 0; i < 20; ++i) {
+            const double fp = fprime(r);
             if (!(std::abs(fp) > 0)) {
                 break;
             }
-            const double step = fr / fp;
-            if (!(std::abs(moved + step) < max_step)) {
-                break;
+            // Backtrack (halve the step) until the residual shrinks: from the flat inflection region
+            // near the critical point the full Newton step overshoots.
+            double step = fr / fp;
+            double r_new = NAN, f_new = NAN;
+            bool accepted = false;
+            for (int k = 0; k < 40 && !accepted; ++k, step *= 0.5) {
+                // The cap is on the total displacement from the closed-form root after this step.
+                if (!(std::abs((r - step) - r0_closed) < max_step)) {
+                    continue;
+                }
+                r_new = r - step;
+                if (region0 >= 0 && region(r_new) != region0) {
+                    continue;
+                }
+                f_new = f(r_new);
+                accepted = std::abs(f_new) < std::abs(fr);
             }
-            const double r_new = r - step;
-            const double f_new = f(r_new);
-            if (!(std::abs(f_new) < std::abs(fr))) {
+            if (!accepted) {
                 break;
             }
             r = r_new;
             fr = f_new;
-            moved += step;
         }
     };
     polish(rho0);
     polish(rho1);
     polish(rho2);
+    // A spurious member of a near-critical cluster can stall in a local minimum of |p(rho) - p|
+    // while another member of the same cluster converges to the true root; give the stalled one that
+    // root.  Converged means the residual is at round-off relative to the terms of p.
+    {
+        double* roots[3] = {&rho0, &rho1, &rho2};
+        auto residual = [&](double x) {
+            const double v = 1 / x;
+            return R * T / (v + d1) - am / ((v + d2) * (v + d3)) - p;
+        };
+        auto converged = [&](double x) { return std::abs(residual(x)) <= 1e-12 * (std::abs(p) + std::abs(R * T * x)); };
+        for (int i = 0; i < 3; ++i) {
+            if (converged(*roots[i])) {
+                continue;
+            }
+            for (int j = 0; j < 3; ++j) {
+                if (j != i && converged(*roots[j])
+                    && std::abs(r_closed[i] - r_closed[j]) <= 1e-3 * std::max(std::abs(r_closed[i]), std::abs(r_closed[j]))) {
+                    *roots[i] = *roots[j];
+                    break;
+                }
+            }
+        }
+    }
     sort3(rho0, rho1, rho2);
     return;
 }
