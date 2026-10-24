@@ -212,7 +212,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // R Tc / pc, so its critical molar volume is v_c = Z_c R Tc / pc = (Z_c / Omega_b) b =
                 // b / (3 Omega_b), i.e. rho_c,SRK = 1 / v_c = 3 Omega_b / b (Omega_b = 0.08664..., the
                 // same covolume coefficient SRK_covolume() sums per component).
-                constexpr double SRK_Omega_b = 0.08664034999649577215890158147700;
+                constexpr double SRK_Omega_b = 0.08664034996495772158907020;
                 const double b_srk = HEOS.SRK_covolume();
                 const double rho_srk_crit = (b_srk > 0) ? (3.0 * SRK_Omega_b / b_srk) : HEOS.rhomolar_reducing();
                 phases primary = (gas_ok || liq_ok) ? ((rho_srk > rho_srk_crit) ? iphase_liquid : iphase_gas) : iphase_gas;
