@@ -1488,6 +1488,69 @@ TEST_CASE("rhosr-CS viscosity honours x_crossover from the fluid file", "[viscos
     CHECK(std::abs(clone_moved / shipped - 1) > 0.01);
 }
 
+// x = rho*s_r/rhosr_critical goes to 0 in the dilute gas, and the logistic
+// switch equals 1/2 at x = x_crossover.  For x_crossover <= 0 the liquid
+// branch therefore carries at least half the weight at zero density; with the
+// shipped coefficients (c_vap[0] = 0, c_liq[0] = 0.61) eta/eta_dilute tends to
+// 1 + C*(exp(0.305) - 1) instead of 1.  Such a value can only arrive through a
+// fluid file, so the parser must reject it.
+TEST_CASE("rhosr-CS viscosity rejects a non-positive x_crossover", "[viscosity],[transport],[rhosr],[add_one]") {
+    using nlohmann::json;
+
+    json shipped = json::parse(CoolProp::get_fluid_param_string("R1233zd(E)", "JSON"))[0];
+    REQUIRE(shipped["TRANSPORT"]["viscosity"].at("type").get<std::string>() == "rhosr-CS");
+
+    SECTION("parse_rhosr_viscosity") {
+        // parse_rhosr_viscosity is protected on a non-final class; reach it directly.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_rhosr_viscosity;
+        };
+        Probe probe;
+        CoolProp::CoolPropFluid f;
+        f.name = "Probe";
+        for (double bad : {0.0, -2.0, std::nan(""), std::numeric_limits<double>::infinity()}) {
+            CAPTURE(bad);
+            json visc = shipped["TRANSPORT"]["viscosity"];
+            visc["x_crossover"] = bad;
+            CHECK_THROWS_AS(probe.parse_rhosr_viscosity(visc, f), CoolProp::ValueError);
+            CHECK_THROWS_WITH(probe.parse_rhosr_viscosity(visc, f),
+                              Catch::Matchers::ContainsSubstring("x_crossover must be positive") && Catch::Matchers::ContainsSubstring("Probe"));
+        }
+        // The shipped value, and any positive one, still loads.
+        for (double good : {2.0, 0.5}) {
+            CAPTURE(good);
+            json visc = shipped["TRANSPORT"]["viscosity"];
+            visc["x_crossover"] = good;
+            CoolProp::CoolPropFluid g;
+            g.name = "Probe";
+            CHECK_NOTHROW(probe.parse_rhosr_viscosity(visc, g));
+            CHECK(g.transport.viscosity_rhosr.x_crossover == good);
+            CHECK(g.transport.viscosity_using_rhosr);
+        }
+    }
+
+    SECTION("add_fluids_as_JSON with x_crossover = 0 fails cleanly") {
+        const std::string name = "R1233zdE_XC_ZERO";
+        json fluid = shipped;
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = "999-99-82";
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+            fluid["INFO"].erase(key);
+        }
+        fluid["TRANSPORT"]["viscosity"]["x_crossover"] = 0.0;
+
+        const std::string before = CoolProp::get_global_param_string("fluids_list");
+        // add_one wraps any std::exception as ValueError, so the type alone
+        // carries no signal; the message must come from the guard.
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()),
+                          Catch::Matchers::ContainsSubstring("x_crossover must be positive") && Catch::Matchers::ContainsSubstring(name));
+        CHECK(CoolProp::get_global_param_string("fluids_list") == before);
+    }
+}
+
 static CoolProp::input_pairs inputs[] = {
   CoolProp::DmolarT_INPUTS,
   //CoolProp::SmolarT_INPUTS,
