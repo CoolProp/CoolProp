@@ -1,9 +1,11 @@
-// Pressure-input flashes (P,H / P,S / P,U / P,D) for pure cubic fluids.
+// Pressure-input (P,H / P,S / P,U / P,D) and temperature-input (H,T / S,T / T,U / D,T) flashes for
+// pure cubic fluids.
 //
 // GitHub #3441: the subcritical branch of p_phase_determination_pure_or_pseudopure asked the
 // EOS-level (Helmholtz) superancillary for Tsat(p) and, finding none on a cubic backend, fell
 // through to the classic pL/pV ancillaries -- which cubics never populate -- and threw
-// "type not set".  The cubic Chebyshev superancillary now answers that query instead.
+// "type not set".  T_phase_determination_pure_or_pseudopure did the same on the T side.  The cubic
+// Chebyshev superancillary now answers both, through superanc_saturation_at_p / _at_T.
 
 #if defined(ENABLE_CATCH)
 
@@ -172,6 +174,174 @@ TEST_CASE("Cubic superancillary hook: cached table bounds follow parameter chang
             CHECK(std::abs(after->T / before->T - 1) > 1e-4);  // the alpha change really moved Tsat
         }
     }
+}
+
+// T-input flashes (H,T / S,T / T,U / D,T) for pure cubic fluids.  Subcritical H,T, S,T and T,U threw
+// "type not set" for the same reason as #3441, on the T side: T_phase_determination_pure_or_pseudopure
+// asked get_superanc() and fell through to the classic ancillaries cubics never populate.
+namespace {
+void check_T_roundtrip(AbstractState& AS, AbstractState& ref) {
+    CAPTURE(ref.T(), ref.p(), ref.Q());
+    const double T = ref.T();
+    const bool ref_twophase = ref.phase() == iphase_twophase;
+    auto check = [&](const char* name, parameters key) {
+        CAPTURE(name);
+        // Always: the returned state reproduces both inputs.
+        CHECK(AS.T() == T);
+        CHECK(AS.keyed_output(key) == Catch::Approx(ref.keyed_output(key)).epsilon(1e-9));
+        // In a cold liquid (dh/dp)_T = v(1 - T*beta) > 0, so compressing raises h above h_L(T) and a
+        // compressed-liquid (T, h) also lies inside the dome: H,T is not unique there, and the flash
+        // (like HEOS) returns the two-phase state.  Everywhere else the state must match the reference.
+        if (key == iHmolar && !ref_twophase && AS.phase() == iphase_twophase) {
+            CHECK(ref.phase() == iphase_liquid);
+            // The exemption must be the real non-uniqueness, checked independently of the flash:
+            // the reference h lies inside [h_L(T), h_V(T)] from a separate Q,T update.
+            std::unique_ptr<AbstractState> sat(AbstractState::factory(AS.backend_name(), AS.fluid_names()));
+            sat->update(QT_INPUTS, 0, T);
+            const double hL = sat->hmolar();
+            sat->update(QT_INPUTS, 1, T);
+            const double hV = sat->hmolar();
+            CHECK(ref.hmolar() >= hL);
+            CHECK(ref.hmolar() <= hV);
+            CHECK(AS.Q() >= 0);
+            CHECK(AS.Q() <= 1);
+            return;
+        }
+        CHECK(AS.rhomolar() == Catch::Approx(ref.rhomolar()).epsilon(1e-8));
+        // 1e-7: a stiff compressed liquid amplifies density round-off ~1e3-1e4-fold in p.
+        CHECK(AS.p() == Catch::Approx(ref.p()).epsilon(1e-7));
+        CHECK((AS.phase() == iphase_twophase) == ref_twophase);
+        if (ref_twophase) {
+            CHECK(AS.Q() == Catch::Approx(ref.Q()).margin(1e-8));
+        }
+    };
+    AS.update(HmolarT_INPUTS, ref.hmolar(), T);
+    check("HmolarT", iHmolar);
+    AS.update(SmolarT_INPUTS, ref.smolar(), T);
+    check("SmolarT", iSmolar);
+    AS.update(TUmolar_INPUTS, T, ref.umolar());
+    check("TUmolar", iUmolar);
+    AS.update(DmolarT_INPUTS, ref.rhomolar(), T);
+    check("DmolarT", iDmolar);
+}
+}  // namespace
+
+TEST_CASE("Cubic T-input flashes for pure fluids", "[cubic][flash][cubic_T_flash]") {
+    const auto backend = GENERATE(as<std::string>{}, "SRK", "PR");
+    const auto fluid = GENERATE(as<std::string>{}, "CO2", "Propane", "Water");
+    CAPTURE(backend, fluid);
+    std::unique_ptr<AbstractState> AS(AbstractState::factory(backend, fluid));
+    std::unique_ptr<AbstractState> ref(AbstractState::factory(backend, fluid));
+    auto* cubic = dynamic_cast<AbstractCubicBackend*>(ref.get());
+    REQUIRE(cubic != nullptr);
+    const double Tc = AS->T_critical(), pc = AS->p_critical();
+
+    SECTION("subcritical gas and liquid") {
+        for (double Tr : {0.6, 0.8, 0.95}) {
+            const double T = Tr * Tc;
+            const double psat = cubic->calc_saturation_ancillary(iP, 0, iT, T);
+            ref->update(PT_INPUTS, 0.5 * psat, T);
+            check_T_roundtrip(*AS, *ref);
+            ref->update(PT_INPUTS, 2 * psat, T);
+            check_T_roundtrip(*AS, *ref);
+        }
+    }
+    SECTION("inside the dome") {
+        for (double Tr : {0.6, 0.8, 0.95}) {
+            const double T = Tr * Tc;
+            const double rhoL = cubic->calc_saturation_ancillary(iDmolar, 0, iT, T);
+            const double rhoV = cubic->calc_saturation_ancillary(iDmolar, 1, iT, T);
+            ref->update(DmolarT_INPUTS, 1 / (0.3 / rhoV + 0.7 / rhoL), T);
+            check_T_roundtrip(*AS, *ref);
+        }
+    }
+    SECTION("supercritical temperature") {
+        ref->update(PT_INPUTS, 0.5 * pc, 1.2 * Tc);
+        check_T_roundtrip(*AS, *ref);
+        ref->update(PT_INPUTS, 2 * pc, 1.2 * Tc);
+        check_T_roundtrip(*AS, *ref);
+    }
+}
+
+TEST_CASE("Cubic T-input flashes with an imposed phase", "[cubic][flash][cubic_T_flash]") {
+    // With a phase imposed, DHSU_T_flash skips T_phase_determination, so the density seed in
+    // solver_for_rho_given_T_oneof_HSU must come from the superancillary hook, not from the
+    // classic ancillaries (empty for a cubic: "type not set").
+    for (const auto& backend : std::vector<std::string>{"SRK", "PR"}) {
+        CAPTURE(backend);
+        std::unique_ptr<AbstractState> AS(AbstractState::factory(backend, "Propane"));
+        std::unique_ptr<AbstractState> ref(AbstractState::factory(backend, "Propane"));
+        const double T = 0.8 * AS->T_critical();
+        auto* cubic = dynamic_cast<AbstractCubicBackend*>(ref.get());
+        REQUIRE(cubic != nullptr);
+        const double psat = cubic->calc_saturation_ancillary(iP, 0, iT, T);
+        for (const auto& [p, phase] : std::vector<std::pair<double, phases>>{{2 * psat, iphase_liquid}, {0.5 * psat, iphase_gas}}) {
+            CAPTURE(p, phase);
+            ref->update(PT_INPUTS, p, T);
+            AS->specify_phase(phase);
+            REQUIRE_NOTHROW(AS->update(SmolarT_INPUTS, ref->smolar(), T));
+            CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-8));
+            REQUIRE_NOTHROW(AS->update(HmolarT_INPUTS, ref->hmolar(), T));
+            CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-8));
+            AS->unspecify_phase();
+        }
+    }
+}
+
+TEST_CASE("Cubic T,U around T* where the Soave alpha vanishes", "[cubic][flash][cubic_T_flash]") {
+    // (du/dv)_T = (a - T da/dT)/((v + D1 b)(v + D2 b)), and for the Soave alpha a - T da/dT vanishes at
+    // T* = Tc(1 + 1/m)^2 (COO-145): u does not depend on density there, so T,U must refuse rather than
+    // return an arbitrary density (it returned rho ~ 0).  Above T*, u rises with density, and dense
+    // states threw "input not in range" because the bracket assumed the opposite.
+    std::unique_ptr<AbstractState> AS(AbstractState::factory("SRK", "Water"));
+    const double Tc = AS->T_critical(), w = AS->acentric_factor();
+    const double m = 0.480 + 1.574 * w - 0.176 * w * w;
+    const double Tstar = Tc * (1 + 1 / m) * (1 + 1 / m);
+    std::unique_ptr<AbstractState> ref(AbstractState::factory("SRK", "Water"));
+    ref->update(DmolarT_INPUTS, 5000, Tstar);
+    CHECK_THROWS_WITH(AS->update(TUmolar_INPUTS, Tstar, ref->umolar()), Catch::Matchers::ContainsSubstring("ill-posed"));
+    for (double f : {0.99, 1.01, 1.1}) {
+        for (double rho : {100.0, 5000.0, 20000.0}) {
+            CAPTURE(f, rho);
+            ref->update(DmolarT_INPUTS, rho, f * Tstar);
+            REQUIRE_NOTHROW(AS->update(TUmolar_INPUTS, f * Tstar, ref->umolar()));
+            CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-8));
+        }
+    }
+}
+
+TEST_CASE("Cubic imposed-phase T-input flash below the table gives the superancillary's error", "[cubic][flash][cubic_T_flash]") {
+    // Below the cubic superancillary's low-T end the hook throws a clear range error.  With a phase
+    // imposed, solver_for_rho_given_T_oneof_HSU used to swallow it and fall back to the classic
+    // ancillaries, which a cubic does not have: "type not set".
+    std::unique_ptr<AbstractState> AS(AbstractState::factory("SRK", "Propane"));
+    const double T = 0.15 * AS->T_critical();
+    AS->specify_phase(iphase_liquid);
+    CHECK_THROWS_WITH(AS->update(HmolarT_INPUTS, -20000.0, T), Catch::Matchers::ContainsSubstring("superancillary"));
+}
+
+TEST_CASE("Cubic T-input flash rejects densities past the repulsive pole", "[cubic][flash][cubic_T_flash]") {
+    // For a cubic, u and h stay finite past rho = 1/(b - c), and above T* u rises with density, so a large
+    // enough T,U input used to "solve" beyond the pole with a negative pressure.
+    std::unique_ptr<AbstractState> AS(AbstractState::factory("SRK", "Water"));
+    auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(cubic != nullptr);
+    const double w = AS->acentric_factor(), m = 0.480 + 1.574 * w - 0.176 * w * w;
+    const double T = 1.1 * AS->T_critical() * (1 + 1 / m) * (1 + 1 / m);
+    const std::vector<double> x = {1.0};
+    const double b = cubic->get_cubic()->bm_term(x);
+    std::unique_ptr<AbstractState> ref(AbstractState::factory("SRK", "Water"));
+    ref->specify_phase(iphase_gas);
+    ref->update(DmolarT_INPUTS, 0.999 / b, T);
+    const double u_near_pole = ref->umolar();
+    ref->update(DmolarT_INPUTS, 0.5 / b, T);
+    REQUIRE(u_near_pole > ref->umolar());  // u rises with density here
+    // A u that the EOS does reach, but only past the pole (rho = 1.2/b): no physical state has it.
+    ref->update(DmolarT_INPUTS, 1.2 / b, T);
+    const double u_past_pole = ref->umolar();
+    REQUIRE(std::isfinite(u_past_pole));
+    REQUIRE(u_past_pole > u_near_pole);
+    CHECK_THROWS_WITH(AS->update(TUmolar_INPUTS, T, u_past_pole), Catch::Matchers::ContainsSubstring("No physical state"));
 }
 
 #endif
