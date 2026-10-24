@@ -9985,4 +9985,211 @@ TEST_CASE("Unreachable supercritical T+caloric inputs raise a CoolProp error, no
     }
 }
 
+TEST_CASE("IF97 reverse (h,p) and (p,s) phase labels match the forward (T,p) labels", "[IF97][phase]") {
+    // The backward branch classified region 2 and 3 states above the critical
+    // pressure from Tsat97(p), which is not valid there, so a compressed liquid
+    // at 30 MPa could be labeled gas.  Every single-phase state must get the
+    // same phase from HmassP / PSmass as from the (T,p) state that made it.
+    auto fwd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto rev = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int checked = 0;
+    for (double p : {1e6, 5e6, 16e6, 20e6, 22e6, 23e6, 30e6, 50e6, 90e6}) {
+        for (double T : {400.0, 550.0, 620.0, 630.0, 640.0, 646.0, 648.0, 660.0, 700.0, 800.0, 850.0}) {
+            CAPTURE(p, T);
+            try {
+                fwd->update(CoolProp::PT_INPUTS, p, T);
+            } catch (const CoolProp::CoolPropBaseError&) {
+                continue;  // on the saturation curve or outside IF97
+            }
+            const auto expected = fwd->phase();
+            const double h = fwd->hmass(), s = fwd->smass();
+            rev->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(rev->phase() == expected);
+            rev->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(rev->phase() == expected);
+            ++checked;
+        }
+    }
+    CHECK(checked > 60);
+    // The motivating states, stated explicitly
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 640.0);  // region 3, above Pcrit, below Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical_liquid);
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 800.0);  // region 3, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+    fwd->update(CoolProp::PT_INPUTS, 50e6, 1000.0);  // region 2, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 50e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+}
+
+TEST_CASE("IF97 update() that throws leaves no half-built state", "[IF97][update]") {
+    auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    struct Bad
+    {
+        CoolProp::input_pairs pair;
+        double v1, v2;
+    };
+    const std::vector<Bad> bad = {
+      {CoolProp::HmassP_INPUTS, 1e9, 1e6},      // h far above the IF97 range
+      {CoolProp::PSmass_INPUTS, 1e6, 1e6},      // s far above the IF97 range
+      {CoolProp::HmassSmass_INPUTS, 1e9, 1e6},  // h, s far outside
+      {CoolProp::QT_INPUTS, 0.5, 700.0},        // T above Tcrit: no saturation state
+      {CoolProp::PQ_INPUTS, 30e6, 0.5},         // p above Pcrit: no saturation state
+    };
+    for (const auto& b : bad) {
+        CAPTURE(b.pair, b.v1, b.v2);
+        IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+        REQUIRE(IF->hmass() > 0);
+        CHECK_THROWS(IF->update(b.pair, b.v1, b.v2));
+        // The failed update must not leave the previous state, or a mix of the
+        // two, to be read back as if it were valid.
+        CHECK_THROWS(IF->hmass());
+        CHECK_THROWS(IF->smass());
+        CHECK_THROWS(IF->rhomass());
+        // The scalar getters must also agree with a never-updated object, not
+        // return the inputs of the failed update (QT left _Q = 0.5 and _T = 700).
+        for (auto get : {+[](CoolProp::AbstractState& a) { return a.T(); }, +[](CoolProp::AbstractState& a) { return a.p(); },
+                         +[](CoolProp::AbstractState& a) { return a.Q(); }}) {
+            auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+            bool fresh_throws = false, after_throws = false;
+            double fresh_v = 0, after_v = 0;
+            try {
+                fresh_v = get(*fresh);
+            } catch (...) {
+                fresh_throws = true;
+            }
+            try {
+                after_v = get(*IF);
+            } catch (...) {
+                after_throws = true;
+            }
+            CHECK(after_throws == fresh_throws);
+            if (!fresh_throws && !after_throws) CHECK(after_v == fresh_v);
+        }
+        // And the object is fully usable again afterward.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+    }
+}
+
+TEST_CASE("IF97 HmassSmass resolves the vapor dome below s'' at T23min", "[IF97][HS]") {
+    // IAPWS has no backward T(h,s) for the part of the dome with s < SgT23 (5210.9
+    // J/kg/K).  IF97 v2.4.0 solves that part iteratively from the forward saturation
+    // equations; before it, p_hsmass threw "Entropy out of range" there.
+    auto a = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto b = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int solved = 0;
+    for (double p : {1e3, 1e4, 1e5, 1e6, 5e6, 1e7, 1.5e7, 2e7, 2.2e7}) {
+        for (double Q : {0.0, 1e-9, 1e-6, 0.01, 0.1, 0.5, 0.9, 0.99, 1 - 1e-9, 1.0}) {
+            CAPTURE(p, Q);
+            a->update(CoolProp::PQ_INPUTS, p, Q);
+            const double h = a->hmass(), s = a->smass();
+            if (s >= 5210.887825) continue;  // library's own region; accuracy is IAPWS's, not ours
+            CHECK_NOTHROW(b->update(CoolProp::HmassSmass_INPUTS, h, s));
+            CHECK(b->phase() == CoolProp::iphase_twophase);
+            CHECK(b->p() == Catch::Approx(p).epsilon(1e-8));
+            CHECK(b->Q() == Catch::Approx(Q).margin(1e-8));
+            CHECK(b->hmass() == Catch::Approx(h).epsilon(1e-9));
+            CHECK(b->smass() == Catch::Approx(s).epsilon(1e-9));
+            ++solved;
+        }
+    }
+    CHECK(solved > 50);
+    // Single-phase states with s < SgT23 are not claimed by the dome solver.
+    a->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_liquid);
+    CHECK(b->p() == Catch::Approx(1e6).epsilon(5e-3));
+    a->update(CoolProp::PT_INPUTS, 3e7, 640.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_supercritical_liquid);
+    // A state that is neither in the dome nor in IF97's range still throws.
+    CHECK_THROWS(b->update(CoolProp::HmassSmass_INPUTS, 1e9, 1.0));
+}
+
+TEST_CASE("IF97 fast_evaluate rejects non-finite inputs and handles the dome like update()", "[IF97][fast_evaluate]") {
+    shared_ptr<CoolProp::AbstractState> b(CoolProp::AbstractState::factory("IF97", "Water"));
+    shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("IF97", "Water"));
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const double M = ref->molar_mass();
+
+    // A non-finite h or p must flag out of range with an all-NaN row, not return a made-up state
+    // (T_phmass(p, NaN) used to return a Region 1 temperature with status ok).  The finite
+    // points on either side must be unaffected.
+    {
+        ref->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+        const double h_ok = ref->hmass();
+        const double h_in[5] = {h_ok, nan, h_ok, inf, -inf};
+        const double p_in[5] = {1e6, 1e6, nan, 1e6, 1e6};
+        const CoolProp::parameters outs[3] = {CoolProp::iT, CoolProp::iHmass, CoolProp::iDmass};
+        for (CoolProp::input_pairs ip : {CoolProp::HmassP_INPUTS, CoolProp::HmolarP_INPUTS}) {
+            double h_v[5];
+            for (int k = 0; k < 5; ++k)
+                h_v[k] = (ip == CoolProp::HmolarP_INPUTS) ? h_in[k] * M : h_in[k];
+            double out[15];
+            int st[5] = {-1, -1, -1, -1, -1};
+            b->fast_evaluate(ip, h_v, p_in, 5, outs, 3, out, 15, st, 5);
+            CHECK(st[0] == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(400.0).margin(0.05));
+            for (int k = 1; k < 5; ++k) {
+                CAPTURE(k, ip);
+                CHECK(st[k] == CoolProp::fast_evaluate_out_of_range);
+                for (int o = 0; o < 3; ++o)
+                    CHECK(std::isnan(out[k * 3 + o]));
+            }
+        }
+    }
+
+    // On a saturation line update() returns the saturated-phase cp, cv, speed of sound,
+    // viscosity, conductivity, and Prandtl number; fast_evaluate must agree.
+    const CoolProp::parameters props[8] = {CoolProp::iCpmass,       CoolProp::iCvmass,  CoolProp::ispeed_sound, CoolProp::iviscosity,
+                                           CoolProp::iconductivity, CoolProp::iPrandtl, CoolProp::iCpmolar,     CoolProp::iCvmolar};
+    for (double p : {1e5, 1e6, 5e6, 1.5e7}) {
+        for (double Qedge : {0.0, 1.0}) {
+            CAPTURE(p, Qedge);
+            ref->update(CoolProp::PQ_INPUTS, p, Qedge);
+            const double h = ref->hmass();
+            double out[8];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, props, 8, out, 8, &st, 1);
+            REQUIRE(st == CoolProp::fast_evaluate_ok);
+            for (int o = 0; o < 8; ++o) {
+                CAPTURE(o);
+                CHECK(out[o] == Catch::Approx(ref->keyed_output(props[o])).epsilon(1e-12));
+            }
+        }
+    }
+
+    // Strictly inside the dome cp, cv, speed of sound, viscosity, conductivity, and Prandtl number
+    // are not defined for a two-phase mixture (update() throws), so only those columns are NaN.
+    // The lever-rule properties keep their values in the same row and the status is ok.
+    {
+        const double p = 1e6;
+        ref->update(CoolProp::PQ_INPUTS, p, 0.5);
+        const double h = ref->hmass();
+        for (CoolProp::parameters bad : props) {
+            CAPTURE(bad);
+            const CoolProp::parameters outs[3] = {CoolProp::iT, bad, CoolProp::iQ};
+            double out[3];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, outs, 3, out, 3, &st, 1);
+            CHECK(st == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+            CHECK(std::isnan(out[1]));
+            CHECK(out[2] == Catch::Approx(0.5).epsilon(1e-9));
+        }
+        const CoolProp::parameters ok_outs[4] = {CoolProp::iT, CoolProp::iQ, CoolProp::iHmass, CoolProp::iDmass};
+        double out[4];
+        int st = -1;
+        b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, ok_outs, 4, out, 4, &st, 1);
+        CHECK(st == CoolProp::fast_evaluate_ok);
+        CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+        CHECK(out[1] == Catch::Approx(0.5).epsilon(1e-9));
+        CHECK(out[2] == Catch::Approx(h).epsilon(1e-12));
+        CHECK(out[3] == Catch::Approx(ref->rhomass()).epsilon(1e-9));
+    }
+}
+
 #endif
