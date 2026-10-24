@@ -386,9 +386,27 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
             _T = value2;
             update_DmolarT();
             break;
+        case TUmolar_INPUTS:
+            if (is_pure_or_pseudopure) {
+                // (du/dv)_T = (a - T da/dT)/((v + D1 b)(v + D2 b)), so where a - T da/dT vanishes u does not
+                // depend on density at all and T,U has no unique solution: for the Soave alpha at
+                // T* = Tc(1 + 1/m)^2, where alpha itself passes through zero (COO-145).  Refuse rather than
+                // return an arbitrary density.  a - T da/dT = a + tau da/dtau; measured against a(Tc)
+                // because a(T) vanishes there too.
+                const std::vector<double> x = {1.0};
+                const double tau = cubic->get_Tr() / value1;
+                const double a = cubic->am_term(tau, x, 0), a_tau = cubic->am_term(tau, x, 1);
+                const double a_c = cubic->am_term(cubic->get_Tr() / T_critical(), x, 0);
+                if (!(std::abs(a + tau * a_tau) > 1e-8 * std::abs(a_c))) {
+                    throw ValueError(format("T,U is ill-posed for this cubic at T = %g K: a - T da/dT vanishes there (for the Soave alpha "
+                                            "at T* = Tc(1 + 1/m)^2, where alpha passes through zero), so u does not depend on density",
+                                            value1));
+                }
+            }
+            HelmholtzEOSMixtureBackend::update(input_pair, value1, value2);
+            break;
         case HmolarT_INPUTS:
         case SmolarT_INPUTS:
-        case TUmolar_INPUTS:
         case DmolarP_INPUTS:
         case DmolarHmolar_INPUTS:
         case DmolarSmolar_INPUTS:
@@ -404,6 +422,18 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
             break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
+    }
+
+    // The T-input density solves (FlashRoutines::solver_for_rho_given_T_oneof_HSU) know no upper density
+    // bound, and for a cubic u and h stay finite past the repulsive pole at rho = 1/(b - c): a large
+    // enough H,T or T,U input "solved" there, with a negative pressure (stack review).  Only (0, 1/(b - c))
+    // is physical.
+    if (is_pure_or_pseudopure && (input_pair == HmolarT_INPUTS || input_pair == SmolarT_INPUTS || input_pair == TUmolar_INPUTS)) {
+        const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+        if (!(_rhomolar > 0 && _rhomolar * b_minus_c < 1)) {
+            throw ValueError(format("No physical state at these inputs (T = %g K): the solution density %g mol/m^3 lies outside (0, 1/(b - c) = %g)",
+                                    static_cast<double>(_T), static_cast<double>(_rhomolar), 1 / b_minus_c));
+        }
     }
 
     post_update();
@@ -1270,7 +1300,38 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     }
     const double Ttilde = Ttilde_of_T(Tsat);
     return SuperancSatPoint{Tsat, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
-                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm)};
+                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm), p};
+}
+
+std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    const int eos_code = get_superanc_eos_code();
+    if (!is_pure_or_pseudopure || eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        return HelmholtzEOSMixtureBackend::superanc_saturation_at_T(T);
+    }
+    using namespace CubicSuperAncillary;
+    if (T > T_critical() * (1 + 4 * DBL_EPSILON)) {
+        throw ValueError(format("Temperature [%0.10Lg K] may not be above the critical temperature of the cubic, %0.10Lg K", T, T_critical()));
+    }
+    const std::vector<double> x = {1.0};
+    const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+    // The table ends at the exact critical point (#3515), so T == Tc can land a few ulp above its end;
+    // absorb that round-off.  Anything further above the table (a non-monotone alpha) throws.
+    const double Ttilde_max = get_Ttilde_max(eos_code);
+    if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
+        Ttilde = Ttilde_max;
+    }
+    if (Ttilde > Ttilde_max) {
+        throw ValueError(format("Temperature [%0.8Lg K] maps above the end of the cubic superancillary", T));
+    }
+    // Written as !(>=) so that a NaN temperature throws too.
+    if (!(Ttilde >= get_Ttilde_min(eos_code))) {
+        throw ValueError(format("Temperature [%0.8Lg K] is below the minimum temperature of the cubic superancillary", T));
+    }
+    // A volume translation moves no pressure, so p~ needs no correction.
+    return SuperancSatPoint{T, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
+                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm),
+                            supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm)};
 }
 
 void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {

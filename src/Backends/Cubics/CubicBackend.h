@@ -405,6 +405,12 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// just as update_DmolarT() does.
     std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p) override;
 
+    /// Saturation state at temperature T from the cubic Chebyshev superancillary.  Like
+    /// superanc_saturation_at_p it ignores ENABLE_SUPERANCILLARIES; it throws above Tc, below the
+    /// table and for NaN, and maps T within round-off of Tc onto the end of the table (the
+    /// critical point).
+    std::optional<SuperancSatPoint> superanc_saturation_at_T(CoolPropDbl T) override;
+
    private:
     /// Temperatures at the low and high ends of the superancillary table, cached by
     /// superanc_saturation_at_p (which re-validates them on every use).  NaN until first needed.
