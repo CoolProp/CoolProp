@@ -5498,6 +5498,106 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superan
     }
 }
 
+TEST_CASE("Cubic density roots stay finite at the critical point", "[cubic][cubic_supercritical_roots]") {
+    // Within ~1e-9 of the critical point the acos/acosh arguments in solve_cubic rounded outside
+    // their domains (and p rounded to 0), returning NaN roots: PR R134a T,P threw "rhomolar is not a
+    // valid number", as did every P-input flash within ~1e-6 of pc.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"R134a", "n-Pentane", "CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double Tc = AS->T_critical(), pc = AS->p_critical();
+            for (double dT : {-1e-6, -1e-9, -1e-12, 0.0, 1e-12, 1e-9, 1e-6}) {
+                for (double dp : {-1e-6, -1e-9, -1e-12, 0.0, 1e-12, 1e-9, 1e-6}) {
+                    const double T = Tc * (1 + dT), p = pc * (1 + dp);
+                    CAPTURE(backend, fluid, dT, dp);
+                    int N = 0;
+                    double r0 = NAN, r1 = NAN, r2 = NAN;
+                    ACB->rho_Tp_cubic(T, p, N, r0, r1, r2);
+                    CHECK((N == 1 || N == 3));
+                    for (double r : {r0, r1, r2}) {
+                        CHECK(std::isfinite(r));
+                        // Each root reproduces p (the isotherm is flat here, so this is a loose test of rho).
+                        std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                        chk->specify_phase(iphase_gas);
+                        chk->update(CoolProp::DmolarT_INPUTS, r, T);
+                        CHECK(chk->p() == Catch::Approx(p).epsilon(1e-9));
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic gas root at very low pressure is positive", "[cubic][cubic_supercritical_roots]") {
+    // At p ~ 1e-20 Pa the gas root (~p/RT) is far below the closed form's round-off, which returns it
+    // with either sign; the polish must still bring it into the physical domain.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double T = 0.15 * AS->T_critical(), p = 1e-20;
+        int N = 0;
+        double r0 = NAN, r1 = NAN, r2 = NAN;
+        ACB->rho_Tp_cubic(T, p, N, r0, r1, r2);
+        REQUIRE(N == 3);
+        CHECK(r0 == Catch::Approx(p / (ACB->gas_constant() * T)).epsilon(1e-9));
+    }
+}
+
+TEST_CASE("Cubic calc_pressure_nocache uses its arguments", "[cubic][cubic_supercritical_roots]") {
+    // It multiplied by the members _rhomolar and _T instead of its T and rho arguments, so it was
+    // right only when they happened to coincide (inf on a fresh state).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+        ref->update(CoolProp::PT_INPUTS, 2e6, 450.0);
+        CHECK(ACB->calc_pressure_nocache(450.0, ref->rhomolar()) == Catch::Approx(2e6).epsilon(1e-12));
+        AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);  // members now differ from the arguments below
+        CHECK(ACB->calc_pressure_nocache(450.0, ref->rhomolar()) == Catch::Approx(2e6).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Cubic PT at supercritical pressure and high temperature", "[cubic][cubic_supercritical_roots]") {
+    // Well above Tc the cubic in rho can have three real roots even for p > pc, but only one is
+    // physical: the others are negative or lie beyond the 1/(b - c) pole.  The no-guess root
+    // selector used to count all three and throw.
+    int n_three_root_states = 0;
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB_ptr = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB_ptr != nullptr);
+            auto& ACB = *ACB_ptr;
+            const double pc = AS->p_critical(), Tc = AS->T_critical();
+            for (double Tr : {1.5, 2.5, 4.0, 6.0}) {
+                for (double pr : {1.5, 3.0}) {
+                    CAPTURE(backend, fluid, Tr, pr);
+                    const double p = pr * pc, T = Tr * Tc;
+                    int Nsoln = 0;
+                    double r0 = 0, r1 = 0, r2 = 0;
+                    ACB.rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+                    n_three_root_states += (Nsoln == 3) ? 1 : 0;
+                    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, p, T));
+                    CHECK(AS->rhomolar() > 0);
+                    CHECK(AS->rhomolar() < AS->rhomolar_critical() * 4);
+                    // The returned root must reproduce the input pressure.
+                    std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                    chk->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+                    CHECK(chk->p() == Catch::Approx(p).epsilon(1e-10));
+                }
+            }
+        }
+    }
+    // Guard against the grid drifting out of the three-root regime, which would make this test vacuous.
+    CHECK(n_three_root_states >= 8);
+}
+
 TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic][cubic_DmolarT][2673]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
