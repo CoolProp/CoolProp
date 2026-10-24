@@ -311,6 +311,8 @@ def parse_python_floors(
     find_package(Python ...) call that makes CMake skip an older interpreter,
     the spec's BuildRequires and Debian's Build-Depends so the build root
     actually has one.  Leap 15.x ships 3.6 and did fail on exactly this.
+    requires-python is the Python package's own floor and is higher; here it
+    only has to clear REQUIRED_PYTHON.
 
     A python requirement that states NO floor counts as (0, 0) rather than
     being skipped.  Skipping it was a fail-open: dropping ">= 3.9" from a line,

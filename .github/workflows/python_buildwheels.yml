@@ -1,15 +1,21 @@
 name: Python cibuildwheel
 
-# Wheel-matrix gating (CoolProp-rog):
-#   • On master/develop pushes, tags, and PRs carrying the `full-wheels`
-#     label, build the full matrix (6 Pythons × ~7 arches ≈ 42 wheels).
-#   • On every other PR, build a representative subset (1 Linux x86_64,
-#     1 Linux aarch64, 1 Windows AMD64, 1 macOS arm64 — newest Python
-#     only). Cuts ~90% of PR wheel CI minutes while still catching
-#     cross-platform breakage pre-merge.
+# Wheel-matrix gating (CoolProp-rog) and publishing (#3497):
+#   • Tags build the full matrix (2 Pythons × 7 arches + Pyodide) and
+#     publish it to PyPI.
+#   • The nightly schedule builds the full matrix and publishes it to
+#     TestPyPI, but only if master has moved since the last successful
+#     nightly; otherwise the whole run is skipped.  workflow_dispatch on
+#     master does the same unconditionally (use it to check the full matrix
+#     before tagging a release); on another branch it builds but does not
+#     publish, so a feature branch can never become the newest TestPyPI build.
+#   • Branch pushes (master included) and PRs build a representative subset
+#     (1 Linux x86_64, 1 Linux aarch64, 1 Windows AMD64, 1 macOS arm64 —
+#     abi3 Python only, plus the two Pyodide wheels) and publish nothing.  Publishing on every merge put
+#     ~two full matrices a day on TestPyPI, whose pruning is manual.
 # Adding the `full-wheels` label to an open PR triggers a fresh full
 # build (via the `labeled` event type); other label changes are ignored
-# by the gate in `set-matrix`.
+# by the gate in `set-version`.
 
 on:
   push:
@@ -18,13 +24,18 @@ on:
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
     types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
 
 concurrency:
   # Cancel superseded runs on the same ref to cut CI backlog on heavy
   # dev days (repeated pushes to an open PR).  Protected: master / main
   # / develop and tags never cancel, so mainline + release runs always
-  # complete.
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # complete.  event_name is in the key so a nightly run never shares a group
+  # with master pushes: a pending run in a group is replaced by the next one
+  # even with cancel-in-progress off, and that would drop the nightly.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
@@ -33,15 +44,51 @@ jobs:
     # otherwise every unrelated label change would spawn a wheel build.
     if: github.event_name != 'pull_request' || github.event.action != 'labeled' || github.event.label.name == 'full-wheels'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read   # list this workflow's earlier runs (nightly gate)
     outputs:
       testpypiversion: ${{ steps.set.outputs.testpypiversion }}
+      run: ${{ steps.gate.outputs.run }}
     steps:
       - name: Set version for testpypi
         id: set
         run: echo "testpypiversion=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
 
+      # A nightly whose commit is the one the last SUCCESSFUL nightly built has
+      # nothing new to publish.  A failed nightly does not count, so the next one
+      # retries.  If the lookup itself fails, build and publish anyway: an extra
+      # upload is cheap, a silently missing nightly is not.
+      - name: Skip the nightly if master has not moved
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          run=true
+          if [[ "$EVENT_NAME" == "schedule" && "$REPO" != "CoolProp/CoolProp" ]]; then
+            # A fork with Actions enabled has no TestPyPI token to publish with.
+            run=false
+            echo "nightly runs only in CoolProp/CoolProp; skipping in $REPO"
+          elif [[ "$EVENT_NAME" == "schedule" ]]; then
+            if last=$(gh api "repos/$REPO/actions/workflows/python_buildwheels.yml/runs?event=schedule&status=success&branch=master&per_page=1" \
+                        --jq '.workflow_runs[0].head_sha // ""'); then
+              echo "This commit: $SHA; last successful nightly: ${last:-none}"
+              if [[ "$last" == "$SHA" ]]; then
+                run=false
+                echo "master has not moved since the last successful nightly; skipping"
+              fi
+            else
+              echo "::warning::could not look up the last nightly; building anyway"
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
   set-matrix:
     needs: set-version
+    if: needs.set-version.outputs.run == 'true'
     runs-on: ubuntu-latest
     outputs:
       full: ${{ steps.detect.outputs.full }}
@@ -58,7 +105,7 @@ jobs:
           LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           full=false
-          if [[ "$EVENT_NAME" == "push" || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/* || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
             full=true
           elif [[ "$EVENT_NAME" == "pull_request" ]] && echo "$LABELS_JSON" | grep -q '"full-wheels"'; then
             full=true
@@ -68,9 +115,9 @@ jobs:
           # v8 go-live (bd CoolProp-r9sq.6): the wheels are now nanobind. The cp312
           # build is abi3-tagged (one cp312-abi3 wheel covers 3.12/3.13/3.14), so
           # 3.13/3.14 are dropped from the matrix to avoid building duplicate abi3
-          # wheels; 3.9-3.11 stay per-version (below nanobind's stable-ABI floor).
+          # wheels; 3.11 stays per-version (below nanobind's stable-ABI floor).
           if $full; then
-            echo 'py_versions=[39, 310, 311, 312]' >> "$GITHUB_OUTPUT"
+            echo 'py_versions=[311, 312]' >> "$GITHUB_OUTPUT"
             echo 'ubuntu_archs=["x86_64"]' >> "$GITHUB_OUTPUT"
             echo 'ubuntu_arm_archs=["aarch64"]' >> "$GITHUB_OUTPUT"
             echo 'windows_archs=["AMD64", "x86", "ARM64"]' >> "$GITHUB_OUTPUT"
@@ -85,6 +132,7 @@ jobs:
 
   python_source:
     needs: set-version
+    if: needs.set-version.outputs.run == 'true'
     name: Build source package
     runs-on: ubuntu-latest
     steps:
@@ -181,19 +229,13 @@ jobs:
         arch: ${{ fromJSON(needs.set-matrix.outputs.windows_archs) }}
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
-      # Runner selection for Windows ARM64 (CoolProp-6z0a):
-      #   • CPython ships a native win_arm64 interpreter only for 3.11+, so
-      #     ARM64 on py>=3.11 builds NATIVELY on the windows-11-arm runner.
-      #     Native build means delvewheel (cibuildwheel 4.0's default Windows
-      #     repair) can resolve the ARM64 VC runtime, so the wheel repairs.
-      #   • ARM64 on py3.9/3.10 has no native interpreter; it must cross-compile
-      #     on the x64 windows-latest host, where delvewheel can't find the
-      #     ARM64 msvcp140.dll — so repair is disabled on that leg (see the
-      #     reusable workflow's CIBW_REPAIR_WHEEL_COMMAND_WINDOWS).
-      #   • AMD64/x86 always run on windows-latest with the default repair.
-      # python-version is encoded as 39/310/311/312 (monotonic with the real
-      # version), so `>= 311` correctly means CPython >= 3.11.
-      os: ${{ (matrix.arch == 'ARM64' && matrix.python-version >= 311) && 'windows-11-arm' || 'windows-latest' }}
+      # Runner selection for Windows ARM64 (CoolProp-6z0a): every supported
+      # Python (3.11+) ships a native win_arm64 interpreter, so ARM64 builds
+      # NATIVELY on the windows-11-arm runner, where delvewheel (cibuildwheel
+      # 4.0's default Windows repair) can resolve the ARM64 VC runtime.
+      # AMD64/x86 run on windows-latest.  The x64-host cross-compile that
+      # py3.9/3.10 needed, with its repair disabled, went with those versions.
+      os: ${{ matrix.arch == 'ARM64' && 'windows-11-arm' || 'windows-latest' }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
       TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
@@ -240,7 +282,7 @@ jobs:
          pattern: Python-*
 
   upload_python_bindings_to_pypi:
-    needs: merge_wheels
+    needs: [set-matrix, merge_wheels]
     name: Upload to PyPi
     runs-on: ubuntu-latest
     steps:
@@ -289,8 +331,11 @@ jobs:
     - name: Check every distribution ships THIRD_PARTY_NOTICES.md
       run: python src/dev/ci/check_dist_notices.py Python src/THIRD_PARTY_NOTICES.md
 
+    # Only tags (PyPI) and the nightly / manual runs (TestPyPI) publish; see the
+    # header.  Check that the matrix really was the full one, so a subset can
+    # never be published as if it were a complete release.
     - name: Publish wheels to (Test)PyPI
-      if: ${{ github.event_name != 'pull_request' }}
+      if: ${{ needs.set-matrix.outputs.full == 'true' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')) }}
       env:
         TWINE_USERNAME: __token__
       run: python -m twine upload --verbose --skip-existing Python/*.whl Python/*.tar.gz

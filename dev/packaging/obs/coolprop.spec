@@ -78,8 +78,9 @@ BuildRequires:  eigen3-devel >= 3.4
 BuildRequires:  fmt-devel
 # dev/generate_headers.py runs at build time to turn the fluid JSON into the
 # generated headers that get compiled into the library.  It needs Python 3.9 or
-# newer, which is what pyproject.toml declares and what CMakeLists.txt asks
-# find_package for: the script uses builtin generics such as list[Path].
+# newer, which is what CMakeLists.txt asks find_package for: the script uses
+# builtin generics such as list[Path].  (pyproject.toml's requires-python is
+# higher; that is the floor for the Python package, not for this build tool.)
 #
 # Leap 15.x still ships Python 3.6 as its default python3, so there the build
 # died with "TypeError: 'type' object is not subscriptable".  Ask that
