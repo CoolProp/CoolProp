@@ -3466,6 +3466,25 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             return (x < Tmin || x > Tmax);
         }
     };
+    // solver_resid's constructor imposes the phase, and every normal and error exit below unspecifies
+    // it -- except a throw from the bracket-end evaluations resid.call(Tmin/Tmax), which run outside the
+    // try blocks.  That left the phase imposed, so a later T,P update on the same object silently picked
+    // the wrong root (stress sweep of the cubic superancillary stack).  Unspecify on every exit, exactly
+    // as the other exits already do (so a phase the caller imposed before the flash is cleared, as before).
+    struct ImposedPhaseClearer
+    {
+        HelmholtzEOSMixtureBackend& H;
+        explicit ImposedPhaseClearer(HelmholtzEOSMixtureBackend& H) : H(H) {}
+        ImposedPhaseClearer(const ImposedPhaseClearer&) = delete;
+        ImposedPhaseClearer& operator=(const ImposedPhaseClearer&) = delete;
+        ImposedPhaseClearer(ImposedPhaseClearer&&) = delete;
+        ImposedPhaseClearer& operator=(ImposedPhaseClearer&&) = delete;
+        // What HelmholtzEOSMixtureBackend::calc_unspecify_phase() does, without the virtual call (whose
+        // AbstractState default throws), so the destructor cannot throw.
+        ~ImposedPhaseClearer() {
+            H.imposed_phase_index = iphase_not_imposed;
+        }
+    } clear_imposed_phase(HEOS);
     solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax, direct_path_enabled);
 
     class resid_2D : public FuncWrapperND
@@ -3720,19 +3739,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Tmin = std::max(HEOS.Tmin(), HEOS.Ttriple());
                     } else {
 
-                        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                            auto superanc_ptr = HEOS.get_superanc();
-                            if (superanc_ptr) {
-                                auto& superanc = *superanc_ptr;
-                                CoolPropDbl pmax_num = superanc.get_pmax();
-                                if (HEOS._p > pmax_num) {
-                                    throw ValueError(
-                                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p,
-                                             pmax_num));
-                                }
-                                Tmin = superanc.get_T_from_p(HEOS._p);
-                                break;
-                            }
+                        if (const auto sat = HEOS.superanc_saturation_at_p(HEOS._p)) {
+                            Tmin = sat->T;
+                            break;
                         }
                         if (saturation_called) {
                             Tmin = HEOS.SatV->T();
@@ -3751,18 +3760,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Tmin = HEOS.Tmin() - 1e-3;
                     }
 
-                    if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                        auto superanc_ptr = HEOS.get_superanc();
-                        if (superanc_ptr) {
-                            auto& superanc = *superanc_ptr;
-                            CoolPropDbl pmax_num = superanc.get_pmax();
-                            if (HEOS._p > pmax_num) {
-                                throw ValueError(format(
-                                  "Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
-                            }
-                            Tmax = superanc.get_T_from_p(HEOS._p);
-                            break;
-                        }
+                    if (const auto sat = HEOS.superanc_saturation_at_p(HEOS._p)) {
+                        Tmax = sat->T;
+                        break;
                     }
 
                     if (saturation_called) {
