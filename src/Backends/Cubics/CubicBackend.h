@@ -293,7 +293,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int& Nsolns, double& rho0, double& rho1, double& rho2);
 
     /// In this class, we are already doing cubic evaluation, just delegate to our function.
-    /// solver_rho_Tp(T, p, phase) THROWS when the requested-phase root does not exist, but
+    /// solver_rho_Tp(T, p, phase) can THROW (no gaseous root; for a pure SRK/PR, !(p > 0), no
+    /// physical root, or several physical roots and a phase that is neither gas nor liquid; with a
+    /// single physical root it returns that root whatever the phase), but
     /// callers of solver_rho_Tp_SRK (e.g. FlashRoutines::PT_flash_mixtures) expect the
     /// base-class negative-sentinel contract -- they test `rho > 0 && ValidNumber(rho)` and
     /// are not wrapped in a try/catch.  Honor that contract here so a cubic-mixture
@@ -418,9 +420,8 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Evaluate the cubic superancillary at T (pure fluid with a superancillary code).  Returns false,
     /// without throwing, when T lies outside the table (below its low-T end, above its end -- the
     /// critical point -- by more than round-off, or NaN).  T within round-off above the end maps onto
-    /// it unless map_end_gap is false, in which case it counts as outside.  The one place the cubic
-    /// evaluates the table at a temperature.
-    bool cubic_superanc_eval(double T, SuperancSatPoint& out, bool map_end_gap = true);
+    /// it.  The one place the cubic evaluates the table at a temperature.
+    bool cubic_superanc_eval(double T, SuperancSatPoint& out);
     /// cubic_superanc_eval that throws ValueError above Tc and outside the table.
     SuperancSatPoint cubic_superanc_at_T(double T);
     /// Temperatures at the low and high ends of the superancillary table, cached by

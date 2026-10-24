@@ -2,6 +2,7 @@
 #include "CoolProp/numerics/MatrixMath.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <unsupported/Eigen/Polynomials>
 
 double root_sum_square(const std::vector<double>& x) {
@@ -111,7 +112,12 @@ void solve_cubic(double a, double b, double c, double d, int& N, double& x0, dou
     // arguments below can round just outside their domains and p can round to exactly zero, which
     // returned NaN roots.  Branch on the sign of p, clamp the arguments, and treat p == 0 directly.
     const double shift = b / (3 * a);
-    if (p == 0) {
+    if (!std::isfinite(p) || !std::isfinite(q) || !std::isfinite(shift) || std::isnan(DELTA)) {
+        // Non-finite coefficients (or a discriminant that overflowed to inf - inf): NaN roots, as before
+        // the clamps below, which would otherwise turn a NaN argument into a finite root
+        N = 3;
+        x0 = x1 = x2 = std::numeric_limits<double>::quiet_NaN();
+    } else if (p == 0) {
         // t^3 + q = 0: one real root (a triple root if q == 0 too)
         const double t0 = std::cbrt(-q);
         N = 1;

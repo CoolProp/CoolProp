@@ -5651,8 +5651,8 @@ TEST_CASE("Cubic TP root choice at very low pressure", "[cubic][cubic_superanc][
 
 TEST_CASE("Cubic TP root choice just below Tc and psat", "[cubic][cubic_superanc][COO-136]") {
     // Within ~1e-6 of Tc the table's rho_V and the EOS vapour root differ by more than any fixed
-    // slack, so comparing the root with rho_V threw "Unable to find gaseous density" for 12 PR fluids
-    // in the stack review's stress sweep (e.g. PR acetone at Tc(1 - 1e-6), p = psat(1 - 1e-10)).
+    // slack, so comparing the root with rho_V threw "Unable to find gaseous density" for 12 of 127 PR
+    // fluids (e.g. PR acetone at Tc(1 - 1e-6), p = psat(1 - 1e-10)).
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         for (const auto& fluid : std::vector<std::string>{"Acetone", "R134a", "Propane", "Water"}) {
             CAPTURE(backend, fluid);
@@ -5676,10 +5676,44 @@ TEST_CASE("Cubic TP root choice just below Tc and psat", "[cubic][cubic_superanc
 
 TEST_CASE("Cubic TP at non-positive pressure is rejected", "[cubic][cubic_superanc][COO-136]") {
     // p <= 0 has no vapour root (the tensile liquid is not supported): a clear error, not a root.
+    // Below Tc the cubic has three real roots there; above Tc one, which is negative (COO-138).
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
-        CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
-        CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, -1e5, 0.6 * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+        for (const auto& [p, Tr] : std::vector<std::pair<double, double>>{{-1e5, 0.6}, {-1e5, 1.2}, {-1e6, 2.0}, {0.0, 1.2}}) {
+            CAPTURE(backend, p, Tr);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, p, Tr * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+            // ... and with a phase imposed
+            for (auto phase : {CoolProp::iphase_gas, CoolProp::iphase_liquid}) {
+                AS->specify_phase(phase);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, p, Tr * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+                AS->unspecify_phase();
+            }
+        }
+        // p of either sign below round-off: decided on p, not on the sign of a near-zero root
+        CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, -1e-10, 1.2 * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+    }
+}
+
+TEST_CASE("Cubic TP with an imposed liquid phase skips the root past the pole", "[cubic][cubic_superanc]") {
+    // Well above Tc at high p the densest of three real roots lies past rho = 1/(b - c).  An imposed
+    // (supercritical) liquid phase must take the densest physical root, which here is the only one.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double T = 3 * AS->T_critical(), p = 2 * AS->p_critical();
+        const double b = ACB->get_cubic()->bm_term(std::vector<double>{1.0});
+        AS->update(CoolProp::PT_INPUTS, p, T);
+        const double rho_free = AS->rhomolar();
+        for (auto phase :
+             {CoolProp::iphase_liquid, CoolProp::iphase_supercritical_liquid, CoolProp::iphase_supercritical_gas, CoolProp::iphase_supercritical}) {
+            CAPTURE(backend, phase);
+            AS->specify_phase(phase);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            CHECK(AS->rhomolar() * b < 1);
+            CHECK(AS->rhomolar() == Catch::Approx(rho_free).epsilon(1e-12));
+            AS->unspecify_phase();
+        }
     }
 }
 
@@ -5784,6 +5818,21 @@ TEST_CASE("Cubic QT and PQ with volume translation", "[cubic][cubic_superanc][CO
         AS->update(CoolProp::PQ_INPUTS, p, 0);
         CHECK(AS->T() == Catch::Approx(T).epsilon(1e-12));
         CHECK(AS->rhomolar() == Catch::Approx(rhoL).epsilon(1e-10));
+    }
+}
+
+TEST_CASE("solve_cubic returns NaN roots for non-finite coefficients", "[cubic][cubic_supercritical_roots]") {
+    // The clamps on the acos/acosh arguments must not turn a NaN into a finite root: with d = NaN the
+    // three-root branch would otherwise give the roots of x^3 - 3x + 2 (callers such as the bicubic
+    // inversion build d from a user input).
+    for (double d : {std::nan(""), std::numeric_limits<double>::infinity()}) {
+        int N = 0;
+        double x0 = 0, x1 = 0, x2 = 0;
+        solve_cubic(1, 0, -3, d, N, x0, x1, x2);
+        CAPTURE(d, N, x0, x1, x2);
+        CHECK(std::isnan(x0));
+        CHECK((N < 2 || std::isnan(x1)));
+        CHECK((N < 3 || std::isnan(x2)));
     }
 }
 

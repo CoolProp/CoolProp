@@ -3471,7 +3471,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     // solver_resid's constructor imposes the phase, and every normal and error exit below unspecifies
     // it -- except a throw from the bracket-end evaluations resid.call(Tmin/Tmax), which run outside the
     // try blocks.  That left the phase imposed, so a later T,P update on the same object silently picked
-    // the wrong root (stress sweep of the cubic superancillary stack).  Unspecify on every exit, exactly
+    // the wrong root (seen with near-critical cubic P-input flashes).  Unspecify on every exit, exactly
     // as the other exits already do (so a phase the caller imposed before the flash is cleared, as before).
     struct ImposedPhaseClearer
     {
@@ -4087,7 +4087,7 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
             // y lies beyond yc on the side away from ymin, so a higher density can bracket it: increase
             // rhoc until it does.  Written for either sign of dy/drho -- for the usual decreasing u, s or h
             // this is y < yc, but above T* = Tc(1 + 1/m)^2 the Soave alpha makes u rise with density, and
-            // dense cubic T,U states threw "input not in range" (stack review).
+            // dense cubic T,U states threw "input not in range".
             int step_count = 0;
             while (!is_in_closed_range(ymin, yc, y)) {
                 rhoc *= 1.1;  // Increase density by a few percent

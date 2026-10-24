@@ -344,4 +344,28 @@ TEST_CASE("Cubic T-input flash rejects densities past the repulsive pole", "[cub
     CHECK_THROWS_WITH(AS->update(TUmolar_INPUTS, T, u_past_pole), Catch::Matchers::ContainsSubstring("No physical state"));
 }
 
+TEST_CASE("Cubic P-input flashes at high supercritical pressure", "[cubic][flash][3441]") {
+    // At several pc the cubic has three real roots well above Tc, the densest past the repulsive pole,
+    // and the P-input bracket runs up to 1.5 Tmax with a phase imposed.  Round trips over that range.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Water"}) {
+            std::unique_ptr<AbstractState> AS(AbstractState::factory(backend, fluid)), ref(AbstractState::factory(backend, fluid));
+            const double Tc = AS->T_critical(), pc = AS->p_critical();
+            for (double pr : {2.0, 5.0}) {
+                for (double Tr : {0.9, 1.05, 1.15, 1.5, 3.0}) {
+                    const double T = Tr * Tc, p = pr * pc;
+                    CAPTURE(backend, fluid, pr, Tr);
+                    ref->update(PT_INPUTS, p, T);
+                    const double h = ref->hmolar(), s = ref->smolar();
+                    REQUIRE(std::isfinite(h));
+                    CHECK_NOTHROW(AS->update(HmolarP_INPUTS, h, p));
+                    CHECK(AS->T() == Catch::Approx(T).epsilon(1e-8));
+                    CHECK_NOTHROW(AS->update(PSmolar_INPUTS, p, s));
+                    CHECK(AS->T() == Catch::Approx(T).epsilon(1e-8));
+                }
+            }
+        }
+    }
+}
+
 #endif

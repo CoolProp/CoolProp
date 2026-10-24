@@ -426,7 +426,7 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
 
     // The T-input density solves (FlashRoutines::solver_for_rho_given_T_oneof_HSU) know no upper density
     // bound, and for a cubic u and h stay finite past the repulsive pole at rho = 1/(b - c): a large
-    // enough H,T or T,U input "solved" there, with a negative pressure (stack review).  Only (0, 1/(b - c))
+    // enough H,T or T,U input "solved" there, with a negative pressure.  Only (0, 1/(b - c))
     // is physical.
     if (is_pure_or_pseudopure && (input_pair == HmolarT_INPUTS || input_pair == SmolarT_INPUTS || input_pair == TUmolar_INPUTS)) {
         const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
@@ -795,8 +795,34 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, 
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase) {
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
+    const bool pure_superanc = is_pure_or_pseudopure && get_superanc_eos_code() != CubicSuperAncillary::UNKNOWN_CODE;
+    if (pure_superanc && !(p > 0)) {
+        throw ValueError(format("T,P for a pure cubic needs p > 0 (got p = %g Pa at T = %g K)", p, T));
+    }
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
-    if (Nsoln == 1) {
+    if (pure_superanc && (Nsoln == 1 || Nsoln == 3)) {
+        // Only roots in (0, 1/(b - c)) are physical: well above Tc the densest root can lie past the
+        // repulsive pole.  The imposed phase picks the least (gas) or most (liquid) dense of them.
+        const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+        std::vector<double> phys;
+        for (double r : {rho0, rho1, rho2}) {
+            if (static_cast<int>(phys.size()) < Nsoln && r > 0 && r * b_minus_c < 1) {
+                phys.push_back(r);
+            }
+        }
+        if (phys.empty()) {
+            throw ValueError(format("No physical density root at T = %g K, p = %g Pa", T, p));
+        }
+        // A single physical root is the only state there is, whatever the imposed phase (as for a
+        // single cubic root); otherwise the imposed gas or liquid phase picks the least or most dense.
+        if (phys.size() == 1 || phase == iphase_gas || phase == iphase_supercritical_gas) {
+            rho = phys.front();
+        } else if (phase == iphase_liquid || phase == iphase_supercritical_liquid) {
+            rho = phys.back();
+        } else {
+            throw ValueError("Specified phase is invalid");
+        }
+    } else if (Nsoln == 1) {
         rho = rho0;
     } else if (Nsoln == 3) {
         if (phase == iphase_gas || phase == iphase_supercritical_gas) {
@@ -826,11 +852,26 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     if (imposed_phase_index != iphase_not_imposed) {
         return solver_rho_Tp(T, p, imposed_phase_index);
     }
+    // A pure SRK/PR has no state at p <= 0 that is supported (above Tc the single root is negative or
+    // zero, below it the liquid is tensile; COO-138).  Checked on p itself: at p = 0 the closed-form
+    // root is zero only to round-off, with either sign.
+    if (is_pure_or_pseudopure && get_superanc_eos_code() != CubicSuperAncillary::UNKNOWN_CODE && !(p > 0)) {
+        throw ValueError(format("T,P for a pure cubic needs p > 0 (got p = %g Pa at T = %g K); the tensile "
+                                "(negative-pressure) liquid is not supported",
+                                p, T));
+    }
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
     if (Nsoln == 1) {
         rho = rho0;
+        // For p > 0 the single real root is physical; check it anyway rather than return a negative density
+        if (is_pure_or_pseudopure && get_superanc_eos_code() != CubicSuperAncillary::UNKNOWN_CODE) {
+            const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+            if (!(rho > 0 && rho * b_minus_c < 1)) {
+                throw ValueError(format("No physical density root at T = %g K, p = %g Pa", T, p));
+            }
+        }
     } else if (Nsoln == 3) {
         if (p < p_critical()) {
             // Gas root: the smallest positive one, which must lie below the saturated-vapour density.
@@ -861,12 +902,11 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                     // with psat(T) read straight off the table: no p -> Tsat inversion, so any p works,
                     // however small.  Below p_sat the stable root is the vapour-like one, phys[0]: no
                     // comparison with the table's rho_V, which near Tc differs from the EOS root by more
-                    // than any fixed slack (the stack review's stress sweep hit that for 12 PR fluids).
+                    // than any fixed slack (12 of 127 PR fluids threw there).
                     // Outside the table (below its low-T end) take the root of lower Gibbs energy, as
                     // solver_rho_Tp_global does.
                     SuperancSatPoint sat{};
-                    // No end-of-table round-off mapping here: the Gibbs comparison is exact there.
-                    if (cubic_superanc_eval(T, sat, /*map_end_gap=*/false)) {
+                    if (cubic_superanc_eval(T, sat)) {
                         if (p < sat.p) {
                             rho = phys[0];
                         } else {
@@ -879,10 +919,6 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                         }
                         rho = (g_liq < g_vap) ? phys[2] : phys[0];
                     }
-                } else if (!(p > 0)) {
-                    throw CoolProp::ValueError(format("T,P for a pure cubic needs p > 0 (got p = %g Pa at T = %g K); the tensile "
-                                                      "(negative-pressure) liquid is not supported",
-                                                      p, T));
                 } else {
                     throw CoolProp::ValueError(format("Cubic has %d physical density roots at T: %g K, p: %g Pa", static_cast<int>(n_phys), T, p));
                 }
@@ -1266,17 +1302,17 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     return sat;
 }
 
-bool CoolProp::AbstractCubicBackend::cubic_superanc_eval(double T, SuperancSatPoint& out, bool map_end_gap) {
+bool CoolProp::AbstractCubicBackend::cubic_superanc_eval(double T, SuperancSatPoint& out) {
     using namespace CubicSuperAncillary;
     const int eos_code = get_superanc_eos_code();
     const std::vector<double> x = {1.0};
     const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
     double Ttilde = cubic->get_R_u() * T * bm / am;
     // The table ends at the exact critical point (#3515), so T == Tc can land a few ulp above its end;
-    // absorb that round-off (unless the caller has an exact alternative there).  Anything further above
+    // absorb that round-off.  Anything further above
     // the table (a non-monotone alpha) is outside it, not clamped.
     const double Ttilde_max = get_Ttilde_max(eos_code);
-    if (map_end_gap && Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
+    if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
         Ttilde = Ttilde_max;
     }
     // Written as !(... && ...) so that a NaN Ttilde counts as outside.
