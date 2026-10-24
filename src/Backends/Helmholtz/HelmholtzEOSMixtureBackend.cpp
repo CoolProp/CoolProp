@@ -2913,6 +2913,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
     return 0.9 / SRK_covolume();
 }
 
+// SRK_covolume() and solver_rho_Tp_SRK() are approximate seeds for the HEOS mixture solvers, not an
+// SRK EOS.  Their Omega_a/Omega_b literals carry #2745's transcription error (~4e-10 relative); the
+// exact values are in Backends/Cubics/CubicConstants.h.  They are deliberately left as they are: the
+// mixture PT flash's stability test is knife-edge sensitive to them and the exact values flip a
+// subcooled-liquid case to a spurious two-phase result (Linear COO-150).  Switch them once that is fixed.
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     double b = 0;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
@@ -3232,6 +3237,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                                 rhomolar_guess, e.what()));
     }
 }
+// Seed constants: see the note above SRK_covolume() (Linear COO-150).
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
     CoolPropDbl rhomolar = NAN, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
