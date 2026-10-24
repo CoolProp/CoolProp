@@ -83,6 +83,15 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
   `cmake/dependencies.cmake`) and do not reintroduce it.
 
+- **Catch2 test names must not contain commas.**  A comma in a test spec
+  is OR, so "Cubic T,P root choice" cannot be selected by name.  Write
+  "TP", "P-input", etc.
+- **Rewriting a stack of PR branches:** commit the fix on the owning
+  branch, then from the top branch `git rebase --update-refs --onto
+  <owner-new> <owner-old>`; it moves every intermediate branch ref in one
+  pass.  Use the old SHA the upper branch actually sits on (after an
+  amend it differs from the branch's own old tip).  Enable `rerere`.
+
 ## REFPROP
 
 - **Running `[refprop]` Catch2 tests locally:** without configuration they
@@ -123,16 +132,37 @@ recorded history of finished or abandoned work were dropped (they remain in
   pure without one) use the dome-free legs of `hs_cascade` (PR #3182).
 - **Cubic backends have no classic ancillaries.** `components[0].ancillaries`
   (pL, pV, hL, ...) is empty on SRK/PR, so any path that reaches it throws
-  "type not set" (#3441).  `get_superanc()` is null there too: the cubic's
-  Chebyshev superancillary is reached only through the virtuals
-  `superanc_saturation_at_p` / `calc_saturation_ancillary`.  Route
-  saturation lookups through those, not through `get_superanc()`.  Cubic
-  Q,T / P,Q updates, and the gas/liquid root choice in `solver_rho_Tp`, read
-  the superancillary too (COO-136).  The old secant saturation solve is no
-  fallback: it is ~1e-7 in p near Tc and, out of the table's range, silently
-  returns the trivial or wrong root.  When you add a superancillary, check that every input pair that
-  needs saturation actually reaches it: the cubic one (#2739) sat unused by Q,T and
-  P,Q because `AbstractCubicBackend::update` intercepts both.
+  "type not set" (#3441).  `get_superanc()` is null there too.  Reach the
+  cubic Chebyshev superancillary through the virtuals
+  `superanc_saturation_at_p` / `superanc_saturation_at_T` (or
+  `calc_saturation_ancillary`); inside the cubic backend everything goes
+  through the private `cubic_superanc_eval`.  Q,T, P,Q and the T,P root
+  choice use it too (COO-136); the old secant saturation solve is no
+  fallback (~1e-7 in p near Tc, and silently the trivial or wrong root
+  outside the table).  When adding a superancillary, check that every input
+  pair needing saturation reaches it: the cubic one (#2739) sat unused for
+  Q,T and P,Q because `AbstractCubicBackend::update` intercepts both.
+  Direct `get_superanc()` callers that remain are listed in COO-146.
+- **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
+  (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
+  `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
+  real-fluid fit, because it decides gas vs liquid; the Soave alpha passes
+  through zero at T* = Tc(1+1/m)^2, where T,U is degenerate, Ttilde turns
+  over and the closed-form cubic loses ~10 digits (COO-145).  Within ~1e-9
+  of the critical point the expanded cubic's coefficients cancel: polish
+  roots against p(rho) in EOS form, never the polynomial.
+- **Flash non-uniqueness is physical, not a bug.**  H,T for a cold
+  compressed liquid: (dh/dp)_T = v(1 - T beta) > 0, so the same (T, h) is
+  also a two-phase state and the flash returns that one, as HEOS does.
+  Test that the result reproduces both inputs; exempt the reference match
+  only with an independent check that h is inside [h_L(T), h_V(T)].
+- **Compute long constants, never transcribe them.**  #2745's "exact"
+  SRK/PR Omegas had doubled and dropped digits (fixed in #3515), which put
+  SRK's own critical point ~1e-9 below the input Tc/pc and surfaced as a
+  phantom "end gap" in the superancillary.  Evaluate the closed form in a
+  script and test the defining property (critical conditions), not digits.
+- **`recalculate_singlephase_phase()` reads `_rhomolar`.**  Assign the new
+  density before calling it (cubic `solver_rho_Tp` did not: #3506).
 - **HS cascade rules:** every cascade leg must be exception-guarded (a leg
   leaving the EOS domain otherwise aborts the cascade), and phase
   determination for two-phase (h,s) inputs is the dispatcher's job, done

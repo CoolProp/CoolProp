@@ -230,17 +230,17 @@ void CoolProp::AbstractCubicBackend::update_DmolarT() {
         return;
     }
     // Pure SRK/PR: use the Chebyshev superancillary to bracket the dome at T, then pick
-    // the matching EOS root.  Above the superancillary Tmax we are unambiguously single-
-    // phase and just evaluate the EOS directly.
-    const double Tmax = calc_superanc_Tmax();
-    if (_T >= Tmax) {
+    // the matching EOS root.  Above Tc we are unambiguously single-phase and just evaluate the
+    // EOS directly.
+    if (_T >= T_critical()) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
         recalculate_singlephase_phase();
         return;
     }
-    const double rhoL_sat = calc_saturation_ancillary(iDmolar, 0, iT, _T);
-    const double rhoV_sat = calc_saturation_ancillary(iDmolar, 1, iT, _T);
+    const SuperancSatPoint sat = cubic_superanc_at_T(_T);
+    const double rhoL_sat = sat.rhomolarL;
+    const double rhoV_sat = sat.rhomolarV;
     if (_rhomolar >= rhoL_sat) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
@@ -253,7 +253,7 @@ void CoolProp::AbstractCubicBackend::update_DmolarT() {
         // Inside the dome: pressure is the saturation pressure and quality follows from
         // the lever rule, 1/rho = (1-Q)/rhoL + Q/rhoV.
         const double rho = _rhomolar;
-        _p = calc_saturation_ancillary(iP, 0, iT, _T);
+        _p = sat.p;
         _Q = (rhoV_sat * (rhoL_sat - rho)) / (rho * (rhoL_sat - rhoV_sat));
         _phase = iphase_twophase;
         SatL->update_TDmolarP_unchecked(_T, rhoL_sat, _p);
@@ -661,38 +661,14 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
     if (is_pure_or_pseudopure && eos_code != CubicSuperAncillary::UNKNOWN_CODE) {
         using namespace CubicSuperAncillary;
         std::optional<SuperancSatPoint> sat;
-        double psat = _p;
         if (inputs == PQ_INPUTS) {
             sat = superanc_saturation_at_p(_p);
         } else if (inputs == QT_INPUTS) {
-            if (_T > T_critical() * (1 + 4 * DBL_EPSILON)) {
-                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the critical temperature of the cubic", _T));
-            }
-            const std::vector<double> x = {1.0};
-            const double am = cubic->am_term(cubic->get_Tr() / _T, x, 0), bm = cubic->bm_term(x);
-            double Ttilde = cubic->get_R_u() * _T * bm / am;
-            // The table ends at the exact critical point, Ttilde_c = Omega_b/Omega_a (#3515), so T == Tc
-            // can land a few ulp above its end; absorb that round-off.  Anything further above the table
-            // (a non-monotone alpha) is not clamped: it throws.
-            const double Ttilde_max = get_Ttilde_max(eos_code);
-            if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
-                Ttilde = Ttilde_max;
-            }
-            if (Ttilde > Ttilde_max) {
-                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] maps above the end of the cubic superancillary", _T));
-            }
-            // Written as !(>=) so that a NaN temperature throws too.
-            if (!(Ttilde >= get_Ttilde_min(eos_code))) {
-                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] is below the minimum temperature of the cubic superancillary", _T));
-            }
-            // A volume translation moves no pressure, so p~ needs no correction.
-            psat = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
-            sat = SuperancSatPoint{_T, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
-                                   untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm)};
+            sat = cubic_superanc_at_T(_T);
         }
         if (sat) {
             _T = sat->T;
-            _p = psat;
+            _p = sat->p;
             rhoL = sat->rhomolarL;
             rhoV = sat->rhomolarV;
             // As update_QT_pure_superanc does: both phases carry the saturation pressure exactly,
@@ -888,13 +864,10 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                     // than any fixed slack (the stack review's stress sweep hit that for 12 PR fluids).
                     // Outside the table (below its low-T end) take the root of lower Gibbs energy, as
                     // solver_rho_Tp_global does.
-                    using namespace CubicSuperAncillary;
-                    const std::vector<double> x = {1.0};
-                    const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
-                    const double Ttilde = cubic->get_R_u() * T * bm / am;
-                    if (Ttilde >= get_Ttilde_min(eos_code) && Ttilde <= get_Ttilde_max(eos_code)) {
-                        const double psat = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
-                        if (p < psat) {
+                    SuperancSatPoint sat{};
+                    // No end-of-table round-off mapping here: the Gibbs comparison is exact there.
+                    if (cubic_superanc_eval(T, sat, /*map_end_gap=*/false)) {
+                        if (p < sat.p) {
                             rho = phys[0];
                         } else {
                             rho = phys[2];
@@ -1172,25 +1145,11 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters
         throw NotImplementedError(format("calc_saturation_ancillary: only T-given is supported for cubic EOS; got given=%s",
                                          get_parameter_information(given, "short").c_str()));
     }
-    double T = value;
-    double Tmax = calc_superanc_Tmax();
-    if (T > Tmax) {
-        throw ValueError(format("calc_saturation_ancillary: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
-    }
-    std::vector<double> x = {1.0};
-    double tau = cubic->get_Tr() / T;
-    double am = cubic->am_term(tau, x, 0);
-    double bm = cubic->bm_term(x);
-    double Ttilde = cubic->get_R_u() * T * bm / am;
-
-    using namespace CubicSuperAncillary;
+    const SuperancSatPoint sat = cubic_superanc_at_T(value);
     if (param == iP) {
-        // A volume translation moves no pressure, so the p~ mapping needs no correction.
-        double p_tilde = supercubic(eos_code, P_CODE, Ttilde);
-        return p_tilde * am / (bm * bm);
+        return sat.p;
     } else if (param == iDmolar) {
-        double rho_tilde = supercubic(eos_code, (Q == 0) ? RHOL_CODE : RHOV_CODE, Ttilde);
-        return untranslate_superanc_rho(rho_tilde, bm);
+        return (Q == 0) ? sat.rhomolarL : sat.rhomolarV;
     } else {
         throw NotImplementedError(
           format("calc_saturation_ancillary: unsupported param=%s for cubic EOS", get_parameter_information(param, "short").c_str()));
@@ -1222,8 +1181,8 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
     // allowed iteration look the same; judge convergence by whether the bracket meets the tolerance.
     boost::math::tools::eps_tolerance<double> tol(bits);
     // T at which Ttilde equals Ttilde_bound.  The converged bracket end that lies INSIDE the
-    // superancillary domain is returned, so later evaluations never step off it by an ulp
-    // (calc_superanc_Tmax() inverts with a(Tc) and can overshoot Ttilde_max slightly).
+    // superancillary domain is returned, so later evaluations never step off it by an ulp.
+    // (calc_superanc_Tmax() is no substitute: it inverts with a(Tc) rather than a(T).)
     auto T_at_Ttilde = [&](double Ttilde_bound, bool inside_is_above) {
         auto f = [&](double T) { return Ttilde_of_T(T) - Ttilde_bound; };
         double Ta = 0.5 * T_critical(), Tb = 2 * T_critical();
@@ -1298,40 +1257,56 @@ std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::
             throw ValueError(format("superanc_saturation_at_p: non-finite residual at Tsat = %g K for p = %0.8Lg Pa", Tsat, p));
         }
     }
-    const double Ttilde = Ttilde_of_T(Tsat);
-    return SuperancSatPoint{Tsat, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
-                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm), p};
+    SuperancSatPoint sat{};
+    // Tsat lies in [Tmin, Tmax], inside the table by construction.
+    if (!cubic_superanc_eval(Tsat, sat)) {
+        throw ValueError(format("superanc_saturation_at_p: Tsat = %g K fell outside the cubic superancillary", Tsat));
+    }
+    sat.p = p;
+    return sat;
 }
 
-std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_T(CoolPropDbl T) {
-    const int eos_code = get_superanc_eos_code();
-    if (!is_pure_or_pseudopure || eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
-        return HelmholtzEOSMixtureBackend::superanc_saturation_at_T(T);
-    }
+bool CoolProp::AbstractCubicBackend::cubic_superanc_eval(double T, SuperancSatPoint& out, bool map_end_gap) {
     using namespace CubicSuperAncillary;
-    if (T > T_critical() * (1 + 4 * DBL_EPSILON)) {
-        throw ValueError(format("Temperature [%0.10Lg K] may not be above the critical temperature of the cubic, %0.10Lg K", T, T_critical()));
-    }
+    const int eos_code = get_superanc_eos_code();
     const std::vector<double> x = {1.0};
     const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
     double Ttilde = cubic->get_R_u() * T * bm / am;
     // The table ends at the exact critical point (#3515), so T == Tc can land a few ulp above its end;
-    // absorb that round-off.  Anything further above the table (a non-monotone alpha) throws.
+    // absorb that round-off (unless the caller has an exact alternative there).  Anything further above
+    // the table (a non-monotone alpha) is outside it, not clamped.
     const double Ttilde_max = get_Ttilde_max(eos_code);
-    if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
+    if (map_end_gap && Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
         Ttilde = Ttilde_max;
     }
-    if (Ttilde > Ttilde_max) {
-        throw ValueError(format("Temperature [%0.8Lg K] maps above the end of the cubic superancillary", T));
-    }
-    // Written as !(>=) so that a NaN temperature throws too.
-    if (!(Ttilde >= get_Ttilde_min(eos_code))) {
-        throw ValueError(format("Temperature [%0.8Lg K] is below the minimum temperature of the cubic superancillary", T));
+    // Written as !(... && ...) so that a NaN Ttilde counts as outside.
+    if (!(Ttilde >= get_Ttilde_min(eos_code) && Ttilde <= Ttilde_max)) {
+        return false;
     }
     // A volume translation moves no pressure, so p~ needs no correction.
-    return SuperancSatPoint{T, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
-                            untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm),
-                            supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm)};
+    out =
+      SuperancSatPoint{T, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
+                       untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm), supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm)};
+    return true;
+}
+
+CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint CoolProp::AbstractCubicBackend::cubic_superanc_at_T(double T) {
+    if (T > T_critical() * (1 + 4 * DBL_EPSILON)) {
+        throw ValueError(
+          format("Temperature [%0.10g K] may not be above the critical temperature of the cubic, %0.10g K", T, static_cast<double>(T_critical())));
+    }
+    SuperancSatPoint sat{};
+    if (!cubic_superanc_eval(T, sat)) {
+        throw ValueError(format("Temperature [%0.8g K] is outside the range of the cubic superancillary", T));
+    }
+    return sat;
+}
+
+std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    if (!is_pure_or_pseudopure || get_superanc_eos_code() == CubicSuperAncillary::UNKNOWN_CODE) {
+        return HelmholtzEOSMixtureBackend::superanc_saturation_at_T(T);
+    }
+    return cubic_superanc_at_T(T);
 }
 
 void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
@@ -1342,22 +1317,8 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
     if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
         throw NotImplementedError("update_QT_pure_superanc: no superancillary available for this cubic EOS");
     }
-    double Tmax = calc_superanc_Tmax();
-    if (T > Tmax) {
-        throw ValueError(format("update_QT_pure_superanc: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
-    }
-
-    std::vector<double> x = {1.0};
-    double tau = cubic->get_Tr() / T;
-    double am = cubic->am_term(tau, x, 0);
-    double bm = cubic->bm_term(x);
-    double Ttilde = cubic->get_R_u() * T * bm / am;
-
-    using namespace CubicSuperAncillary;
-    CoolPropDbl rhoL = untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm);
-    CoolPropDbl rhoV = untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm);
-    // A volume translation moves no pressure, so p~ needs no correction.
-    CoolPropDbl p = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
+    const SuperancSatPoint sat = cubic_superanc_at_T(T);
+    const CoolPropDbl rhoL = sat.rhomolarL, rhoV = sat.rhomolarV, p = sat.p;
 
     clear();
     _Q = Q;

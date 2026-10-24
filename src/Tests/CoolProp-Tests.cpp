@@ -5442,6 +5442,31 @@ TEST_CASE("Cubic Omega constants reproduce the critical point", "[cubic][cubic_o
     }
 }
 
+TEST_CASE("Cubic superancillary evaluation at the edges of the table", "[cubic][cubic_superanc]") {
+    // All cubic table evaluations at a temperature go through one helper (#3508): up to Tc (the end of
+    // the table, to round-off) they succeed; below the table's low-T end they throw ValueError rather
+    // than std::invalid_argument from the Chebyshev evaluation; D,T just below Tc inside the dome is
+    // two-phase (it used to be forced single-phase above calc_superanc_Tmax()).
+    for (const auto& backend : std::vector<std::string>{"SRK", "PR"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double Tc = AS->T_critical();
+        CHECK(ACB->calc_saturation_ancillary(iP, 0, iT, Tc) == Catch::Approx(AS->p_critical()).epsilon(1e-10));
+        CHECK_NOTHROW(AS->update_QT_pure_superanc(0.5, Tc));
+        CHECK_THROWS_AS(ACB->calc_saturation_ancillary(iP, 0, iT, 0.1 * Tc), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->update(CoolProp::QT_INPUTS, 0.5, 0.1 * Tc), CoolProp::ValueError);
+
+        const double T = Tc * (1 - 1e-6);
+        const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+        const double rhoV = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+        AS->update(CoolProp::DmolarT_INPUTS, 0.5 * (rhoL + rhoV), T);
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(AS->p() == Catch::Approx(ACB->calc_saturation_ancillary(iP, 0, iT, T)).epsilon(1e-12));
+    }
+}
+
 TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
