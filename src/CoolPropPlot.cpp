@@ -2,6 +2,7 @@
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/numerics/numerics.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -1606,7 +1607,50 @@ bool solve_crossing(Fluid& fluid, CoolProp::parameters xkey, CoolProp::parameter
     return false;
 }
 
-/// Where an isoline crosses the phase envelope of a mixture, interpolated linearly.
+/// Indices of the four envelope points for a cubic interpolation across the interval [i, i + 1]: the
+/// interval's ends and the nearest distinct neighbour beyond each, all on the same (bubble or dew) side,
+/// with the interpolation variable k finite and strictly monotone over them.  False where that does not
+/// exist (an end of the envelope, the bubble/dew switch, a fold of k, a failed point), and the caller
+/// interpolates linearly.
+bool cubic_stencil(const std::vector<double>& k, const std::vector<double>& Q, size_t i, std::array<size_t, 4>& idx) {
+    const size_t n = k.size();
+    if (i + 1 >= n || (Q[i] < 0.5) != (Q[i + 1] < 0.5)) return false;
+    const double gap = std::fabs(k[i + 1] - k[i]);
+    if (!(gap > 1e-12 * std::max(std::fabs(k[i]), std::fabs(k[i + 1])))) return false;
+    // The envelope can repeat a point to within rounding; such a point is no new information.  Measured
+    // against the interval itself, not |k|, which can be near zero (an h or u isoline near a zero
+    // reference), where a relative test would take a near-duplicate for a node and blow up the weights.
+    auto distinct = [&](size_t a, size_t b) { return std::fabs(k[a] - k[b]) > 1e-6 * gap; };
+    size_t left = i, right = i + 1;
+    bool found_left = false, found_right = false;
+    for (size_t m = i; m-- > 0;) {
+        if ((Q[m] < 0.5) != (Q[i] < 0.5) || !std::isfinite(k[m])) break;
+        if (distinct(m, i)) {
+            left = m;
+            found_left = true;
+            break;
+        }
+    }
+    for (size_t m = i + 2; m < n; ++m) {
+        if ((Q[m] < 0.5) != (Q[i] < 0.5) || !std::isfinite(k[m])) break;
+        if (distinct(m, i + 1)) {
+            right = m;
+            found_right = true;
+            break;
+        }
+    }
+    if (!(found_left && found_right)) return false;
+    idx = {left, i, i + 1, right};
+    const double d0 = k[idx[1]] - k[idx[0]], d1 = k[idx[2]] - k[idx[1]], d2 = k[idx[3]] - k[idx[2]];
+    return (d0 > 0 && d1 > 0 && d2 > 0) || (d0 < 0 && d1 < 0 && d2 < 0);
+}
+
+/// Where an isoline crosses the phase envelope of a mixture: bracketed on the envelope's points, then
+/// interpolated with a cubic (4-point Lagrange in the isoline variable) along the envelope, linearly
+/// where no cubic stencil exists or the cubic is not finite.  Linear alone was up to ~2e-4 off near the
+/// critical point, where the envelope's steps are several kelvin; this value is what an isoline keeps
+/// when its exact crossing (the saturation flash in dome_interval, or solve_crossing in merge) fails,
+/// so its accuracy decided whether a plot test passed.
 std::vector<Crossing> envelope_crossings(Envelope& envelope, CoolProp::parameters xkey, CoolProp::parameters ykey, CoolProp::parameters iso_key,
                                          double value, CoolProp::parameters sweep_key, const Metric* metric, const Range* sweep_range) {
     const std::vector<double>& k = envelope.values(iso_key);
@@ -1624,11 +1668,32 @@ std::vector<Crossing> envelope_crossings(Envelope& envelope, CoolProp::parameter
         if (sb == 0 && i + 1 < k.size() - 1) continue;
         double t = a / (a - b);
         std::vector<double> point(6);
-        bool ok = true;
-        for (size_t c = 0; c < 6; ++c) {
-            const std::vector<double>& v = *columns[c];
-            point[c] = v[i] + t * (v[i + 1] - v[i]);
-            ok = ok && finite(point[c]);
+        bool ok = false;
+        std::array<size_t, 4> idx{};
+        if (cubic_stencil(k, envelope.Q, i, idx)) {
+            // Lagrange weights at k == value
+            std::array<double, 4> L{};
+            for (size_t m = 0; m < 4; ++m) {
+                L[m] = 1;
+                for (size_t q = 0; q < 4; ++q)
+                    if (q != m) L[m] *= (value - k[idx[q]]) / (k[idx[m]] - k[idx[q]]);
+            }
+            ok = true;
+            for (size_t c = 0; c < 6; ++c) {
+                const std::vector<double>& v = *columns[c];
+                point[c] = 0;
+                for (size_t m = 0; m < 4; ++m)
+                    point[c] += L[m] * v[idx[m]];
+                ok = ok && finite(point[c]);
+            }
+        }
+        if (!ok) {
+            ok = true;
+            for (size_t c = 0; c < 6; ++c) {
+                const std::vector<double>& v = *columns[c];
+                point[c] = v[i] + t * (v[i + 1] - v[i]);
+                ok = ok && finite(point[c]);
+            }
         }
         if (!ok) continue;
         if (sweep_range && !(sweep_range->min <= point[0] && point[0] <= sweep_range->max)) continue;
@@ -2494,14 +2559,36 @@ TEST_CASE("The lines of a blend meet the dome near the critical point", "[Plot]"
         for (size_t i = 0; i < data.T.size(); ++i)
             if ((data.Q[i] > 0.5) == dew) branch.emplace_back(data.T[i], data.p[i]);
         std::sort(branch.begin(), branch.end());
-        REQUIRE(branch.size() >= 2);
+        // The envelope can repeat a point (to within ~1e-12, not bit-for-bit); a repeated temperature
+        // would make the interpolation below divide by (nearly) zero
+        branch.erase(std::unique(branch.begin(), branch.end(),
+                                 [](const auto& a, const auto& b) { return std::abs(a.first - b.first) <= 1e-6 * std::abs(a.first); }),
+                     branch.end());
+        REQUIRE(branch.size() >= 4);
+        // 340 K must be inside the branch, or the reference below would extrapolate
+        REQUIRE(branch.front().first < 340.0);
+        REQUIRE(branch.back().first > 340.0);
         size_t j = 1;
         while (j + 1 < branch.size() && branch[j].first < 340.0)
             ++j;
-        // cppcheck-suppress containerOutOfBounds // REQUIRE above stops the test when a branch has fewer than two points
-        double t = (340.0 - branch[j - 1].first) / (branch[j].first - branch[j - 1].first);
-        // cppcheck-suppress containerOutOfBounds // as above
-        double p_sat = branch[j - 1].second + t * (branch[j].second - branch[j - 1].second);
+        // p_sat(340 K) by cubic (4-point Lagrange) interpolation in T on this branch, as an accurate
+        // reference.  Linear interpolation is ~2e-4 off here (the envelope steps ~4 K across 340 K near
+        // the critical point), which is more than the tolerance; it used to pass only because the plot
+        // itself inserted the same linear value whenever its exact crossing (here the saturation flash in
+        // dome_interval) failed (see envelope_crossings), and whether that fails depends on rounding.
+        const size_t k0 = std::min(j >= 2 ? j - 2 : 0, branch.size() - 4);
+        double p_sat = 0;
+        for (size_t a = k0; a < k0 + 4; ++a) {
+            double L = 1;
+            for (size_t b = k0; b < k0 + 4; ++b) {
+                if (b != a) {
+                    // cppcheck-suppress containerOutOfBounds // REQUIRE above guarantees four points
+                    L *= (340.0 - branch[b].first) / (branch[a].first - branch[b].first);
+                }
+            }
+            // cppcheck-suppress containerOutOfBounds // as above
+            p_sat += L * branch[a].second;
+        }
         CHECK(smallest_distance_y(isotherm, p_sat) < 1e-4 * p_sat);
     }
 }
