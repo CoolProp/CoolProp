@@ -1563,7 +1563,7 @@ Issues Closed:
 * `#1368 <https://github.com/CoolProp/CoolProp/issues/1368>`__ : segmentation fault when calling get_global_param_string("REFPROP_version") from Python
 * `#1366 <https://github.com/CoolProp/CoolProp/pull/1366>`__ : Allow fluids to be provided (and overwritten) at runtime; closes #1345
 * `#1365 <https://github.com/CoolProp/CoolProp/pull/1365>`__ : SMath Wrapper refactoring
-* `#1362 <https://github.com/CoolProp/CoolProp/pull/1362>`__ : LabVIEW VIs to call PropsSI and Props1SI
+* `#1362 <https://github.com/CoolProp/CoolProp/issues/1362>`__ : LabVIEW VIs to call PropsSI and Props1SI
 * `#1361 <https://github.com/CoolProp/CoolProp/issues/1361>`__ : Re-enable alpha0 mixture derivative tests for cubics
 * `#1359 <https://github.com/CoolProp/CoolProp/pull/1359>`__ : Allow for cubic transformations in HEOS multi-fluid model
 * `#1355 <https://github.com/CoolProp/CoolProp/issues/1355>`__ : SMath Wrapper refactoring
@@ -1662,7 +1662,7 @@ ibell, JonWel, jowr, babaksamareh, mikekaganski
 * `#1269 <https://github.com/CoolProp/CoolProp/pull/1269>`__ : SatL and SatV of type VTPR too
 * `#1268 <https://github.com/CoolProp/CoolProp/issues/1268>`__ : Implement fluid_names for cubic backend
 * `#1267 <https://github.com/CoolProp/CoolProp/issues/1267>`__ : PengRobinson doesn't pass alpha to SatL and SatV
-* `#1266 <https://github.com/CoolProp/CoolProp/pull/1266>`__ : Small fixes for VTPR
+* `#1266 <https://github.com/CoolProp/CoolProp/issues/1266>`__ : Small fixes for VTPR
 * `#1264 <https://github.com/CoolProp/CoolProp/issues/1264>`__ : Update initialization for VTPR
 * `#1262 <https://github.com/CoolProp/CoolProp/pull/1262>`__ : Set alpha function in JSON
 * `#1261 <https://github.com/CoolProp/CoolProp/pull/1261>`__ : Update CMakeLists.txt
@@ -1757,7 +1757,7 @@ Pull Requests merged:
 * `#1272 <https://github.com/CoolProp/CoolProp/pull/1272>`__ : Solves a bug in VTPR
 * `#1271 <https://github.com/CoolProp/CoolProp/pull/1271>`__ : Remove possible division by 0, closes #1270
 * `#1269 <https://github.com/CoolProp/CoolProp/pull/1269>`__ : SatL and SatV of type VTPR too
-* `#1266 <https://github.com/CoolProp/CoolProp/pull/1266>`__ : Small fixes for VTPR
+* `#1266 <https://github.com/CoolProp/CoolProp/issues/1266>`__ : Small fixes for VTPR
 * `#1262 <https://github.com/CoolProp/CoolProp/pull/1262>`__ : Set alpha function in JSON
 * `#1261 <https://github.com/CoolProp/CoolProp/pull/1261>`__ : Update CMakeLists.txt
 * `#1258 <https://github.com/CoolProp/CoolProp/pull/1258>`__ : Solves a bug with cubic and mixtures
@@ -2145,7 +2145,7 @@ Issues Closed:
 * `#548 <https://github.com/CoolProp/CoolProp/issues/548>`__ : Problem with HAPropsSI
 * `#546 <https://github.com/CoolProp/CoolProp/pull/546>`__ : Small speed enhancement for Julia wrapper
 * `#541 <https://github.com/CoolProp/CoolProp/pull/541>`__ : Update CoolProp.jl
-* `#540 <https://github.com/CoolProp/CoolProp/pull/540>`__ : Update CoolProp.jl
+* `#540 <https://github.com/CoolProp/CoolProp/issues/540>`__ : Update CoolProp.jl
 * `#539 <https://github.com/CoolProp/CoolProp/issues/539>`__ : Add SATTP to REFPROP wrapper
 * `#537 <https://github.com/CoolProp/CoolProp/issues/537>`__ : [Tabular] rebuild tables if limits (especially enthalpies) have shifted
 * `#536 <https://github.com/CoolProp/CoolProp/pull/536>`__ : Add low level interface to Julia wrapper as discussed in #534 + Fixes #497
