@@ -71,7 +71,7 @@ Projects Using CoolProp
 * `Calcumber <https://calcumber.app/fluid-properties/>`_ - notebook-style unit-aware web calculator
 * `FluidProps <https://fluidprops.com>`_ - free fluid property calculators and steam tables built on CoolProp
 * `Thermoprops <https://luisbedoia.github.io/thermoprops/>`_ - web calculator for fluid states and p-h, T-s and other thermodynamic diagrams
-* `TESPy <https://tespy.readthedocs.io>`_ - thermodynamic process simulator for heat pumps, ORCs etc.
+* `TESPy <https://tespy.readthedocs.io/en/main/>`_ - thermodynamic process simulator for heat pumps, ORCs etc.
 
 Main Developers
 ---------------
@@ -94,7 +94,7 @@ Supporters
 .. image:: _static/logo_labothap.png
    :height: 100px
    :alt: labothap
-   :target: https://www.labothap.uliege.be/
+   :target: https://www.labothap.uliege.be/cms/c_6307260/en/thermodynamics-laboratory
 
 .. image:: _static/logo_ORCNext.jpg
    :height: 100px
