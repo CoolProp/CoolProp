@@ -19,13 +19,16 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
    so short (only the corner of the axes is valid) that PropertyPlot also reports
    "Poor data quality" for it. The two hidden plot blocks below ignore both
    warnings for this one example, so that a warning from any other plot in the
-   build is still visible.
+   build is still visible. The first block saves the filter list and the last
+   one restores it (they share a namespace through the :context: option).
 
 .. plot::
+    :context:
     :nofigs:
     :show-source-link: false
 
     import warnings
+    saved_filters = warnings.filters[:]
     warnings.filterwarnings("ignore", message="An error occurred for inputs", category=UserWarning)
     warnings.filterwarnings("ignore", message="Poor data quality", category=UserWarning)
 
@@ -39,13 +42,11 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
     plot.show()
 
 .. plot::
+    :context:
     :nofigs:
     :show-source-link: false
 
-    import warnings
-    ignored = ("An error occurred for inputs", "Poor data quality")
-    warnings.filters[:] = [f for f in warnings.filters
-                           if not (f[1] is not None and f[1].pattern.startswith(ignored))]
+    warnings.filters[:] = saved_filters
 
 .. note::
 
