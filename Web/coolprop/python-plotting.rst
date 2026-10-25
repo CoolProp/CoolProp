@@ -15,16 +15,22 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
 .. The default isolines sweep densities and entropies across the whole pressure
    axis, so many points have no valid state (for example, above the maximum
    temperature). PropertyPlot reports each one as a UserWarning and leaves a gap
-   in the line, which is the intended result here. The two hidden plot blocks
-   below ignore those warnings for this one example, so that a warning from any
-   other plot in the build is still visible.
+   in the line, which is the intended result here. The lowest-density line is
+   so short (only the corner of the axes is valid) that PropertyPlot also reports
+   "Poor data quality" for it. The two hidden plot blocks below ignore both
+   warnings for this one example, so that a warning from any other plot in the
+   build is still visible. The first block saves the filter list and the last
+   one restores it (they share a namespace through the :context: option).
 
 .. plot::
+    :context:
     :nofigs:
     :show-source-link: false
 
     import warnings
+    saved_filters = warnings.filters[:]
     warnings.filterwarnings("ignore", message="An error occurred for inputs", category=UserWarning)
+    warnings.filterwarnings("ignore", message="Poor data quality", category=UserWarning)
 
 .. plot::
     :include-source:
@@ -36,12 +42,11 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
     plot.show()
 
 .. plot::
+    :context:
     :nofigs:
     :show-source-link: false
 
-    import warnings
-    warnings.filters[:] = [f for f in warnings.filters
-                           if not (f[1] is not None and f[1].pattern.startswith("An error occurred for inputs"))]
+    warnings.filters[:] = saved_filters
 
 .. note::
 
@@ -50,9 +55,12 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
     mean anything is wrong with your installation. To draw complete isolines,
     CoolProp calculates points right up to, and beyond, the temperature and
     pressure limits of the fluid. Where the fluid has no valid state, that point
-    is skipped and the line simply has a gap there. If you would rather not see
-    the messages, you can ignore them in your script with
-    ``warnings.filterwarnings("ignore", message="An error occurred for inputs")``.
+    is skipped and the line simply has a gap there. The lowest-density line is
+    valid only in a small corner of the plot, so you will also see one
+    "Poor data quality" message for it, and that line is short for the same reason.
+    If you would rather not see the messages, you can ignore them in your script with
+    ``warnings.filterwarnings("ignore", message="An error occurred for inputs")``
+    (and the same with ``message="Poor data quality"``).
 
 The following example can be used to create a temperature-entropy (:math:`T,s`) plot for
 propane (R290) with isolines for the vapour quality in steps of 0.2:
