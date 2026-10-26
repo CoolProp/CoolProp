@@ -34,6 +34,9 @@ def main(argv):
         print(__doc__)
         return 2
     output = read_lines(argv[0])
+    if output is not None:
+        # Skip headers from an earlier run so a repeated run gives the same result.
+        output = [ln for ln in output if not (ln.startswith("== ") and ln.endswith(" =="))]
     logs = [read_lines(p) for p in argv[1:]]
 
     grouped = {title: [] for title, _ in GROUPS}
