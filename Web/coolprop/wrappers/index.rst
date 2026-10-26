@@ -25,7 +25,7 @@ Target                                                  Operating Systems       
 :ref:`Rust <Rust>`                                      linux, OSX, win              3-party wrapper on crates.io
 :ref:`Scilab <Scilab>`                                  linux, OSX, win              Wrapper is SWIG based (experimental)
 :ref:`Julia <Julia>`                                    linux, OSX, win
-`Modelica <https://github.com/modelica-3rdparty/ExternalMedia>`_ linux, OSX, win
+:ref:`Modelica <Modelica>`                              linux, OSX, win
 :ref:`PHP <PHP>`                                        linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
 :ref:`Labview <Labview>`                                Windows only
@@ -122,6 +122,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     Java/index.rst
     Javascript/index.rst
     Julia/index.rst
+    Modelica/index.rst
     Labview/index.rst
     Python/index.rst
     LibreOffice/index.rst
