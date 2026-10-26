@@ -58,7 +58,7 @@ Remark: I used the first one, the second one isn't quite clear to me.
 https://smath.com/en-US/view/SMathStudio/download
 
 2) To link CoolProp to SMathStudio_Desktop follow the identical instructions as given below for MathCAD 15 :
-https://en.smath.info/forum/yaf_postst2568_CoolProp.aspx#post13310
+https://smath.com/en-US/forum/topic/EEvowF/CoolProp
 
 Notes :
 - In October 2014 SMath Studio with CoolProp worked on Windows only. 
@@ -66,4 +66,4 @@ Notes :
 
 More information on SMath Studio is given under :
 https://en.wikipedia.org/wiki/SMath_Studio
-https://en.smath.info/
+https://smath.com/en-US/

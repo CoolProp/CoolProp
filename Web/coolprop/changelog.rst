@@ -1077,7 +1077,7 @@ Pull requests merged:
 
 Highlights:
 
-* [BREAKING] Added superancillary functions for all pure fluids with multiparameter EOS; see docs: https://www.coolprop.org/coolprop/SuperAncillary.html . Huge speedup for some properties!
+* [BREAKING] Added superancillary functions for all pure fluids with multiparameter EOS; see docs: https://coolprop.org/coolprop/SuperAncillary.html . Huge speedup for some properties!
 * [BREAKING] Changed EOS for methanol to match that in REFPROP 
 * Finally(!) got the Catch2 tests to all pass
 * Update docs to use the pydata sphinx theme 
