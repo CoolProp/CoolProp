@@ -419,7 +419,7 @@ Fluids for Indirect Systems* :cite:`Melinder2010` has inspired both, the work on
 pure fluids and aqueous solutions. The second major source of inspiration is the
 `SecCool <https://www.ipu.dk/refrigeration-software/seccool>`_
 :cite:`Skovrup2013` software, which contains data compiled by Morten Juel
-Skovrup. It is provided free of charge by his employer `IPU <https://ipu.dk>`_.
+Skovrup. It is provided free of charge by his employer `IPU <https://www.ipu.dk/>`_.
 
 
 .. _Pure:

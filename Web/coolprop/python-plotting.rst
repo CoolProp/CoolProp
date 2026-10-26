@@ -110,7 +110,7 @@ and at this time (May 2016) this list contains (:math:`T,s`), (:math:`p,h`),
 (:math:`h,s`), (:math:`p,s`), (:math:`p,\rho`), (:math:`T,\rho`), (:math:`p,T`) and 
 (:math:`p,u`) plots. 
 
-Some of the commonly used `Matplotlib <https://www.matplotlib.org>`_ functions,
+Some of the commonly used `Matplotlib <https://matplotlib.org/>`_ functions,
 such as :func:`title`, :func:`grid`, :func:`xlabel` and :func:`ylabel` have been wrapped in
 the :py:class:`CoolProp.Plots.Common.BasePlot` class to make the plotting of
 graphs a little simpler, for example:

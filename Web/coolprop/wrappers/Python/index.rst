@@ -74,7 +74,7 @@ Using the ``pip`` installation program, you can install the official release fro
 
     pip install CoolProp
 
-There are also unofficial `Conda <https://conda.io>`__ packages available from the ``conda-forge`` channel. To
+There are also unofficial `Conda <https://docs.conda.io/en/latest/>`__ packages available from the ``conda-forge`` channel. To
 install, use::
 
     conda install conda-forge::coolprop
