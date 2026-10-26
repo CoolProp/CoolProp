@@ -678,7 +678,7 @@ class Pirobloc(PureData):
         self.TminPsat = self.Tmax  # np.min(self.temperature.data[~np.isnan(self.saturation_pressure.data)])
         self.name = "PBB"
         self.description = "Pirobloc HTF-BASIC"
-        self.reference = "https://www.fluidotermico.com/"
+        self.reference = "http://www.fluidotermico.com"
         self.reshapeAll()
 
 
