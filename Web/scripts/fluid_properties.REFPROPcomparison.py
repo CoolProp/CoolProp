@@ -78,6 +78,8 @@ else:
     # REFPROP rejects states above twice its own upper pressure limit, so end the
     # density range where CoolProp reaches that pressure (or at 2*rhoc, if sooner)
     p_limit = 2*CP.PropsSI('pmax', RPfluid)*0.995
+    if not 0 < p_limit < np.inf:
+        raise ValueError('REFPROP upper pressure limit is not usable for ' + RPfluid + ': ' + str(p_limit))
     rho_max = 2*rhoc
     if CP.PropsSI('P', 'T', T, 'Dmolar', rho_max, fluid) > p_limit:
         lo, hi = 1e-10, rho_max
