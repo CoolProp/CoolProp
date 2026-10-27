@@ -163,7 +163,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME IF97
   GIT_REPOSITORY https://github.com/CoolProp/IF97
-  GIT_TAG        7aaced024a702f0985474bf293cdaae9c8d06521
+  GIT_TAG        50b6559a7dd91e5b88fd681b86ba52f221ef40c3
   DOWNLOAD_ONLY  YES
 )
 
@@ -177,7 +177,7 @@ CPMAddPackage(
 CPMAddPackage(
   NAME boost_headers
   GIT_REPOSITORY https://github.com/CoolProp/boost-headers.git
-  GIT_TAG        c68104660ca4bd80d0d5cb34c4eba0cf5bab3f73
+  GIT_TAG        bb87178a4c27171ed91bfa9f314c0a71a8abcb8f
   DOWNLOAD_ONLY  YES
 )
 

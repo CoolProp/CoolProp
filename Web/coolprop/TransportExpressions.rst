@@ -98,6 +98,8 @@ the whole formula, not from the start of the line.
 **Arithmetic.**  ``+ - * / ^`` and parentheses.  ``^`` binds tightest and is
 right-associative, so ``2^3^2`` is 512, and unary minus binds looser than ``^``, so
 ``-2^2`` is -4.  Numbers are decimal literals with an optional exponent (``8.4e3``, ``.5``).
+The decimal separator is always ``.``, whatever the host program's locale; hexadecimal
+literals and literals outside the range of a double are errors.
 
 **Functions.**  ``exp``, ``ln``, ``log10``, ``sqrt``, ``abs``, ``sinh``, ``cosh``,
 ``tanh``, ``sin``, ``cos``, ``atan``, each of one argument, and ``pow(x, y)``.

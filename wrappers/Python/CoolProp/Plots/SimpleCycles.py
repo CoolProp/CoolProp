@@ -616,6 +616,7 @@ class BaseCycle(BasePlot):
       CoolProp.iSmass: 'specific entropy',
       CoolProp.iT: 'temperature'
     }
+    """for more properties, see :class:`CoolProp.Plots.Common.BasePlot`."""
 
     STATECOUNT = 0
     """A list of accepted numbers of states"""
@@ -637,8 +638,6 @@ class BaseCycle(BasePlot):
             The graph type to be plotted, like \"PH\" or \"TS\"
         unit_system : string, ['EUR','KSI','SI']
             Select the units used for the plotting.  'EUR' is bar, kJ, C; 'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
-
-        for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.
         """
         self._cycle_states = StateContainer()
         self._steps = 2

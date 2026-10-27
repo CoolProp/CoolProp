@@ -39,8 +39,14 @@ CP.set_config_bool(CP.ENABLE_SUPERANCILLARIES, False)
 
 AS = CP.AbstractState('HEOS', "{fluid}")
 
-# Skip pseudo-pure fluids, pure fluids only; pseudo-pure do not have superancillaries
+# Pure fluids only; pseudo-pure do not have superancillaries.  The fluid page
+# links the plot files unconditionally, so write a placeholder rather than none.
 if AS.fluid_param_string("pure") != "true":
+    fig = plt.figure()
+    fig.text(0.5, 0.5, 'Superancillary not available (pseudo-pure fluid)', ha='center', va='center')
+    plt.savefig('{fluid:s}.png', dpi = 300)
+    plt.savefig('{fluid:s}.pdf')
+    plt.close()
     quit()
 
 jEOS = json.loads(CP.get_fluid_param_string("{fluid}", "JSON"))[0]['EOS'][0]
