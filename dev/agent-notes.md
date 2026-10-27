@@ -160,7 +160,12 @@ recorded history of finished or abandoned work were dropped (they remain in
   SRK/PR Omegas had doubled and dropped digits (fixed in #3515), which put
   SRK's own critical point ~1e-9 below the input Tc/pc and surfaced as a
   phantom "end gap" in the superancillary.  Evaluate the closed form in
-  code (`src/Backends/Cubics/CubicConstants.h`) and test the defining property (critical conditions), not digits.
+  high precision in a committed script and store the correctly rounded
+  double as a hex literal (`dev/scripts/cubic_constants.py` writes
+  `src/Backends/Cubics/CubicConstants.h`; evaluating in double at run time
+  is 1-2 ulp off and platform-dependent; the C++ build has no
+  multiprecision).  Test the defining property (critical conditions), not
+  digits.
 - **`recalculate_singlephase_phase()` reads `_rhomolar`.**  Assign the new
   density before calling it (cubic `solver_rho_Tp` did not; fixed with #3441).
 - **HS cascade rules:** every cascade leg must be exception-guarded (a leg
