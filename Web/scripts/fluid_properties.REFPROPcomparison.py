@@ -53,7 +53,8 @@ else:
 
     # Transport properties are only compared when both CoolProp and REFPROP have a
     # model for the fluid.  Probe with a scalar call at a single-phase state; an
-    # array call hides the error message.  Any other error is not swallowed.
+    # array call hides the error message.  The match ignores case; any other
+    # error is not swallowed.
     no_model_msgs = ('Viscosity model is not available',
                      'Thermal conductivity model is not available',
                      'Transport equations are not available')
@@ -61,7 +62,7 @@ else:
         try:
             CP.PropsSI(key, 'T', T, 'Dmolar', 0.5*rhoc, name)
         except ValueError as E:
-            if any(msg in str(E) for msg in no_model_msgs):
+            if any(msg.lower() in str(E).lower() for msg in no_model_msgs):
                 return False
             raise
         return True
