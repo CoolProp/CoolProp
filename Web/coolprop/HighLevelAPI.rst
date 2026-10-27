@@ -433,7 +433,7 @@ For non-standard reference states, you can specify them directly for the given t
 Calling REFPROP
 ---------------
 
-If you have the `REFPROP library <https://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
+If you have the `REFPROP library <https://www.nist.gov/srd/refprop>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP::`` preceding the fluid name. For instance, as in python:
 
 .. ipython::
 

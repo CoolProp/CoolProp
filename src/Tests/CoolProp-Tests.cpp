@@ -489,6 +489,16 @@ class TransportValidationFixture
         parameters iin2 = CoolProp::get_parameter_index(in2);
         CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
+        // Published check values are the correlation evaluated at (T, rho), and some
+        // sit inside the EOS's dome (metastable, or just inside it because the paper
+        // used a different EOS).  Transport properties refuse two-phase states (#3446),
+        // so impose the single phase the paper meant and re-flash, which puts the EOS
+        // pressure at (T, rho) rather than psat in p().  Only interior qualities: a
+        // saturated row (Q = 0 or 1) is left as flashed.
+        if (pState->phase() == CoolProp::iphase_twophase && pState->Q() > 0 && pState->Q() < 1) {
+            pState->specify_phase(pState->rhomolar() > pState->rhomolar_critical() ? CoolProp::iphase_liquid : CoolProp::iphase_gas);
+            pState->update(pair, o1, o2);
+        }
     }
     void get_value(parameters key) {
         actual = pState->keyed_output(key);
@@ -1238,6 +1248,140 @@ TEST_CASE("Nitrogen and xenon conductivity contributions match their papers", "[
 // consciously rather than absorb silently -- in particular rhosr_critical must
 // be recomputed from the new EOS and C refitted on top of it, since the two are
 // coupled through x = rho*s_r/rhosr_critical.
+TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[viscosity],[conductivity],[transport],[3446]") {
+    // A two-phase pure-fluid state has a liquid and a vapor phase in equilibrium with
+    // different transport properties; there is no single value to return.  These used
+    // to evaluate the single-phase correlation at the overall (T, rho) -- or, for
+    // methane's hardcoded conductivity, fail with "PropsSI failed ungracefully".
+    SECTION("interior quality throws; Q = 0 and Q = 1 give the saturated-phase values") {
+        const std::string fluid = GENERATE(as<std::string>{}, "Methane", "Nitrogen", "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        const double T = 0.8 * AS->T_critical();
+        AS->update(CoolProp::QT_INPUTS, 0.5, T);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        // The same state reached through (T, rho) rather than (Q, T)
+        AS->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        for (const double Q : {0.0, 1.0}) {
+            CAPTURE(Q);
+            AS->update(CoolProp::QT_INPUTS, Q, T);
+            const double lambda = AS->conductivity(), eta = AS->viscosity();
+            const double lambda_sat =
+              (Q == 0.0) ? AS->saturated_liquid_keyed_output(CoolProp::iconductivity) : AS->saturated_vapor_keyed_output(CoolProp::iconductivity);
+            const double eta_sat =
+              (Q == 0.0) ? AS->saturated_liquid_keyed_output(CoolProp::iviscosity) : AS->saturated_vapor_keyed_output(CoolProp::iviscosity);
+            CHECK(lambda == Catch::Approx(lambda_sat).epsilon(1e-12));
+            CHECK(eta == Catch::Approx(eta_sat).epsilon(1e-12));
+        }
+    }
+    SECTION("states on the saturation curve to within roundoff are not refused") {
+        // The pure-fluid flashes label |Q| <= 1e-9 (and |Q - 1| <= 1e-9) two-phase, keeping
+        // the slightly negative or slightly-above-one Q; those must not throw.
+        const std::string fluid = GENERATE(as<std::string>{}, "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        AS->update(CoolProp::QT_INPUTS, 0, 0.9 * AS->T_critical());
+        const double p = AS->p(), hL = AS->saturated_liquid_keyed_output(CoolProp::iHmolar), hV = AS->saturated_vapor_keyed_output(CoolProp::iHmolar);
+        for (const double h : {hL - 1e-10 * std::abs(hL), hV + 1e-10 * std::abs(hV)}) {
+            AS->update(CoolProp::HmolarP_INPUTS, h, p);
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == CoolProp::iphase_twophase);  // premise: labelled two-phase, Q just outside [0, 1]
+            CHECK_NOTHROW(AS->viscosity());
+            CHECK_NOTHROW(AS->conductivity());
+        }
+    }
+    SECTION("imposing a phase still gives the metastable value at (T, rho)") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane"));
+        AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);  // the state from the bug report
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        AS->specify_phase(CoolProp::iphase_gas);
+        AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);
+        CHECK(ValidNumber(AS->viscosity()));
+    }
+    SECTION("tabular backends refuse interior quality too") {
+        // TTSE/BICUBIC used to return a quality-weighted blend of the saturated values
+        const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+        CAPTURE(backend);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        const double p = 2e5;
+        AS->update(CoolProp::PQ_INPUTS, p, 0.5);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        // Through (h, p) and (T, rho) as well.  The (T, rho) state goes to a fresh object:
+        // that branch used to leave _phase unset, so only a stale label could trip a check.
+        const double h = AS->hmolar(), T = AS->T(), rho = AS->rhomolar();
+        AS->update(CoolProp::HmolarP_INPUTS, h, p);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        fresh->update(CoolProp::DmolarT_INPUTS, rho, T);
+        CHECK(fresh->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(fresh->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(fresh->conductivity(), CoolProp::ValueError);
+        // A failed update the caller ignored leaves an out-of-range Q and invalid saturation
+        // indices; that must be a clean error, not an out-of-bounds table read
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, p, 1.5));
+        CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        // The saturated phases still have values.  Not compared with HEOS: a locally cached
+        // table built before a transport-model change would carry the old values.
+        AS->update(CoolProp::PQ_INPUTS, p, 0);
+        const double etaL = AS->viscosity(), lambdaL = AS->conductivity();
+        AS->update(CoolProp::PQ_INPUTS, p, 1);
+        const double etaV = AS->viscosity(), lambdaV = AS->conductivity();
+        CAPTURE(etaL, etaV, lambdaL, lambdaV);
+        CHECK(ValidNumber(etaV));
+        CHECK(ValidNumber(lambdaV));
+        CHECK(etaL > 10 * etaV);
+        CHECK(lambdaL > 10 * lambdaV);
+    }
+    SECTION("mixtures") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions({0.5, 0.5});
+        SECTION("a single-phase mixture whose (T, rho) is inside a component's dome still has a value") {
+            // The approximate mixing rule evaluates each pure fluid at the mixture's (T, rho)
+            AS->update(CoolProp::PT_INPUTS, 2e6, 250.0);
+            REQUIRE(AS->phase() == CoolProp::iphase_gas);
+            shared_ptr<CoolProp::AbstractState> ethane(CoolProp::AbstractState::factory("HEOS", "Ethane"));
+            ethane->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), AS->T());
+            REQUIRE(ethane->phase() == CoolProp::iphase_twophase);  // premise of the test
+            CHECK(ValidNumber(AS->viscosity()));
+            CHECK(ValidNumber(AS->conductivity()));
+        }
+        SECTION("component states keep psat in p(), so friction-theory viscosity is unchanged") {
+            // H2S viscosity is friction theory, which reads p(); at these single-phase mixture
+            // states the H2S component evaluated at the mixture's (T, rho) is inside its dome.
+            // Re-flashing it with an imposed phase would swap psat for the EOS pressure and
+            // move these by up to 7%.  Values are master (3f16d5fbb) before #3446.
+            struct row
+            {
+                double T, p, eta;
+            };
+            const row rows[] = {{255, 2e6, 1.0158842386870101e-05}, {230, 10e6, 5.2617732506557792e-05}, {280, 2e6, 1.0882970508098438e-05}};
+            for (const auto& r : rows) {
+                CAPTURE(r.T, r.p);
+                CHECK(CoolProp::PropsSI("V", "T", r.T, "P", r.p, "Methane[0.9]&HydrogenSulfide[0.1]") == Catch::Approx(r.eta).epsilon(1e-9));
+            }
+        }
+        SECTION("interior quality throws") {
+            AS->update(CoolProp::PQ_INPUTS, 1e6, 0.5);
+            CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+            CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        }
+    }
+    SECTION("the state from the bug report gives a clear error through PropsSI") {
+        const double lambda = CoolProp::PropsSI("conductivity", "T", 120, "D", 50, "CH4");
+        CHECK(!ValidNumber(lambda));
+        CHECK(CoolProp::get_global_param_string("errstring").find("two-phase") != std::string::npos);
+    }
+}
+
 TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[3330]") {
     SECTION("the state from the bug report is finite") {
         const double eta = CoolProp::PropsSI("V", "T", 273.15, "Q", 0, "R1233zd(E)");
@@ -1342,6 +1486,69 @@ TEST_CASE("rhosr-CS viscosity honours x_crossover from the fluid file", "[viscos
     // The point of the test: moving the switch must move the result.  This
     // failed before the fix, when the two clones agreed exactly.
     CHECK(std::abs(clone_moved / shipped - 1) > 0.01);
+}
+
+// x = rho*s_r/rhosr_critical goes to 0 in the dilute gas, and the logistic
+// switch equals 1/2 at x = x_crossover.  For x_crossover <= 0 the liquid
+// branch therefore carries at least half the weight at zero density; with the
+// shipped coefficients (c_vap[0] = 0, c_liq[0] = 0.61) eta/eta_dilute tends to
+// 1 + C*(exp(0.305) - 1) instead of 1.  Such a value can only arrive through a
+// fluid file, so the parser must reject it.
+TEST_CASE("rhosr-CS viscosity rejects a non-positive x_crossover", "[viscosity],[transport],[rhosr],[add_one]") {
+    using nlohmann::json;
+
+    json shipped = json::parse(CoolProp::get_fluid_param_string("R1233zd(E)", "JSON"))[0];
+    REQUIRE(shipped["TRANSPORT"]["viscosity"].at("type").get<std::string>() == "rhosr-CS");
+
+    SECTION("parse_rhosr_viscosity") {
+        // parse_rhosr_viscosity is protected on a non-final class; reach it directly.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_rhosr_viscosity;
+        };
+        Probe probe;
+        CoolProp::CoolPropFluid f;
+        f.name = "Probe";
+        for (double bad : {0.0, -2.0, std::nan(""), std::numeric_limits<double>::infinity()}) {
+            CAPTURE(bad);
+            json visc = shipped["TRANSPORT"]["viscosity"];
+            visc["x_crossover"] = bad;
+            CHECK_THROWS_AS(probe.parse_rhosr_viscosity(visc, f), CoolProp::ValueError);
+            CHECK_THROWS_WITH(probe.parse_rhosr_viscosity(visc, f),
+                              Catch::Matchers::ContainsSubstring("x_crossover must be positive") && Catch::Matchers::ContainsSubstring("Probe"));
+        }
+        // The shipped value, and any positive one, still loads.
+        for (double good : {2.0, 0.5}) {
+            CAPTURE(good);
+            json visc = shipped["TRANSPORT"]["viscosity"];
+            visc["x_crossover"] = good;
+            CoolProp::CoolPropFluid g;
+            g.name = "Probe";
+            CHECK_NOTHROW(probe.parse_rhosr_viscosity(visc, g));
+            CHECK(g.transport.viscosity_rhosr.x_crossover == good);
+            CHECK(g.transport.viscosity_using_rhosr);
+        }
+    }
+
+    SECTION("add_fluids_as_JSON with x_crossover = 0 fails cleanly") {
+        const std::string name = "R1233zdE_XC_ZERO";
+        json fluid = shipped;
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = "999-99-82";
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+            fluid["INFO"].erase(key);
+        }
+        fluid["TRANSPORT"]["viscosity"]["x_crossover"] = 0.0;
+
+        const std::string before = CoolProp::get_global_param_string("fluids_list");
+        // add_one wraps any std::exception as ValueError, so the type alone
+        // carries no signal; the message must come from the guard.
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()),
+                          Catch::Matchers::ContainsSubstring("x_crossover must be positive") && Catch::Matchers::ContainsSubstring(name));
+        CHECK(CoolProp::get_global_param_string("fluids_list") == before);
+    }
 }
 
 static CoolProp::input_pairs inputs[] = {
@@ -8648,6 +8855,73 @@ TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773
     CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
 }
 
+// The DQ/HQ/QS flashes (and their _with_guesses variants) used to call
+// specify_phase(iphase_twophase) and never undo it, so the next PT_INPUTS update
+// on the same AbstractState was forced two-phase: h = -2.2 MJ/kg for liquid water
+// at 20 MPa / 553.15 K, or "Bad phase to solver_rho_Tp_SRK" (GitHub #3468).
+TEST_CASE("Saturation flashes do not leave a phase imposed", "[3468]") {
+    const double p = 2e7, T = 553.15;
+    std::shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory("HEOS", "Water"));
+    fresh->update(CoolProp::PT_INPUTS, p, T);
+    const double h_fresh = fresh->hmolar();
+    REQUIRE(fresh->phase() == CoolProp::iphase_liquid);
+
+    // D and S targets from saturated vapor at 450 K.  h_g(T) peaks near 540 K, so
+    // the H target comes from 640 K, where h_g is below h_g(Ttriple) and has one T-root.
+    fresh->update(CoolProp::QT_INPUTS, 1.0, 450.0);
+    const double rhoV = fresh->rhomolar(), sV = fresh->smolar();
+    fresh->update(CoolProp::QT_INPUTS, 1.0, 640.0);
+    const double hV = fresh->hmolar();
+    fresh->update(CoolProp::QT_INPUTS, 0.1, 450.0);
+    const double rho_Q01 = fresh->rhomolar();
+    CoolProp::GuessesStructure g;
+    g.T = 450.0;
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    SECTION("DmolarQ, fractional Q") {
+        AS->update(CoolProp::DmolarQ_INPUTS, rho_Q01, 0.1);
+    }
+    SECTION("DmolarQ, Q=1") {
+        AS->update(CoolProp::DmolarQ_INPUTS, rhoV, 1.0);
+    }
+    SECTION("HmolarQ") {
+        AS->update(CoolProp::HmolarQ_INPUTS, hV, 1.0);
+    }
+    SECTION("QSmolar") {
+        AS->update(CoolProp::QSmolar_INPUTS, 1.0, sV);
+    }
+    SECTION("DmolarQ with guesses") {
+        AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rhoV, 1.0, g);
+    }
+    SECTION("HmolarQ with guesses") {
+        CoolProp::GuessesStructure gH;
+        gH.T = 640.0;
+        AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, hV, 1.0, gH);
+    }
+    SECTION("QSmolar with guesses") {
+        AS->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, sV, g);
+    }
+    CHECK(AS->phase() == CoolProp::iphase_twophase);
+
+    AS->update(CoolProp::PT_INPUTS, p, T);
+    CHECK(AS->phase() == CoolProp::iphase_liquid);
+    CHECK(AS->hmolar() == Catch::Approx(h_fresh).epsilon(1e-12));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101000, 373.15));
+}
+
+TEST_CASE("Saturation flashes keep a phase the caller imposed", "[3468]") {
+    // The fix must not clear a phase the user set themselves (#1027 semantics)
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS->update(CoolProp::QT_INPUTS, 1.0, 450.0);
+    const double rhoV = AS->rhomolar();
+    AS->specify_phase(CoolProp::iphase_gas);
+    AS->update(CoolProp::DmolarQ_INPUTS, rhoV, 1.0);
+    // Liquid-like (T, p) with gas imposed must still give the vapor-branch root
+    AS->update(CoolProp::PT_INPUTS, 1e5, 360.0);
+    CHECK(AS->phase() == CoolProp::iphase_gas);
+    CHECK(AS->rhomolar() < 100);  // vapor-like density, not ~53 kmol/m3 liquid
+}
+
 // Edge-case coverage gaps surfaced in PR #2835 review (S4):
 TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 
@@ -9708,6 +9982,213 @@ TEST_CASE("Unreachable supercritical T+caloric inputs raise a CoolProp error, no
         CHECK_THROWS_MATCHES(
           AS->update(CoolProp::SmolarT_INPUTS, pt.smolar, pt.T), CoolProp::ValueError,
           Catch::Matchers::MessageMatches(Catch::Matchers::Matches(R"(input [-+0-9.eE]+ is not in range [-+0-9.eE]+,[-+0-9.eE]+)")));
+    }
+}
+
+TEST_CASE("IF97 reverse (h,p) and (p,s) phase labels match the forward (T,p) labels", "[IF97][phase]") {
+    // The backward branch classified region 2 and 3 states above the critical
+    // pressure from Tsat97(p), which is not valid there, so a compressed liquid
+    // at 30 MPa could be labeled gas.  Every single-phase state must get the
+    // same phase from HmassP / PSmass as from the (T,p) state that made it.
+    auto fwd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto rev = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int checked = 0;
+    for (double p : {1e6, 5e6, 16e6, 20e6, 22e6, 23e6, 30e6, 50e6, 90e6}) {
+        for (double T : {400.0, 550.0, 620.0, 630.0, 640.0, 646.0, 648.0, 660.0, 700.0, 800.0, 850.0}) {
+            CAPTURE(p, T);
+            try {
+                fwd->update(CoolProp::PT_INPUTS, p, T);
+            } catch (const CoolProp::CoolPropBaseError&) {
+                continue;  // on the saturation curve or outside IF97
+            }
+            const auto expected = fwd->phase();
+            const double h = fwd->hmass(), s = fwd->smass();
+            rev->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(rev->phase() == expected);
+            rev->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(rev->phase() == expected);
+            ++checked;
+        }
+    }
+    CHECK(checked > 60);
+    // The motivating states, stated explicitly
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 640.0);  // region 3, above Pcrit, below Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical_liquid);
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 800.0);  // region 3, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+    fwd->update(CoolProp::PT_INPUTS, 50e6, 1000.0);  // region 2, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 50e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+}
+
+TEST_CASE("IF97 update() that throws leaves no half-built state", "[IF97][update]") {
+    auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    struct Bad
+    {
+        CoolProp::input_pairs pair;
+        double v1, v2;
+    };
+    const std::vector<Bad> bad = {
+      {CoolProp::HmassP_INPUTS, 1e9, 1e6},      // h far above the IF97 range
+      {CoolProp::PSmass_INPUTS, 1e6, 1e6},      // s far above the IF97 range
+      {CoolProp::HmassSmass_INPUTS, 1e9, 1e6},  // h, s far outside
+      {CoolProp::QT_INPUTS, 0.5, 700.0},        // T above Tcrit: no saturation state
+      {CoolProp::PQ_INPUTS, 30e6, 0.5},         // p above Pcrit: no saturation state
+    };
+    for (const auto& b : bad) {
+        CAPTURE(b.pair, b.v1, b.v2);
+        IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+        REQUIRE(IF->hmass() > 0);
+        CHECK_THROWS(IF->update(b.pair, b.v1, b.v2));
+        // The failed update must not leave the previous state, or a mix of the
+        // two, to be read back as if it were valid.
+        CHECK_THROWS(IF->hmass());
+        CHECK_THROWS(IF->smass());
+        CHECK_THROWS(IF->rhomass());
+        // The scalar getters must also agree with a never-updated object, not
+        // return the inputs of the failed update (QT left _Q = 0.5 and _T = 700).
+        for (auto get : {+[](CoolProp::AbstractState& a) { return a.T(); }, +[](CoolProp::AbstractState& a) { return a.p(); },
+                         +[](CoolProp::AbstractState& a) { return a.Q(); }}) {
+            auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+            bool fresh_throws = false, after_throws = false;
+            double fresh_v = 0, after_v = 0;
+            try {
+                fresh_v = get(*fresh);
+            } catch (...) {
+                fresh_throws = true;
+            }
+            try {
+                after_v = get(*IF);
+            } catch (...) {
+                after_throws = true;
+            }
+            CHECK(after_throws == fresh_throws);
+            if (!fresh_throws && !after_throws) CHECK(after_v == fresh_v);
+        }
+        // And the object is fully usable again afterward.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+    }
+}
+
+TEST_CASE("IF97 HmassSmass resolves the vapor dome below s'' at T23min", "[IF97][HS]") {
+    // IAPWS has no backward T(h,s) for the part of the dome with s < SgT23 (5210.9
+    // J/kg/K).  IF97 v2.4.0 solves that part iteratively from the forward saturation
+    // equations; before it, p_hsmass threw "Entropy out of range" there.
+    auto a = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto b = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int solved = 0;
+    for (double p : {1e3, 1e4, 1e5, 1e6, 5e6, 1e7, 1.5e7, 2e7, 2.2e7}) {
+        for (double Q : {0.0, 1e-9, 1e-6, 0.01, 0.1, 0.5, 0.9, 0.99, 1 - 1e-9, 1.0}) {
+            CAPTURE(p, Q);
+            a->update(CoolProp::PQ_INPUTS, p, Q);
+            const double h = a->hmass(), s = a->smass();
+            if (s >= 5210.887825) continue;  // library's own region; accuracy is IAPWS's, not ours
+            CHECK_NOTHROW(b->update(CoolProp::HmassSmass_INPUTS, h, s));
+            CHECK(b->phase() == CoolProp::iphase_twophase);
+            CHECK(b->p() == Catch::Approx(p).epsilon(1e-8));
+            CHECK(b->Q() == Catch::Approx(Q).margin(1e-8));
+            CHECK(b->hmass() == Catch::Approx(h).epsilon(1e-9));
+            CHECK(b->smass() == Catch::Approx(s).epsilon(1e-9));
+            ++solved;
+        }
+    }
+    CHECK(solved > 50);
+    // Single-phase states with s < SgT23 are not claimed by the dome solver.
+    a->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_liquid);
+    CHECK(b->p() == Catch::Approx(1e6).epsilon(5e-3));
+    a->update(CoolProp::PT_INPUTS, 3e7, 640.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_supercritical_liquid);
+    // A state that is neither in the dome nor in IF97's range still throws.
+    CHECK_THROWS(b->update(CoolProp::HmassSmass_INPUTS, 1e9, 1.0));
+}
+
+TEST_CASE("IF97 fast_evaluate rejects non-finite inputs and handles the dome like update()", "[IF97][fast_evaluate]") {
+    shared_ptr<CoolProp::AbstractState> b(CoolProp::AbstractState::factory("IF97", "Water"));
+    shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("IF97", "Water"));
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const double M = ref->molar_mass();
+
+    // A non-finite h or p must flag out of range with an all-NaN row, not return a made-up state
+    // (T_phmass(p, NaN) used to return a Region 1 temperature with status ok).  The finite
+    // points on either side must be unaffected.
+    {
+        ref->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+        const double h_ok = ref->hmass();
+        const double h_in[5] = {h_ok, nan, h_ok, inf, -inf};
+        const double p_in[5] = {1e6, 1e6, nan, 1e6, 1e6};
+        const CoolProp::parameters outs[3] = {CoolProp::iT, CoolProp::iHmass, CoolProp::iDmass};
+        for (CoolProp::input_pairs ip : {CoolProp::HmassP_INPUTS, CoolProp::HmolarP_INPUTS}) {
+            double h_v[5];
+            for (int k = 0; k < 5; ++k)
+                h_v[k] = (ip == CoolProp::HmolarP_INPUTS) ? h_in[k] * M : h_in[k];
+            double out[15];
+            int st[5] = {-1, -1, -1, -1, -1};
+            b->fast_evaluate(ip, h_v, p_in, 5, outs, 3, out, 15, st, 5);
+            CHECK(st[0] == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(400.0).margin(0.05));
+            for (int k = 1; k < 5; ++k) {
+                CAPTURE(k, ip);
+                CHECK(st[k] == CoolProp::fast_evaluate_out_of_range);
+                for (int o = 0; o < 3; ++o)
+                    CHECK(std::isnan(out[k * 3 + o]));
+            }
+        }
+    }
+
+    // On a saturation line update() returns the saturated-phase cp, cv, speed of sound,
+    // viscosity, conductivity, and Prandtl number; fast_evaluate must agree.
+    const CoolProp::parameters props[8] = {CoolProp::iCpmass,       CoolProp::iCvmass,  CoolProp::ispeed_sound, CoolProp::iviscosity,
+                                           CoolProp::iconductivity, CoolProp::iPrandtl, CoolProp::iCpmolar,     CoolProp::iCvmolar};
+    for (double p : {1e5, 1e6, 5e6, 1.5e7}) {
+        for (double Qedge : {0.0, 1.0}) {
+            CAPTURE(p, Qedge);
+            ref->update(CoolProp::PQ_INPUTS, p, Qedge);
+            const double h = ref->hmass();
+            double out[8];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, props, 8, out, 8, &st, 1);
+            REQUIRE(st == CoolProp::fast_evaluate_ok);
+            for (int o = 0; o < 8; ++o) {
+                CAPTURE(o);
+                CHECK(out[o] == Catch::Approx(ref->keyed_output(props[o])).epsilon(1e-12));
+            }
+        }
+    }
+
+    // Strictly inside the dome cp, cv, speed of sound, viscosity, conductivity, and Prandtl number
+    // are not defined for a two-phase mixture (update() throws), so only those columns are NaN.
+    // The lever-rule properties keep their values in the same row and the status is ok.
+    {
+        const double p = 1e6;
+        ref->update(CoolProp::PQ_INPUTS, p, 0.5);
+        const double h = ref->hmass();
+        for (CoolProp::parameters bad : props) {
+            CAPTURE(bad);
+            const CoolProp::parameters outs[3] = {CoolProp::iT, bad, CoolProp::iQ};
+            double out[3];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, outs, 3, out, 3, &st, 1);
+            CHECK(st == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+            CHECK(std::isnan(out[1]));
+            CHECK(out[2] == Catch::Approx(0.5).epsilon(1e-9));
+        }
+        const CoolProp::parameters ok_outs[4] = {CoolProp::iT, CoolProp::iQ, CoolProp::iHmass, CoolProp::iDmass};
+        double out[4];
+        int st = -1;
+        b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, ok_outs, 4, out, 4, &st, 1);
+        CHECK(st == CoolProp::fast_evaluate_ok);
+        CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+        CHECK(out[1] == Catch::Approx(0.5).epsilon(1e-9));
+        CHECK(out[2] == Catch::Approx(h).epsilon(1e-12));
+        CHECK(out[3] == Catch::Approx(ref->rhomass()).epsilon(1e-9));
     }
 }
 

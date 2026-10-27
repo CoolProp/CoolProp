@@ -86,8 +86,6 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
     is_pure_or_pseudopure = (N == 1);
 
     // loading interaction parameters
-    std::string kij_string;
-    std::string kijT_string;
     if (is_pure_or_pseudopure) {
         this->mole_fractions = std::vector<CoolPropDbl>(1, 1);
     } else {
@@ -96,10 +94,11 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
         for (unsigned int i = 0; i < N; ++i) {
             for (unsigned int j = 0; j < N; ++j) {
                 if (i != j) {
-                    kij_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
-                    kijT_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
-                    k_ij[i * N + j] = atof(kij_string.c_str());
-                    k_ijT[i * N + j] = atof(kijT_string.c_str());
+                    // Read as doubles: the text form went through atof, which follows the C
+                    // locale, so a decimal-comma host read kij = 0.0123 as 0.
+                    auto& library = PCSAFTLibrary::get_library();
+                    k_ij[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kij");
+                    k_ijT[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kijT");
                 }
             }
         }
@@ -152,8 +151,6 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
     is_pure_or_pseudopure = (N == 1);
 
     // loading interaction parameters
-    std::string kij_string;
-    std::string kijT_string;
     if (is_pure_or_pseudopure) {
         this->mole_fractions = std::vector<CoolPropDbl>(1, 1);
     } else {
@@ -162,10 +159,11 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
         for (unsigned int i = 0; i < N; ++i) {
             for (unsigned int j = 0; j < N; ++j) {
                 if (i != j) {
-                    kij_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
-                    kijT_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
-                    k_ij[i * N + j] = atof(kij_string.c_str());
-                    k_ijT[i * N + j] = atof(kijT_string.c_str());
+                    // Read as doubles: the text form went through atof, which follows the C
+                    // locale, so a decimal-comma host read kij = 0.0123 as 0.
+                    auto& library = PCSAFTLibrary::get_library();
+                    k_ij[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kij");
+                    k_ijT[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kijT");
                 }
             }
         }

@@ -218,19 +218,20 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         std::vector<std::string> fluid_parts = strsplit(fluid_string, '-');
         // Check it worked
         if (fluid_parts.size() != 2) {
-            throw ValueError(
-              format(R"(Format of incompressible solution string [%s] is invalid, should be like "EG-20%" or "EG-0.2" )", fluid_string.c_str()));
+            throw ValueError(format(R"(Format of incompressible solution string [%s] is invalid, should be like "EG-20%%")", fluid_string.c_str()));
         }
 
-        // Convert the concentration into a string
-        char* pEnd = nullptr;
-        x = strtod(fluid_parts[1].c_str(), &pEnd);
-
-        // Check if per cent or fraction syntax is used
-        if (strcmp(pEnd, "%") == 0) {
-            x *= 0.01;
+        // Convert the per-cent concentration, independent of the C locale.  With
+        // strtod a decimal-comma locale read "EG-20.5%" as 20 followed by ".5%",
+        // and a malformed "EG-abc%" silently gave 0.
+        const std::string& conc = fluid_parts[1];
+        const char* const last = conc.data() + conc.size();
+        const char* end = nullptr;
+        if (parse_double_C(conc.data(), last, x, end) != std::errc() || std::string(end, last) != "%") {
+            throw ValueError(format(R"(Concentration [%s] in incompressible solution string [%s] is invalid, should be like "EG-20%%")", conc.c_str(),
+                                    fluid_string.c_str()));
         }
-        fractions.push_back(x);
+        fractions.push_back(x * 0.01);
         if (get_debug_level() > 10)
             std::cout << format("%s:%d: Detected incompressible concentration of %s for %s.", __FILE__, __LINE__, vec_to_string(fractions).c_str(),
                                 fluid_parts[0].c_str());

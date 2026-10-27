@@ -52,7 +52,7 @@ Here is a sample of using this in python:
     
 
 More than one published model for a pair
----------------------------------------
+----------------------------------------
 
 For a few binary pairs CoolProp ships more than one published set of interaction parameters, because
 a newer correlation has superseded an older one without the older one becoming worthless.  Both are
