@@ -151,11 +151,20 @@ jobs:
     #   run: |
     #     ctest -j 1 --rerun-failed --output-on-failure
 
+    # The [locale] tests load fluids under a decimal-comma LC_NUMERIC; the runner
+    # image ships no such locale, and without it those tests would SKIP green.
+    - name: Generate de_DE.UTF-8 locale for the [locale] tests
+      run: |
+        sudo locale-gen de_DE.UTF-8
+        locale -a | grep -qi '^de_DE\.utf-\?8$'
+
     # TODO: pick one style, for now I'm doing this so I can report zero new failures compared to catch1
     - name: Rerun failed Tests in CatchTestRunner directly
       # if: failure()
       working-directory: ./build
       shell: bash
+      env:
+        COOLPROP_REQUIRE_LOCALE_TESTS: "1"
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |

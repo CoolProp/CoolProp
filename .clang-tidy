@@ -26,10 +26,16 @@
 #   -cppcoreguidelines-narrowing-conversions / -bugprone-narrowing-conversions :
 #       WarnOnEquivalentBitWidth was added in clang-tidy 13; without it
 #       the check is too noisy on uint→int conversions, so disabled
-#   Aliases (one suppression covers both):
+#   Aliases.  Suppressing one name does NOT suppress the other: clang-tidy
+#   resolves each spelling independently, so an alias-only entry leaves the
+#   primary check live.  List BOTH spellings.  (This bit us on PR #3400,
+#   where -cppcoreguidelines-avoid-c-arrays alone left 9 live
+#   modernize-avoid-c-arrays findings on a header whose C arrays are
+#   deliberate hot-path stack scratch.)
 #     cppcoreguidelines-avoid-c-arrays = modernize-avoid-c-arrays
 #     cppcoreguidelines-non-private-member-variables-in-classes
 #       = misc-non-private-member-variables-in-classes
+#     cppcoreguidelines-avoid-magic-numbers = readability-magic-numbers
 #     cppcoreguidelines-explicit-virtual-functions, hicpp-use-override
 #       = modernize-use-override
 #     bugprone-narrowing-conversions = cppcoreguidelines-narrowing-conversions
@@ -50,11 +56,14 @@ Checks: |
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
   -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
   -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-explicit-virtual-functions,
   -cppcoreguidelines-narrowing-conversions,
   -cppcoreguidelines-non-private-member-variables-in-classes,
+  -misc-non-private-member-variables-in-classes,
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,

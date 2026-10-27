@@ -59,7 +59,7 @@ recorded history of finished or abandoned work were dropped (they remain in
   executes notebooks with `jupyter nbconvert --execute` after `pip wheel .`;
   it does not build the C++ test runner.  Figures in doc notebooks must come
   from the Python API alone, never from Catch2 test output.
-- **nanobind `CoolProp.pyi` drift gate is reproducible locally**, but only
+- **nanobind stub drift gate is reproducible locally**, but only
   with the pinned pair, not the ambient interpreter:
 
   ```bash
@@ -68,11 +68,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   COOLPROP_NANOBIND=ON VIRTUAL_ENV=/tmp/stubvenv uv build --wheel --no-build-isolation \
     --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
     --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON --out-dir /tmp/stubdist .
-  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp.pyi' -d /tmp/stubcheck
-  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp.pyi
+  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp/*.pyi' -d /tmp/stubcheck
+  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp/__init__.pyi
+  diff -u wrappers/Python/_nanobind/Plot.pyi /tmp/stubcheck/CoolProp/CoolProp/Plot.pyi
   ```
 
-  Take the generated stub verbatim; never hand-edit it.
+  Take the generated stubs verbatim; never hand-edit them.  A default value
+  that stubgen writes with a name the stub does not define (an enum of the
+  core in `Plot.pyi`) is fixed in the binding with `nb::arg(...).sig("...")`.
 - **TestPyPI pruning is manual** (since 2025-11-14, PyPI's new-device email
   verification blocks unattended TOTP logins).  Stay logged into TestPyPI in
   a browser, then `python3 dev/testpypi_delete.py --keep 10` (dry run) and
@@ -227,3 +230,82 @@ recorded history of finished or abandoned work were dropped (they remain in
   mixtures follow the trivial solution past the critical point to GPa
   pressures, and heavy traces underflow to NaN.  Use these cases when
   judging a replacement tracer.
+
+## Property plots (CoolProp::Plot)
+
+- **`src/CoolPropPlot.cpp` is a port of CoolPlot's numerics** (the Python
+  package: `thermo/isolines.py`, `tracer.py`, `stepping.py`, `fluid.py` of
+  CoolPlot 0.7+).  Names and the order of steps follow the Python files on
+  purpose; fix a numerics bug in both.  CoolPlot uses the port through
+  `CoolProp.CoolProp.Plot` when it is present and falls back to its Python
+  copy, which its tests treat as the reference.
+- **The nanobind submodule lives at `CoolProp.CoolProp.Plot`**, not
+  `CoolProp.Plot`: the package `__init__` is kept identical to the legacy
+  one (import-tree parity gate), and `CoolProp.Plots` is the old Python
+  plotting package.  Its stubs are a stub package,
+  `CoolProp/CoolProp/__init__.pyi` and `CoolProp/CoolProp/Plot.pyi`: a stub
+  module `CoolProp/CoolProp.pyi` cannot have submodules, and a `Plot.pyi`
+  next to it types the non-existent `CoolProp.Plot`.  The regeneration
+  imports the built module as `CoolProp.CoolProp` from a staging package;
+  imported as a top-level `CoolProp`, stubgen names the types in `Plot.pyi`
+  `CoolProp.<type>`, which do not resolve.
+- **Releasing the GIL** in `PropertyPlot.calc_isolines`, `isoline_range`
+  and `value_at` is safe for Python objects: the arguments are converted
+  to C++ before the call (the settings are copied, see the binding) and
+  the results after it.  `AbstractState.update` keeps the GIL: existing
+  code that shares one state between Python threads relies on the GIL to
+  serialise the calls.  `AbstractState.update_nogil` is the opt-in that
+  releases it, for code that gives each thread its own state.  CoolProp's
+  lazily built shared data (the fluid and mixture libraries, the caloric
+  superancillaries) is built under `std::call_once` or a mutex, so distinct
+  HEOS, cubic and GERG states are safe in parallel.  Not safe: a thread
+  that changes the configuration (`set_config_*` writes a global without a
+  lock), and a thread that builds tabular tables (creating a TTSE or
+  BICUBIC state, or setting its fractions, when its tables are not on
+  disk yet): the build toggles `DONT_CHECK_PROPERTY_LIMITS` globally
+  (`TabularBackends.cpp`, COO-144).
+  REFPROP states are serialised by `REFPROP_mutex()`.  Every other binding keeps the GIL; add
+  `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
+  re-enter Python.  A REFPROP plot is safe without the GIL too: the
+  backend serialises its calls through `REFPROP_mutex()`.  But another
+  thread's REFPROP state can now run between two calls of a plot, and
+  REFPROP keeps one set of loaded fluids: interaction parameters set
+  with `set_binary_interaction_*`, a reference state or a custom `.MIX`
+  composition are lost when that other state loads different fluids
+  (see `REFPROPMixtureBackend.h`).
+- **Every isoline tracer builds its own phase envelope**, about a quarter
+  of the time of a traced line for a blend.  Do not share or cache that
+  saturation state between tracers: the mixture saturation flashes take
+  their guesses from it, so a line would depend on the lines computed
+  before it, and lines are cached and computed one by one in any order
+  (tried in COO-142 and reverted; CoolPlot's `tracer.py` has the same note).
+- **No `==` or `!=` between doubles in the plot numerics**, and no
+  tolerance in their place where an exact answer is meant.  The envelope's
+  Q flags (exactly 0 or 1) and the markers of `generate_update_pair` are
+  compared by side (`Q > 0.5`); an exact root or a vanished denominator is
+  `is_zero` (a classification); sign tests use `sign_of` (integers); a
+  cache key or a copied sample is `same_bits`; the start and end of a
+  stepped range are passed as flags, not found by comparing `u`; tests
+  that mean "the same double" use `WithinULP(x, 0)`.  `-Wfloat-equal` on
+  `src/CoolPropPlot.cpp` is clean (the warnings left come from the bundled
+  fmt).  The rewrite was checked bit-identical on about 1100 isolines of
+  pure fluids, blends and an incompressible.  CoolPlot has the same
+  helpers in `coolplot/thermo/floats.py`; its `is_zero` classifies the
+  bits too, since `abs(v) < math.ulp(0.0)` is false for 0.0 when an
+  extension built with fast-math sets denormals-are-zero.
+- **A `PropertyPlot` serialises its own calls**: every line of a plot is
+  computed with the plot's one `AbstractState`, updated in place, so
+  `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they
+  release the GIL, and two Python threads really do call them at once).
+  Parallel work needs one plot per thread (CoolPlot's adapter keeps one
+  per thread, after a review of its thread workers found a shared plot).
+- **The mixture H-p flash on master refuses two-phase states 8.0.0 solved**
+  (R32/R125 70/30 at h = 4e5 J/kg, p = 9.65 bar: the residual gate after the
+  temperature search throws "the (T,p) flash is misclassifying the phase").
+  Tests of the tracer against the flash compare only where the flash
+  converges; the isoline tracer itself never needs that flash.
+- **Building the Python wheel offline:** the catch build fills
+  `.cpm_cache/` in the repo; `pip wheel .` configures a fresh tree, so pass
+  `CMAKE_ARGS="-DCPM_SOURCE_CACHE=$PWD/.cpm_cache"` (plus the valijson
+  source if downloads are blocked) or Eigen is fetched again (gitlab
+  returns 429 quickly).

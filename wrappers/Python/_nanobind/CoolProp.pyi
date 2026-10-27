@@ -5,6 +5,8 @@ from typing import Annotated, TypeAlias, overload
 import numpy
 from numpy.typing import NDArray
 
+from . import Plot as Plot
+
 
 import numpy
 from numpy.typing import NDArray
@@ -341,6 +343,8 @@ class configuration_keys(enum.IntEnum):
 
     SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB = 39
 
+    CHEBYSHEV_DENSITY_SOLVER = 40
+
 NORMALIZE_GAS_CONSTANTS: configuration_keys = configuration_keys.NORMALIZE_GAS_CONSTANTS
 
 CRITICAL_WITHIN_1UK: configuration_keys = configuration_keys.CRITICAL_WITHIN_1UK
@@ -420,6 +424,8 @@ TABULAR_NY: configuration_keys = configuration_keys.TABULAR_NY
 SVDSBTL_SURFACE_CACHE_MAX_ENTRIES: configuration_keys = ...
 
 SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB: configuration_keys = ...
+
+CHEBYSHEV_DENSITY_SOLVER: configuration_keys = configuration_keys.CHEBYSHEV_DENSITY_SOLVER
 
 class parameters(enum.IntEnum):
     igas_constant = 1
@@ -1091,6 +1097,18 @@ class AbstractState:
 
     def update(self, arg0: input_pairs, arg1: float, arg2: float, /) -> None: ...
 
+    def update_nogil(self, input_pair: input_pairs, value1: float, value2: float) -> None:
+        """
+        update() with the GIL released, so that other Python threads run while CoolProp computes.
+
+        Use it only on a state that no other thread uses at the same time: CoolProp does not lock the
+        state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct
+        HEOS, cubic and GERG states, also of the same fluid, can be updated in parallel; REFPROP states
+        are safe but run one at a time. Not safe while another thread changes the configuration
+        (set_config_*) or builds tabular tables (creates a TTSE or BICUBIC state, or sets its
+        fractions, when its tables are not on disk yet).
+        """
+
     def update_with_guesses(self, arg0: input_pairs, arg1: float, arg2: float, arg3: GuessesStructure, /) -> None: ...
 
     def available_in_high_level(self) -> bool: ...
@@ -1534,7 +1552,7 @@ class Expression:
 
     Construct from the JSON text of a `"type": "expression"` block
     ({"formula": ..., "state_variables": [...], "constants": {...},
-     "arrays": {...}}), then evaluate it at a state.
+    "arrays": {...}}), then evaluate it at a state.
 
     `state_variables` lists the thermodynamic quantities the formula reads,
     in CoolProp's own spelling ("T", "P", "Dmolar", "Smolar_residual",

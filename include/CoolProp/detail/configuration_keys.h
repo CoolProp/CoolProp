@@ -70,9 +70,6 @@
       "If true, the library will always be reloaded, no matter what is currently loaded")                                                            \
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")  \
     X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")         \
-    X(CHEBYSHEV_DENSITY_SOLVER, "CHEBYSHEV_DENSITY_SOLVER", false,                                                                                   \
-      "If true, the HEOS and GERG mixture PT flash finds density roots with the Chebyshev all-roots solver (certified isolation of every root, "     \
-      "spinodal-branch selection), falling back to the existing solvers where it cannot answer.  Experimental.")                                     \
     X(ENABLE_MELTING_CALORIC_HS, "ENABLE_MELTING_CALORIC_HS", true,                                                                                  \
       "If true, HS_flash may seed the cold-compressed-liquid corner from the melting-line caloric Chebyshev (cascade leg 4). "                       \
       "Set false to force the legacy fallback for that region. Default: true")                                                                       \
@@ -109,7 +106,10 @@
     X(SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB, "SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB", static_cast<int>(512),                                                 \
       "Maximum total estimated resident size, in MB, of the process-wide SVDSBTL in-memory surface cache.  Evicted LRU-first alongside the entry-"   \
       "count cap in SVDSBTL_SURFACE_CACHE_MAX_ENTRIES -- whichever limit is hit first triggers eviction.  Needed because surface size varies "       \
-      "widely with the NT/NR/rank build options, so an entry count alone can't bound memory.")
+      "widely with the NT/NR/rank build options, so an entry count alone can't bound memory.")                                                       \
+    X(CHEBYSHEV_DENSITY_SOLVER, "CHEBYSHEV_DENSITY_SOLVER", false,                                                                                   \
+      "If true, the HEOS and GERG mixture PT flash finds density roots with the Chebyshev all-roots solver (certified isolation of every root, "     \
+      "spinodal-branch selection), falling back to the existing solvers where it cannot answer.  Experimental.")
 
 // Use preprocessor to create the Enum
 enum configuration_keys

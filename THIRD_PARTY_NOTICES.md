@@ -27,7 +27,7 @@ https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz .
 | [nlohmann/json](https://github.com/nlohmann/json) | 3.12.0 | MIT |
 | [Valijson](https://github.com/tristanpenman/valijson) | 1.0.6 | BSD-2-Clause |
 | [msgpack-c](https://github.com/msgpack/msgpack-c) | 919908742b4f | BSL-1.0 (bundles Boost Predef and Boost Preprocessor, BSL-1.0) |
-| [Boost (header subset)](https://github.com/CoolProp/boost-headers) | c68104660ca4 | BSL-1.0 |
+| [Boost (header subset)](https://github.com/CoolProp/boost-headers) | bb87178a4c27 | BSL-1.0 (includes compiled Boost.CharConv sources, which derive from fast_float) |
 | [IF97](https://github.com/CoolProp/IF97) | 7aaced024a70 | MIT |
 | [REFPROP-headers](https://github.com/CoolProp/REFPROP-headers) | b4faab1b7391 | MIT |
 | [miniz](https://github.com/richgel999/miniz) | 3.1.1 | MIT |
@@ -903,7 +903,7 @@ DEALINGS IN THE SOFTWARE.
 
 ## Boost (header subset)
 
-Version c68104660ca4 — https://github.com/CoolProp/boost-headers
+Version bb87178a4c27 — https://github.com/CoolProp/boost-headers
 
 ### LICENSE
 

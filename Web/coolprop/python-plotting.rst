@@ -12,6 +12,26 @@ with default isolines and spacing. Here is a brief example to demonstrate
 how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane 
 (R-290) with automatic isoline spacing:
 
+.. The default isolines sweep densities and entropies across the whole pressure
+   axis, so many points have no valid state (for example, above the maximum
+   temperature). PropertyPlot reports each one as a UserWarning and leaves a gap
+   in the line, which is the intended result here. The lowest-density line is
+   so short (only the corner of the axes is valid) that PropertyPlot also reports
+   "Poor data quality" for it. The two hidden plot blocks below ignore both
+   warnings for this one example, so that a warning from any other plot in the
+   build is still visible. The first block saves the filter list and the last
+   one restores it (they share a namespace through the :context: option).
+
+.. plot::
+    :context:
+    :nofigs:
+    :show-source-link: false
+
+    import warnings
+    saved_filters = warnings.filters[:]
+    warnings.filterwarnings("ignore", message="An error occurred for inputs", category=UserWarning)
+    warnings.filterwarnings("ignore", message="Poor data quality", category=UserWarning)
+
 .. plot::
     :include-source:
 
@@ -20,6 +40,27 @@ how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane
     plot = PropertyPlot('R290', 'ph')
     plot.calc_isolines()
     plot.show()
+
+.. plot::
+    :context:
+    :nofigs:
+    :show-source-link: false
+
+    warnings.filters[:] = saved_filters
+
+.. note::
+
+    Running the example above in your own environment will print many ``UserWarning`` messages
+    (*over 1,000*) that start with "An error occurred for inputs". This is expected and does not
+    mean anything is wrong with your installation. To draw complete isolines,
+    CoolProp calculates points right up to, and beyond, the temperature and
+    pressure limits of the fluid. Where the fluid has no valid state, that point
+    is skipped and the line simply has a gap there. The lowest-density line is
+    valid only in a small corner of the plot, so you will also see one
+    "Poor data quality" message for it, and that line is short for the same reason.
+    If you would rather not see the messages, you can ignore them in your script with
+    ``warnings.filterwarnings("ignore", message="An error occurred for inputs")``
+    (and the same with ``message="Poor data quality"``).
 
 The following example can be used to create a temperature-entropy (:math:`T,s`) plot for
 propane (R290) with isolines for the vapour quality in steps of 0.2:
@@ -69,7 +110,7 @@ and at this time (May 2016) this list contains (:math:`T,s`), (:math:`p,h`),
 (:math:`h,s`), (:math:`p,s`), (:math:`p,\rho`), (:math:`T,\rho`), (:math:`p,T`) and 
 (:math:`p,u`) plots. 
 
-Some of the commonly used `Matplotlib <https://www.matplotlib.org>`_ functions,
+Some of the commonly used `Matplotlib <https://matplotlib.org/>`_ functions,
 such as :func:`title`, :func:`grid`, :func:`xlabel` and :func:`ylabel` have been wrapped in
 the :py:class:`CoolProp.Plots.Common.BasePlot` class to make the plotting of
 graphs a little simpler, for example:
