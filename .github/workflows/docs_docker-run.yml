@@ -202,8 +202,10 @@ jobs:
       shell: bash
       run: |
         source activate docs
+        mkdir -p "$GITHUB_WORKSPACE/ci-logs"
         echo "Calling: python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}"
-        python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}
+        # tee keeps a copy for the warning counts in the link-check summary
+        python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }} 2>&1 | tee "$GITHUB_WORKSPACE/ci-logs/homepage.log"
 
     # Save the ccache populated by the wrapper-example builds above — but only
     # on a trusted event and only if the build SUCCEEDED.  An explicit `if:`
@@ -233,8 +235,10 @@ jobs:
       shell: bash
       run: |
         source activate docs
+        mkdir -p "$GITHUB_WORKSPACE/ci-logs"
         sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
-        make html
+        # tee keeps a copy for the warning counts in the link-check summary
+        make html 2>&1 | tee "$GITHUB_WORKSPACE/ci-logs/sphinx.log"
 
     - name: Check documentation links (non-blocking)
       working-directory: ./Web
@@ -243,7 +247,8 @@ jobs:
       # and a hard gate would cause spurious CI failures, so this never fails the
       # build.  Sphinx runs with -q so the log holds only warnings; the broken
       # and timed-out links are then listed from _build/linkcheck/output.txt,
-      # which is also uploaded as an artifact.  See linkcheck_ignore and
+      # which is also uploaded as an artifact.  linkcheck_summary.py then prints
+      # the counts and sorts output.txt by type.  See linkcheck_ignore and
       # linkcheck_request_headers in conf.py.
       continue-on-error: true
       run: |
@@ -258,6 +263,8 @@ jobs:
           echo "linkcheck produced no output.txt (the build itself failed)"
         fi
         echo "::endgroup::"
+        python "$GITHUB_WORKSPACE/dev/ci/linkcheck_summary.py" _build/linkcheck/output.txt \
+          "$GITHUB_WORKSPACE/ci-logs/homepage.log" "$GITHUB_WORKSPACE/ci-logs/sphinx.log" || true
         exit $rc
 
     - name: Upload linkcheck results
