@@ -270,7 +270,7 @@ A few notes:
   costs ~10–50 ms. This is amortized across all subsequent calls. To
   pre-build, you can call ``HEOS.update_with_guesses(...)`` once at startup,
   or rely on the lazy path. The build is repeated when
-  :cpapi:`CoolProp::set_reference_state` is called for the fluid, so the
+  :cpapi:`CoolProp::set_reference_stateS` is called for the fluid, so the
   cached coefficients always match the active reference state.
 
 If you call plain ``update`` (without guesses) and the input lies in a
@@ -464,7 +464,7 @@ Here is an example showing how to change the reference state and demonstrating t
 Low-level interface using REFPROP
 ---------------------------------
 
-If you have the `REFPROP library <https://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
+If you have the `REFPROP library <https://www.nist.gov/srd/refprop>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
 
 .. ipython::
 

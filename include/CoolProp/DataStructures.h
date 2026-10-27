@@ -507,7 +507,10 @@ enum backend_families : int
     PCSAFT_BACKEND_FAMILY,
     SVDSBTL_BACKEND_FAMILY,
     GERG2004_BACKEND_FAMILY,
-    GERG2008_BACKEND_FAMILY
+    GERG2008_BACKEND_FAMILY,
+    // Appended, not inserted: these enums are serialized by value in
+    // places, so renumbering existing entries would silently break them.
+    BOLLENGIER_BACKEND_FAMILY
 };
 enum backends : int
 {
@@ -527,7 +530,8 @@ enum backends : int
     PCSAFT_BACKEND,
     SVDSBTL_BACKEND,
     GERG2004_BACKEND,
-    GERG2008_BACKEND
+    GERG2008_BACKEND,
+    BOLLENGIER_BACKEND
 };
 
 /// Convert a string into the enum values

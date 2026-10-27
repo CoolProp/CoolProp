@@ -102,7 +102,8 @@ class PsyCoolprop(object):
         v: Mixture specified volume
 
     P: mandatory input for barometric pressure, z is an alternate pressure input
-    it needs other two input parameters:
+    it needs other two input parameters::
+
         0 - tdb, w
         1 - tdb, HR
         2 - tdb, twb

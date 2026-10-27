@@ -56,7 +56,7 @@ Requirements
 ------------
 Compilation of the EES wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-Additionally, you must download `InnoSetup <https://www.jrsoftware.org/isinfo.php>`_ and add it to the system path.
+Additionally, you must download `InnoSetup <https://jrsoftware.org/isinfo.php>`_ and add it to the system path.
 
 Build
 -----

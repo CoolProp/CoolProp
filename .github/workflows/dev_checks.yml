@@ -36,11 +36,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
 
+# Least privilege (#3304).  Every job declares its own `permissions:` block;
+# this workflow-level default only covers a job added later without one.  The
+# artifact upload and cache actions authenticate with the Actions runtime
+# token, not GITHUB_TOKEN, so `contents: read` is enough for them.
+permissions:
+  contents: read
+
 jobs:
   asan:
     name: address sanitizer
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
     # default cap; when a test runs away the job is silently reported as
     # `cancelled` rather than a real failure (that is exactly how the
@@ -90,6 +99,12 @@ jobs:
         # -j$(nproc): every other build job already parallelises; the ASan job
         # historically did not, leaving the compile serial on the multi-vCPU runner.
         run: cmake --build build --config Asan -j$(nproc)
+      # The [locale] tests load fluids under a decimal-comma LC_NUMERIC; the runner
+      # image ships no such locale, and without it those tests would SKIP green.
+      - name: Generate de_DE.UTF-8 locale for the [locale] tests
+        run: |
+          sudo locale-gen de_DE.UTF-8
+          locale -a | grep -qi '^de_DE\.utf-\?8$'
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
         # (CoolProp-xuu).  With REFPROP present — which CI builds — the 6
@@ -202,6 +217,7 @@ jobs:
           set +e
           timeout --signal=INT --kill-after=60 "$budget" \
             env ASAN_OPTIONS=detect_odr_violation=1 \
+                COOLPROP_REQUIRE_LOCALE_TESTS=1 \
                 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
                 ./CatchTestRunner "~[slow]" --benchmark-samples 1
           rc=$?
@@ -224,6 +240,8 @@ jobs:
     # If you need to test the workflow on a branch, open a draft PR.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -268,6 +286,8 @@ jobs:
     # retroactively. Open a draft PR to exercise it on a branch.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -290,7 +310,7 @@ jobs:
             # Pin nanobind: the cp312 wheel below regenerates the committed type
             # stub (REGEN_STUB), and the drift gate diffs it byte-for-byte, so the
             # stubgen toolchain must be reproducible.  Bump deliberately together
-            # with wrappers/Python/_nanobind/CoolProp.pyi (bd CoolProp-1gas).
+            # with wrappers/Python/_nanobind/CoolProp.pyi and Plot.pyi (bd CoolProp-1gas).
             uv pip install "nanobind==2.12.0" cython scikit-build-core ninja
             # Only the native cp312-abi3 build regenerates the stub (stubgen imports
             # the just-built CoolProp.abi3.so -- safe natively, impossible when
@@ -317,46 +337,53 @@ jobs:
           done
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
 
-      - name: Drift gate — committed nanobind stub matches stubgen output
+      - name: Drift gate — committed nanobind stubs match stubgen output
         shell: bash
         run: |
           set -euo pipefail
           # The cp312 leg above built with COOLPROP_NANOBIND_REGEN_STUB=ON, so its
-          # wheel carries a FRESHLY regenerated CoolProp.pyi (stubgen run against the
-          # just-built native .so). It must match the committed copy that every
+          # wheel carries FRESHLY regenerated stubs (stubgen run against the
+          # just-built native .so). They must match the committed copies that every
           # OTHER (incl. cross-compiled) wheel ships verbatim; a diff means a binding
-          # changed without regenerating the stub (bd CoolProp-1gas).
+          # changed without regenerating the stubs (bd CoolProp-1gas).  The stubs
+          # form the stub package CoolProp/CoolProp/ (module + Plot submodule); the
+          # committed copies are _nanobind/CoolProp.pyi and _nanobind/Plot.pyi.
+          # unzip fails (set -e) when a stub is missing from the wheel.
           WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl)
           rm -rf _stubcheck && mkdir _stubcheck
-          unzip -q -o "$WHL" -d _stubcheck "CoolProp/CoolProp.pyi" "CoolProp/py.typed"
+          unzip -q -o "$WHL" -d _stubcheck \
+            "CoolProp/CoolProp/__init__.pyi" "CoolProp/CoolProp/Plot.pyi" "CoolProp/py.typed"
           ok=1
-          diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp.pyi || ok=0
-          diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed     || ok=0
+          diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp/__init__.pyi || ok=0
+          diff -u wrappers/Python/_nanobind/Plot.pyi     _stubcheck/CoolProp/CoolProp/Plot.pyi     || ok=0
+          diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed              || ok=0
           if [ "$ok" -ne 1 ]; then
             # The unified diff above shows exactly what drifted. Emit a copy-paste
             # regen recipe (matches wrappers/Python/_nanobind/README.md), then fail
             # with a single concise annotation.
             {
               echo
-              echo "Committed nanobind stub is out of sync with stubgen output."
-              echo "Regenerate it from a NATIVE abi3 build and commit the result:"
+              echo "Committed nanobind stubs are out of sync with stubgen output."
+              echo "Regenerate them from a NATIVE abi3 build and commit the result:"
               echo
               echo "  uv pip install 'nanobind==2.12.0' cython scikit-build-core ninja"
               echo "  COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \\"
               echo "    --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \\"
               echo "    --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON \\"
               echo "    --out-dir dist ."
-              echo "  unzip -o -j dist/coolprop-*-cp312-abi3-*.whl \\"
-              echo "    CoolProp/CoolProp.pyi CoolProp/py.typed -d wrappers/Python/_nanobind/"
+              echo "  WHL=\$(ls dist/coolprop-*-cp312-abi3-*.whl)"
+              echo "  unzip -p \"\$WHL\" CoolProp/CoolProp/__init__.pyi > wrappers/Python/_nanobind/CoolProp.pyi"
+              echo "  unzip -p \"\$WHL\" CoolProp/CoolProp/Plot.pyi > wrappers/Python/_nanobind/Plot.pyi"
+              echo "  unzip -p \"\$WHL\" CoolProp/py.typed > wrappers/Python/_nanobind/py.typed"
               echo
               echo "(nanobind must be PINNED to the gate's version for a byte-exact match;"
               echo " see wrappers/Python/_nanobind/README.md.)"
               echo
             } >&2
-            echo "::error::Committed nanobind stub is stale — see the regen recipe in the log above."
+            echo "::error::Committed nanobind stubs are stale — see the regen recipe in the log above."
             exit 1
           fi
-          echo "Committed nanobind stub is in sync."
+          echo "Committed nanobind stubs are in sync."
 
       - name: Run the pytest suite on 3.9-3.14 against the matching wheel
         shell: bash
@@ -466,6 +493,8 @@ jobs:
     # and local runs see the same check set.  When ubuntu-latest moves, this
     # job does not move with it.
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -653,6 +682,8 @@ jobs:
     # Triggers: PR + workflow_dispatch + Sunday cron (skip Thursday codeql cron).
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '15 8 * * 0')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -709,6 +740,8 @@ jobs:
     # Triggers: push master + PR + workflow_dispatch + Sunday cron.
     if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -767,6 +800,8 @@ jobs:
     # source-built CoolProp and runs in the wheel-build workflow, not here.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -821,6 +856,8 @@ jobs:
     # dev/scripts/check_superanc_release_pin.py.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -884,6 +921,8 @@ jobs:
     # to downstream consumers at compile time.  Real gate — no continue-on-error.
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -922,6 +961,8 @@ jobs:
     # filter so this can be a required check without deadlocking unrelated PRs.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
