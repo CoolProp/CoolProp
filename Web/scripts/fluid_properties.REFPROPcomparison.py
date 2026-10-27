@@ -51,23 +51,63 @@ else:
     T = np.min([1.01*CP.PropsSI(fluid, 'Tcrit'),CP.PropsSI(fluid, 'Tmax')])
     rhoc = CP.PropsSI(fluid, 'rhomolar_critical')
 
+    # Transport properties are only compared when both CoolProp and REFPROP have a
+    # model for the fluid.  Probe with a scalar call at a single-phase state; an
+    # array call hides the error message.  Any other error is not swallowed.
+    no_model_msgs = ('Viscosity model is not available',
+                     'Thermal conductivity model is not available',
+                     'Transport equations are not available')
+    def has_model(key, name):
+        try:
+            CP.PropsSI(key, 'T', T, 'Dmolar', 0.5*rhoc, name)
+        except ValueError as E:
+            if any(msg in str(E) for msg in no_model_msgs):
+                return False
+            raise
+        return True
+
+    allkeys = ['P','V','L','Cpmolar','Cvmolar']
+    normalkeys = list(allkeys)
+    skipped = dict()
+    for key, label in (('V', 'viscosity'), ('L', 'thermal conductivity')):
+        missing_in = [n for n, f in (('CoolProp', fluid), ('REFPROP', RPfluid)) if not has_model(key, f)]
+        if missing_in:
+            normalkeys.remove(key)
+            skipped.setdefault(' or '.join(missing_in), []).append(label)
+
+    # REFPROP rejects states above twice its own upper pressure limit, so end the
+    # density range where CoolProp reaches that pressure (or at 2*rhoc, if sooner)
+    p_limit = 2*CP.PropsSI('pmax', RPfluid)*0.995
+    rho_max = 2*rhoc
+    if CP.PropsSI('P', 'T', T, 'Dmolar', rho_max, fluid) > p_limit:
+        lo, hi = 1e-10, rho_max
+        for _ in range(60):
+            mid = 0.5*(lo + hi)
+            if CP.PropsSI('P', 'T', T, 'Dmolar', mid, fluid) > p_limit:
+                hi = mid
+            else:
+                lo = mid
+        rho_max = lo
+
     # Normal properties
-    rho = np.linspace(1e-10, 2*rhoc)
-    normalkeys = ['P','V','L','Cpmolar','Cvmolar']
+    rho = np.linspace(1e-10, rho_max)
     RPdata = CP.PropsSI(normalkeys, 'T', T, 'Dmolar', rho, RPfluid)
     CPdata = CP.PropsSI(normalkeys, 'T', T, 'Dmolar', rho, fluid)
     for i, key in enumerate(normalkeys):
-        plt.plot(rho/rhoc, np.abs(RPdata[:,i]/CPdata[:,i]-1)*100, lw = 0, label = key, marker = symbols[i%len(symbols)])
+        plt.plot(rho/rhoc, np.abs(RPdata[:,i]/CPdata[:,i]-1)*100, lw = 0, label = key, marker = symbols[allkeys.index(key)%len(symbols)])
 
     # Special properties
-    rho = np.linspace(1e-10, 2*rhoc)
     keys = ['Hmolar','Smolar']
     for i, key in enumerate(keys):
         RPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, RPfluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, RPfluid)
         CPdata = CP.PropsSI(key, 'T', T, 'Dmolar', rho, fluid) - CP.PropsSI(key, 'T', T, 'Dmolar', 1, fluid)
-        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, lw = 0, label = key, marker = symbols[(i+len(normalkeys))%len(symbols)])
+        plt.plot(rho/rhoc, np.abs(RPdata/CPdata-1)*100, lw = 0, label = key, marker = symbols[(i+len(allkeys))%len(symbols)])
 
     ax.legend(loc='best', ncol = 2)
+    if skipped:
+        fig.subplots_adjust(bottom = 0.14 + 0.04*len(skipped))
+        note = ['Not plotted: ' + ', '.join(labels) + ' (no model in ' + src + ')' for src, labels in skipped.items()]
+        fig.text(0.5, 0.02, '\\n'.join(note), ha = 'center', va = 'bottom', fontsize = 8)
 
 plt.xlabel(r'Reduced density [$\\rho/\\rho_c$]')
 plt.ylabel(r'Relative deviation $(y_{{CP}}/y_{{RP}}-1)\\times 100$ [%]')
