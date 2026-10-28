@@ -644,7 +644,7 @@ jobs:
         
     - name: Fix the docs
       run: |
-        rm -rf binaries/github-pages
+        rm -rf binaries/github-pages binaries/linkcheck
         tar -xzf binaries/docs/*documentation*.tar.gz
         mkdir -p html/v4
         rsync frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/frs/project/coolprop/CoolProp/4.2.5/coolpropv425docs.zip coolpropv4docs.zip
