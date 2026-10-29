@@ -77,7 +77,7 @@ The basic concept behind Tabular Taylor Series Extrapolation (TTSE) extrapolatio
 
     \Delta x = y-y_j
 
-See the `IAPWS TTSE report <https://www.iapws.org/relguide/TTSE.pdf>`_ for a description of the method.  Analytic derivatives are used to build the tables
+See the `IAPWS TTSE report <https://iapws.org/technical-guidance/release/TTSE>`_ for a description of the method.  Analytic derivatives are used to build the tables
 
 Bicubic Interpolation
 ---------------------

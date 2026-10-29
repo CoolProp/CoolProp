@@ -464,7 +464,7 @@ Here is an example showing how to change the reference state and demonstrating t
 Low-level interface using REFPROP
 ---------------------------------
 
-If you have the `REFPROP library <https://www.nist.gov/srd/nist23.cfm>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
+If you have the `REFPROP library <https://www.nist.gov/srd/refprop>`_ installed, you can call REFPROP in the same way that you call CoolProp, but with ``REFPROP`` as the backend instead of ``HEOS``. For instance, as in python:
 
 .. ipython::
 
