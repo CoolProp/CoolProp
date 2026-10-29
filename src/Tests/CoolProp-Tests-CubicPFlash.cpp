@@ -176,7 +176,7 @@ TEST_CASE("Cubic superancillary hook: cached table bounds follow parameter chang
     }
 }
 
-// T-input flashes (H,T / S,T / T,U / D,T) for pure cubic fluids.  Subcritical H,T, S,T and T,U threw
+// T-input flashes (S,T / T,U / D,T) for pure cubic fluids.  Subcritical S,T and T,U threw
 // "type not set" for the same reason as #3441, on the T side: T_phase_determination_pure_or_pseudopure
 // asked get_superanc() and fell through to the classic ancillaries cubics never populate.
 namespace {
@@ -189,24 +189,6 @@ void check_T_roundtrip(AbstractState& AS, AbstractState& ref) {
         // Always: the returned state reproduces both inputs.
         CHECK(AS.T() == T);
         CHECK(AS.keyed_output(key) == Catch::Approx(ref.keyed_output(key)).epsilon(1e-9));
-        // In a cold liquid (dh/dp)_T = v(1 - T*beta) > 0, so compressing raises h above h_L(T) and a
-        // compressed-liquid (T, h) also lies inside the dome: H,T is not unique there, and the flash
-        // (like HEOS) returns the two-phase state.  Everywhere else the state must match the reference.
-        if (key == iHmolar && !ref_twophase && AS.phase() == iphase_twophase) {
-            CHECK(ref.phase() == iphase_liquid);
-            // The exemption must be the real non-uniqueness, checked independently of the flash:
-            // the reference h lies inside [h_L(T), h_V(T)] from a separate Q,T update.
-            std::unique_ptr<AbstractState> sat(AbstractState::factory(AS.backend_name(), AS.fluid_names()));
-            sat->update(QT_INPUTS, 0, T);
-            const double hL = sat->hmolar();
-            sat->update(QT_INPUTS, 1, T);
-            const double hV = sat->hmolar();
-            CHECK(ref.hmolar() >= hL);
-            CHECK(ref.hmolar() <= hV);
-            CHECK(AS.Q() >= 0);
-            CHECK(AS.Q() <= 1);
-            return;
-        }
         CHECK(AS.rhomolar() == Catch::Approx(ref.rhomolar()).epsilon(1e-8));
         // 1e-7: a stiff compressed liquid amplifies density round-off ~1e3-1e4-fold in p.
         CHECK(AS.p() == Catch::Approx(ref.p()).epsilon(1e-7));
@@ -215,8 +197,6 @@ void check_T_roundtrip(AbstractState& AS, AbstractState& ref) {
             CHECK(AS.Q() == Catch::Approx(ref.Q()).margin(1e-8));
         }
     };
-    AS.update(HmolarT_INPUTS, ref.hmolar(), T);
-    check("HmolarT", iHmolar);
     AS.update(SmolarT_INPUTS, ref.smolar(), T);
     check("SmolarT", iSmolar);
     AS.update(TUmolar_INPUTS, T, ref.umolar());
@@ -281,7 +261,7 @@ TEST_CASE("Cubic T-input flashes with an imposed phase", "[cubic][flash][cubic_T
             AS->specify_phase(phase);
             REQUIRE_NOTHROW(AS->update(SmolarT_INPUTS, ref->smolar(), T));
             CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-8));
-            REQUIRE_NOTHROW(AS->update(HmolarT_INPUTS, ref->hmolar(), T));
+            REQUIRE_NOTHROW(AS->update(TUmolar_INPUTS, T, ref->umolar()));
             CHECK(AS->rhomolar() == Catch::Approx(ref->rhomolar()).epsilon(1e-8));
             AS->unspecify_phase();
         }
@@ -317,7 +297,20 @@ TEST_CASE("Cubic imposed-phase T-input flash below the table gives the superanci
     std::unique_ptr<AbstractState> AS(AbstractState::factory("SRK", "Propane"));
     const double T = 0.15 * AS->T_critical();
     AS->specify_phase(iphase_liquid);
-    CHECK_THROWS_WITH(AS->update(HmolarT_INPUTS, -20000.0, T), Catch::Matchers::ContainsSubstring("superancillary"));
+    CHECK_THROWS_WITH(AS->update(SmolarT_INPUTS, -100.0, T), Catch::Matchers::ContainsSubstring("superancillary"));
+}
+
+TEST_CASE("Cubic H,T inputs are refused for pure fluids", "[cubic][flash][cubic_T_flash]") {
+    // (T, h) is not a unique state below the maximum Joule-Thomson inversion temperature, and mass-based
+    // H,T is already refused for every backend; the molar pair must not pick one of the states silently.
+    for (const auto& backend : std::vector<std::string>{"SRK", "PR"}) {
+        CAPTURE(backend);
+        std::unique_ptr<AbstractState> AS(AbstractState::factory(backend, "Propane"));
+        const double T = 0.8 * AS->T_critical();
+        AS->update(QT_INPUTS, 0.5, T);
+        CHECK_THROWS_WITH(AS->update(HmolarT_INPUTS, AS->hmolar(), T),
+                          Catch::Matchers::ContainsSubstring("H,T inputs are not supported for pure cubic"));
+    }
 }
 
 TEST_CASE("Cubic T-input flash rejects densities past the repulsive pole", "[cubic][flash][cubic_T_flash]") {

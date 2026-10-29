@@ -406,6 +406,16 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
             HelmholtzEOSMixtureBackend::update(input_pair, value1, value2);
             break;
         case HmolarT_INPUTS:
+            // (dh/dp)_T = v(1 - T alpha_p) changes sign below the maximum Joule-Thomson inversion
+            // temperature (~5 Tc), and h(rho) at fixed T is non-monotonic on every subcritical isotherm, so
+            // (T, h) names several states over most of the fluid range.  Mass-based H,T is refused for every
+            // backend (AbstractState::mass_to_molar_inputs); refuse the molar pair too rather than pick one.
+            // Mixtures still pass through to DHSU_T_flash, like HEOS mixtures.
+            if (is_pure_or_pseudopure) {
+                throw ValueError("H,T inputs are not supported for pure cubic fluids: (T, h) does not identify a unique state");
+            }
+            HelmholtzEOSMixtureBackend::update(input_pair, value1, value2);
+            break;
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
         case DmolarHmolar_INPUTS:
@@ -425,10 +435,10 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
     }
 
     // The T-input density solves (FlashRoutines::solver_for_rho_given_T_oneof_HSU) know no upper density
-    // bound, and for a cubic u and h stay finite past the repulsive pole at rho = 1/(b - c): a large
-    // enough H,T or T,U input "solved" there, with a negative pressure.  Only (0, 1/(b - c))
+    // bound, and for a cubic u stays finite past the repulsive pole at rho = 1/(b - c): a large
+    // enough T,U input "solved" there, with a negative pressure.  Only (0, 1/(b - c))
     // is physical.
-    if (is_pure_or_pseudopure && (input_pair == HmolarT_INPUTS || input_pair == SmolarT_INPUTS || input_pair == TUmolar_INPUTS)) {
+    if (is_pure_or_pseudopure && (input_pair == SmolarT_INPUTS || input_pair == TUmolar_INPUTS)) {
         const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
         if (!(_rhomolar > 0 && _rhomolar * b_minus_c < 1)) {
             throw ValueError(format("No physical state at these inputs (T = %g K): the solution density %g mol/m^3 lies outside (0, 1/(b - c) = %g)",
