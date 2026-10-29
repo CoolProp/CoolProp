@@ -297,7 +297,7 @@ TEST_CASE("Cubic imposed-phase T-input flash below the table gives the superanci
     std::unique_ptr<AbstractState> AS(AbstractState::factory("SRK", "Propane"));
     const double T = 0.15 * AS->T_critical();
     AS->specify_phase(iphase_liquid);
-    CHECK_THROWS_WITH(AS->update(SmolarT_INPUTS, -100.0, T), Catch::Matchers::ContainsSubstring("superancillary"));
+    CHECK_THROWS_WITH(AS->update(SmolarT_INPUTS, -100.0, T), Catch::Matchers::ContainsSubstring("outside the range of the cubic superancillary"));
 }
 
 TEST_CASE("Cubic H,T inputs are refused for pure fluids", "[cubic][flash][cubic_T_flash]") {
@@ -314,7 +314,7 @@ TEST_CASE("Cubic H,T inputs are refused for pure fluids", "[cubic][flash][cubic_
 }
 
 TEST_CASE("Cubic T-input flash rejects densities past the repulsive pole", "[cubic][flash][cubic_T_flash]") {
-    // For a cubic, u and h stay finite past rho = 1/(b - c), and above T* u rises with density, so a large
+    // For a cubic, u stays finite past rho = 1/(b - c), and above T* u rises with density, so a large
     // enough T,U input used to "solve" beyond the pole with a negative pressure.
     std::unique_ptr<AbstractState> AS(AbstractState::factory("SRK", "Water"));
     auto* cubic = dynamic_cast<AbstractCubicBackend*>(AS.get());

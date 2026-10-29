@@ -151,11 +151,15 @@ recorded history of finished or abandoned work were dropped (they remain in
   over and the closed-form cubic loses ~10 digits (COO-145).  Within ~1e-9
   of the critical point the expanded cubic's coefficients cancel: polish
   roots against p(rho) in EOS form, never the polynomial.
-- **Flash non-uniqueness is physical, not a bug.**  H,T for a cold
-  compressed liquid: (dh/dp)_T = v(1 - T beta) > 0, so the same (T, h) is
-  also a two-phase state and the flash returns that one, as HEOS does.
-  Test that the result reproduces both inputs; exempt the reference match
-  only with an independent check that h is inside [h_L(T), h_V(T)].
+- **Flash non-uniqueness is physical, not a bug.**  H,T is non-unique below
+  the max Joule-Thomson inversion temperature (~5 Tc): a cold compressed
+  liquid's (T, h) is also a two-phase state.  Pure cubics refuse H,T; HEOS
+  and cubic mixtures still return the two-phase root (COO-158).  T,S is
+  unique for pure cubics but not for cold liquid water (alpha_p < 0 below
+  the density maximum): HEOS and REFPROP both return the two-phase state.
+  A round-trip test across such a region must not demand the reference
+  state back; exempt it only with an independent check that the input is
+  inside the saturated [L, V] interval at that T.
 - **Compute long constants, never transcribe them.**  #2745's "exact"
   SRK/PR Omegas had doubled and dropped digits (fixed in #3515), which put
   SRK's own critical point ~1e-9 below the input Tc/pc and surfaced as a
