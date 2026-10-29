@@ -211,7 +211,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // seed decision on one consistent density scale.  SRK has Z_c = 1/3, and b = Omega_b
                 // R Tc / pc, so its critical molar volume is v_c = Z_c R Tc / pc = (Z_c / Omega_b) b =
                 // b / (3 Omega_b), i.e. rho_c,SRK = 1 / v_c = 3 Omega_b / b (Omega_b = 0.08664..., the
-                // same covolume coefficient SRK_covolume() sums per component).
+                // same covolume coefficient SRK_covolume() sums per component, kept identical to it
+                // on purpose; see the note above SRK_covolume() and Linear COO-150).
                 constexpr double SRK_Omega_b = 0.08664034999649577215890158147700;
                 const double b_srk = HEOS.SRK_covolume();
                 const double rho_srk_crit = (b_srk > 0) ? (3.0 * SRK_Omega_b / b_srk) : HEOS.rhomolar_reducing();
@@ -663,6 +664,7 @@ double FlashRoutines::T_DP_PengRobinson(HelmholtzEOSMixtureBackend& HEOS, double
     R = HEOS.gas_constant();
 
     kappa = 0.37464 + 1.54226 * omega - 0.26992 * omega * omega;
+    // Rounded PR constants on purpose: this only seeds the T solve (exact ones: Cubics/CubicConstants.h)
     a = 0.457235 * R * R * Tc * Tc / pc;
     b = 0.077796 * R * Tc / pc;
     double den = V * V + 2 * b * V - b * b;

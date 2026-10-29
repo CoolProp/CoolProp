@@ -1,4 +1,5 @@
 #include "GeneralizedCubic.h"
+#include "CubicConstants.h"
 #include "CoolProp/numerics/numerics.h"
 #include <array>
 #include <cassert>
@@ -826,13 +827,13 @@ double AbstractCubic::d3_alphar_dxidxjdxk(double tau, double delta, const std::v
 }
 
 double SRK::a0_ii(std::size_t i) {
-    // Exact value: 1/(9*(2^(1/3)-1)); see Bell and Deiters, IECR, 2021
-    double a = 0.42748023335403414043900347952220 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
+    // Omega_a = 1/(9*(2^(1/3)-1)), from its closed form (see CubicConstants.h)
+    double a = CoolProp::CubicConstants::SRK_Omega_a() * R_u * R_u * Tc[i] * Tc[i] / pc[i];
     return a;
 }
 double SRK::b0_ii(std::size_t i) {
-    // Exact value: (2^(1/3)-1)/3; see Bell and Deiters, IECR, 2021
-    double b = 0.08664034999649577215890158147700 * R_u * Tc[i] / pc[i];
+    // Omega_b = (2^(1/3)-1)/3, from its closed form (see CubicConstants.h)
+    double b = CoolProp::CubicConstants::SRK_Omega_b() * R_u * Tc[i] / pc[i];
     return b;
 }
 double SRK::m_ii(std::size_t i) {
@@ -843,13 +844,13 @@ double SRK::m_ii(std::size_t i) {
 }
 
 double PengRobinson::a0_ii(std::size_t i) {
-    // Exact value; see Bell and Deiters, IECR, 2021
-    double a = 0.45723552892138218938000849856422 * R_u * R_u * Tc[i] * Tc[i] / pc[i];
+    // Omega_a from the closed-form critical point (see CubicConstants.h)
+    double a = CoolProp::CubicConstants::PR_Omega_a() * R_u * R_u * Tc[i] * Tc[i] / pc[i];
     return a;
 }
 double PengRobinson::b0_ii(std::size_t i) {
-    // Exact value; see Bell and Deiters, IECR, 2021
-    double b = 0.07779607390388455972148597969400 * R_u * Tc[i] / pc[i];
+    // Omega_b from the closed-form critical point (see CubicConstants.h)
+    double b = CoolProp::CubicConstants::PR_Omega_b() * R_u * Tc[i] / pc[i];
     return b;
 }
 double PengRobinson::m_ii(std::size_t i) {
