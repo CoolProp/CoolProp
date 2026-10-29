@@ -273,6 +273,8 @@ Performance:
 
 Bug fixes:
 
+* HEOS mixture ``T_critical()``, ``p_critical()`` and ``rhomolar_critical()`` skip unstable critical points instead of throwing when the tracer also found one, e.g. R454B (`#3528 <https://github.com/CoolProp/CoolProp/issues/3528>`__).
+
 * ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
 
 * **Low-density entropy flashes returned wrong densities.**  ``SmolarT`` resolved
