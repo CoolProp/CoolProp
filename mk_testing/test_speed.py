@@ -6,165 +6,121 @@ import numpy as np
 
 if __name__ == "__main__":
     n = int(1e6)
+    plot = False
 
-    FLUID = "MEG"
+    FLUIDS_STRING = ["MEG[0.35]", "Water"]
 
-    fluid_json = json.load(open(f"dev/incompressible_liquids/json/{FLUID}.json"))  # noqa: SIM115
-    fluid_json["name"] = fluid_json["name"] + "_mod"
-    fluid_json.pop("density_cheb", None)
-    fluid_json.pop("specific_heat_cheb", None)
-    CP.add_fluids_as_JSON("INCOMP", json.dumps([fluid_json]))
+    FLUIDS = [f.split("[")[0] for f in FLUIDS_STRING]
 
-    fluid = CP.AbstractState("INCOMP", f"{FLUID}_mod")
-    fluid.set_mass_fractions([0.35])
+    FLUIDCONS = [
+        ([float(f.split("[")[1].split("]")[0])] if "[" in f else "")
+        for f in FLUIDS_STRING
+    ]
 
-    print("\nStarting CoolProp polynomial tests")
-    print("-" * 40)
+    for fld_string, fld, fldconc in zip(FLUIDS_STRING, FLUIDS, FLUIDCONS):
+        fluid_json = json.load(open(f"dev/incompressible_liquids/json/{fld}.json"))  # noqa: SIM115
+        fluid_json["name"] = fluid_json["name"] + "_mod"
+        fluid_json.pop("density_cheb", None)
+        fluid_json.pop("specific_heat_cheb", None)
+        CP.add_fluids_as_JSON("INCOMP", json.dumps([fluid_json]))
 
-    T = np.linspace(300, 350, n)
-    fluid.update(CP.PT_INPUTS, 1e5, T[0])
-    h1, s1 = fluid.hmass(), fluid.smass()
-    fluid.update(CP.PT_INPUTS, 1e5, T[-1])
-    h2, s2 = fluid.hmass(), fluid.smass()
-    h = np.linspace(h1, h2, n)
-    s = np.linspace(s1, s2, n)
+        fluid = CP.AbstractState("INCOMP", f"{fld}_mod")
+        if fldconc:
+            fluid.set_mass_fractions(fldconc)
 
-    Tfreeze = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 0.0, _T)
-        Tfreeze.append(fluid.keyed_output(CP.iT_freeze))
-    end_time = time.time()
-    print(f"Tfreeze(T,p) elapsed time: {end_time - start_time} seconds")
+        print(f"\nStarting CoolProp test: {fld_string}")
+        print("-" * 40)
 
-    mu = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        mu.append(fluid.viscosity())
-    end_time = time.time()
-    print(f"mu(T,p) elapsed time: {end_time - start_time} seconds")
+        T = np.linspace(300, 350, n)
+        fluid.update(CP.PT_INPUTS, 1e5, T[0])
+        h1, s1 = fluid.hmass(), fluid.smass()
+        fluid.update(CP.PT_INPUTS, 1e5, T[-1])
+        h2, s2 = fluid.hmass(), fluid.smass()
+        h = np.linspace(h1, h2, n)
+        s = np.linspace(s1, s2, n)
 
-    k = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        k.append(fluid.conductivity())
-    end_time = time.time()
-    print(f"k(T,p) elapsed time: {end_time - start_time} seconds")
+        if fldconc:
+            Tfreeze = []
+            start_time = time.time()
+            for _T in T:
+                fluid.update(CP.PT_INPUTS, 0.0, _T)
+                Tfreeze.append(fluid.keyed_output(CP.iT_freeze))
+            end_time = time.time()
+            print(f"Tfreeze(T,p) elapsed time: {end_time - start_time} seconds")
 
-    d = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        d.append(fluid.rhomass())
-    end_time = time.time()
-    print(f"d(T,p) elapsed time: {end_time - start_time} seconds")
+        if fld == "Water":
+            psat = []
+            start_time = time.time()
+            for _T in T:
+                fluid.update(CP.QT_INPUTS, 0.0, _T)
+                psat.append(fluid.p())
+            end_time = time.time()
+            print(f"psat(Q,T) elapsed time: {end_time - start_time} seconds")
 
-    cp = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        cp.append(fluid.cpmass())
-    end_time = time.time()
-    print(f"cp(T,p) elapsed time: {end_time - start_time} seconds")
+        mu = []
+        start_time = time.time()
+        for _T in T:
+            fluid.update(CP.PT_INPUTS, 1e5, _T)
+            mu.append(fluid.viscosity())
+        end_time = time.time()
+        print(f"mu(T,p) elapsed time: {end_time - start_time} seconds")
 
-    Touth = []
-    start_time = time.time()
-    for _h in h:
-        fluid.update(CP.HmassP_INPUTS, _h, 1e5)
-        Touth.append(fluid.T())
-    end_time = time.time()
-    print(f"T(p,h) elapsed time: {end_time - start_time} seconds")
+        k = []
+        start_time = time.time()
+        for _T in T:
+            fluid.update(CP.PT_INPUTS, 1e5, _T)
+            k.append(fluid.conductivity())
+        end_time = time.time()
+        print(f"k(T,p) elapsed time: {end_time - start_time} seconds")
 
-    Touts = []
-    start_time = time.time()
-    for _s in s:
-        fluid.update(CP.PSmass_INPUTS, 1e5, _s)
-        Touts.append(fluid.T())
-    end_time = time.time()
-    print(f"T(p,s) elapsed time: {end_time - start_time} seconds")
+        d = []
+        start_time = time.time()
+        for _T in T:
+            fluid.update(CP.PT_INPUTS, 1e5, _T)
+            d.append(fluid.rhomass())
+        end_time = time.time()
+        print(f"d(T,p) elapsed time: {end_time - start_time} seconds")
 
-    ###########################################################################################################
+        cp = []
+        start_time = time.time()
+        for _T in T:
+            fluid.update(CP.PT_INPUTS, 1e5, _T)
+            cp.append(fluid.cpmass())
+        end_time = time.time()
+        print(f"cp(T,p) elapsed time: {end_time - start_time} seconds")
 
-    print("-" * 40)
-    print("\nStarting CoolProp chebychev tests")
-    print("-" * 40)
+        Touth = []
+        start_time = time.time()
+        for _h in h:
+            fluid.update(CP.HmassP_INPUTS, _h, 1e5)
+            Touth.append(fluid.T())
+        end_time = time.time()
+        print(f"T(p,h) elapsed time: {end_time - start_time} seconds")
 
-    fluid = CP.AbstractState("INCOMP", f"{FLUID}")
-    fluid.set_mass_fractions([0.35])
+        Touts = []
+        start_time = time.time()
+        for _s in s:
+            fluid.update(CP.PSmass_INPUTS, 1e5, _s)
+            Touts.append(fluid.T())
+        end_time = time.time()
+        print(f"T(p,s) elapsed time: {end_time - start_time} seconds")
 
-    T = np.linspace(300, 350, n)
-    fluid.update(CP.PT_INPUTS, 1e5, T[0])
-    h1, s1 = fluid.hmass(), fluid.smass()
-    fluid.update(CP.PT_INPUTS, 1e5, T[-1])
-    h2, s2 = fluid.hmass(), fluid.smass()
-    h = np.linspace(h1, h2, n)
-    s = np.linspace(s1, s2, n)
+        if plot:
+            import matplotlib.pyplot as plt
 
-    # psat = []
-    # start_time = time.time()
-    # for _T in T:
-    #     fluid.update(CP.QT_INPUTS, 0.0, _T)
-    #     psat.append(fluid.p())
-    # end_time = time.time()
-    # print(f"psat(Q,T) elapsed time: {end_time - start_time} seconds")
-
-    Tfreeze = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 0.0, _T)
-        Tfreeze.append(fluid.keyed_output(CP.iT_freeze))
-    end_time = time.time()
-    print(f"Tfreeze(T,p) elapsed time: {end_time - start_time} seconds")
-
-    mu = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        mu.append(fluid.viscosity())
-    end_time = time.time()
-    print(f"mu(T,p) elapsed time: {end_time - start_time} seconds")
-
-    k = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        k.append(fluid.conductivity())
-    end_time = time.time()
-    print(f"k(T,p) elapsed time: {end_time - start_time} seconds")
-
-    d = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        d.append(fluid.rhomass())
-    end_time = time.time()
-    print(f"d(T,p) elapsed time: {end_time - start_time} seconds")
-
-    cp = []
-    start_time = time.time()
-    for _T in T:
-        fluid.update(CP.PT_INPUTS, 1e5, _T)
-        cp.append(fluid.cpmass())
-    end_time = time.time()
-    print(f"cp(T,p) elapsed time: {end_time - start_time} seconds")
-
-    Touth = []
-    start_time = time.time()
-    for _h in h:
-        fluid.update(CP.HmassP_INPUTS, _h, 1e5)
-        Touth.append(fluid.T())
-    end_time = time.time()
-    print(f"T(p,h) elapsed time: {end_time - start_time} seconds")
-
-    Touts = []
-    start_time = time.time()
-    for _s in s:
-        fluid.update(CP.PSmass_INPUTS, 1e5, _s)
-        Touts.append(fluid.T())
-    end_time = time.time()
-    print(f"T(p,s) elapsed time: {end_time - start_time} seconds")
-
-    print("-" * 40)
-    print("\n")
+            fig, axes = plt.subplots(2, 3, figsize=(15, 8), constrained_layout=True)
+            panels = [
+                (mu, "mu(T,p)", "Viscosity [Pa s]"),
+                (k, "k(T,p)", "Conductivity [W/m/K]"),
+                (d, "d(T,p)", "Density [kg/m3]"),
+                (cp, "cp(T,p)", "Specific heat [J/kg/K]"),
+                (Touth, "T(p,h)", "Temperature [K]"),
+                (Touts, "T(p,s)", "Temperature [K]"),
+            ]
+            for ax, (values, title, ylabel) in zip(axes.flat, panels):
+                ax.plot(T, values)
+                ax.set_title(title)
+                ax.set_xlabel("Temperature [K]")
+                ax.set_ylabel(ylabel)
+            fig.suptitle(f"Properties of {fld_string}")
+            plt.show()
