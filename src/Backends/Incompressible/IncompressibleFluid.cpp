@@ -1,5 +1,6 @@
 
 #include "CoolProp/CoolProp.h"
+#include "CoolProp/Configuration.h"
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "IncompressibleLibrary.h"
@@ -37,6 +38,90 @@ double evaluateAwayFromPole(double x_den, Func fnc) {
     const double f_lo = fnc(x_lo);
     const double f_hi = fnc(x_hi);
     return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
+}
+
+// ---- Polynomial caloric fits (type == INCOMPRESSIBLE_POLYNOMIAL) -----------
+//
+// Rows multiply powers of (T - Tbase), columns multiply powers of
+// (x - xbase), as in Polynomial2DFrac::evaluate. The derivative and the two
+// integrals that h and s need are built once at load time (validate) as
+// coefficient matrices in this same basis, so evaluating them costs no more
+// than evaluating the fit itself.
+
+/// Evaluate a coefficient matrix in the polynomial basis with Horner's
+/// scheme: first along each row in (x - xbase), then down the rows in
+/// (T - Tbase). The highest coefficient is the starting value rather than
+/// 0 * dx, so a single-column (pure fluid) matrix never touches xbase.
+double polyEvalMatrix(const Eigen::MatrixXd& M, double T, double x, double Tbase, double xbase) {
+    if (M.rows() < 1 || M.cols() < 1) {
+        // Same reasoning as chebEvalMatrix below: an empty derived matrix
+        // must be loud, not a silent 0.0.
+        throw CoolProp::ValueError("Polynomial coefficient matrix is empty; the fluid was not loaded through validate().");
+    }
+    const double dT = T - Tbase;
+    const double dx = x - xbase;
+    auto row_value = [&](Eigen::Index i) {
+        double value = M(i, M.cols() - 1);
+        for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
+            value = value * dx + M(i, j);
+        }
+        return value;
+    };
+    double result = row_value(M.rows() - 1);
+    for (Eigen::Index i = M.rows() - 2; i >= 0; --i) {
+        result = result * dT + row_value(i);
+    }
+    return result;
+}
+
+/// Coefficients of d/dT: the term a_i (T - Tbase)^i becomes
+/// i a_i (T - Tbase)^(i-1), so row i moves to row i-1 times i.
+Eigen::MatrixXd polyDerivativeMatrix(const Eigen::MatrixXd& C) {
+    const Eigen::Index n = C.rows();
+    if (n <= 1) return Eigen::MatrixXd::Zero(1, C.cols());
+    Eigen::MatrixXd D(n - 1, C.cols());
+    for (Eigen::Index i = 1; i < n; ++i) {
+        D.row(i - 1) = static_cast<double>(i) * C.row(i);
+    }
+    return D;
+}
+
+/// Coefficients of the indefinite integral over T: a_i (T - Tbase)^i
+/// becomes a_i / (i+1) (T - Tbase)^(i+1). Row 0, the integration constant,
+/// is left at zero.
+Eigen::MatrixXd polyAntiderivativeMatrix(const Eigen::MatrixXd& C) {
+    const Eigen::Index n = C.rows();
+    Eigen::MatrixXd B = Eigen::MatrixXd::Zero(n + 1, C.cols());
+    for (Eigen::Index i = 0; i < n; ++i) {
+        B.row(i + 1) = C.row(i) / static_cast<double>(i + 1);
+    }
+    return B;
+}
+
+/// Coefficients of the indefinite integral Int f/T dT for a polynomial f.
+/// With y = T - Tbase, each term y^i / T = y^i / (y + Tbase) splits by
+/// polynomial division into
+///     y^i / (y + Tbase) = sum_{m=0}^{i-1} (-Tbase)^m y^(i-1-m) + (-Tbase)^i / T
+/// and so integrates to
+///     sum_{m=0}^{i-1} (-Tbase)^m y^(i-m) / (i-m)  +  (-Tbase)^i ln(T).
+/// The first part goes into P (same basis as C), the factor of ln(T) into
+/// the single row L. This holds for Tbase == 0 as well, where it reduces to
+/// a_0 ln(T) + sum_{i>0} a_i T^i / i. Unlike the per-call evaluation in
+/// Polynomial2DFrac::integral, which expands in powers of T itself, the
+/// polynomial part stays in powers of (T - Tbase) and has no pole anywhere.
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> polyDivideByTAntiderivative(const Eigen::MatrixXd& C, double Tbase) {
+    const Eigen::Index n = C.rows();
+    Eigen::MatrixXd P = Eigen::MatrixXd::Zero(std::max<Eigen::Index>(n, 1), C.cols());
+    Eigen::MatrixXd L = Eigen::MatrixXd::Zero(1, C.cols());
+    for (Eigen::Index i = 0; i < n; ++i) {
+        double minus_Tbase_power = 1.0;  // (-Tbase)^m, built up step by step
+        for (Eigen::Index m = 0; m < i; ++m) {
+            P.row(i - m) += C.row(i) * (minus_Tbase_power / static_cast<double>(i - m));
+            minus_Tbase_power *= -Tbase;
+        }
+        L.row(0) += C.row(i) * minus_Tbase_power;  // now (-Tbase)^i
+    }
+    return {P, L};
 }
 
 // ---- Chebyshev caloric fits (type == INCOMPRESSIBLE_CHEBYSHEV) -------------
@@ -173,17 +258,40 @@ and transport properties.
 //IncompressibleFluid::IncompressibleFluid();
 
 void IncompressibleFluid::validate() {
-    // Chebyshev caloric fits: check the domain and build the derived
-    // coefficient matrices exactly once, at load time. Everything h/s need
-    // afterwards is a plain Clenshaw evaluation (see dhdTatPxdT/dsdTatPxdT).
-    for (IncompressibleData* data : {&density, &specific_heat}) {
+    // Caloric fits: check them and build the derived coefficient matrices
+    // exactly once, at load time. Everything h and s need afterwards is a
+    // plain evaluation of a stored matrix (see drhodTatPx, dhdTatPxdT and
+    // dsdTatPxdT). Both the classic and the Chebyshev fits are prepared, so
+    // that either can be selected per state without reloading anything.
+    struct CaloricFit
+    {
+        IncompressibleData* data;
+        const char* what;
+        bool is_specific_heat;
+    };
+    for (const CaloricFit& fit : {CaloricFit{&density, "density", false}, CaloricFit{&density_cheb, "density", false},
+                                  CaloricFit{&specific_heat, "specific heat", true}, CaloricFit{&specific_heat_cheb, "specific heat", true}}) {
+        IncompressibleData* data = fit.data;
+        if (data->type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
+            if (data->coeffs.rows() < 1 || data->coeffs.cols() < 1) {
+                throw ValueError(
+                  format("%s (%d): Polynomial %s fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, fit.what, name.c_str()));
+            }
+            if (fit.is_specific_heat) {
+                data->int_dT = polyAntiderivativeMatrix(data->coeffs);
+                std::tie(data->int_dTdivT, data->int_dTdivT_log) = polyDivideByTAntiderivative(data->coeffs, Tbase);
+            } else {
+                data->ddT = polyDerivativeMatrix(data->coeffs);
+            }
+            continue;
+        }
         if (data->type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) continue;
         if (!(data->cheb_Tmin > 0.0) || !(data->cheb_Tmax > data->cheb_Tmin)) {
-            throw ValueError(format("%s (%d): Chebyshev fit for %s needs 0 < Tmin < Tmax, got [%g, %g].", __FILE__, __LINE__, name.c_str(),
-                                    data->cheb_Tmin, data->cheb_Tmax));
+            throw ValueError(format("%s (%d): Chebyshev %s fit for %s needs 0 < Tmin < Tmax, got [%g, %g].", __FILE__, __LINE__, fit.what,
+                                    name.c_str(), data->cheb_Tmin, data->cheb_Tmax));
         }
         if (data->coeffs.rows() < 1 || data->coeffs.cols() < 1) {
-            throw ValueError(format("%s (%d): Chebyshev fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, name.c_str()));
+            throw ValueError(format("%s (%d): Chebyshev %s fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, fit.what, name.c_str()));
         }
         // The fit domain must cover the fluid's advertised range. The scaled
         // variable u = (2T - (cheb_Tmax + cheb_Tmin)) / (cheb_Tmax - cheb_Tmin)
@@ -206,19 +314,34 @@ void IncompressibleFluid::validate() {
             throw ValueError(format("%s (%d): Chebyshev fit domain [%g, %g] for %s does not cover the fluid range [%g, %g].", __FILE__, __LINE__,
                                     data->cheb_Tmin, data->cheb_Tmax, name.c_str(), Tmin, Tmax));
         }
-        data->cheb_ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+        if (fit.is_specific_heat) {
+            data->int_dT = chebAntiderivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+            data->int_dTdivT =
+              chebAntiderivativeMatrix(chebDivideByTMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax), data->cheb_Tmin, data->cheb_Tmax);
+        } else {
+            data->ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+        }
     }
-    if (specific_heat.type == IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
-        specific_heat.cheb_int_dT = chebAntiderivativeMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
-        specific_heat.cheb_int_dTdivT =
-          chebAntiderivativeMatrix(chebDivideByTMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax),
-                                   specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
+    // The pure/solution classification comes from the number of density
+    // columns (is_pure). If the classic and the Chebyshev density disagreed,
+    // the fluid would change classification with the configuration, while
+    // the library files it under one name list for good.
+    if (density.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && density_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET
+        && (density.coeffs.cols() == 1) != (density_cheb.coeffs.cols() == 1)) {
+        throw ValueError(format("%s (%d): The classic and Chebyshev density fits for %s disagree on whether the fluid is pure (%d vs %d columns).",
+                                __FILE__, __LINE__, name.c_str(), static_cast<int>(density.coeffs.cols()),
+                                static_cast<int>(density_cheb.coeffs.cols())));
     }
 }
 
 bool IncompressibleFluid::is_pure() {
-    if (density.coeffs.cols() == 1) return true;
+    // validate() ensures both density fits agree, so either one will do
+    if (densityFit(true).coeffs.cols() == 1) return true;
     return false;
+}
+
+bool IncompressibleFluid::chebyshevCaloricPreferred() {
+    return get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC);
 }
 
 /// Base exponential function: exp(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2])
@@ -292,39 +415,41 @@ ValueError IncompressibleFluid::notDefinedError(const std::string& property) con
 }
 
 /// Density as a function of temperature, pressure and composition.
-double IncompressibleFluid::rho(double T, double p, double x) {
-    switch (density.type) {
+double IncompressibleFluid::rho(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
+            return poly.evaluate(fit.coeffs, T, x, 0, 0, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(density.coeffs, density, T, x);
+            return chebEvalMatrix(fit.coeffs, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-            return baseExponential(density, T, 0.0);
+            return baseExponential(fit, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
-            return baseLogexponential(density, T, 0.0);
+            return baseLogexponential(fit, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(poly.evaluate(fit.coeffs, T, x, 0, 0, Tbase, xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-            return basePolyOffset(density, T, x);
+            return basePolyOffset(fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("density");
         default:
-            throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, density.type));
+            throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, fit.type));
     }
 }
 
 /// Heat capacities as a function of temperature, pressure and composition.
-double IncompressibleFluid::c(double T, double p, double x) {
-    switch (specific_heat.type) {
+double IncompressibleFluid::c(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(specific_heat.coeffs, T, x, 0, 0, Tbase, xbase);
+            return poly.evaluate(fit.coeffs, T, x, 0, 0, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(specific_heat.coeffs, specific_heat, T, x);
+            return chebEvalMatrix(fit.coeffs, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.", __FILE__, __LINE__,
-                                    specific_heat.type));
+                                    fit.type));
     }
 }
 
@@ -419,51 +544,58 @@ double IncompressibleFluid::Tfreeze(double p, double x) {
  * derive the different functions with respect to temperature.
  */
 /// Partial derivative of density with respect to temperature at constant pressure and composition
-double IncompressibleFluid::drhodTatPx(double T, double p, double x) {
-    switch (density.type) {
+double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            // d/dT, derived once at load time in validate()
+            return polyEvalMatrix(fit.ddT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(density.cheb_ddT, density, T, x);
+            return chebEvalMatrix(fit.ddT, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("density");
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, density.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, fit.type));
     }
 }
 /// Partial derivative of entropy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
-double IncompressibleFluid::dsdTatPxdT(double T, double p, double x) {
-    switch (specific_heat.type) {
+double IncompressibleFluid::dsdTatPxdT(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+            // Indefinite Int c/T dT, derived once at load time in validate():
+            // a polynomial part plus a ln(T) term, see polyDivideByTAntiderivative
+            return polyEvalMatrix(fit.int_dTdivT, T, x, Tbase, xbase) + std::log(T) * polyEvalMatrix(fit.int_dTdivT_log, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             // Indefinite Int c/T dT, derived once at load time in validate()
-            return chebEvalMatrix(specific_heat.cheb_int_dTdivT, specific_heat, T, x);
+            return chebEvalMatrix(fit.int_dTdivT, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, specific_heat.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
     }
 }
 /// Partial derivative of enthalpy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
-double IncompressibleFluid::dhdTatPxdT(double T, double p, double x) {
-    switch (specific_heat.type) {
+double IncompressibleFluid::dhdTatPxdT(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            // Indefinite Int c dT, derived once at load time in validate()
+            return polyEvalMatrix(fit.int_dT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             // Indefinite Int c dT, derived once at load time in validate()
-            return chebEvalMatrix(specific_heat.cheb_int_dT, specific_heat, T, x);
+            return chebEvalMatrix(fit.int_dT, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, specific_heat.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
     }
 }
 
@@ -585,11 +717,12 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
  * done here, but in the backend, T(h,p) for example.
  */
 /// Temperature as a function of density, pressure and composition.
-double IncompressibleFluid::T_rho(double Dmass, double p, double x) {
+double IncompressibleFluid::T_rho(double Dmass, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
     double d_raw = Dmass;  // No changes needed, no reference values...
-    switch (density.type) {
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limits(density.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+            return poly.solve_limits(fit.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
             // Brent on the forward evaluation over the fluid's range,
             // mirroring the backend's HmassP/PSmass flashes; the Chebyshev
@@ -599,29 +732,32 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x) {
                public:
                 IncompressibleFluid* fluid;
                 double p, x, target;
-                Residual(IncompressibleFluid* fluid, double p, double x, double target) : fluid(fluid), p(p), x(x), target(target) {}
+                bool chebyshev;
+                Residual(IncompressibleFluid* fluid, double p, double x, double target, bool chebyshev)
+                  : fluid(fluid), p(p), x(x), target(target), chebyshev(chebyshev) {}
                 double call(double T) override {
-                    return fluid->rho(T, p, x) - target;
+                    return fluid->rho(T, p, x, chebyshev) - target;
                 }
-            } res(this, p, x, d_raw);
+            } res(this, p, x, d_raw, chebyshev);
             return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
         }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("density");
         default:
-            // density.type, not specific_heat.type: T_rho switches on the
-            // density fit, so reporting the heat capacity's type code here
-            // named the wrong property.
+            // The density fit's type, not the specific heat's: T_rho
+            // switches on the density fit, so reporting the heat capacity's
+            // type code here named the wrong property.
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.", __FILE__, __LINE__,
-                                    density.type));
+                                    fit.type));
     }
 }
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
-double IncompressibleFluid::T_c(double Cmass, double p, double x) {
+double IncompressibleFluid::T_c(double Cmass, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
     double c_raw = Cmass;  // No changes needed, no reference values...
-    switch (specific_heat.type) {
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limits(specific_heat.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+            return poly.solve_limits(fit.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
             // See the matching comment in T_rho above.
             class Residual : public FuncWrapper1D
@@ -629,18 +765,20 @@ double IncompressibleFluid::T_c(double Cmass, double p, double x) {
                public:
                 IncompressibleFluid* fluid;
                 double p, x, target;
-                Residual(IncompressibleFluid* fluid, double p, double x, double target) : fluid(fluid), p(p), x(x), target(target) {}
+                bool chebyshev;
+                Residual(IncompressibleFluid* fluid, double p, double x, double target, bool chebyshev)
+                  : fluid(fluid), p(p), x(x), target(target), chebyshev(chebyshev) {}
                 double call(double T) override {
-                    return fluid->c(T, p, x) - target;
+                    return fluid->c(T, p, x, chebyshev) - target;
                 }
-            } res(this, p, x, c_raw);
+            } res(this, p, x, c_raw, chebyshev);
             return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
         }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse specific heat.", __FILE__,
-                                    __LINE__, specific_heat.type));
+                                    __LINE__, fit.type));
     }
 }
 

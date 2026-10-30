@@ -93,6 +93,7 @@ New features:
 * Lead-bismuth eutectic (``INCOMP::LBE``), 400-1100 K (`#3193 <https://github.com/CoolProp/CoolProp/pull/3193>`__).
 * ``HFORMATION``: standard ideal-gas enthalpy of formation at 298.15 K, from ATcT for HEOS (`#3309 <https://github.com/CoolProp/CoolProp/pull/3309>`__) and from ``HEATFRMdll`` for REFPROP (`#3349 <https://github.com/CoolProp/CoolProp/pull/3349>`__).
 * Incompressible fluids: Chebyshev fits for density and heat capacity, with enthalpy and entropy integrated exactly; ``add_fluids_as_JSON("INCOMP", ...)`` registers fluids at runtime (`#2384 <https://github.com/CoolProp/CoolProp/issues/2384>`__; `#3294 <https://github.com/CoolProp/CoolProp/pull/3294>`__, `#3295 <https://github.com/CoolProp/CoolProp/pull/3295>`__, `#3296 <https://github.com/CoolProp/CoolProp/pull/3296>`__, `#3297 <https://github.com/CoolProp/CoolProp/pull/3297>`__, `#3390 <https://github.com/CoolProp/CoolProp/pull/3390>`__).
+* Incompressible fluids: the configuration key ``INCOMP_PREFER_CHEBYSHEV_CALORIC`` (default ``true``) switches density, heat capacity, enthalpy and entropy back to the classic polynomial fits, which are now loaded alongside the Chebyshev fits.  Each ``AbstractState`` keeps the choice it was created with; ``PropsSI`` follows the setting immediately.  The derivative and integrals of the polynomial fits are built once at load time instead of on every call.
 * PR/SRK: Péneloux volume translation for mixtures, with a per-component ``c``, and fixes to the pure-fluid paths that ignored ``c`` (`#3353 <https://github.com/CoolProp/CoolProp/pull/3353>`__).
 * PR/SRK: ``Tcrit`` and ``pcrit`` can be set per component through ``set_fluid_parameter_double`` (`#3261 <https://github.com/CoolProp/CoolProp/pull/3261>`__).
 * Vector ``fugacities()`` and ``chemical_potentials()`` on ``AbstractState``, and all three vector endpoints (with ``fugacity_coefficients()``) in Python and the C API, which also gains a scalar ``AbstractState_get_chemical_potential`` (`#3024 <https://github.com/CoolProp/CoolProp/issues/3024>`__, `#3232 <https://github.com/CoolProp/CoolProp/pull/3232>`__).
@@ -273,6 +274,7 @@ Performance:
 
 Bug fixes:
 
+* Setting ``ALTERNATIVE_REFPROP_PATH``, ``ALTERNATIVE_REFPROP_HMX_BNC_PATH`` or ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` through ``set_config_as_json_string`` now unloads the loaded REFPROP library, as ``set_config_string`` already did, so the new path takes effect.
 * HEOS mixture ``T_critical()``, ``p_critical()`` and ``rhomolar_critical()`` skip unstable critical points instead of throwing when the tracer also found one, e.g. R454B (`#3528 <https://github.com/CoolProp/CoolProp/issues/3528>`__).
 
 * ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
