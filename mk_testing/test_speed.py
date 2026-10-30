@@ -29,6 +29,14 @@ if __name__ == "__main__":
     h = np.linspace(h1, h2, n)
     s = np.linspace(s1, s2, n)
 
+    Tfreeze = []
+    start_time = time.time()
+    for _T in T:
+        fluid.update(CP.PT_INPUTS, 0.0, _T)
+        Tfreeze.append(fluid.keyed_output(CP.iT_freeze))
+    end_time = time.time()
+    print(f"Tfreeze(T,p) elapsed time: {end_time - start_time} seconds")
+
     mu = []
     start_time = time.time()
     for _T in T:
@@ -93,6 +101,22 @@ if __name__ == "__main__":
     h2, s2 = fluid.hmass(), fluid.smass()
     h = np.linspace(h1, h2, n)
     s = np.linspace(s1, s2, n)
+
+    # psat = []
+    # start_time = time.time()
+    # for _T in T:
+    #     fluid.update(CP.QT_INPUTS, 0.0, _T)
+    #     psat.append(fluid.p())
+    # end_time = time.time()
+    # print(f"psat(Q,T) elapsed time: {end_time - start_time} seconds")
+
+    Tfreeze = []
+    start_time = time.time()
+    for _T in T:
+        fluid.update(CP.PT_INPUTS, 0.0, _T)
+        Tfreeze.append(fluid.keyed_output(CP.iT_freeze))
+    end_time = time.time()
+    print(f"Tfreeze(T,p) elapsed time: {end_time - start_time} seconds")
 
     mu = []
     start_time = time.time()
