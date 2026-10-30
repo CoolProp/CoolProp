@@ -215,7 +215,7 @@ Tell Julia which Python to use, then add the PyCall package.  Set ``PYTHON`` to 
 
     julia> Pkg.build("PyCall")
 
-On Linux or macOS, use a path such as ``/usr/bin/python3``.  If PyCall was already installed with a different Python, the ``Pkg.build`` step switches it to the new one.
+On Linux or macOS, use a path such as ``/usr/bin/python3``.  If PyCall was already installed with a different Python, the ``Pkg.build`` step switches it to the new one.  If PyCall was already loaded in the current Julia session, exit Julia and start a new session after the build, because the running session keeps using the old Python.
 
 Usage:
 
