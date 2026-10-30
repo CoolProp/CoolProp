@@ -278,6 +278,18 @@ class IncompressibleFluid
     }
     void setTbase(double Tbase) {
         this->Tbase = Tbase;
+        // The entropy integral of a polynomial fit has Tbase built in (see
+        // int_dTdivT_log), so drop the derived matrices: evaluating h or s
+        // then throws until validate() rebuilds them, instead of silently
+        // mixing the old and the new Tbase.
+        for (IncompressibleData* data : {&density, &specific_heat, &density_cheb, &specific_heat_cheb}) {
+            if (data->type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
+                data->ddT.resize(0, 0);
+                data->int_dT.resize(0, 0);
+                data->int_dTdivT.resize(0, 0);
+                data->int_dTdivT_log.resize(0, 0);
+            }
+        }
     }
     void setxbase(double xbase) {
         this->xbase = xbase;
@@ -330,10 +342,14 @@ class IncompressibleFluid
     /// key. It is the default for the chebyshev argument of the caloric
     /// functions below; the backend reads it once per state instead.
     static bool chebyshevCaloricPreferred();
-    /// True if this fluid ships a Chebyshev fit for density or specific heat
+    /// True if this fluid has Chebyshev fits for both density and specific heat
     bool hasChebyshevCaloric() const {
         return density_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET
-               || specific_heat_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+               && specific_heat_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+    }
+    /// True if this fluid has classic fits for both density and specific heat
+    bool hasClassicCaloric() const {
+        return density.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && specific_heat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
     }
 
    protected:

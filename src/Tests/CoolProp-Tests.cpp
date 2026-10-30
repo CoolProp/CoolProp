@@ -8344,8 +8344,8 @@ TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime",
         // Tbase (the ln(T) term mixes every power of (T - Tbase)) and with
         // Tbase == 0 (the case Polynomial2DFrac::integral special-cases).
         const Eigen::MatrixXd C_rho = (Eigen::MatrixXd(3, 2) << 1050.0, -40.0, -0.6, 0.3, -2.5e-3, 1.0e-3).finished();
-        const Eigen::MatrixXd C_cp = (Eigen::MatrixXd(4, 3) << 3600.0, 900.0, -150.0, 2.1, -1.5, 0.4, 4.0e-3, 2.0e-3, -1.0e-3, -3.0e-5, 1.0e-5, 2.0e-6)
-                                       .finished();
+        const Eigen::MatrixXd C_cp =
+          (Eigen::MatrixXd(4, 3) << 3600.0, 900.0, -150.0, 2.1, -1.5, 0.4, 4.0e-3, 2.0e-3, -1.0e-3, -3.0e-5, 1.0e-5, 2.0e-6).finished();
         auto matrix_json = [](const Eigen::MatrixXd& M) {
             std::ostringstream out;
             out.precision(17);
@@ -8494,6 +8494,32 @@ TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime",
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
         }])";
         CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", json), Catch::Matchers::ContainsSubstring("disagree on whether the fluid is pure"));
+
+        // A classic entry with an unknown type must not be dropped silently
+        const std::string bad_type = R"([{
+            "name": "CatchRuntimeBadTypeFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "polynomal", "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", bad_type), Catch::Matchers::ContainsSubstring("[density] exists but its type"));
+    }
+    SECTION("Changing Tbase after validate() makes h and s throw until validate() runs again") {
+        // The polynomial entropy integral has Tbase built in; a stale matrix
+        // would give a wrong entropy without any error.
+        CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MEG");
+        const double T = 300.0, x = 0.3;
+        const double s_before = fluid.dsdTatPxdT(T, p, x, false) - fluid.dsdTatPxdT(280.0, p, x, false);
+        fluid.setTbase(fluid.getTbase());
+        CHECK_THROWS_WITH(fluid.dsdTatPxdT(T, p, x, false), Catch::Matchers::ContainsSubstring("not loaded through validate()"));
+        CHECK_THROWS(fluid.dhdTatPxdT(T, p, x, false));
+        CHECK_THROWS(fluid.drhodTatPx(T, p, x, false));
+        // The Chebyshev fits do not depend on Tbase and keep working
+        CHECK_NOTHROW(fluid.dsdTatPxdT(T, p, x, true));
+        fluid.validate();
+        CHECK(fluid.dsdTatPxdT(T, p, x, false) - fluid.dsdTatPxdT(280.0, p, x, false) == Catch::Approx(s_before).epsilon(1e-14));
     }
     SECTION("Shipped fluids: the classic fits give consistent h and s, and match where the Chebyshev fit is a conversion") {
         // dh/dT == cp and ds/dT == cp/T on the classic fits, by central
@@ -8574,6 +8600,11 @@ TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime",
                 CAPTURE(chebyshev);
                 CAPTURE(name);
                 CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+                // Every shipped fluid carries both kinds. Without this, a
+                // classic fit lost at load would fall back to the Chebyshev
+                // one and every check below would still pass.
+                CHECK(fluid.hasClassicCaloric());
+                CHECK(fluid.hasChebyshevCaloric());
                 const double T = 0.5 * (fluid.getTmin() + fluid.getTmax());
                 const double x = fluid.is_pure() ? 0.0 : 0.5 * (fluid.getxmin() + fluid.getxmax());
                 // A throw inside CHECK is reported as a failure of that

@@ -491,6 +491,13 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
             IncompressibleData chebyshev_data = parse_chebyshev(id);
             const bool has_chebyshev = chebyshev_data.type != CoolProp::IncompressibleData::INCOMPRESSIBLE_NOT_SET;
             IncompressibleData classic_data = parse_coefficients(fluid_json, id, !has_chebyshev);
+            if (fluid_json.contains(id) && classic_data.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+                // A non-vital entry with an unknown "type" parses to NOT_SET
+                // without complaint. Here that would make the classic fit
+                // silently fall back to the Chebyshev one when the setting
+                // asks for the classic fit, so reject it as the _cheb check does.
+                throw ValueError(format("The entry [%s] exists but its type is not understood; fix or remove it.", id.c_str()));
+            }
             if (id == "density") {
                 fluid.setDensity(std::move(classic_data));
                 fluid.setDensityChebyshev(std::move(chebyshev_data));

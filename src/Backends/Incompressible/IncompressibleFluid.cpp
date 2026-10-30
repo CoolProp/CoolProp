@@ -269,6 +269,15 @@ void IncompressibleFluid::validate() {
         const char* what;
         bool is_specific_heat;
     };
+    // The Chebyshev slots must hold Chebyshev data: setDensityChebyshev and
+    // setSpecificHeatChebyshev accept anything, and anything else there would
+    // be evaluated as the "Chebyshev" choice without being one.
+    for (const IncompressibleData* data : {&density_cheb, &specific_heat_cheb}) {
+        if (data->type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && data->type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+            throw ValueError(
+              format("%s (%d): The Chebyshev caloric fit slot of %s holds a fit of type [%d].", __FILE__, __LINE__, name.c_str(), data->type));
+        }
+    }
     for (const CaloricFit& fit : {CaloricFit{&density, "density", false}, CaloricFit{&density_cheb, "density", false},
                                   CaloricFit{&specific_heat, "specific heat", true}, CaloricFit{&specific_heat_cheb, "specific heat", true}}) {
         IncompressibleData* data = fit.data;
@@ -448,8 +457,8 @@ double IncompressibleFluid::c(double T, double p, double x, bool chebyshev) {
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.", __FILE__, __LINE__,
-                                    fit.type));
+            throw ValueError(
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.", __FILE__, __LINE__, fit.type));
     }
 }
 
@@ -747,8 +756,8 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x, bool chebysh
             // The density fit's type, not the specific heat's: T_rho
             // switches on the density fit, so reporting the heat capacity's
             // type code here named the wrong property.
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.", __FILE__, __LINE__,
-                                    fit.type));
+            throw ValueError(
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.", __FILE__, __LINE__, fit.type));
     }
 }
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
