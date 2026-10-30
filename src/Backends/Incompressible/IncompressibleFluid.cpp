@@ -160,6 +160,75 @@ Eigen::MatrixXd chebDivideByTMatrix(const Eigen::MatrixXd& C, double Tmin, doubl
         degree += 16;
     }
 }
+
+// ---- Polynomial fits (type == INCOMPRESSIBLE_POLYNOMIAL) -------------------
+//
+// Rows of the coefficient matrix are powers of (T - Tbase), columns powers of
+// (x - xbase). Unlike Polynomial2DFrac, none of these build temporary matrices
+// when evaluating.
+
+/// Horner over the columns of one row, at dx = x - xbase.
+double polyRow(const Eigen::MatrixXd& M, Eigen::Index i, double dx) {
+    double row = 0.0;
+    for (Eigen::Index j = M.cols() - 1; j >= 0; --j) {
+        row = row * dx + M(i, j);
+    }
+    return row;
+}
+
+/// Evaluate at dT = T - Tbase and dx = x - xbase.
+double polyEvalMatrix(const Eigen::MatrixXd& M, double dT, double dx) {
+    double acc = 0.0;
+    for (Eigen::Index i = M.rows() - 1; i >= 0; --i) {
+        acc = acc * dT + polyRow(M, i, dx);
+    }
+    return acc;
+}
+
+/// Coefficients of d/dT (one row shorter, but never empty).
+Eigen::MatrixXd polyDerivativeMatrix(const Eigen::MatrixXd& P) {
+    Eigen::MatrixXd D = Eigen::MatrixXd::Zero(std::max<Eigen::Index>(P.rows() - 1, 1), P.cols());
+    for (Eigen::Index i = 1; i < P.rows(); ++i) {
+        D.row(i - 1) = static_cast<double>(i) * P.row(i);
+    }
+    return D;
+}
+
+/// Coefficients of the indefinite Int dT; the constant term is zero at T = Tbase.
+Eigen::MatrixXd polyAntiderivativeMatrix(const Eigen::MatrixXd& P) {
+    Eigen::MatrixXd I = Eigen::MatrixXd::Zero(P.rows() + 1, P.cols());
+    for (Eigen::Index i = 0; i < P.rows(); ++i) {
+        I.row(i + 1) = P.row(i) / static_cast<double>(i + 1);
+    }
+    return I;
+}
+
+/// Indefinite Int p/T dT for p = sum a_i (T - Tbase)^i: expand p in powers of T
+/// (b_k = sum_{i>=k} a_i C(i,k) (-Tbase)^(i-k)), then Int = b_0 ln T + sum_{k>=1} b_k T^k / k.
+/// Row 0 holds b_0 (it multiplies ln T); row k >= 1 holds b_k / k.
+Eigen::MatrixXd polyAntiderivativeDivTMatrix(const Eigen::MatrixXd& P, double Tbase) {
+    Eigen::MatrixXd B = Eigen::MatrixXd::Zero(P.rows(), P.cols());
+    for (Eigen::Index i = 0; i < P.rows(); ++i) {
+        double binom = 1.0;  // C(i, k)
+        for (Eigen::Index k = 0; k <= i; ++k) {
+            B.row(k) += binom * std::pow(-Tbase, static_cast<int>(i - k)) * P.row(i);
+            binom *= static_cast<double>(i - k) / static_cast<double>(k + 1);
+        }
+    }
+    for (Eigen::Index k = 1; k < B.rows(); ++k) {
+        B.row(k) /= static_cast<double>(k);
+    }
+    return B;
+}
+
+/// Evaluate a matrix from polyAntiderivativeDivTMatrix at T and dx = x - xbase.
+double polyEvalDivT(const Eigen::MatrixXd& S, double T, double dx) {
+    double acc = 0.0;
+    for (Eigen::Index i = S.rows() - 1; i >= 1; --i) {
+        acc = acc * T + polyRow(S, i, dx);
+    }
+    return acc * T + polyRow(S, 0, dx) * std::log(T);
+}
 }  // namespace
 
 namespace CoolProp {
@@ -213,6 +282,15 @@ void IncompressibleFluid::validate() {
         specific_heat.cheb_int_dTdivT =
           chebAntiderivativeMatrix(chebDivideByTMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax),
                                    specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
+    }
+    // Polynomial fits: derive the h/s coefficients once as well, so evaluating
+    // them never rebuilds matrices. poly_int_dTdivT depends on Tbase.
+    if (density.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL && density.coeffs.size() > 0) {
+        density.poly_ddT = polyDerivativeMatrix(density.coeffs);
+    }
+    if (specific_heat.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL && specific_heat.coeffs.size() > 0) {
+        specific_heat.poly_int_dT = polyAntiderivativeMatrix(specific_heat.coeffs);
+        specific_heat.poly_int_dTdivT = polyAntiderivativeDivTMatrix(specific_heat.coeffs, Tbase);
     }
 }
 
@@ -295,7 +373,7 @@ ValueError IncompressibleFluid::notDefinedError(const std::string& property) con
 double IncompressibleFluid::rho(double T, double p, double x) {
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(density.coeffs, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             return chebEvalMatrix(density.coeffs, density, T, x);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
@@ -317,7 +395,7 @@ double IncompressibleFluid::rho(double T, double p, double x) {
 double IncompressibleFluid::c(double T, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(specific_heat.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(specific_heat.coeffs, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             return chebEvalMatrix(specific_heat.coeffs, specific_heat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -422,7 +500,10 @@ double IncompressibleFluid::Tfreeze(double p, double x) {
 double IncompressibleFluid::drhodTatPx(double T, double p, double x) {
     switch (density.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            if (density.poly_ddT.size() == 0) {  // not run through validate()
+                return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            }
+            return polyEvalMatrix(density.poly_ddT, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             return chebEvalMatrix(density.cheb_ddT, density, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -438,7 +519,10 @@ double IncompressibleFluid::drhodTatPx(double T, double p, double x) {
 double IncompressibleFluid::dsdTatPxdT(double T, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+            if (specific_heat.poly_int_dTdivT.size() == 0) {  // not run through validate()
+                return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+            }
+            return polyEvalDivT(specific_heat.poly_int_dTdivT, T, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             // Indefinite Int c/T dT, derived once at load time in validate()
             return chebEvalMatrix(specific_heat.cheb_int_dTdivT, specific_heat, T, x);
@@ -455,7 +539,10 @@ double IncompressibleFluid::dsdTatPxdT(double T, double p, double x) {
 double IncompressibleFluid::dhdTatPxdT(double T, double p, double x) {
     switch (specific_heat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            if (specific_heat.poly_int_dT.size() == 0) {  // not run through validate()
+                return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            }
+            return polyEvalMatrix(specific_heat.poly_int_dT, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             // Indefinite Int c dT, derived once at load time in validate()
             return chebEvalMatrix(specific_heat.cheb_int_dT, specific_heat, T, x);
@@ -971,6 +1058,42 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
             std::string errmsg = CoolProp::get_global_param_string("errstring");
             CAPTURE(errmsg);
             CHECK(check_abs(expected, actual, acc));
+        }
+    }
+}
+
+TEST_CASE("Precomputed polynomial h/s/rho coefficients match the Polynomial2DFrac path", "[IncompressibleFluids]") {
+    Eigen::MatrixXd cp_coeffs(3, 3);
+    cp_coeffs << 3800.0, 20.0, -5.0, 4.0, 0.5, 0.1, 0.01, -0.002, 0.0005;
+    Eigen::MatrixXd rho_coeffs(3, 3);
+    rho_coeffs << 1000.0, -30.0, 4.0, -0.5, 0.02, -0.003, -0.002, 0.0001, 0.00002;
+
+    // Tbase = 0 takes the plain-power branch of the reference integral, 300 the centred one.
+    for (const double Tbase : {0.0, 300.0}) {
+        CoolProp::IncompressibleData density, specific_heat;
+        density.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        density.coeffs = rho_coeffs;
+        specific_heat.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        specific_heat.coeffs = cp_coeffs;
+
+        CoolProp::IncompressibleFluid reference;
+        reference.setName("PolyReference");
+        reference.setTbase(Tbase);
+        reference.setxbase(0.25);
+        reference.setDensity(density);
+        reference.setSpecificHeat(specific_heat);
+        CoolProp::IncompressibleFluid precomputed = reference;  // copied before validate(), so it has no derived matrices
+        precomputed.validate();
+
+        for (const double T : {285.0, 310.0, 340.0, 365.0}) {
+            for (const double x : {0.0, 0.2, 0.4}) {
+                CAPTURE(Tbase, T, x);
+                CHECK(precomputed.rho(T, 1e5, x) == Catch::Approx(reference.rho(T, 1e5, x)).epsilon(1e-10));
+                CHECK(precomputed.c(T, 1e5, x) == Catch::Approx(reference.c(T, 1e5, x)).epsilon(1e-10));
+                CHECK(precomputed.drhodTatPx(T, 1e5, x) == Catch::Approx(reference.drhodTatPx(T, 1e5, x)).epsilon(1e-10));
+                CHECK(precomputed.dhdTatPxdT(T, 1e5, x) == Catch::Approx(reference.dhdTatPxdT(T, 1e5, x)).epsilon(1e-10));
+                CHECK(precomputed.dsdTatPxdT(T, 1e5, x) == Catch::Approx(reference.dsdTatPxdT(T, 1e5, x)).epsilon(1e-10));
+            }
         }
     }
 }
