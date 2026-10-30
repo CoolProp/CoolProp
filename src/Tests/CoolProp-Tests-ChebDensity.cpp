@@ -10,6 +10,7 @@
 #if defined(ENABLE_CATCH)
 
 #    include <algorithm>
+#    include <array>
 #    include <cfloat>
 #    include <cmath>
 #    include <memory>
@@ -20,6 +21,7 @@
 #    include <catch2/catch_all.hpp>
 
 #    include "CoolProp/AbstractState.h"
+#    include "CoolProp/Configuration.h"
 #    include "CoolProp/DataStructures.h"
 #    include "../Backends/Helmholtz/ChebDensitySolver.h"
 #    include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
@@ -576,6 +578,196 @@ TEST_CASE("ChebDensity: non-analytic tables are shared across mixtures", "[cheb_
         CHECK(std::abs(G1 - G2) <= m1 + m2);
         CHECK(m1 < 1e-6);  // not vacuous: small, finite margins (the GE fits put ~2e-7 here)
         CHECK(m2 < 1e-6);
+    }
+}
+
+namespace {
+// sets a configuration bool for the scope, restoring the previous value
+struct ConfigBoolScope
+{
+    configuration_keys key;
+    bool old;
+    ConfigBoolScope(configuration_keys k, bool v) : key(k), old(get_config_bool(k)) {
+        set_config_bool(k, v);
+    }
+    ~ConfigBoolScope() {
+        set_config_bool(key, old);
+    }
+    ConfigBoolScope(const ConfigBoolScope&) = delete;
+    ConfigBoolScope& operator=(const ConfigBoolScope&) = delete;
+    ConfigBoolScope(ConfigBoolScope&&) = delete;
+    ConfigBoolScope& operator=(ConfigBoolScope&&) = delete;
+};
+}  // namespace
+
+TEST_CASE("ChebDensity: PT flash with CHEBYSHEV_DENSITY_SOLVER", "[cheb_density][flash]") {
+    struct C
+    {
+        std::string backend, fluids;
+        std::vector<double> z;
+        double Tlo, Thi;
+    };
+    const std::vector<C> cs = {
+      {"GERG2008", "Methane&Ethane", {0.5, 0.5}, 150, 400},
+      {"GERG2008", "Methane&Nitrogen&CarbonDioxide&Ethane&Propane", {0.85, 0.05, 0.03, 0.05, 0.02}, 150, 400},
+      {"HEOS", "Methane&Ethane&Propane", {0.7, 0.2, 0.1}, 150, 400},
+      {"HEOS", "CarbonDioxide&Water", {0.95, 0.05}, 280, 450},
+    };
+    for (const auto& c : cs) {
+        std::shared_ptr<AbstractState> off(AbstractState::factory(c.backend, c.fluids)), on(AbstractState::factory(c.backend, c.fluids));
+        off->set_mole_fractions(c.z);
+        on->set_mole_fractions(c.z);
+        std::mt19937_64 g(7);
+        int n = 0, same = 0, single = 0, answered = 0, published = 0, phase_differs = 0;
+        for (int k = 0; k < 150; ++k) {
+            const double u1 = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53, u2 = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53;
+            const double T = c.Tlo + (c.Thi - c.Tlo) * u1, p = std::exp(std::log(1e4) + (std::log(3e7) - std::log(1e4)) * u2);
+            double rho_off = NAN, Q_off = NAN, rho_on = NAN, Q_on = NAN;
+            try {
+                off->update(PT_INPUTS, p, T);
+                rho_off = off->rhomolar();
+                Q_off = off->Q();
+            } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                // a failed flash leaves rho_off NaN: the state is skipped below
+            }
+            {
+                ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
+                try {
+                    on->update(PT_INPUTS, p, T);
+                    rho_on = on->rhomolar();
+                    Q_on = on->Q();
+                } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                    // a failed flash leaves rho_on NaN: the state is skipped below
+                }
+                auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(on.get());
+                REQUIRE(heos != nullptr);
+                const double rc = heos->solver_rho_Tp_cheb(T, p);
+                if (rc > 0) {
+                    ++answered;
+                    // a single-phase flash with the solver serving the state publishes its root
+                    if (std::isfinite(rho_on) && !(Q_on > 0 && Q_on < 1) && std::abs(rho_on / rc - 1) < 1e-12) ++published;
+                }
+            }
+            if (!std::isfinite(rho_off) || !std::isfinite(rho_on)) continue;
+            ++n;
+            if ((Q_off > 0 && Q_off < 1) != (Q_on > 0 && Q_on < 1)) ++phase_differs;
+            const bool one_phase = !(Q_off > 0 && Q_off < 1) && !(Q_on > 0 && Q_on < 1);
+            if (one_phase) {
+                ++single;
+                // both single-phase: the same stable root (the legacy solver's own convergence is ~1e-8)
+                if (std::abs(rho_on / rho_off - 1) < 1e-6) ++same;
+            }
+        }
+        INFO(c.backend << "::" << c.fluids << ": " << n << " states, " << single << " single-phase, " << same << " same density, kernel answered "
+                       << answered << ", published its root " << published << ", phase verdict differs " << phase_differs);
+        CHECK(n > 120);
+        CHECK(answered > n / 2);    // the solver really serves the flash
+        CHECK(same >= single - 2);  // at most a couple of states where the legacy solver took another root
+        CHECK(phase_differs <= 2);
+        CHECK(published > single / 2);  // the flash really uses the solver's root
+    }
+}
+
+TEST_CASE("ChebDensity: tables follow changed interaction parameters", "[cheb_density][flash]") {
+    ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
+    const std::vector<double> z = {0.5, 0.5};
+    std::shared_ptr<AbstractState> A(AbstractState::factory("HEOS", "Methane&Ethane")), B(AbstractState::factory("HEOS", "Methane&Ethane"));
+    A->set_mole_fractions(z);
+    B->set_mole_fractions(z);
+    const double T = 250, p = 5e6;
+    auto* ha = dynamic_cast<HelmholtzEOSMixtureBackend*>(A.get());
+    auto* hb = dynamic_cast<HelmholtzEOSMixtureBackend*>(B.get());
+    const double ra = ha->solver_rho_Tp_cheb(T, p);
+    REQUIRE(ra > 0);
+    // change B's reducing function; A keeps the original model
+    B->set_binary_interaction_double(0, 1, "betaT", 1.05 * B->get_binary_interaction_double(0, 1, "betaT"));
+    const double rb = hb->solver_rho_Tp_cheb(T, p);
+    REQUIRE(rb > 0);
+    CHECK(std::abs(rb / ra - 1) > 1e-4);  // a different model, different tables
+    // and B's root is a root of B's model, and A's of A's: the pressure at the returned density
+    auto p_at = [&](AbstractState& S, double rho) {
+        S.specify_phase(iphase_gas);
+        S.update(DmolarT_INPUTS, rho, T);
+        const double pp = S.p();
+        S.unspecify_phase();
+        return pp;
+    };
+    CHECK(std::abs(p_at(*B, rb) / p - 1) < 1e-9);
+    CHECK(std::abs(p_at(*A, ra) / p - 1) < 1e-9);
+    CHECK(std::abs(p_at(*B, ra) / p - 1) > 1e-4);                    // A's root is not a root of B's model
+    CHECK(std::abs(ha->solver_rho_Tp_cheb(T, p) / ra - 1) < 1e-14);  // A unchanged
+}
+
+TEST_CASE("ChebDensity: cubic backends are not served", "[cheb_density][flash]") {
+    ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
+    std::shared_ptr<AbstractState> A(AbstractState::factory("PR", "Methane&Ethane"));
+    A->set_mole_fractions({0.5, 0.5});
+    auto* h = dynamic_cast<HelmholtzEOSMixtureBackend*>(A.get());
+    REQUIRE(h != nullptr);
+    CHECK(h->solver_rho_Tp_cheb(250, 1e6) < 0);
+    CHECK_NOTHROW(A->update(PT_INPUTS, 1e6, 250));
+}
+
+TEST_CASE("ChebDensity: cache key tells beta from 1/beta", "[cheb_density][flash]") {
+    // at x_i = x_j the GERG reducing function is unchanged by beta -> 1/beta; the key samples asymmetric compositions
+    ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
+    const std::vector<double> z = {0.3, 0.7};
+    std::shared_ptr<AbstractState> A(AbstractState::factory("HEOS", "Methane&Ethane")), B(AbstractState::factory("HEOS", "Methane&Ethane"));
+    A->set_mole_fractions(z);
+    B->set_mole_fractions(z);
+    const double bT = A->get_binary_interaction_double(0, 1, "betaT");
+    REQUIRE(std::abs(bT - 1) > 1e-3);  // the test needs beta != 1/beta
+    B->set_binary_interaction_double(0, 1, "betaT", 1 / bT);
+    const double T = 250, p = 5e6;
+    auto* ha = dynamic_cast<HelmholtzEOSMixtureBackend*>(A.get());
+    auto* hb = dynamic_cast<HelmholtzEOSMixtureBackend*>(B.get());
+    const double ra = ha->solver_rho_Tp_cheb(T, p), rb = hb->solver_rho_Tp_cheb(T, p);
+    REQUIRE(ra > 0);
+    REQUIRE(rb > 0);
+    auto p_at = [&](AbstractState& S, double rho) {
+        S.specify_phase(iphase_gas);
+        S.update(DmolarT_INPUTS, rho, T);
+        const double pp = S.p();
+        S.unspecify_phase();
+        return pp;
+    };
+    CHECK(std::abs(p_at(*A, ra) / p - 1) < 1e-9);
+    CHECK(std::abs(p_at(*B, rb) / p - 1) < 1e-9);  // B's root of B's model, not A's tables
+}
+
+TEST_CASE("ChebDensity: change_EOS and gas-constant configuration re-resolve the tables", "[cheb_density][flash]") {
+    ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
+    std::shared_ptr<AbstractState> A(AbstractState::factory("HEOS", "Methane&Ethane"));
+    A->set_mole_fractions({0.5, 0.5});
+    auto* h = dynamic_cast<HelmholtzEOSMixtureBackend*>(A.get());
+    REQUIRE(h->solver_rho_Tp_cheb(250, 5e6) > 0);
+    {  // a different gas constant: tables for the new configuration
+        ConfigBoolScope norm(NORMALIZE_GAS_CONSTANTS, !get_config_bool(NORMALIZE_GAS_CONSTANTS));
+        const double r2 = h->solver_rho_Tp_cheb(250, 5e6);
+        REQUIRE(r2 > 0);
+        A->specify_phase(iphase_gas);
+        A->update(DmolarT_INPUTS, r2, 250);
+        CHECK(std::abs(A->p() / 5e6 - 1) < 1e-9);
+        A->unspecify_phase();
+    }
+    A->change_EOS(0, "SRK");  // a cubic residual: the tables decline the model
+    CHECK(h->solver_rho_Tp_cheb(250, 5e6) < 0);
+    CHECK_NOTHROW(A->update(PT_INPUTS, 5e6, 250));  // the existing solvers answer
+}
+
+TEST_CASE("PT flash: NaN trial-composition fixes (Amarillo)", "[cheb_density][flash]") {
+    // States from the 10k-state Amarillo sweep where non-finite K-factors used to fail the flash; with the NaN lnK
+    // reported as non-convergence they fall back to the single-phase liquid REFPROP TPFLSH gives (kernel off and on)
+    for (bool kernel : {false, true}) {
+        ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, kernel);
+        std::shared_ptr<AbstractState> A(
+          AbstractState::factory("GERG2008", "Methane&Nitrogen&CarbonDioxide&Ethane&Propane&IsoButane&n-Butane&Isopentane&n-Pentane&n-Hexane"));
+        A->set_mole_fractions({0.906724, 0.031284, 0.004676, 0.045279, 0.00828, 0.001037, 0.001563, 0.000321, 0.000443, 0.000393});
+        for (const auto& [T, p, rho_ref] : std::vector<std::array<double, 3>>{{176.98, 15.15e6, 21146.1}, {180.14, 8.59e6, 19740.7}}) {
+            INFO("kernel " << kernel << " T=" << T << " p=" << p);
+            REQUIRE_NOTHROW(A->update(PT_INPUTS, p, T));
+            CHECK(std::abs(A->rhomolar() / rho_ref - 1) < 1e-4);
+        }
     }
 }
 
