@@ -297,7 +297,7 @@ class IncompressibleFluid
     double baseExponential(const IncompressibleData& data, double y, double ybase);
     double baseLogexponential(const IncompressibleData& data, double y, double ybase);
     double baseExponentialOffset(IncompressibleData data, double y);
-    double basePolyOffset(IncompressibleData data, double y, double z = 0.0);
+    double basePolyOffset(const IncompressibleData& data, double y, double z = 0.0);
 
    public:
     /* All functions need T and p as input. Might not

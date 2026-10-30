@@ -229,6 +229,15 @@ double polyEvalDivT(const Eigen::MatrixXd& S, double T, double dx) {
     }
     return acc * T + polyRow(S, 0, dx) * std::log(T);
 }
+
+/// Coefficients of a row- or column-vector matrix as a contiguous array, without
+/// copying; nullptr if the matrix is not vector-shaped.
+const double* vectorCoeffs(const Eigen::MatrixXd& m) {
+    if (m.rows() < 1 || m.cols() < 1 || (m.rows() != 1 && m.cols() != 1)) {
+        return nullptr;
+    }
+    return m.data();
+}
 }  // namespace
 
 namespace CoolProp {
@@ -301,10 +310,14 @@ bool IncompressibleFluid::is_pure() {
 
 /// Base exponential function: exp(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2])
 double IncompressibleFluid::baseExponential(const IncompressibleData& data, double y, double ybase) {
-    Eigen::VectorXd coeffs = makeVector(data.coeffs);
-    size_t r = coeffs.rows(), c = coeffs.cols();
-    if (strict && (r != 3 || c != 1)) {
-        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
+    const double* coeffs = vectorCoeffs(data.coeffs);
+    if (coeffs == nullptr) {
+        throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).", static_cast<int>(data.coeffs.rows()),
+                                static_cast<int>(data.coeffs.cols())));
+    }
+    if (strict && data.coeffs.size() != 3) {
+        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__,
+                                static_cast<int>(data.coeffs.size()), 1));
     }
     const double x_den = (y - ybase) + coeffs[1];
     return evaluateAwayFromPole(x_den, [&](double x) { return exp(coeffs[0] / x - coeffs[2]); });
@@ -313,34 +326,35 @@ double IncompressibleFluid::baseExponential(const IncompressibleData& data, doub
 /// Base exponential function with logarithmic term:
 /// exp(log(1/x + 1/x^2) * coeffs[1] + coeffs[2]) with x = (y - ybase) + coeffs[0]
 double IncompressibleFluid::baseLogexponential(const IncompressibleData& data, double y, double ybase) {
-    Eigen::VectorXd coeffs = makeVector(data.coeffs);
-    size_t r = coeffs.rows(), c = coeffs.cols();
-    if (strict && (r != 3 || c != 1)) {
-        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
+    const double* coeffs = vectorCoeffs(data.coeffs);
+    if (coeffs == nullptr) {
+        throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).", static_cast<int>(data.coeffs.rows()),
+                                static_cast<int>(data.coeffs.cols())));
+    }
+    if (strict && data.coeffs.size() != 3) {
+        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__,
+                                static_cast<int>(data.coeffs.size()), 1));
     }
     const double x_den = (y - ybase) + coeffs[0];
     return evaluateAwayFromPole(x_den, [&](double x) { return exp(log(1.0 / x + 1.0 / x / x) * coeffs[1] + coeffs[2]); });
 }
 
-double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z) {
-    size_t r = data.coeffs.rows(), c = data.coeffs.cols();
-    double offset = 0.0;
-    double in = 0.0;
-    Eigen::MatrixXd coeffs;
-    if (r > 0 && c > 0) {
-        offset = data.coeffs(0, 0);
-        if (r == 1 && c > 1) {  // row vector -> function of z
-            coeffs = Eigen::MatrixXd(data.coeffs.block(0, 1, r, c - 1));
-            in = z;
-        } else if (r > 1 && c == 1) {  // column vector -> function of y
-            coeffs = Eigen::MatrixXd(data.coeffs.block(1, 0, r - 1, c));
-            in = y;
-        } else {
-            throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
-        }
-        return poly.evaluate(coeffs, in, 0, offset);
+/// First coefficient is the offset, the rest is a polynomial in (input - offset).
+double IncompressibleFluid::basePolyOffset(const IncompressibleData& data, double y, double z) {
+    const Eigen::Index r = data.coeffs.rows(), c = data.coeffs.cols();
+    const bool row_vector = (r == 1 && c > 1);  // function of z
+    const bool col_vector = (r > 1 && c == 1);  // function of y
+    if (!row_vector && !col_vector) {
+        throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__,
+                                static_cast<int>(r), static_cast<int>(c)));
     }
-    throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
+    const double* a = data.coeffs.data();
+    const double dx = (row_vector ? z : y) - a[0];
+    double result = 0.0;
+    for (Eigen::Index k = r * c - 1; k >= 1; --k) {
+        result = result * dx + a[k];
+    }
+    return result;
 }
 
 /// Build the error for a property this fluid carries no fit for.
@@ -410,13 +424,13 @@ double IncompressibleFluid::c(double T, double p, double x) {
 double IncompressibleFluid::visc(double T, double p, double x) {
     switch (viscosity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(viscosity.coeffs, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(viscosity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(viscosity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(viscosity.coeffs, T - Tbase, x - xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(viscosity, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -429,13 +443,13 @@ double IncompressibleFluid::visc(double T, double p, double x) {
 double IncompressibleFluid::cond(double T, double p, double x) {
     switch (conductivity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(conductivity.coeffs, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(conductivity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(conductivity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(conductivity.coeffs, T - Tbase, x - xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(conductivity, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -457,13 +471,13 @@ double IncompressibleFluid::psat(double T, double x) {
     }
     switch (p_sat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(p_sat.coeffs, T - Tbase, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(p_sat, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(p_sat, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(p_sat.coeffs, T - Tbase, x - xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(p_sat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -476,13 +490,13 @@ double IncompressibleFluid::psat(double T, double x) {
 double IncompressibleFluid::Tfreeze(double p, double x) {
     switch (T_freeze.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase);
+            return polyEvalMatrix(T_freeze.coeffs, p, x - xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(T_freeze, x, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(T_freeze, x, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase));
+            return exp(polyEvalMatrix(T_freeze.coeffs, p, x - xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(T_freeze, p, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
@@ -1094,6 +1108,67 @@ TEST_CASE("Precomputed polynomial h/s/rho coefficients match the Polynomial2DFra
                 CHECK(precomputed.dhdTatPxdT(T, 1e5, x) == Catch::Approx(reference.dhdTatPxdT(T, 1e5, x)).epsilon(1e-10));
                 CHECK(precomputed.dsdTatPxdT(T, 1e5, x) == Catch::Approx(reference.dsdTatPxdT(T, 1e5, x)).epsilon(1e-10));
             }
+        }
+    }
+}
+
+TEST_CASE("Transport, saturation and freezing fits match a direct evaluation of their formulas", "[IncompressibleFluids]") {
+    using Data = CoolProp::IncompressibleData;
+    const double Tbase = 300.0, xbase = 0.25;
+    const auto direct = [](const Eigen::MatrixXd& M, double dT, double dx) {
+        double sum = 0.0;
+        for (Eigen::Index i = 0; i < M.rows(); ++i) {
+            for (Eigen::Index j = 0; j < M.cols(); ++j) {
+                sum += M(i, j) * std::pow(dT, static_cast<int>(i)) * std::pow(dx, static_cast<int>(j));
+            }
+        }
+        return sum;
+    };
+    const auto make = [](Data::IncompressibleTypeEnum type, const Eigen::MatrixXd& coeffs) {
+        Data data;
+        data.type = type;
+        data.coeffs = coeffs;
+        return data;
+    };
+
+    Eigen::MatrixXd poly2d(3, 3);
+    poly2d << 0.7, 0.02, -0.001, 0.003, -0.0004, 0.00002, 1e-5, 2e-6, -3e-7;
+    Eigen::MatrixXd visc_exp(3, 1), cond_logexp(3, 1), psat_offset(4, 1), tfreeze_exp(3, 1);
+    visc_exp << 500.0, -140.0, 10.0;
+    cond_logexp << -100.0, -1.2, 1.5;
+    psat_offset << 290.0, 1.5, 0.02, 1e-4;
+    tfreeze_exp << 2.0, 1.0, 0.5;
+
+    CoolProp::IncompressibleFluid polynomials, others;
+    for (CoolProp::IncompressibleFluid* fluid : {&polynomials, &others}) {
+        fluid->setTbase(Tbase);
+        fluid->setxbase(xbase);
+        fluid->setTminPsat(0.0);
+    }
+    polynomials.setViscosity(make(Data::INCOMPRESSIBLE_POLYNOMIAL, poly2d));
+    polynomials.setConductivity(make(Data::INCOMPRESSIBLE_EXPPOLYNOMIAL, poly2d));
+    polynomials.setPsat(make(Data::INCOMPRESSIBLE_POLYNOMIAL, poly2d));
+    polynomials.setTfreeze(make(Data::INCOMPRESSIBLE_POLYNOMIAL, poly2d));
+    others.setViscosity(make(Data::INCOMPRESSIBLE_EXPONENTIAL, visc_exp));
+    others.setConductivity(make(Data::INCOMPRESSIBLE_LOGEXPONENTIAL, cond_logexp));
+    others.setPsat(make(Data::INCOMPRESSIBLE_POLYOFFSET, psat_offset));
+    others.setTfreeze(make(Data::INCOMPRESSIBLE_EXPONENTIAL, tfreeze_exp));
+
+    const double p_freeze = 2.0;  // Tfreeze takes pressure as its first polynomial variable
+    for (const double T : {285.0, 310.0, 340.0}) {
+        for (const double x : {0.0, 0.2, 0.4}) {
+            CAPTURE(T, x);
+            const double dT = T - Tbase, dx = x - xbase;
+            CHECK(polynomials.visc(T, 1e5, x) == Catch::Approx(direct(poly2d, dT, dx)).epsilon(1e-10));
+            CHECK(polynomials.cond(T, 1e5, x) == Catch::Approx(std::exp(direct(poly2d, dT, dx))).epsilon(1e-10));
+            CHECK(polynomials.psat(T, x) == Catch::Approx(direct(poly2d, dT, dx)).epsilon(1e-10));
+            CHECK(polynomials.Tfreeze(p_freeze, x) == Catch::Approx(direct(poly2d, p_freeze, dx)).epsilon(1e-10));
+
+            const double xl = T - 100.0, dp = T - 290.0;
+            CHECK(others.visc(T, 1e5, x) == Catch::Approx(std::exp(500.0 / (T - 140.0) - 10.0)).epsilon(1e-10));
+            CHECK(others.cond(T, 1e5, x) == Catch::Approx(std::exp(std::log(1.0 / xl + 1.0 / (xl * xl)) * -1.2 + 1.5)).epsilon(1e-10));
+            CHECK(others.psat(T, x) == Catch::Approx(1.5 + 0.02 * dp + 1e-4 * dp * dp).epsilon(1e-10));
+            CHECK(others.Tfreeze(p_freeze, x) == Catch::Approx(std::exp(2.0 / (x + 1.0) - 0.5)).epsilon(1e-10));
         }
     }
 }
