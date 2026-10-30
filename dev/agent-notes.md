@@ -207,6 +207,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   exceptions and Excel/VBA poll the status word.  `CoolProp::fpu_guard`
   (`include/CoolProp/FPUGuard.h`) keys on `_WIN32` (any compiler, incl.
   MinGW), not `_MSC_VER`.
+- **Mixture critical points: filter on `stable`, nothing else** (#3528).
+  `calc_all_critical_points()` also returns spurious points; most sit at
+  liquid-like density and negative pressure, which `calc_critical_point`
+  already marks unstable (negative pressure is physical, so don't filter on
+  p).  The TPD verdict on the ~100 K / 100s-of-MPa points is *marginal*: it
+  flips between builds (R470A), so don't assert per-blend stable counts there
+  (COO-155).  The N×N L*/M* formulation is general-N, but Air (ternary) yields
+  four stable points (COO-154), and natural gases take minutes.
 
 ## Fluid data, superancillaries and transport
 

@@ -622,6 +622,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_Tmin_sat(CoolPropDbl& Tmin_satL, CoolPropDbl& Tmin_satV);
     void calc_pmin_sat(CoolPropDbl& pmin_satL, CoolPropDbl& pmin_satV);
 
+    /// The unique stable critical point of a mixture; throws if there is not exactly one
+    CriticalState calc_unique_stable_critical_point();
     CoolPropDbl calc_T_critical() override;
     CoolPropDbl calc_p_critical() override;
     CoolPropDbl calc_rhomolar_critical() override;

@@ -1312,15 +1312,25 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500() {
         return v;
     }
 }
+CriticalState HelmholtzEOSMixtureBackend::calc_unique_stable_critical_point() {
+    // The tracer also returns unstable points (e.g. negative-pressure ones at liquid-like
+    // densities, see #3528); only the stable ones are candidates for "the" critical point
+    std::vector<CriticalState> critpts = calc_all_critical_points();
+    std::vector<CriticalState> stable;
+    for (const auto& pt : critpts) {
+        if (pt.stable) {
+            stable.push_back(pt);
+        }
+    }
+    if (stable.size() != 1) {
+        throw ValueError(format("critical point finding routine found %d stable critical points (%d in total)", static_cast<int>(stable.size()),
+                                static_cast<int>(critpts.size())));
+    }
+    return stable[0];
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].T;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().T;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1333,13 +1343,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].p;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().p;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1352,13 +1356,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].rhomolar;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().rhomolar;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
