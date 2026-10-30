@@ -186,7 +186,7 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **Incompressible caloric fits come in two kinds, both loaded.**  A fluid
   may ship `density`/`specific_heat` (classic polynomial) and
   `density_cheb`/`specific_heat_cheb`; `IncompressibleFluid` keeps both and
-  every caloric function takes a `chebyshev` flag (`caloricFit` picks, with
+  every caloric function takes a `chebyshev` flag (`useChebyshevFit` picks, with
   fallback to whichever exists).  `IncompressibleBackend` snapshots
   `INCOMP_PREFER_CHEBYSHEV_CALORIC` in its constructor and must pass it to
   every caloric call, including residuals inside `T_rho`/`T_c`: a call that

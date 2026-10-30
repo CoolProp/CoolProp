@@ -8332,6 +8332,8 @@ struct ChebyshevCaloricSetting
     }
     ChebyshevCaloricSetting(const ChebyshevCaloricSetting&) = delete;
     ChebyshevCaloricSetting& operator=(const ChebyshevCaloricSetting&) = delete;
+    ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
+    ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
 };
 
 TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime", "[INCOMP]") {
@@ -8346,30 +8348,33 @@ TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime",
         const Eigen::MatrixXd C_rho = (Eigen::MatrixXd(3, 2) << 1050.0, -40.0, -0.6, 0.3, -2.5e-3, 1.0e-3).finished();
         const Eigen::MatrixXd C_cp =
           (Eigen::MatrixXd(4, 3) << 3600.0, 900.0, -150.0, 2.1, -1.5, 0.4, 4.0e-3, 2.0e-3, -1.0e-3, -3.0e-5, 1.0e-5, 2.0e-6).finished();
-        auto matrix_json = [](const Eigen::MatrixXd& M) {
-            std::ostringstream out;
-            out.precision(17);
-            out << "[";
+        auto matrix_rows = [](const Eigen::MatrixXd& M) {
+            std::vector<std::vector<double>> rows(M.rows(), std::vector<double>(M.cols()));
             for (Eigen::Index i = 0; i < M.rows(); ++i) {
-                out << (i ? ", [" : "[");
                 for (Eigen::Index j = 0; j < M.cols(); ++j) {
-                    out << (j ? ", " : "") << M(i, j);
+                    rows[i][j] = M(i, j);
                 }
-                out << "]";
             }
-            out << "]";
-            return out.str();
+            return rows;
         };
         for (const double Tbase : {300.0, 0.0}) {
             CAPTURE(Tbase);
             const double xbase = 0.2;
             const std::string name = std::string("CatchRuntimeClassicFluid") + (Tbase > 0 ? "A" : "B");
-            const std::string json = "[{\"name\": \"" + name
-                                     + "\", \"description\": \"x\", \"reference\": \"x\", \"Tmin\": 250.0, \"Tmax\": 350.0, \"TminPsat\": 350.0, "
-                                       "\"xid\": \"mass\", \"xmin\": 0.0, \"xmax\": 0.5, \"Tbase\": "
-                                     + std::to_string(Tbase) + ", \"xbase\": " + std::to_string(xbase)
-                                     + ", \"density\": {\"type\": \"polynomial\", \"coeffs\": " + matrix_json(C_rho)
-                                     + "}, \"specific_heat\": {\"type\": \"polynomial\", \"coeffs\": " + matrix_json(C_cp) + "}}]";
+            const nlohmann::json definition = {{"name", name},
+                                               {"description", "x"},
+                                               {"reference", "x"},
+                                               {"Tmin", 250.0},
+                                               {"Tmax", 350.0},
+                                               {"TminPsat", 350.0},
+                                               {"xid", "mass"},
+                                               {"xmin", 0.0},
+                                               {"xmax", 0.5},
+                                               {"Tbase", Tbase},
+                                               {"xbase", xbase},
+                                               {"density", {{"type", "polynomial"}, {"coeffs", matrix_rows(C_rho)}}},
+                                               {"specific_heat", {{"type", "polynomial"}, {"coeffs", matrix_rows(C_cp)}}}};
+            const std::string json = nlohmann::json::array({definition}).dump();
             REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
             CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
             CoolProp::Polynomial2DFrac poly;

@@ -123,7 +123,7 @@ class IncompressibleFluid
     /// Optional Chebyshev alternatives to density and specific_heat
     /** The fluid data may ship both a classic fit ("density") and a
      *  Chebyshev fit ("density_cheb") of the same property; both are kept.
-     *  Which one is evaluated is chosen per call, see caloricFit() and the
+     *  Which one is evaluated is chosen per call, see useChebyshevFit() and the
      *  INCOMP_PREFER_CHEBYSHEV_CALORIC configuration key. Either may be
      *  missing (type INCOMPRESSIBLE_NOT_SET), in which case the other is used.
      */
@@ -167,23 +167,22 @@ class IncompressibleFluid
 
     Polynomial2DFrac poly;
 
-    /// Pick the fit to evaluate for a caloric property.
-    /** Returns chebyshev_fit if chebyshev is true and that fit exists, or if
-     *  classic_fit does not exist; classic_fit otherwise. With neither fit
-     *  present the returned fit is unset and evaluating it reports the
-     *  missing property.
+    /// Decide which fit to evaluate for a caloric property.
+    /** True (use the Chebyshev fit) if chebyshev is true and that fit exists,
+     *  or if the classic fit does not exist; false (use the classic fit)
+     *  otherwise. With neither fit present the classic one is chosen; it is
+     *  unset, and evaluating it reports the missing property.
      */
-    static const IncompressibleData& caloricFit(const IncompressibleData& classic_fit, const IncompressibleData& chebyshev_fit, bool chebyshev) {
+    static bool useChebyshevFit(const IncompressibleData& classic_fit, const IncompressibleData& chebyshev_fit, bool chebyshev) {
         const bool has_classic = classic_fit.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
         const bool has_chebyshev = chebyshev_fit.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
-        if (has_chebyshev && (chebyshev || !has_classic)) return chebyshev_fit;
-        return classic_fit;
+        return has_chebyshev && (chebyshev || !has_classic);
     }
-    const IncompressibleData& densityFit(bool chebyshev) const {
-        return caloricFit(density, density_cheb, chebyshev);
+    [[nodiscard]] const IncompressibleData& densityFit(bool chebyshev) const {
+        return useChebyshevFit(density, density_cheb, chebyshev) ? density_cheb : density;
     }
-    const IncompressibleData& specificHeatFit(bool chebyshev) const {
-        return caloricFit(specific_heat, specific_heat_cheb, chebyshev);
+    [[nodiscard]] const IncompressibleData& specificHeatFit(bool chebyshev) const {
+        return useChebyshevFit(specific_heat, specific_heat_cheb, chebyshev) ? specific_heat_cheb : specific_heat;
     }
 
     /// Build the error for a property this fluid carries no fit for.
@@ -343,12 +342,12 @@ class IncompressibleFluid
     /// functions below; the backend reads it once per state instead.
     static bool chebyshevCaloricPreferred();
     /// True if this fluid has Chebyshev fits for both density and specific heat
-    bool hasChebyshevCaloric() const {
+    [[nodiscard]] bool hasChebyshevCaloric() const {
         return density_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET
                && specific_heat_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
     }
     /// True if this fluid has classic fits for both density and specific heat
-    bool hasClassicCaloric() const {
+    [[nodiscard]] bool hasClassicCaloric() const {
         return density.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && specific_heat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
     }
 
@@ -367,7 +366,7 @@ class IncompressibleFluid
     /** The caloric functions (rho, c, their derivatives and integrals, and
      *  their inverses) take a trailing chebyshev flag: true evaluates the
      *  Chebyshev fit where the fluid ships one, false the classic fit where
-     *  the fluid ships one (see caloricFit). It defaults to the current value
+     *  the fluid ships one (see useChebyshevFit). It defaults to the current value
      *  of the INCOMP_PREFER_CHEBYSHEV_CALORIC configuration key.
      */
     double rho(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());

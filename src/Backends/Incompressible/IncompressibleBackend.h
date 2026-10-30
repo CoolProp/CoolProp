@@ -30,7 +30,7 @@ class IncompressibleBackend : public AbstractState
     IncompressibleFluid* fluid;
 
     /// Evaluate density and specific heat from the fluid's Chebyshev fits
-    /// (true) or its classic fits (false), see IncompressibleFluid::caloricFit.
+    /// (true) or its classic fits (false), see IncompressibleFluid::useChebyshevFit.
     /// Read once from INCOMP_PREFER_CHEBYSHEV_CALORIC when the state is
     /// created and never changed afterwards: the reference enthalpy and
     /// entropy cached in _hmass_ref and _smass_ref were computed from the
