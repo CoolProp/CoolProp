@@ -1,11 +1,14 @@
 #include "CubicBackend.h"
 
+#include <array>
 #include <cmath>
+#include <limits>
 #include "CoolProp/numerics/Solvers.h"
 #include "CoolProp/Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 #include "Backends/Helmholtz/MixtureDerivatives.h"
 #include <Eigen/Dense>
+#include "boost/math/tools/toms748_solve.hpp"
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
@@ -26,6 +29,10 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     }
     // Now set the reducing function for the mixture
     Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
+    // Seed the cached reducing state, as HelmholtzEOSMixtureBackend::set_components does.  Otherwise
+    // it is only filled by pre_update(), and a SatL/SatV populated through update_TDmolarP_unchecked()
+    // before ever seeing a full update() evaluates h, s, u at tau = inf.
+    _reducing = calc_reducing_state_nocache(mole_fractions);
 
     // Set the alpha function based on the components in use
     set_alpha_from_components();
@@ -148,8 +155,9 @@ void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double& rhom
         // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
         double v_c_Lmol = 2.14107171795 * (Tc[i] / pc[i] * 1000) + 0.00773144012514;  // [L/mol]
         // A volume translation leaves Tc alone but moves each component's critical volume by -c_i,
-        // so the linear volume average has to be taken on the translated volumes to stay consistent
-        // with calc_rhomolar_critical().
+        // so the linear volume average has to be taken on the translated volumes, the same shift
+        // calc_rhomolar_critical() applies.  (For a pure SRK/PR that now uses the EOS's own Z_c rather
+        // than this fit; these linear parameters only set search and scaling ranges.)
         v_r += mole_fractions[i] * (v_c_Lmol / 1000.0 - cubic->get_cm(i));
     }
     if (!(v_r > 0)) {
@@ -205,7 +213,8 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T,
     AbstractCubic* cubic = get_cubic().get();
     double tau = cubic->get_Tr() / T;
     double delta = rhomolar / cubic->get_rhor();
-    return _rhomolar * gas_constant() * _T * (1 + delta * cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
+    // Use the arguments, not the members _rhomolar/_T: the result was right only when they coincided.
+    return rhomolar * gas_constant() * T * (1 + delta * cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }
 void CoolProp::AbstractCubicBackend::update_DmolarT() {
     if (this->imposed_phase_index != iphase_not_imposed) {
@@ -221,17 +230,17 @@ void CoolProp::AbstractCubicBackend::update_DmolarT() {
         return;
     }
     // Pure SRK/PR: use the Chebyshev superancillary to bracket the dome at T, then pick
-    // the matching EOS root.  Above the superancillary Tmax we are unambiguously single-
-    // phase and just evaluate the EOS directly.
-    const double Tmax = calc_superanc_Tmax();
-    if (_T >= Tmax) {
+    // the matching EOS root.  Above Tc we are unambiguously single-phase and just evaluate the
+    // EOS directly.
+    if (_T >= T_critical()) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
         recalculate_singlephase_phase();
         return;
     }
-    const double rhoL_sat = calc_saturation_ancillary(iDmolar, 0, iT, _T);
-    const double rhoV_sat = calc_saturation_ancillary(iDmolar, 1, iT, _T);
+    const SuperancSatPoint sat = cubic_superanc_at_T(_T);
+    const double rhoL_sat = sat.rhomolarL;
+    const double rhoV_sat = sat.rhomolarV;
     if (_rhomolar >= rhoL_sat) {
         _p = calc_pressure_nocache(_T, _rhomolar);
         _Q = -1;
@@ -244,7 +253,7 @@ void CoolProp::AbstractCubicBackend::update_DmolarT() {
         // Inside the dome: pressure is the saturation pressure and quality follows from
         // the lever rule, 1/rho = (1-Q)/rhoL + Q/rhoV.
         const double rho = _rhomolar;
-        _p = calc_saturation_ancillary(iP, 0, iT, _T);
+        _p = sat.p;
         _Q = (rhoV_sat * (rhoL_sat - rho)) / (rho * (rhoL_sat - rhoV_sat));
         _phase = iphase_twophase;
         SatL->update_TDmolarP_unchecked(_T, rhoL_sat, _p);
@@ -377,9 +386,37 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
             _T = value2;
             update_DmolarT();
             break;
-        case HmolarT_INPUTS:
-        case SmolarT_INPUTS:
         case TUmolar_INPUTS:
+            if (is_pure_or_pseudopure) {
+                // (du/dv)_T = (a - T da/dT)/((v + D1 b)(v + D2 b)), so where a - T da/dT vanishes u does not
+                // depend on density at all and T,U has no unique solution: for the Soave alpha at
+                // T* = Tc(1 + 1/m)^2, where alpha itself passes through zero (COO-145).  Refuse rather than
+                // return an arbitrary density.  a - T da/dT = a + tau da/dtau; measured against a(Tc)
+                // because a(T) vanishes there too.
+                const std::vector<double> x = {1.0};
+                const double tau = cubic->get_Tr() / value1;
+                const double a = cubic->am_term(tau, x, 0), a_tau = cubic->am_term(tau, x, 1);
+                const double a_c = cubic->am_term(cubic->get_Tr() / T_critical(), x, 0);
+                if (!(std::abs(a + tau * a_tau) > 1e-8 * std::abs(a_c))) {
+                    throw ValueError(format("T,U is ill-posed for this cubic at T = %g K: a - T da/dT vanishes there (for the Soave alpha "
+                                            "at T* = Tc(1 + 1/m)^2, where alpha passes through zero), so u does not depend on density",
+                                            value1));
+                }
+            }
+            HelmholtzEOSMixtureBackend::update(input_pair, value1, value2);
+            break;
+        case HmolarT_INPUTS:
+            // (dh/dp)_T = v(1 - T alpha_p) changes sign below the maximum Joule-Thomson inversion
+            // temperature (~5 Tc), and h(rho) at fixed T is non-monotonic on every subcritical isotherm, so
+            // (T, h) names several states over most of the fluid range.  Mass-based H,T is refused for every
+            // backend (AbstractState::mass_to_molar_inputs); refuse the molar pair too rather than pick one.
+            // Mixtures still pass through to DHSU_T_flash, like HEOS mixtures.
+            if (is_pure_or_pseudopure) {
+                throw ValueError("H,T inputs are not supported for pure cubic fluids: (T, h) does not identify a unique state");
+            }
+            HelmholtzEOSMixtureBackend::update(input_pair, value1, value2);
+            break;
+        case SmolarT_INPUTS:
         case DmolarP_INPUTS:
         case DmolarHmolar_INPUTS:
         case DmolarSmolar_INPUTS:
@@ -395,6 +432,18 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
             break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
+    }
+
+    // The T-input density solves (FlashRoutines::solver_for_rho_given_T_oneof_HSU) know no upper density
+    // bound, and for a cubic u stays finite past the repulsive pole at rho = 1/(b - c): a large
+    // enough T,U input "solved" there, with a negative pressure.  Only (0, 1/(b - c))
+    // is physical.
+    if (is_pure_or_pseudopure && (input_pair == SmolarT_INPUTS || input_pair == TUmolar_INPUTS)) {
+        const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+        if (!(_rhomolar > 0 && _rhomolar * b_minus_c < 1)) {
+            throw ValueError(format("No physical state at these inputs (T = %g K): the solution density %g mol/m^3 lies outside (0, 1/(b - c) = %g)",
+                                    static_cast<double>(_T), static_cast<double>(_rhomolar), 1 / b_minus_c));
+        }
     }
 
     post_update();
@@ -420,6 +469,100 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
 
     // Solving the cubic:
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
+    // Polish each root with Newton on p(rho) - p, evaluated in the EOS form
+    // p = RT/(v + d1) - a/((v + d2)(v + d3)) rather than from the expanded coefficients, whose
+    // formation cancels digits.  The closed-form solution loses digits when crho3 nearly cancels (well
+    // above Tc a spurious root runs off to ~-1e10 mol/m^3): SRK water at 4*Tc and 1.5*pc came back with
+    // p(rho) off by 5e-4.  Within ~1e-9 of the critical point the coefficients themselves cancel and the
+    // polynomial's own root is ~2e-3 off.  The EOS form stays well conditioned at the physical root,
+    // so a few Newton steps recover it.  A step is kept only if it
+    // shrinks the residual and moves less than half the gap to the nearest other distinct root, so a
+    // root near a double root (spinodal) cannot be polished onto its neighbour.  Roots closer than
+    // 1e-3 relative count as one cluster: near the critical point the closed form returns spurious
+    // near-coincident roots (~2e-4 apart), which the cap would otherwise freeze in place.  Merging a close pair is harmless: near
+    // a spinodal the pair is the metastable and unstable root, and the stable root stays distinct.
+    const double r_closed[3] = {rho0, rho1, rho2};
+    auto polish = [&](double& r) {
+        auto f = [&](double x) {
+            const double v = 1 / x;
+            return R * T / (v + d1) - am / ((v + d2) * (v + d3)) - p;
+        };
+        auto fprime = [&](double x) {
+            const double v = 1 / x, A = (v + d2) * (v + d3);
+            const double dpdv = -R * T / ((v + d1) * (v + d1)) + am * (2 * v + d2 + d3) / (A * A);
+            return -dpdv / (x * x);
+        };
+        double max_step = std::numeric_limits<double>::infinity();
+        for (double other : r_closed) {
+            if (std::abs(other - r) > 1e-3 * std::max(std::abs(other), std::abs(r))) {
+                max_step = std::min(max_step, 0.5 * std::abs(other - r));
+            }
+        }
+        const double r0_closed = r;
+        // Never move a root out of its region (rho < 0, physical (0, 1/(b - c)), past the pole): the
+        // EOS-form residual is smooth across those boundaries for Newton, and a spurious root carried
+        // into the physical domain would duplicate the physical one and corrupt the root count.
+        // A root within round-off of zero (the gas root at very low p, ~p/RT) belongs to neither side:
+        // the closed form returns it with either sign, so it may settle wherever the residual says.
+        auto region = [&](double x) { return (x <= 0) ? 0 : ((x * (-d1) < 1) ? 1 : 2); };
+        const double scale = std::max({std::abs(r_closed[0]), std::abs(r_closed[1]), std::abs(r_closed[2])});
+        const int region0 = (std::abs(r) <= 1e-10 * scale) ? -1 : region(r);
+        double fr = f(r);
+        for (int i = 0; i < 20; ++i) {
+            const double fp = fprime(r);
+            if (!(std::abs(fp) > 0)) {
+                break;
+            }
+            // Backtrack (halve the step) until the residual shrinks: from the flat inflection region
+            // near the critical point the full Newton step overshoots.
+            double step = fr / fp;
+            double r_new = NAN, f_new = NAN;
+            bool accepted = false;
+            for (int k = 0; k < 40 && !accepted; ++k, step *= 0.5) {
+                // The cap is on the total displacement from the closed-form root after this step.
+                if (!(std::abs((r - step) - r0_closed) < max_step)) {
+                    continue;
+                }
+                r_new = r - step;
+                if (region0 >= 0 && region(r_new) != region0) {
+                    continue;
+                }
+                f_new = f(r_new);
+                accepted = std::abs(f_new) < std::abs(fr);
+            }
+            if (!accepted) {
+                break;
+            }
+            r = r_new;
+            fr = f_new;
+        }
+    };
+    polish(rho0);
+    polish(rho1);
+    polish(rho2);
+    // A spurious member of a near-critical cluster can stall in a local minimum of |p(rho) - p|
+    // while another member of the same cluster converges to the true root; give the stalled one that
+    // root.  Converged means the residual is at round-off relative to the terms of p.
+    {
+        double* roots[3] = {&rho0, &rho1, &rho2};
+        auto residual = [&](double x) {
+            const double v = 1 / x;
+            return R * T / (v + d1) - am / ((v + d2) * (v + d3)) - p;
+        };
+        auto converged = [&](double x) { return std::abs(residual(x)) <= 1e-12 * (std::abs(p) + std::abs(R * T * x)); };
+        for (int i = 0; i < 3; ++i) {
+            if (converged(*roots[i])) {
+                continue;
+            }
+            for (int j = 0; j < 3; ++j) {
+                if (j != i && converged(*roots[j])
+                    && std::abs(r_closed[i] - r_closed[j]) <= 1e-3 * std::max(std::abs(r_closed[i]), std::abs(r_closed[j]))) {
+                    *roots[i] = *roots[j];
+                    break;
+                }
+            }
+        }
+    }
     sort3(rho0, rho1, rho2);
     return;
 }
@@ -519,6 +662,34 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
     AbstractCubic* cubic = get_cubic().get();
     double Tc = cubic->get_Tc()[0], pc = cubic->get_pc()[0], acentric = cubic->get_acentric()[0];
     double rhoL = -1, rhoV = -1;
+    // Pure SRK/PR: read the saturation state off the Chebyshev superancillary, which satisfies equal
+    // Gibbs energy to round-off.  The secant solves below converge only to ~1e-7 in p near Tc and, out
+    // of the table's range, to the wrong root (P,Q) or the trivial rhoL = rhoV solution (Q,T), so for
+    // these fluids they are not a fallback: inputs outside the table throw.  Every in-tree cubic (SRK,
+    // PR, VTPR) has a superancillary; the secants remain only for subclasses that do not.
+    const int eos_code = get_superanc_eos_code();
+    if (is_pure_or_pseudopure && eos_code != CubicSuperAncillary::UNKNOWN_CODE) {
+        using namespace CubicSuperAncillary;
+        std::optional<SuperancSatPoint> sat;
+        if (inputs == PQ_INPUTS) {
+            sat = superanc_saturation_at_p(_p);
+        } else if (inputs == QT_INPUTS) {
+            sat = cubic_superanc_at_T(_T);
+        }
+        if (sat) {
+            _T = sat->T;
+            _p = sat->p;
+            rhoL = sat->rhomolarL;
+            rhoV = sat->rhomolarV;
+            // As update_QT_pure_superanc does: both phases carry the saturation pressure exactly,
+            // rather than the EOS pressure re-evaluated at the tabulated densities.
+            this->SatL->update_TDmolarP_unchecked(_T, rhoL, _p);
+            this->SatV->update_TDmolarP_unchecked(_T, rhoV, _p);
+            _rhomolar = 1 / (_Q / rhoV + (1 - _Q) / rhoL);
+            _phase = iphase_twophase;
+            return;
+        }
+    }
     if (inputs == PQ_INPUTS) {
         if (is_pure_or_pseudopure) {
             // Estimate temperature from the acentric factor relationship
@@ -634,8 +805,34 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, 
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase) {
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
+    const bool pure_superanc = is_pure_or_pseudopure && get_superanc_eos_code() != CubicSuperAncillary::UNKNOWN_CODE;
+    if (pure_superanc && !(p > 0)) {
+        throw ValueError(format("T,P for a pure cubic needs p > 0 (got p = %g Pa at T = %g K)", p, T));
+    }
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
-    if (Nsoln == 1) {
+    if (pure_superanc && (Nsoln == 1 || Nsoln == 3)) {
+        // Only roots in (0, 1/(b - c)) are physical: well above Tc the densest root can lie past the
+        // repulsive pole.  The imposed phase picks the least (gas) or most (liquid) dense of them.
+        const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+        std::vector<double> phys;
+        for (double r : {rho0, rho1, rho2}) {
+            if (static_cast<int>(phys.size()) < Nsoln && r > 0 && r * b_minus_c < 1) {
+                phys.push_back(r);
+            }
+        }
+        if (phys.empty()) {
+            throw ValueError(format("No physical density root at T = %g K, p = %g Pa", T, p));
+        }
+        // A single physical root is the only state there is, whatever the imposed phase (as for a
+        // single cubic root); otherwise the imposed gas or liquid phase picks the least or most dense.
+        if (phys.size() == 1 || phase == iphase_gas || phase == iphase_supercritical_gas) {
+            rho = phys.front();
+        } else if (phase == iphase_liquid || phase == iphase_supercritical_liquid) {
+            rho = phys.back();
+        } else {
+            throw ValueError("Specified phase is invalid");
+        }
+    } else if (Nsoln == 1) {
         rho = rho0;
     } else if (Nsoln == 3) {
         if (phase == iphase_gas || phase == iphase_supercritical_gas) {
@@ -665,37 +862,110 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     if (imposed_phase_index != iphase_not_imposed) {
         return solver_rho_Tp(T, p, imposed_phase_index);
     }
+    // A pure SRK/PR has no state at p <= 0 that is supported (above Tc the single root is negative or
+    // zero, below it the liquid is tensile; COO-138).  Checked on p itself: at p = 0 the closed-form
+    // root is zero only to round-off, with either sign.
+    if (is_pure_or_pseudopure && get_superanc_eos_code() != CubicSuperAncillary::UNKNOWN_CODE && !(p > 0)) {
+        throw ValueError(format("T,P for a pure cubic needs p > 0 (got p = %g Pa at T = %g K); the tensile "
+                                "(negative-pressure) liquid is not supported",
+                                p, T));
+    }
     int Nsoln = 0;
     double rho0 = 0, rho1 = 0, rho2 = 0, rho = -1;
     rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);  // Densities are sorted in increasing order
     if (Nsoln == 1) {
         rho = rho0;
+        // For p > 0 the single real root is physical; check it anyway rather than return a negative density
+        if (is_pure_or_pseudopure && get_superanc_eos_code() != CubicSuperAncillary::UNKNOWN_CODE) {
+            const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+            if (!(rho > 0 && rho * b_minus_c < 1)) {
+                throw ValueError(format("No physical density root at T = %g K, p = %g Pa", T, p));
+            }
+        }
     } else if (Nsoln == 3) {
         if (p < p_critical()) {
-            add_transient_pure_state();
-            transient_pure_state->set_mole_fractions(this->mole_fractions);
-            transient_pure_state->update(PQ_INPUTS, p, 0);
-            if (T > transient_pure_state->T()) {
-                double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
-                // Gas
+            // Gas root: the smallest positive one, which must lie below the saturated-vapour density.
+            auto gas_root = [&](double rhoV) {
                 if (rho0 > 0 && rho0 < rhoV) {
-                    rho = rho0;
+                    return static_cast<double>(rho0);
                 } else if (rho1 > 0 && rho1 < rhoV) {
-                    rho = rho1;
+                    return static_cast<double>(rho1);
+                }
+                throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+            };
+            const int eos_code = get_superanc_eos_code();
+            if (is_pure_or_pseudopure && eos_code != CubicSuperAncillary::UNKNOWN_CODE) {
+                // Pure SRK/PR (COO-136).  First keep only the roots in the physical domain
+                // (0, 1/(b - c)): well above Tc a root can run past the repulsive pole.
+                const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+                std::array<double, 3> phys{};
+                std::size_t n_phys = 0;
+                for (double r : {rho0, rho1, rho2}) {
+                    if (r > 0 && r * b_minus_c < 1) {
+                        phys[n_phys++] = r;
+                    }
+                }
+                if (n_phys == 1) {
+                    rho = phys[0];
+                } else if (n_phys == 3) {
+                    // Vapour-like, unstable and liquid-like roots.  Inside the superancillary compare p
+                    // with psat(T) read straight off the table: no p -> Tsat inversion, so any p works,
+                    // however small.  Below p_sat the stable root is the vapour-like one, phys[0]: no
+                    // comparison with the table's rho_V, which near Tc differs from the EOS root by more
+                    // than any fixed slack (12 of 127 PR fluids threw there).
+                    // Outside the table (below its low-T end) take the root of lower Gibbs energy, as
+                    // solver_rho_Tp_global does.
+                    SuperancSatPoint sat{};
+                    if (cubic_superanc_eval(T, sat)) {
+                        if (p < sat.p) {
+                            rho = phys[0];
+                        } else {
+                            rho = phys[2];
+                        }
+                    } else {
+                        const double g_vap = calc_gibbsmolar_nocache(T, phys[0]), g_liq = calc_gibbsmolar_nocache(T, phys[2]);
+                        if (!ValidNumber(g_vap) || !ValidNumber(g_liq)) {
+                            throw CoolProp::ValueError(format("Unable to select the stable density root for T: %g K, p: %g Pa", T, p));
+                        }
+                        rho = (g_liq < g_vap) ? phys[2] : phys[0];
+                    }
                 } else {
-                    throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+                    throw CoolProp::ValueError(format("Cubic has %d physical density roots at T: %g K, p: %g Pa", static_cast<int>(n_phys), T, p));
                 }
             } else {
-                // Liquid
-                rho = rho2;
+                add_transient_pure_state();
+                transient_pure_state->set_mole_fractions(this->mole_fractions);
+                transient_pure_state->update(PQ_INPUTS, p, 0);
+                if (T > transient_pure_state->T()) {
+                    rho = gas_root(transient_pure_state->saturated_vapor_keyed_output(iDmolar));
+                } else {
+                    // Liquid
+                    rho = rho2;
+                }
             }
         } else {
-            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+            // Above the critical pressure a cubic can still have three real roots at high T, but
+            // only one in the physical domain: the others are negative or have v + c < b (an
+            // untranslated volume below the covolume, past the repulsive pole).  Take that one.
+            const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+            int Nphysical = 0;
+            for (double r : {rho0, rho1, rho2}) {
+                if (r > 0 && r * b_minus_c < 1) {
+                    rho = r;
+                    ++Nphysical;
+                }
+            }
+            if (Nphysical != 1) {
+                throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+            }
         }
     } else {
         throw ValueError("Obtained neither 1 nor three roots");
     }
     if (is_pure_or_pseudopure) {
+        // recalculate_singlephase_phase() reads rhomolar(); the caller only assigns _rhomolar from our
+        // return value, so set it first or the label comes from the previous state's density.
+        _rhomolar = rho;
         this->recalculate_singlephase_phase();
     } else {
         if (rho < rhomolar_reducing()) {
@@ -921,29 +1191,168 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters
         throw NotImplementedError(format("calc_saturation_ancillary: only T-given is supported for cubic EOS; got given=%s",
                                          get_parameter_information(given, "short").c_str()));
     }
-    double T = value;
-    double Tmax = calc_superanc_Tmax();
-    if (T > Tmax) {
-        throw ValueError(format("calc_saturation_ancillary: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
-    }
-    std::vector<double> x = {1.0};
-    double tau = cubic->get_Tr() / T;
-    double am = cubic->am_term(tau, x, 0);
-    double bm = cubic->bm_term(x);
-    double Ttilde = cubic->get_R_u() * T * bm / am;
-
-    using namespace CubicSuperAncillary;
+    const SuperancSatPoint sat = cubic_superanc_at_T(value);
     if (param == iP) {
-        // A volume translation moves no pressure, so the p~ mapping needs no correction.
-        double p_tilde = supercubic(eos_code, P_CODE, Ttilde);
-        return p_tilde * am / (bm * bm);
+        return sat.p;
     } else if (param == iDmolar) {
-        double rho_tilde = supercubic(eos_code, (Q == 0) ? RHOL_CODE : RHOV_CODE, Ttilde);
-        return untranslate_superanc_rho(rho_tilde, bm);
+        return (Q == 0) ? sat.rhomolarL : sat.rhomolarV;
     } else {
         throw NotImplementedError(
           format("calc_saturation_ancillary: unsupported param=%s for cubic EOS", get_parameter_information(param, "short").c_str()));
     }
+}
+
+std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_p(CoolPropDbl p) {
+    const int eos_code = get_superanc_eos_code();
+    if (!is_pure_or_pseudopure || eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        return HelmholtzEOSMixtureBackend::superanc_saturation_at_p(p);
+    }
+    if (!(p > 0)) {
+        throw ValueError(format("superanc_saturation_at_p: pressure (%Lg Pa) must be positive", p));
+    }
+    const std::vector<double> x = {1.0};
+    const double R = cubic->get_R_u(), Tr = cubic->get_Tr(), bm = cubic->bm_term(x);
+    using namespace CubicSuperAncillary;
+    // The superancillary is tabulated in Ttilde = R*T*b/a(T); a(T) carries the alpha function, so
+    // T(Ttilde) has no closed form and every inversion below is a 1-D solve in T.  Ttilde rises
+    // monotonically with T from zero.
+    auto Ttilde_of_T = [&](double T) { return R * T * bm / cubic->am_term(Tr / T, x, 0); };
+    auto ln_psat_of_T = [&](double T) {
+        const double am = cubic->am_term(Tr / T, x, 0);  // once: it dominates the cost
+        return log(supercubic(eos_code, P_CODE, R * T * bm / am) * am / (bm * bm));
+    };
+    const int bits = 50;
+    std::uintmax_t max_iter = 100;
+    // toms748_solve reports the iterations it used, so running out and converging on the last
+    // allowed iteration look the same; judge convergence by whether the bracket meets the tolerance.
+    boost::math::tools::eps_tolerance<double> tol(bits);
+    // T at which Ttilde equals Ttilde_bound.  The converged bracket end that lies INSIDE the
+    // superancillary domain is returned, so later evaluations never step off it by an ulp.
+    // (calc_superanc_Tmax() is no substitute: it inverts with a(Tc) rather than a(T).)
+    auto T_at_Ttilde = [&](double Ttilde_bound, bool inside_is_above) {
+        auto f = [&](double T) { return Ttilde_of_T(T) - Ttilde_bound; };
+        double Ta = 0.5 * T_critical(), Tb = 2 * T_critical();
+        for (int i = 0; i < 20 && !(f(Ta) < 0); ++i) {
+            Ta *= 0.5;
+        }
+        for (int i = 0; i < 20 && !(f(Tb) > 0); ++i) {
+            Tb *= 2;
+        }
+        // Verify the search found a sign change with finite ends: otherwise boost would throw an
+        // opaque std::domain_error, or a NaN end would steer the bracket by its sign bit.
+        const double fa = f(Ta), fb = f(Tb);
+        if (!(fa < 0 && fb > 0)) {
+            throw ValueError("superanc_saturation_at_p: unable to bracket the cubic superancillary's Ttilde range");
+        }
+        max_iter = 100;
+        const auto bracket = boost::math::tools::toms748_solve(f, Ta, Tb, fa, fb, tol, max_iter);
+        if (!tol(bracket.first, bracket.second)) {
+            throw ValueError("superanc_saturation_at_p: Ttilde inversion did not converge");
+        }
+        return inside_is_above ? bracket.second : bracket.first;
+    };
+    // Tmin/Tmax depend only on the EOS parameters, so cache them -- but validate on every use rather
+    // than invalidating in setters: the cubic's parameters can also be changed directly through
+    // get_cubic().  Ttilde at a cached bound must still sit at the matching end of the table to 1e-12
+    // (2 am_term calls instead of ~30); any parameter change moves it far more and forces a re-solve.
+    const double Ttilde_min = get_Ttilde_min(eos_code), Ttilde_max = get_Ttilde_max(eos_code);
+    auto cache_valid = [&](double T, double Ttilde_bound, bool inside_is_above) {
+        if (!std::isfinite(T)) {
+            return false;
+        }
+        const double Tt = Ttilde_of_T(T);
+        return inside_is_above ? (Tt >= Ttilde_bound && Tt <= Ttilde_bound * (1 + 1e-12)) : (Tt <= Ttilde_bound && Tt >= Ttilde_bound * (1 - 1e-12));
+    };
+    if (!cache_valid(superanc_Tmin_cache, Ttilde_min, true)) {
+        superanc_Tmin_cache = T_at_Ttilde(Ttilde_min, true);
+    }
+    if (!cache_valid(superanc_Tmax_cache, Ttilde_max, false)) {
+        superanc_Tmax_cache = T_at_Ttilde(Ttilde_max, false);
+    }
+    const double Tmin = superanc_Tmin_cache, Tmax = superanc_Tmax_cache;
+
+    const double ln_p = log(static_cast<double>(p));
+    double g_Tmax = ln_psat_of_T(Tmax) - ln_p;
+    // The table ends at the exact critical point (#3515), so psat at its end is pc to round-off and
+    // p == pc can land just above it.  Absorb that round-off, and no more: the width check keeps a
+    // subclass whose p_critical() is not its EOS's own critical pressure from being clamped silently.
+    if (g_Tmax < 0 && g_Tmax > -1e-10 && p <= p_critical() * (1 + 4 * DBL_EPSILON)) {
+        g_Tmax = 0;
+    }
+    // Written as !(... >= 0) so that a NaN from am_term or the Chebyshev evaluation throws
+    // rather than slipping past both range checks.
+    if (!(g_Tmax >= 0)) {
+        throw ValueError(
+          format("Pressure [%0.8Lg Pa] may not be above the maximum pressure of the cubic superancillary (%0.15g Pa)", p, exp(g_Tmax + ln_p)));
+    }
+    const double g_Tmin = ln_psat_of_T(Tmin) - ln_p;
+    if (!(g_Tmin <= 0)) {
+        throw ValueError(format("Pressure [%0.8Lg Pa] is below the minimum pressure of the cubic superancillary (%0.15g Pa)", p, exp(g_Tmin + ln_p)));
+    }
+    double Tsat = Tmax;
+    if (g_Tmax > 0) {
+        max_iter = 100;
+        auto g = [&](double T) { return ln_psat_of_T(T) - ln_p; };
+        const auto bracket = boost::math::tools::toms748_solve(g, Tmin, Tmax, g_Tmin, g_Tmax, tol, max_iter);
+        if (!tol(bracket.first, bracket.second)) {
+            throw ValueError(format("superanc_saturation_at_p: Tsat inversion did not converge for p = %0.8Lg Pa", p));
+        }
+        Tsat = 0.5 * (bracket.first + bracket.second);
+        // A bracket can also close onto the edge of a NaN region rather than a root.
+        if (!std::isfinite(g(Tsat))) {
+            throw ValueError(format("superanc_saturation_at_p: non-finite residual at Tsat = %g K for p = %0.8Lg Pa", Tsat, p));
+        }
+    }
+    SuperancSatPoint sat{};
+    // Tsat lies in [Tmin, Tmax], inside the table by construction.
+    if (!cubic_superanc_eval(Tsat, sat)) {
+        throw ValueError(format("superanc_saturation_at_p: Tsat = %g K fell outside the cubic superancillary", Tsat));
+    }
+    sat.p = p;
+    return sat;
+}
+
+bool CoolProp::AbstractCubicBackend::cubic_superanc_eval(double T, SuperancSatPoint& out) {
+    using namespace CubicSuperAncillary;
+    const int eos_code = get_superanc_eos_code();
+    const std::vector<double> x = {1.0};
+    const double am = cubic->am_term(cubic->get_Tr() / T, x, 0), bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+    // The table ends at the exact critical point (#3515), so T == Tc can land a few ulp above its end;
+    // absorb that round-off.  Anything further above
+    // the table (a non-monotone alpha) is outside it, not clamped.
+    const double Ttilde_max = get_Ttilde_max(eos_code);
+    if (Ttilde > Ttilde_max && Ttilde <= Ttilde_max * (1 + 1e-12)) {
+        Ttilde = Ttilde_max;
+    }
+    // Written as !(... && ...) so that a NaN Ttilde counts as outside.
+    if (!(Ttilde >= get_Ttilde_min(eos_code) && Ttilde <= Ttilde_max)) {
+        return false;
+    }
+    // A volume translation moves no pressure, so p~ needs no correction.
+    out =
+      SuperancSatPoint{T, untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm),
+                       untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm), supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm)};
+    return true;
+}
+
+CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint CoolProp::AbstractCubicBackend::cubic_superanc_at_T(double T) {
+    if (T > T_critical() * (1 + 4 * DBL_EPSILON)) {
+        throw ValueError(
+          format("Temperature [%0.10g K] may not be above the critical temperature of the cubic, %0.10g K", T, static_cast<double>(T_critical())));
+    }
+    SuperancSatPoint sat{};
+    if (!cubic_superanc_eval(T, sat)) {
+        throw ValueError(format("Temperature [%0.8g K] is outside the range of the cubic superancillary", T));
+    }
+    return sat;
+}
+
+std::optional<CoolProp::HelmholtzEOSMixtureBackend::SuperancSatPoint> CoolProp::AbstractCubicBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    if (!is_pure_or_pseudopure || get_superanc_eos_code() == CubicSuperAncillary::UNKNOWN_CODE) {
+        return HelmholtzEOSMixtureBackend::superanc_saturation_at_T(T);
+    }
+    return cubic_superanc_at_T(T);
 }
 
 void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
@@ -954,22 +1363,8 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
     if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
         throw NotImplementedError("update_QT_pure_superanc: no superancillary available for this cubic EOS");
     }
-    double Tmax = calc_superanc_Tmax();
-    if (T > Tmax) {
-        throw ValueError(format("update_QT_pure_superanc: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
-    }
-
-    std::vector<double> x = {1.0};
-    double tau = cubic->get_Tr() / T;
-    double am = cubic->am_term(tau, x, 0);
-    double bm = cubic->bm_term(x);
-    double Ttilde = cubic->get_R_u() * T * bm / am;
-
-    using namespace CubicSuperAncillary;
-    CoolPropDbl rhoL = untranslate_superanc_rho(supercubic(eos_code, RHOL_CODE, Ttilde), bm);
-    CoolPropDbl rhoV = untranslate_superanc_rho(supercubic(eos_code, RHOV_CODE, Ttilde), bm);
-    // A volume translation moves no pressure, so p~ needs no correction.
-    CoolPropDbl p = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
+    const SuperancSatPoint sat = cubic_superanc_at_T(T);
+    const CoolPropDbl rhoL = sat.rhomolarL, rhoV = sat.rhomolarV, p = sat.p;
 
     clear();
     _Q = Q;

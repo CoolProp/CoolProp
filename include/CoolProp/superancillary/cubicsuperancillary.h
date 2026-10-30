@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <vector>
 #include <stdexcept>
 #include <string>
@@ -701,6 +702,19 @@ static inline double supercubic(int EOS, int prop, double Ttilde) {
         }
         default:
             return -1;
+    }
+}
+
+/// Return the minimum reduced temperature Ttilde = R*T*b/a at which all three superancillaries (p, rhoL, rhoV)
+/// of the given EOS are defined.
+static inline double get_Ttilde_min(int EOS) {
+    switch (EOS) {
+        case SRK_CODE:
+            return std::max({SRK_p.exps[0].xmin, SRK_rhoL.exps[0].xmin, SRK_rhoV.exps[0].xmin});
+        case PR_CODE:
+            return std::max({PR_p.exps[0].xmin, PR_rhoL.exps[0].xmin, PR_rhoV.exps[0].xmin});
+        default:
+            return -1.0;
     }
 }
 
