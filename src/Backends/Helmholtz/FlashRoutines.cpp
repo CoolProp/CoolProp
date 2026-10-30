@@ -211,7 +211,8 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 // seed decision on one consistent density scale.  SRK has Z_c = 1/3, and b = Omega_b
                 // R Tc / pc, so its critical molar volume is v_c = Z_c R Tc / pc = (Z_c / Omega_b) b =
                 // b / (3 Omega_b), i.e. rho_c,SRK = 1 / v_c = 3 Omega_b / b (Omega_b = 0.08664..., the
-                // same covolume coefficient SRK_covolume() sums per component).
+                // same covolume coefficient SRK_covolume() sums per component, kept identical to it
+                // on purpose; see the note above SRK_covolume() and Linear COO-150).
                 constexpr double SRK_Omega_b = 0.08664034999649577215890158147700;
                 const double b_srk = HEOS.SRK_covolume();
                 const double rho_srk_crit = (b_srk > 0) ? (3.0 * SRK_Omega_b / b_srk) : HEOS.rhomolar_reducing();
@@ -663,6 +664,7 @@ double FlashRoutines::T_DP_PengRobinson(HelmholtzEOSMixtureBackend& HEOS, double
     R = HEOS.gas_constant();
 
     kappa = 0.37464 + 1.54226 * omega - 0.26992 * omega * omega;
+    // Rounded PR constants on purpose: this only seeds the T solve (exact ones: Cubics/CubicConstants.h)
     a = 0.457235 * R * R * Tc * Tc / pc;
     b = 0.077796 * R * Tc / pc;
     double den = V * V + 2 * b * V - b * b;
@@ -3466,6 +3468,25 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             return (x < Tmin || x > Tmax);
         }
     };
+    // solver_resid's constructor imposes the phase, and every normal and error exit below unspecifies
+    // it -- except a throw from the bracket-end evaluations resid.call(Tmin/Tmax), which run outside the
+    // try blocks.  That left the phase imposed, so a later T,P update on the same object silently picked
+    // the wrong root (seen with near-critical cubic P-input flashes).  Unspecify on every exit, exactly
+    // as the other exits already do (so a phase the caller imposed before the flash is cleared, as before).
+    struct ImposedPhaseClearer
+    {
+        HelmholtzEOSMixtureBackend& H;
+        explicit ImposedPhaseClearer(HelmholtzEOSMixtureBackend& H) : H(H) {}
+        ImposedPhaseClearer(const ImposedPhaseClearer&) = delete;
+        ImposedPhaseClearer& operator=(const ImposedPhaseClearer&) = delete;
+        ImposedPhaseClearer(ImposedPhaseClearer&&) = delete;
+        ImposedPhaseClearer& operator=(ImposedPhaseClearer&&) = delete;
+        // What HelmholtzEOSMixtureBackend::calc_unspecify_phase() does, without the virtual call (whose
+        // AbstractState default throws), so the destructor cannot throw.
+        ~ImposedPhaseClearer() {
+            H.imposed_phase_index = iphase_not_imposed;
+        }
+    } clear_imposed_phase(HEOS);
     solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax, direct_path_enabled);
 
     class resid_2D : public FuncWrapperND
@@ -3720,19 +3741,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Tmin = std::max(HEOS.Tmin(), HEOS.Ttriple());
                     } else {
 
-                        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                            auto superanc_ptr = HEOS.get_superanc();
-                            if (superanc_ptr) {
-                                auto& superanc = *superanc_ptr;
-                                CoolPropDbl pmax_num = superanc.get_pmax();
-                                if (HEOS._p > pmax_num) {
-                                    throw ValueError(
-                                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p,
-                                             pmax_num));
-                                }
-                                Tmin = superanc.get_T_from_p(HEOS._p);
-                                break;
-                            }
+                        if (const auto sat = HEOS.superanc_saturation_at_p(HEOS._p)) {
+                            Tmin = sat->T;
+                            break;
                         }
                         if (saturation_called) {
                             Tmin = HEOS.SatV->T();
@@ -3751,18 +3762,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         Tmin = HEOS.Tmin() - 1e-3;
                     }
 
-                    if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                        auto superanc_ptr = HEOS.get_superanc();
-                        if (superanc_ptr) {
-                            auto& superanc = *superanc_ptr;
-                            CoolPropDbl pmax_num = superanc.get_pmax();
-                            if (HEOS._p > pmax_num) {
-                                throw ValueError(format(
-                                  "Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
-                            }
-                            Tmax = superanc.get_T_from_p(HEOS._p);
-                            break;
-                        }
+                    if (const auto sat = HEOS.superanc_saturation_at_p(HEOS._p)) {
+                        Tmax = sat->T;
+                        break;
                     }
 
                     if (saturation_called) {
@@ -4081,8 +4083,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
             } else {
                 Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100);
             }
-        } else if (y < yc) {
-            // Increase rhomelt until it bounds the solution
+        } else if ((y - yc) * (yc - ymin) > 0) {
+            // y lies beyond yc on the side away from ymin, so a higher density can bracket it: increase
+            // rhoc until it does.  Written for either sign of dy/drho -- for the usual decreasing u, s or h
+            // this is y < yc, but above T* = Tc(1 + 1/m)^2 the Soave alpha makes u rise with density, and
+            // dense cubic T,U states threw "input not in range".
             int step_count = 0;
             while (!is_in_closed_range(ymin, yc, y)) {
                 rhoc *= 1.1;  // Increase density by a few percent
@@ -4127,6 +4132,11 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
     else if ((HEOS._phase == iphase_liquid) || (HEOS._phase == iphase_supercritical_liquid)) {
         CoolPropDbl ymelt = NAN, yL = NAN, y = NAN;
         CoolPropDbl rhomelt = HEOS.components[0].triple_liquid.rhomolar;
+        // Backends without a triple point (the cubics) leave it at _HUGE (+inf), which put the seed
+        // evaluation at delta = inf.  Use the backend's own upper density bound instead.
+        if (!ValidNumber(rhomelt)) {
+            rhomelt = HEOS.calc_rhomolar_max_bound();
+        }
         // Self-contained seed evaluation: prefer the cached ancillary set by
         // upstream phase-determination, otherwise fall through to superancillary
         // (numerical-critical-point accurate), then to the polynomial ancillary.
@@ -4135,18 +4145,23 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         CoolPropDbl rhoL = NAN;
         if (HEOS._rhoLanc) {
             rhoL = static_cast<double>(HEOS._rhoLanc);
-        } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto superanc_ptr = HEOS.get_superanc();
-            if (superanc_ptr) {
-                // get_superanc() only reports cache existence, not domain coverage —
-                // eval_sat() can still throw near the numerical critical point or a
-                // domain edge. Swallow the throw so the polynomial fallback below stays
-                // reachable for previously valid subcritical flashes.
-                try {
-                    rhoL = superanc_ptr->eval_sat(HEOS._T, 'D', 0);
-                } catch (...) {
-                    rhoL = NAN;
+        } else {
+            // superanc_saturation_at_T also covers backends with their own superancillary (the
+            // cubics, whose classic ancillaries are empty: an imposed-phase T-input flash reaches
+            // here without T_phase_determination having set _rhoLanc).  It can throw near the
+            // numerical critical point or a domain edge; swallow that so the polynomial fallback
+            // below stays reachable for previously valid subcritical flashes.
+            try {
+                if (const auto sat = HEOS.superanc_saturation_at_T(HEOS._T)) {
+                    rhoL = sat->rhomolarL;
                 }
+            } catch (...) {
+                // With no polynomial ancillary to fall back on (the cubics), the hook's own error is
+                // the informative one; swallowing it only turned it into "type not set".
+                if (!HEOS.components[0].ancillaries.rhoL.enabled()) {
+                    throw;
+                }
+                rhoL = NAN;
             }
         }
         if (!ValidNumber(rhoL)) {
@@ -4191,15 +4206,17 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         CoolPropDbl rhoV = NAN;
         if (HEOS._rhoVanc) {
             rhoV = static_cast<double>(HEOS._rhoVanc);
-        } else if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto superanc_ptr = HEOS.get_superanc();
-            if (superanc_ptr) {
-                // See companion try/catch in the liquid branch above.
-                try {
-                    rhoV = superanc_ptr->eval_sat(HEOS._T, 'D', 1);
-                } catch (...) {
-                    rhoV = NAN;
+        } else {
+            // See companion block in the liquid branch above.
+            try {
+                if (const auto sat = HEOS.superanc_saturation_at_T(HEOS._T)) {
+                    rhoV = sat->rhomolarV;
                 }
+            } catch (...) {
+                if (!HEOS.components[0].ancillaries.rhoV.enabled()) {
+                    throw;
+                }
+                rhoV = NAN;
             }
         }
         if (!ValidNumber(rhoV)) {
