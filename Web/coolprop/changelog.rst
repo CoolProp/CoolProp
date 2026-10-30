@@ -11,6 +11,7 @@ Changelog for CoolProp
 
 Breaking Changes:
 
+* Pure SRK/PR: ``T,P`` at p <= 0, ``Q,T``/``P,Q`` below the cubic superancillary's low-T end (Tr 0.15-0.33, rising with the acentric factor), and ``T,U`` at T* = Tc(1+1/m)^2 now raise instead of returning a wrong root, and molar ``H,T`` (not unique) is refused for pure SRK/PR/VTPR, as mass-based ``H,T`` already was for every backend; ``rhomolar_critical()`` is the EOS's own value, pc/(Z_c R Tc) (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
 * Viscosity and thermal conductivity now raise an error for two-phase states (0 < Q < 1) in the HEOS, TTSE and BICUBIC backends, for every input pair; HEOS used to return the single-phase correlation evaluated at the bulk density, and the tabular backends a quality-weighted blend. Q = 0 and Q = 1 still give the saturated-phase values; in HEOS, imposing a phase still gives the metastable value. TTSE and BICUBIC (T, rho) and (T, s) inputs inside the dome now also report ``phase()`` as two-phase (`#3446 <https://github.com/CoolProp/CoolProp/issues/3446>`__, `#3447 <https://github.com/CoolProp/CoolProp/pull/3447>`__).
 * The Python ``CoolProp.GUI`` package (the old wxPython GUI and a ``PsychScript.py`` chart script) was removed, so ``import CoolProp.GUI`` now fails.  Its GUI module had not imported since 2015; the desktop GUI is the Tauri app in ``wrappers/GUI`` (`#3472 <https://github.com/CoolProp/CoolProp/issues/3472>`__).
 * The deprecated ``coolprop()`` and ``coolpropsi()`` functions of the EES wrapper were removed. ``coolprop()`` worked in kPa and kJ and called the CoolProp v4 API, and it asserted the wrong unit system, so a model that satisfied its own error message was computing states a factor of 1000 away. ``coolpropsi()`` had not worked at all for years, because it called the external function with a string variable that was never assigned. An EES model calling ``coolprop()`` has to be changed to ``PropsSI``, with pressures in Pa and energies in J; its results change, because they were wrong before. ``CoolProp.LIB`` and ``COOLPROP_EES.dlf`` have to be installed from the same release: a mismatched pair now reports that rather than computing (`#3382 <https://github.com/CoolProp/CoolProp/pull/3382>`__).
@@ -272,6 +273,10 @@ Performance:
 * Python property plots trace isolines instead of flashing every point cold: 255 s to 10 s for the R513A case in discussion #3269 (`#3344 <https://github.com/CoolProp/CoolProp/pull/3344>`__).
 
 Bug fixes:
+
+* Cubic EOS (SRK/PR): exact Omega constants (`#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__); P- and T-input flashes, Q,T/P,Q from the superancillary, robust density roots near the critical point and above Tc, T,P phase labels and fresh-state caloric properties (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
+
+* HEOS mixture ``T_critical()``, ``p_critical()`` and ``rhomolar_critical()`` skip unstable critical points instead of throwing when the tracer also found one, e.g. R454B (`#3528 <https://github.com/CoolProp/CoolProp/issues/3528>`__).
 
 * ``set_reference_stateS`` raises ``ValueError`` for backends other than ``HEOS`` and ``REFPROP`` instead of silently doing nothing.
 

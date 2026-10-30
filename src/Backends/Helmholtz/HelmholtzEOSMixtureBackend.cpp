@@ -319,6 +319,39 @@ std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::g
     return components[0].EOS().get_superanc();
 }
 
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_p(CoolPropDbl p) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl pmax_num = superanc.get_pmax();
+    if (p > pmax_num) {
+        throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", p, pmax_num));
+    }
+    const double Tsat = superanc.get_T_from_p(p);
+    return SuperancSatPoint{Tsat, superanc.eval_sat(Tsat, 'D', 0), superanc.eval_sat(Tsat, 'D', 1), p};
+}
+
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+    if (T > Tcrit_num) {
+        throw ValueError(format("Temperature [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+    }
+    return SuperancSatPoint{T, superanc.eval_sat(T, 'D', 0), superanc.eval_sat(T, 'D', 1), superanc.eval_sat(T, 'P', 1)};
+}
+
 void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     if (!is_pure()) {
         return;
@@ -1279,15 +1312,25 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500() {
         return v;
     }
 }
+CriticalState HelmholtzEOSMixtureBackend::calc_unique_stable_critical_point() {
+    // The tracer also returns unstable points (e.g. negative-pressure ones at liquid-like
+    // densities, see #3528); only the stable ones are candidates for "the" critical point
+    std::vector<CriticalState> critpts = calc_all_critical_points();
+    std::vector<CriticalState> stable;
+    for (const auto& pt : critpts) {
+        if (pt.stable) {
+            stable.push_back(pt);
+        }
+    }
+    if (stable.size() != 1) {
+        throw ValueError(format("critical point finding routine found %d stable critical points (%d in total)", static_cast<int>(stable.size()),
+                                static_cast<int>(critpts.size())));
+    }
+    return stable[0];
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].T;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().T;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1300,13 +1343,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].p;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().p;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1319,13 +1356,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].rhomolar;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().rhomolar;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1861,19 +1892,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     else if (_p >= components[0].EOS().ptriple * 0.9999 && _p <= psat_max) {
 
         // First try the superancillaries, use them to determine the state if you can
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                CoolPropDbl pmax_num = superanc.get_pmax();
-                if (_p > pmax_num) {
-                    throw ValueError(
-                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
-                }
-                auto Tsat = superanc.get_T_from_p(_p);
-                auto rhoL = superanc.eval_sat(Tsat, 'D', 0);
-                auto rhoV = superanc.eval_sat(Tsat, 'D', 1);
+        {
+            const auto sat = superanc_saturation_at_p(_p);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto Tsat = sat->T;
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
                 auto psat = _p;
 
                 if (other == iT) {
@@ -1913,6 +1938,40 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         break;
                     default:
                         throw ValueError(format("bad input for other"));
+                }
+                // At the critical point itself (p == pc, which a superancillary maps onto the end of its
+                // table) the saturated states coincide, and Q is 0/0, +-inf, or a huge number whose sign is
+                // rounding noise in y_V - y_L.  It used to fall through as two-phase with rho = NaN (SRK CO2,
+                // P,H at exactly pc, on x86-64 where rhoL == rhoV to the bit), or could misclassify a liquid
+                // as gas elsewhere.  Decide on the state, not the bits: where the saturated densities coincide
+                // to 1e-10 (the tables agree to ~1e-12 at their critical end, and the sign of y_V - y_L is
+                // reliable well inside 1e-10; for a cubic the band is ~1e-20 in 1 - T/Tc, i.e. p within a few
+                // ulp of pc), classify as the p > psat_max branch above does, against the critical value.  A
+                // non-finite tabulated density is an error, not a critical point.
+                if (!ValidNumber(rhoL) || !ValidNumber(rhoV)) {
+                    throw ValueError(format("superancillary saturated densities are not finite at p = %g Pa", static_cast<double>(_p)));
+                }
+                if (!std::isfinite(Q) || !(std::abs(rhoV - rhoL) > 1e-10 * std::abs(rhoL))) {
+                    bool gas_like = false;
+                    switch (other) {
+                        case iDmolar:
+                            gas_like = value < rhomolar_crit_;
+                            break;
+                        case iSmolar:
+                            gas_like = value > smolar_critical();
+                            break;
+                        case iHmolar:
+                            gas_like = value > hmolar_critical();
+                            break;
+                        default:  // iUmolar; any other key already threw above
+                            gas_like = value > umolar_critical();
+                            break;
+                    }
+                    this->_phase = gas_like ? iphase_supercritical_gas : iphase_supercritical_liquid;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = 1e9;
+                    return;
                 }
                 // Start off by setting variables based on assumption that the state is two-phase
                 if (Q < -1e-9) {
@@ -2307,14 +2366,13 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         }
     } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                auto rhoL = superanc.eval_sat(_T, 'D', 0);
-                auto rhoV = superanc.eval_sat(_T, 'D', 1);
-                auto psat = superanc.eval_sat(_T, 'P', 1);
+        {
+            const auto sat = superanc_saturation_at_T(_T);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
+                auto psat = sat->p;
                 _rhoLanc = rhoL;
                 _rhoVanc = rhoV;
                 _rhoLmolar = rhoL;
@@ -2913,6 +2971,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
     return 0.9 / SRK_covolume();
 }
 
+// SRK_covolume() and solver_rho_Tp_SRK() are approximate seeds for the HEOS mixture solvers, not an
+// SRK EOS.  Their Omega_a/Omega_b literals carry #2745's transcription error (~4e-10 relative); the
+// exact values are in Backends/Cubics/CubicConstants.h.  They are deliberately left as they are: the
+// mixture PT flash's stability test is knife-edge sensitive to them and the exact values flip a
+// subcooled-liquid case to a spurious two-phase result (Linear COO-150).  Switch them once that is fixed.
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     double b = 0;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
@@ -3232,6 +3295,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                                 rhomolar_guess, e.what()));
     }
 }
+// Seed constants: see the note above SRK_covolume() (Linear COO-150).
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
     CoolPropDbl rhomolar = NAN, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
