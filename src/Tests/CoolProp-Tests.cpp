@@ -10,6 +10,7 @@
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
 #include "../Backends/Tabular/TabularBackends.h"
 #include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "../Backends/PCSAFT/PCSAFTLibrary.h"
 #include "../Backends/Helmholtz/TransportRoutines.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
@@ -4190,6 +4191,230 @@ TEST_CASE("Check PC-SAFT interaction parameter functions", "[pcsaft_binary_inter
     CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.127);
 }
 
+namespace PCSAFTLibraryTests {
+
+using nlohmann::json;
+
+// RAII toggle of the process-wide OVERWRITE_FLUIDS flag, restored on scope exit even if a check throws.
+struct OverwriteFluidsGuard
+{
+    bool saved;
+    explicit OverwriteFluidsGuard(bool on) : saved(get_config_bool(OVERWRITE_FLUIDS)) {
+        set_config_bool(OVERWRITE_FLUIDS, on);
+    }
+    ~OverwriteFluidsGuard() {
+        set_config_bool(OVERWRITE_FLUIDS, saved);
+    }
+    OverwriteFluidsGuard(const OverwriteFluidsGuard&) = delete;
+    OverwriteFluidsGuard& operator=(const OverwriteFluidsGuard&) = delete;
+    OverwriteFluidsGuard(OverwriteFluidsGuard&&) = delete;
+    OverwriteFluidsGuard& operator=(OverwriteFluidsGuard&&) = delete;
+};
+
+// A one-fluid JSON listing for add_fluids_as_JSON("PCSAFT", ...); sigma tells the records apart.
+// The aliases default to the name alone.  add_fluids_as_JSON("PCSAFT", ...) returns true and only
+// prints when loading fails, so the tests check every registration through a lookup, which throws
+// if the fluid is missing.
+std::string record(const std::string& name, const std::string& CAS, double sigma, const std::vector<std::string>& aliases = {}) {
+    json fluid = {{"name", name},
+                  {"CAS", CAS},
+                  {"aliases", aliases.empty() ? json::array({name}) : json(aliases)},
+                  {"m", 1.5255},
+                  {"sigma", sigma},
+                  {"sigma_units", "Angstrom"},
+                  {"u", 188.9},
+                  {"u_units", "K"},
+                  {"molemass", 0.032042},
+                  {"molemass_units", "kg/mol"}};
+    return json::array({fluid}).dump();
+}
+
+// (name, CAS) of every fluid in the library, keyed by index.  The library has no size accessor, so
+// keep probing until 1000 consecutive indices past the last fluid found are empty.
+std::map<std::size_t, std::pair<std::string, std::string>> snapshot() {
+    std::map<std::size_t, std::pair<std::string, std::string>> fluids;
+    for (std::size_t i = 0, last = 0; i <= last + 1000; ++i) {
+        try {
+            const PCSAFTFluid& fluid = PCSAFTLibrary::get_library().get(i);
+            fluids[i] = {fluid.getName(), fluid.getCAS()};
+            last = i;
+        } catch (const ValueError&) {  // NOLINT(bugprone-empty-catch)
+            // No fluid at this index.
+        }
+    }
+    return fluids;
+}
+
+std::size_t index_of(const std::map<std::size_t, std::pair<std::string, std::string>>& fluids, const std::string& name) {
+    for (const auto& [index, ids] : fluids) {
+        if (ids.first == name) {
+            return index;
+        }
+    }
+    throw ValueError(format("fluid [%s] not found in the PC-SAFT library", name.c_str()));
+}
+
+}  // namespace PCSAFTLibraryTests
+
+TEST_CASE("PC-SAFT library: a new name with an existing CAS number replaces only that fluid", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    // B stands for a fluid that is already in the library (in the reported case the built-in WATER),
+    // A for a user fluid registered after it, and C for a user fluid that reuses B's CAS number under
+    // a new name.  Registering C used to erase an unrelated fluid and then write C over A.
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestCasB", "9999-81-1", 3.0));
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestCasA", "9999-82-2", 3.1));
+    REQUIRE(library.get("PCSAFTLibTestCasB").getSigma() == 3.0);
+    REQUIRE(library.get("PCSAFTLibTestCasA").getSigma() == 3.1);
+    const auto before = snapshot();
+    const std::size_t index_B = index_of(before, "PCSAFTLibTestCasB");
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestCasC", "9999-81-1", 3.2));
+    const auto after = snapshot();
+
+    // C takes B's slot; no fluid is added, removed or changed anywhere else.
+    CHECK(after.size() == before.size());
+    for (const auto& [index, ids] : before) {
+        CAPTURE(index, ids.first);
+        REQUIRE(after.count(index) == 1);
+        if (index == index_B) {
+            CHECK(after.at(index) == std::make_pair(std::string("PCSAFTLibTestCasC"), std::string("9999-81-1")));
+        } else {
+            CHECK(after.at(index) == ids);
+        }
+    }
+    CHECK(library.get("PCSAFTLibTestCasA").getSigma() == 3.1);
+    CHECK(library.get("PCSAFTLibTestCasC").getSigma() == 3.2);
+    CHECK(library.get("9999-81-1").getName() == "PCSAFTLibTestCasC");
+    // As in the HEOS library, every identifier of the replaced fluid now resolves to the new one.
+    CHECK(library.get("PCSAFTLibTestCasB").getName() == "PCSAFTLibTestCasC");
+}
+
+TEST_CASE("PC-SAFT library: re-registering a fluid under the same name updates it in place", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestSame", "9999-83-3", 3.0));
+    REQUIRE(library.get("PCSAFTLibTestSame").getSigma() == 3.0);
+    const auto before = snapshot();
+    // The same-name path used to erase the fluid map entry twice, the second time at end().
+    for (double sigma : {3.1, 3.2, 3.3}) {
+        CAPTURE(sigma);
+        CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestSame", "9999-83-3", sigma));
+        CHECK(library.get("PCSAFTLibTestSame").getSigma() == sigma);
+        CHECK(snapshot() == before);
+    }
+    // ...and the updated record is usable.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PCSAFT", "PCSAFTLibTestSame"));
+    AS->update(DmolarT_INPUTS, 100, 300);
+    CHECK(std::isfinite(AS->p()));
+}
+
+TEST_CASE("PC-SAFT library: a duplicate is rejected without side effects when OVERWRITE_FLUIDS is off", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestDup", "9999-84-4", 3.0));
+    set_config_bool(OVERWRITE_FLUIDS, false);
+    const auto before = snapshot();
+    // Same CAS number under a new name, and the same name under a new CAS number.
+    CHECK_THROWS_WITH(library.add_many(json::parse(record("PCSAFTLibTestDupOther", "9999-84-4", 3.1))),
+                      Catch::Matchers::ContainsSubstring("already in library"));
+    CHECK_THROWS_WITH(library.add_many(json::parse(record("PCSAFTLibTestDup", "9999-85-5", 3.1))),
+                      Catch::Matchers::ContainsSubstring("already in library"));
+    CHECK(snapshot() == before);
+    CHECK(library.get("PCSAFTLibTestDup").getSigma() == 3.0);
+    CHECK_THROWS_AS(library.get("PCSAFTLibTestDupOther"), ValueError);
+}
+
+TEST_CASE("PC-SAFT library: a record matching two different fluids is rejected without side effects", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestConfA", "9999-86-6", 3.0));
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestConfB", "9999-87-7", 3.1));
+    REQUIRE(library.get("PCSAFTLibTestConfA").getSigma() == 3.0);
+    REQUIRE(library.get("PCSAFTLibTestConfB").getSigma() == 3.1);
+    const auto before = snapshot();
+
+    // Records that match both A and B, as a typo or a copy-paste would give, under either setting: the
+    // name of A with the CAS number of B, and the CAS number of B with an alias that matches A only once
+    // upper-cased.  Replacing B would leave A reachable through its own identifiers and the other way round.
+    for (bool overwrite : {true, false}) {
+        CAPTURE(overwrite);
+        set_config_bool(OVERWRITE_FLUIDS, overwrite);
+        for (const std::string& conflicting :
+             {record("PCSAFTLibTestConfA", "9999-87-7", 3.2), record("PCSAFTLibTestConfC", "9999-87-7", 3.2, {"pcsaftlibtestconfa"})}) {
+            CAPTURE(conflicting);
+            CHECK_THROWS_WITH(library.add_many(json::parse(conflicting)),
+                              Catch::Matchers::ContainsSubstring("match 2 different fluids")
+                                && Catch::Matchers::ContainsSubstring("(PCSAFTLibTestConfA, PCSAFTLibTestConfB)"));
+        }
+        CHECK(snapshot() == before);
+        CHECK_THROWS_AS(library.get("PCSAFTLibTestConfC"), ValueError);
+        for (const std::string& identifier : {"PCSAFTLibTestConfA", "PCSAFTLIBTESTCONFA", "9999-86-6"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == "PCSAFTLibTestConfA");
+            CHECK(library.get(identifier).getSigma() == 3.0);
+        }
+        for (const std::string& identifier : {"PCSAFTLibTestConfB", "PCSAFTLIBTESTCONFB", "9999-87-7"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == "PCSAFTLibTestConfB");
+            CHECK(library.get(identifier).getSigma() == 3.1);
+        }
+    }
+}
+
+TEST_CASE("PC-SAFT library: a record sharing only an alias with a fluid replaces only that fluid", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestAliasD", "9999-88-8", 3.0, {"PCSAFTLibTestAliasShared"}));
+    REQUIRE(library.get("PCSAFTLibTestAliasShared").getName() == "PCSAFTLibTestAliasD");
+    const auto before = snapshot();
+    const std::size_t index_D = index_of(before, "PCSAFTLibTestAliasD");
+
+    // Each new record has its own name and CAS number, so an alias is the only identifier it shares with
+    // the fluid in place: D's alias as written; the same alias in lower case, which matches only once
+    // upper-cased; and D's name, which is not stored upper-cased, so it matches only as written.
+    struct Replacement
+    {
+        std::string name, CAS, alias;
+        double sigma;
+    };
+    for (const Replacement& r : {Replacement{"PCSAFTLibTestAliasE", "9999-89-9", "PCSAFTLibTestAliasShared", 3.1},
+                                 Replacement{"PCSAFTLibTestAliasF", "9999-90-0", "pcsaftlibtestaliasshared", 3.2},
+                                 Replacement{"PCSAFTLibTestAliasG", "9999-91-1", "PCSAFTLibTestAliasD", 3.3}}) {
+        CAPTURE(r.name, r.alias);
+        CoolProp::add_fluids_as_JSON("PCSAFT", record(r.name, r.CAS, r.sigma, {r.alias}));
+        const auto after = snapshot();
+        CHECK(after.size() == before.size());
+        for (const auto& [index, ids] : before) {
+            CAPTURE(index, ids.first);
+            REQUIRE(after.count(index) == 1);
+            if (index == index_D) {
+                CHECK(after.at(index) == std::make_pair(r.name, r.CAS));
+            } else {
+                CHECK(after.at(index) == ids);
+            }
+        }
+        CHECK(library.get(r.name).getSigma() == r.sigma);
+        CHECK(library.get(r.alias).getName() == r.name);
+        // As in the first test, every identifier of the replaced fluid, its CAS number included, now
+        // resolves to the new one.
+        for (const std::string& identifier : {"PCSAFTLibTestAliasD", "9999-88-8", "PCSAFTLibTestAliasShared", "PCSAFTLIBTESTALIASSHARED"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == r.name);
+        }
+    }
+}
+
 TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pressure]") {
     double vp =
       1816840.45112607;  // source: H.-M. Lin, H. M. Sebastian, J. J. Simnick, and K.-C. Chao, “Gas-liquid equilibrium in binary mixtures of methane with N-decane, benzene, and toluene,” J. Chem. Eng. Data, vol. 24, no. 2, pp. 146–149, Apr. 1979.
@@ -5412,6 +5637,63 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
     }
 }
 
+TEST_CASE("Cubic Omega constants reproduce the critical point", "[cubic][cubic_omega][2745]") {
+    // The Omega_a/Omega_b constants (Backends/Cubics/CubicConstants.h) must make (Tc, pc) the EOS's own
+    // critical point.  #2745 transcribed them with doubled/dropped digits (SRK off by ~4e-10, PR Omega_b
+    // by 5e-14), which these checks catch; they test the defining property, not the digits.  The PR Zc
+    // here is an independent high-precision reference, not CubicConstants::PR_Zc().
+    for (const auto& [backend, Zc] : std::vector<std::pair<std::string, double>>{{"SRK", 1.0 / 3.0}, {"PR", 0.30740130869870384800938509665}}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        auto cubic = ACB->get_cubic();
+        const std::vector<double> x = {1.0};
+        const double Tc = AS->T_critical(), pc = AS->p_critical(), R = cubic->get_R_u();
+
+        // (1) The reduced critical temperature Ttilde_c = R Tc b / a(Tc) = Omega_b/Omega_a is where the
+        //     superancillary tables end (they were built from the exact constants).
+        const double Ttilde_c = R * Tc * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / Tc, x, 0);
+        CHECK(Ttilde_c == Catch::Approx(CubicSuperAncillary::get_Ttilde_max(ACB->get_superanc_eos_code())).epsilon(1e-14));
+
+        // (2) Independent of the tables: at (Tc, rho_c = pc/(Zc R Tc)) the EOS gives p = pc with
+        //     dp/drho = d2p/drho2 = 0.
+        const double rhoc = pc / (Zc * R * Tc);
+        AS->specify_phase(iphase_gas);  // evaluate the EOS directly, no phase determination
+        AS->update(CoolProp::DmolarT_INPUTS, rhoc, Tc);
+        // Tight enough to catch an error common to Omega_a and Omega_b, which (1) cannot see.
+        CHECK(AS->p() == Catch::Approx(pc).epsilon(1e-14));
+        CHECK(std::abs(AS->first_partial_deriv(iP, iDmolar, iT)) * rhoc / pc < 1e-10);
+        CHECK(std::abs(AS->second_partial_deriv(iP, iDmolar, iT, iDmolar, iT)) * rhoc * rhoc / pc < 1e-10);
+        AS->unspecify_phase();
+    }
+}
+
+TEST_CASE("Cubic superancillary evaluation at the edges of the table", "[cubic][cubic_superanc]") {
+    // All cubic table evaluations at a temperature go through one helper: up to Tc (the end of
+    // the table, to round-off) they succeed; below the table's low-T end they throw ValueError rather
+    // than std::invalid_argument from the Chebyshev evaluation; D,T just below Tc inside the dome is
+    // two-phase (it used to be forced single-phase above calc_superanc_Tmax()).
+    for (const auto& backend : std::vector<std::string>{"SRK", "PR"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double Tc = AS->T_critical();
+        CHECK(ACB->calc_saturation_ancillary(iP, 0, iT, Tc) == Catch::Approx(AS->p_critical()).epsilon(1e-10));
+        CHECK_NOTHROW(AS->update_QT_pure_superanc(0.5, Tc));
+        CHECK_THROWS_AS(ACB->calc_saturation_ancillary(iP, 0, iT, 0.1 * Tc), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->update(CoolProp::QT_INPUTS, 0.5, 0.1 * Tc), CoolProp::ValueError);
+
+        const double T = Tc * (1 - 1e-6);
+        const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+        const double rhoV = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+        AS->update(CoolProp::DmolarT_INPUTS, 0.5 * (rhoL + rhoV), T);
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(AS->p() == Catch::Approx(ACB->calc_saturation_ancillary(iP, 0, iT, T)).epsilon(1e-12));
+    }
+}
+
 TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
@@ -5429,6 +5711,26 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superan
             }
         }
 
+        SECTION(backend + " caloric properties on a fresh state") {
+            // SatL/SatV are filled by update_TDmolarP_unchecked, which skips pre_update(); the
+            // cubic's cached reducing state must already be seeded or h is evaluated at tau = inf.
+            const double T = 0.8 * Tc_sa;
+            AS->update_QT_pure_superanc(0.5, T);
+            const double h_superanc = AS->hmolar();
+            // Independent reference: h_L and h_V from separate full D,T updates at the saturated
+            // densities (phase imposed, so the EOS is evaluated directly), combined by the lever rule.
+            auto h_at = [&](double rho, CoolProp::phases phase) {
+                std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+                ref->specify_phase(phase);
+                ref->update(CoolProp::DmolarT_INPUTS, rho, T);
+                return ref->hmolar();
+            };
+            const double hL = h_at(AS->saturated_liquid_keyed_output(CoolProp::iDmolar), CoolProp::iphase_liquid);
+            const double hV = h_at(AS->saturated_vapor_keyed_output(CoolProp::iDmolar), CoolProp::iphase_gas);
+            CHECK(std::isfinite(h_superanc));
+            CHECK(h_superanc == Catch::Approx(0.5 * hL + 0.5 * hV).epsilon(1e-9));
+        }
+
         SECTION(backend + " update_QT_pure_superanc Q=0 and Q=1 densities bracket Q=0.5") {
             double T = 0.8 * Tc_sa;
             AS->update_QT_pure_superanc(0.0, T);
@@ -5444,6 +5746,419 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superan
             CHECK(rhoM > rhoV);
         }
     }
+}
+
+TEST_CASE("Cubic QT and PQ updates use the superancillary", "[cubic][cubic_superanc][COO-136]") {
+    // Q,T and P,Q on a pure cubic used to run an iterative secant solve converged to only ~1e-7 in p
+    // near Tc, while the Chebyshev superancillary next to it is exact to round-off.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Propane", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double Tmax = ACB->calc_superanc_Tmax();
+            for (double frac : {0.5, 0.7, 0.9, 0.95, 0.99, 0.9999}) {
+                const double T = frac * Tmax;
+                CAPTURE(backend, fluid, T);
+                const double p_sa = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                const double rhoL_sa = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+                const double rhoV_sa = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+
+                AS->update(CoolProp::QT_INPUTS, 0.3, T);
+                CHECK(AS->p() == Catch::Approx(p_sa).epsilon(1e-13));
+                CHECK(AS->saturated_liquid_keyed_output(iDmolar) == Catch::Approx(rhoL_sa).epsilon(1e-13));
+                CHECK(AS->saturated_vapor_keyed_output(iDmolar) == Catch::Approx(rhoV_sa).epsilon(1e-13));
+
+                AS->update(CoolProp::PQ_INPUTS, p_sa, 0.3);
+                CHECK(AS->T() == Catch::Approx(T).epsilon(1e-12));
+                CHECK(AS->saturated_liquid_keyed_output(iDmolar) == Catch::Approx(rhoL_sa).epsilon(1e-10));
+                CHECK(AS->saturated_vapor_keyed_output(iDmolar) == Catch::Approx(rhoV_sa).epsilon(1e-10));
+                CHECK(AS->Q() == Catch::Approx(0.3).margin(1e-14));
+                // Both phases carry the saturation pressure exactly.
+                CHECK(AS->saturated_liquid_keyed_output(iP) == AS->p());
+                CHECK(AS->saturated_vapor_keyed_output(iP) == AS->p());
+
+                // Independent of the table: equal Gibbs energy of the two phases from the EOS.
+                if (frac < 0.99) {
+                    std::shared_ptr<CoolProp::AbstractState> L(CoolProp::AbstractState::factory(backend, fluid));
+                    std::shared_ptr<CoolProp::AbstractState> V(CoolProp::AbstractState::factory(backend, fluid));
+                    L->specify_phase(iphase_liquid);
+                    V->specify_phase(iphase_gas);
+                    L->update(CoolProp::DmolarT_INPUTS, rhoL_sa, T);
+                    V->update(CoolProp::DmolarT_INPUTS, rhoV_sa, T);
+                    CHECK(std::abs(L->gibbsmolar() - V->gibbsmolar()) / (AS->gas_constant() * T) < 1e-12);
+                    // A stiff liquid amplifies a 1e-15 density error ~1e5-fold in p at low pressure.
+                    CHECK(L->p() == Catch::Approx(p_sa).epsilon(1e-7));
+                    CHECK(V->p() == Catch::Approx(p_sa).epsilon(1e-12));
+                }
+            }
+
+            CAPTURE(backend, fluid);
+            // The table runs to the exact critical point (#3515): Q,T at Tc gives pc and P,Q at pc gives
+            // Tc, both to round-off-level accuracy, not merely without throwing.
+            REQUIRE_NOTHROW(AS->update(CoolProp::QT_INPUTS, 0.5, AS->T_critical()));
+            CHECK(AS->p() == Catch::Approx(AS->p_critical()).epsilon(1e-10));
+            REQUIRE_NOTHROW(AS->update(CoolProp::PQ_INPUTS, AS->p_critical(), 0.5));
+            CHECK(AS->T() == Catch::Approx(AS->T_critical()).epsilon(1e-10));
+            // P-input flashes at exactly pc go through the same end of the table (the critical point).
+            // States just off the critical point round-trip; the critical state itself is singular
+            // (infinite cp, flat isotherm) and is not asked for.
+            for (double Tr : {0.99, 1.01}) {
+                CAPTURE(Tr);
+                std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, fluid));
+                ref->update(CoolProp::PT_INPUTS, AS->p_critical(), Tr * AS->T_critical());
+                REQUIRE_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, ref->hmolar(), AS->p_critical()));
+                CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-8));
+                REQUIRE_NOTHROW(AS->update(CoolProp::PSmolar_INPUTS, AS->p_critical(), ref->smolar()));
+                CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-8));
+            }
+            // Just above pc is out of range for a saturation call, by more than the round-off allowance.
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, AS->p_critical() * (1 + 1e-6), 0.5));
+            // Out-of-range inputs throw rather than reaching the secant solve.
+            CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, 1.01 * AS->T_critical()));
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.01 * AS->p_critical(), 0.5));
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, -1.0, 0.5));
+        }
+    }
+}
+
+TEST_CASE("Cubic QT and PQ below the superancillary range", "[cubic][cubic_superanc][COO-136]") {
+    // The old secant solves silently returned garbage here (the trivial rhoL = rhoV root for Q,T,
+    // the wrong saturation temperature for P,Q), so these inputs must throw instead.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        auto cubic = ACB->get_cubic();
+        const std::vector<double> x = {1.0};
+        const double T = 0.15 * AS->T_critical();
+        const double Ttilde = cubic->get_R_u() * T * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / T, x, 0);
+        CAPTURE(backend, T, Ttilde);
+        // Guard: the point must really be below the table, or this test checks nothing.
+        REQUIRE(Ttilde < CubicSuperAncillary::get_Ttilde_min(ACB->get_superanc_eos_code()));
+        CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, T));
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 1e-30, 0.5));
+    }
+}
+
+TEST_CASE("Cubic TP root choice at very low pressure", "[cubic][cubic_superanc][COO-136]") {
+    // The gas/liquid root choice used to invert p -> Tsat, which cannot reach pressures below the
+    // superancillary's minimum; it now compares p with psat(T).  1e-8 Pa at 300 K is an ideal gas.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        CAPTURE(backend);
+        // Inside the table: compared with psat(T).
+        REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e-8, 300.0));
+        CHECK(AS->rhomolar() == Catch::Approx(1e-8 / (AS->gas_constant() * 300.0)).epsilon(1e-6));
+        // Below the table (Tr = 0.15, psat ~ 1e-12 Pa by extrapolation): the lower-Gibbs root, which is
+        // the gas well below psat and the liquid well above it.
+        const double T = 0.15 * AS->T_critical();
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        {
+            auto cubic = ACB->get_cubic();
+            const std::vector<double> x = {1.0};
+            const double Ttilde = cubic->get_R_u() * T * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / T, x, 0);
+            // Guard: T must really be below the table, or this exercises the psat branch instead.
+            REQUIRE(Ttilde < CubicSuperAncillary::get_Ttilde_min(ACB->get_superanc_eos_code()));
+        }
+        REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e-20, T));
+        CHECK(AS->rhomolar() == Catch::Approx(1e-20 / (AS->gas_constant() * T)).epsilon(1e-6));
+        REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e-8, T));
+        CHECK(AS->rhomolar() > 1000);
+        // And a compressed liquid well inside the table still picks the liquid root.
+        AS->update(CoolProp::QT_INPUTS, 0, 250.0);
+        const double rhoL = AS->rhomolar(), psat = AS->p();
+        AS->update(CoolProp::PT_INPUTS, 2 * psat, 250.0);
+        CHECK(AS->rhomolar() > rhoL);
+    }
+}
+
+TEST_CASE("Cubic TP root choice just below Tc and psat", "[cubic][cubic_superanc][COO-136]") {
+    // Within ~1e-6 of Tc the table's rho_V and the EOS vapour root differ by more than any fixed
+    // slack, so comparing the root with rho_V threw "Unable to find gaseous density" for 12 of 127 PR
+    // fluids (e.g. PR acetone at Tc(1 - 1e-6), p = psat(1 - 1e-10)).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"Acetone", "R134a", "Propane", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            for (double dT : {1e-6, 1e-8}) {
+                const double T = AS->T_critical() * (1 - dT);
+                const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                const double rhoV = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+                const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+                CAPTURE(dT);
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, psat * (1 - 1e-10), T));
+                CHECK(AS->rhomolar() < 0.5 * (rhoV + rhoL));  // the vapour-side root
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, psat * (1 + 1e-10), T));
+                CHECK(AS->rhomolar() > 0.5 * (rhoV + rhoL));  // the liquid-side root
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic TP at non-positive pressure is rejected", "[cubic][cubic_superanc][COO-136]") {
+    // p <= 0 has no vapour root (the tensile liquid is not supported): a clear error, not a root.
+    // Below Tc the cubic has three real roots there; above Tc one, which is negative (COO-138).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        for (const auto& [p, Tr] : std::vector<std::pair<double, double>>{{-1e5, 0.6}, {-1e5, 1.2}, {-1e6, 2.0}, {0.0, 1.2}}) {
+            CAPTURE(backend, p, Tr);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, p, Tr * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+            // ... and with a phase imposed
+            for (auto phase : {CoolProp::iphase_gas, CoolProp::iphase_liquid}) {
+                AS->specify_phase(phase);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, p, Tr * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+                AS->unspecify_phase();
+            }
+        }
+        // p of either sign below round-off: decided on p, not on the sign of a near-zero root
+        CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, -1e-10, 1.2 * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+    }
+}
+
+TEST_CASE("Cubic TP with an imposed liquid phase skips the root past the pole", "[cubic][cubic_superanc]") {
+    // Well above Tc at high p the densest of three real roots lies past rho = 1/(b - c).  An imposed
+    // (supercritical) liquid phase must take the densest physical root, which here is the only one.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double T = 3 * AS->T_critical(), p = 2 * AS->p_critical();
+        const double b = ACB->get_cubic()->bm_term(std::vector<double>{1.0});
+        AS->update(CoolProp::PT_INPUTS, p, T);
+        const double rho_free = AS->rhomolar();
+        for (auto phase :
+             {CoolProp::iphase_liquid, CoolProp::iphase_supercritical_liquid, CoolProp::iphase_supercritical_gas, CoolProp::iphase_supercritical}) {
+            CAPTURE(backend, phase);
+            AS->specify_phase(phase);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            CHECK(AS->rhomolar() * b < 1);
+            CHECK(AS->rhomolar() == Catch::Approx(rho_free).epsilon(1e-12));
+            AS->unspecify_phase();
+        }
+    }
+}
+
+TEST_CASE("Cubic TP root choice above Tc below pc", "[cubic][cubic_superanc][COO-136]") {
+    // Above Tc at p < pc the cubic can have three real roots, one beyond the repulsive pole (where the
+    // Gibbs energy is NaN).  Only one root is physical, and it must be returned.
+    int n_three_root = 0;
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"Hydrogen", "Helium", "Nitrogen"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            for (double T : {300.0, 600.0, 1000.0}) {
+                const double p = 1e5;
+                CAPTURE(backend, fluid, T);
+                REQUIRE(p < AS->p_critical());
+                REQUIRE(T > AS->T_critical());
+                int Nsoln = 0;
+                double r0 = 0, r1 = 0, r2 = 0;
+                ACB->rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+                n_three_root += (Nsoln == 3) ? 1 : 0;
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, p, T));
+                // The returned root must be the physical one, not merely one that reproduces p.
+                const std::vector<double> x = {1.0};
+                const double b_minus_c = ACB->get_cubic()->bm_term(x) - ACB->get_cubic()->cm_term(x);
+                CHECK(AS->rhomolar() > 0);
+                CHECK(AS->rhomolar() * b_minus_c < 1);
+                std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                chk->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+                CHECK(chk->p() == Catch::Approx(p).epsilon(1e-10));
+            }
+        }
+    }
+    // Guard: the grid must actually reach the three-root regime.
+    CHECK(n_three_root >= 4);
+}
+
+TEST_CASE("Cubic TP phase label is right near Tc", "[cubic][cubic_pt_phase]") {
+    // Gas vs liquid is decided by rho vs rhomolar_critical(), which for a pure cubic was a real-fluid
+    // curve fit 15-25% above the cubic's own critical density: compressed liquids within ~0.5% of Tc
+    // were labelled gas (e.g. SRK 1-butene at 418.87 K, rho > rho_L,sat, phase 5).
+    for (const auto& [backend, Zc] : std::vector<std::pair<std::string, double>>{{"SRK", 1.0 / 3.0}, {"PR", 0.30740130869870384800938509665}}) {
+        for (const auto& fluid : std::vector<std::string>{"Propane", "1-Butene", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            CHECK(AS->rhomolar_critical() == Catch::Approx(AS->p_critical() / (Zc * ACB->gas_constant() * AS->T_critical())).epsilon(1e-14));
+            for (double Tr : {0.997, 0.9999}) {
+                const double T = Tr * AS->T_critical();
+                const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                CAPTURE(Tr);
+                AS->update(CoolProp::PT_INPUTS, psat * (1 + 1e-6), T);
+                CHECK(AS->phase() == iphase_liquid);
+                AS->update(CoolProp::PT_INPUTS, psat * (1 - 1e-6), T);
+                CHECK(AS->phase() == iphase_gas);
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic TP phase label follows the new density", "[cubic][cubic_pt_phase]") {
+    // solver_rho_Tp labelled the phase before _rhomolar was assigned, so the label came from the
+    // previous state's density (a fresh state read as gas).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Propane", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double T = 0.6 * AS->T_critical();
+            const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+            // Fresh state straight to a compressed liquid.
+            AS->update(CoolProp::PT_INPUTS, 2 * psat, T);
+            CHECK(AS->phase() == iphase_liquid);
+            // Liquid -> gas -> liquid on the same instance.
+            AS->update(CoolProp::PT_INPUTS, 0.5 * psat, T);
+            CHECK(AS->phase() == iphase_gas);
+            AS->update(CoolProp::PT_INPUTS, 2 * psat, T);
+            CHECK(AS->phase() == iphase_liquid);
+        }
+    }
+}
+
+TEST_CASE("Cubic QT and PQ with volume translation", "[cubic][cubic_superanc][COO-136]") {
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double b = ACB->get_cubic()->bm_term(std::vector<double>{1.0});
+        const double T = 0.8 * ACB->calc_superanc_Tmax();
+        AS->update(CoolProp::QT_INPUTS, 0, T);
+        const double rhoL_untranslated = AS->rhomolar();
+        AS->set_fluid_parameter_double(0, "cm", 0.1 * b);
+        CAPTURE(backend);
+        const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+        // Independent of the shared untranslate step: v_translated = v_untranslated - c.
+        CHECK(1 / rhoL == Catch::Approx(1 / rhoL_untranslated - 0.1 * b).epsilon(1e-12));
+        AS->update(CoolProp::QT_INPUTS, 0, T);
+        CHECK(AS->rhomolar() == Catch::Approx(rhoL).epsilon(1e-13));
+        const double p = AS->p();
+        AS->update(CoolProp::PQ_INPUTS, p, 0);
+        CHECK(AS->T() == Catch::Approx(T).epsilon(1e-12));
+        CHECK(AS->rhomolar() == Catch::Approx(rhoL).epsilon(1e-10));
+    }
+}
+
+TEST_CASE("solve_cubic returns NaN roots for non-finite coefficients", "[cubic][cubic_supercritical_roots]") {
+    // The clamps on the acos/acosh arguments must not turn a NaN into a finite root: with d = NaN the
+    // three-root branch would otherwise give the roots of x^3 - 3x + 2 (callers such as the bicubic
+    // inversion build d from a user input).
+    for (double d : {std::nan(""), std::numeric_limits<double>::infinity()}) {
+        int N = 0;
+        double x0 = 0, x1 = 0, x2 = 0;
+        solve_cubic(1, 0, -3, d, N, x0, x1, x2);
+        CAPTURE(d, N, x0, x1, x2);
+        CHECK(std::isnan(x0));
+        CHECK((N < 2 || std::isnan(x1)));
+        CHECK((N < 3 || std::isnan(x2)));
+    }
+}
+
+TEST_CASE("Cubic density roots stay finite at the critical point", "[cubic][cubic_supercritical_roots]") {
+    // Within ~1e-9 of the critical point the acos/acosh arguments in solve_cubic rounded outside
+    // their domains (and p rounded to 0), returning NaN roots: PR R134a T,P threw "rhomolar is not a
+    // valid number", as did every P-input flash within ~1e-6 of pc.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"R134a", "n-Pentane", "CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double Tc = AS->T_critical(), pc = AS->p_critical();
+            for (double dT : {-1e-6, -1e-9, -1e-12, 0.0, 1e-12, 1e-9, 1e-6}) {
+                for (double dp : {-1e-6, -1e-9, -1e-12, 0.0, 1e-12, 1e-9, 1e-6}) {
+                    const double T = Tc * (1 + dT), p = pc * (1 + dp);
+                    CAPTURE(backend, fluid, dT, dp);
+                    int N = 0;
+                    double r0 = NAN, r1 = NAN, r2 = NAN;
+                    ACB->rho_Tp_cubic(T, p, N, r0, r1, r2);
+                    CHECK((N == 1 || N == 3));
+                    for (double r : {r0, r1, r2}) {
+                        CHECK(std::isfinite(r));
+                        // Each root reproduces p (the isotherm is flat here, so this is a loose test of rho).
+                        std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                        chk->specify_phase(iphase_gas);
+                        chk->update(CoolProp::DmolarT_INPUTS, r, T);
+                        CHECK(chk->p() == Catch::Approx(p).epsilon(1e-9));
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic gas root at very low pressure is positive", "[cubic][cubic_supercritical_roots]") {
+    // At p ~ 1e-20 Pa the gas root (~p/RT) is far below the closed form's round-off, which returns it
+    // with either sign; the polish must still bring it into the physical domain.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double T = 0.15 * AS->T_critical(), p = 1e-20;
+        int N = 0;
+        double r0 = NAN, r1 = NAN, r2 = NAN;
+        ACB->rho_Tp_cubic(T, p, N, r0, r1, r2);
+        REQUIRE(N == 3);
+        CHECK(r0 == Catch::Approx(p / (ACB->gas_constant() * T)).epsilon(1e-9));
+    }
+}
+
+TEST_CASE("Cubic calc_pressure_nocache uses its arguments", "[cubic][cubic_supercritical_roots]") {
+    // It multiplied by the members _rhomolar and _T instead of its T and rho arguments, so it was
+    // right only when they happened to coincide (inf on a fresh state).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+        ref->update(CoolProp::PT_INPUTS, 2e6, 450.0);
+        CHECK(ACB->calc_pressure_nocache(450.0, ref->rhomolar()) == Catch::Approx(2e6).epsilon(1e-12));
+        AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);  // members now differ from the arguments below
+        CHECK(ACB->calc_pressure_nocache(450.0, ref->rhomolar()) == Catch::Approx(2e6).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Cubic PT at supercritical pressure and high temperature", "[cubic][cubic_supercritical_roots]") {
+    // Well above Tc the cubic in rho can have three real roots even for p > pc, but only one is
+    // physical: the others are negative or lie beyond the 1/(b - c) pole.  The no-guess root
+    // selector used to count all three and throw.
+    int n_three_root_states = 0;
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB_ptr = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB_ptr != nullptr);
+            auto& ACB = *ACB_ptr;
+            const double pc = AS->p_critical(), Tc = AS->T_critical();
+            for (double Tr : {1.5, 2.5, 4.0, 6.0}) {
+                for (double pr : {1.5, 3.0}) {
+                    CAPTURE(backend, fluid, Tr, pr);
+                    const double p = pr * pc, T = Tr * Tc;
+                    int Nsoln = 0;
+                    double r0 = 0, r1 = 0, r2 = 0;
+                    ACB.rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+                    n_three_root_states += (Nsoln == 3) ? 1 : 0;
+                    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, p, T));
+                    CHECK(AS->rhomolar() > 0);
+                    CHECK(AS->rhomolar() < AS->rhomolar_critical() * 4);
+                    // The returned root must reproduce the input pressure.
+                    std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                    chk->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+                    CHECK(chk->p() == Catch::Approx(p).epsilon(1e-10));
+                }
+            }
+        }
+    }
+    // Guard against the grid drifting out of the three-root regime, which would make this test vacuous.
+    CHECK(n_three_root_states >= 8);
 }
 
 TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic][cubic_DmolarT][2673]") {

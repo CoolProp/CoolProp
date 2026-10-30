@@ -83,6 +83,15 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
   `cmake/dependencies.cmake`) and do not reintroduce it.
 
+- **Catch2 test names must not contain commas.**  A comma in a test spec
+  is OR, so "Cubic T,P root choice" cannot be selected by name.  Write
+  "TP", "P-input", etc.
+- **Rewriting a stack of PR branches:** commit the fix on the owning
+  branch, then from the top branch `git rebase --update-refs --onto
+  <owner-new> <owner-old>`; it moves every intermediate branch ref in one
+  pass.  Use the old SHA the upper branch actually sits on (after an
+  amend it differs from the branch's own old tip).  Enable `rerere`.
+
 ## REFPROP
 
 - **Running `[refprop]` Catch2 tests locally:** without configuration they
@@ -121,6 +130,48 @@ recorded history of finished or abandoned work were dropped (they remain in
   fluids** (it returns nullptr only for a pure fluid that has none); guard it
   with `is_pure()`.  H,S flashes without a superancillary (pseudo-pure, or
   pure without one) use the dome-free legs of `hs_cascade` (PR #3182).
+- **Cubic backends have no classic ancillaries.** `components[0].ancillaries`
+  (pL, pV, hL, ...) is empty on SRK/PR, so any path that reaches it throws
+  "type not set" (#3441).  `get_superanc()` is null there too.  Reach the
+  cubic Chebyshev superancillary through the virtuals
+  `superanc_saturation_at_p` / `superanc_saturation_at_T` (or
+  `calc_saturation_ancillary`); inside the cubic backend everything goes
+  through the private `cubic_superanc_eval`.  Q,T, P,Q and the T,P root
+  choice use it too (COO-136); the old secant saturation solve is no
+  fallback (~1e-7 in p near Tc, and silently the trivial or wrong root
+  outside the table).  When adding a superancillary, check that every input
+  pair needing saturation reaches it: the cubic one (#2739) sat unused for
+  Q,T and P,Q because `AbstractCubicBackend::update` intercepts both.
+  Direct `get_superanc()` callers that remain are listed in COO-146.
+- **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
+  (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
+  `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
+  real-fluid fit, because it decides gas vs liquid; the Soave alpha passes
+  through zero at T* = Tc(1+1/m)^2, where T,U is degenerate, Ttilde turns
+  over and the closed-form cubic loses ~10 digits (COO-145).  Within ~1e-9
+  of the critical point the expanded cubic's coefficients cancel: polish
+  roots against p(rho) in EOS form, never the polynomial.
+- **Flash non-uniqueness is physical, not a bug.**  H,T is non-unique below
+  the max Joule-Thomson inversion temperature (~5 Tc): a cold compressed
+  liquid's (T, h) is also a two-phase state.  Pure cubics refuse H,T; HEOS
+  and cubic mixtures still return the two-phase root (COO-158).  T,S is
+  unique for pure cubics but not for cold liquid water (alpha_p < 0 below
+  the density maximum): HEOS and REFPROP both return the two-phase state.
+  A round-trip test across such a region must not demand the reference
+  state back; exempt it only with an independent check that the input is
+  inside the saturated [L, V] interval at that T.
+- **Compute long constants, never transcribe them.**  #2745's "exact"
+  SRK/PR Omegas had doubled and dropped digits (fixed in #3515), which put
+  SRK's own critical point ~1e-9 below the input Tc/pc and surfaced as a
+  phantom "end gap" in the superancillary.  Evaluate the closed form in
+  high precision in a committed script and store the correctly rounded
+  double as a hex literal (`dev/scripts/cubic_constants.py` writes
+  `src/Backends/Cubics/CubicConstants.h`; evaluating in double at run time
+  is 1-2 ulp off and platform-dependent; the C++ build has no
+  multiprecision).  Test the defining property (critical conditions), not
+  digits.
+- **`recalculate_singlephase_phase()` reads `_rhomolar`.**  Assign the new
+  density before calling it (cubic `solver_rho_Tp` did not; fixed with #3441).
 - **HS cascade rules:** every cascade leg must be exception-guarded (a leg
   leaving the EOS domain otherwise aborts the cascade), and phase
   determination for two-phase (h,s) inputs is the dispatcher's job, done
@@ -156,6 +207,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   exceptions and Excel/VBA poll the status word.  `CoolProp::fpu_guard`
   (`include/CoolProp/FPUGuard.h`) keys on `_WIN32` (any compiler, incl.
   MinGW), not `_MSC_VER`.
+- **Mixture critical points: filter on `stable`, nothing else** (#3528).
+  `calc_all_critical_points()` also returns spurious points; most sit at
+  liquid-like density and negative pressure, which `calc_critical_point`
+  already marks unstable (negative pressure is physical, so don't filter on
+  p).  The TPD verdict on the ~100 K / 100s-of-MPa points is *marginal*: it
+  flips between builds (R470A), so don't assert per-blend stable counts there
+  (COO-155).  The N×N L*/M* formulation is general-N, but Air (ternary) yields
+  four stable points (COO-154), and natural gases take minutes.
 
 ## Fluid data, superancillaries and transport
 
