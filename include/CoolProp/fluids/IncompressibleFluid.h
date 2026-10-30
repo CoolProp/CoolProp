@@ -56,6 +56,15 @@ struct IncompressibleData
     double cheb_Tmin = 0.0, cheb_Tmax = 0.0, cheb_xbase = 0.0;
     Eigen::MatrixXd cheb_ddT, cheb_int_dT, cheb_int_dTdivT;
 
+    /// Polynomial fits only (type == INCOMPRESSIBLE_POLYNOMIAL), built once by
+    /// IncompressibleFluid::validate(); empty until then, in which case the
+    /// evaluators fall back to Polynomial2DFrac. Columns multiply (x - xbase)^j.
+    ///  - poly_ddT:        d/dT, rows are powers of (T - Tbase)
+    ///  - poly_int_dT:     indefinite Int f dT, rows are powers of (T - Tbase)
+    ///  - poly_int_dTdivT: indefinite Int f/T dT, built for the Tbase at validate()
+    ///                     time; row 0 multiplies ln(T), row k multiplies T^k
+    Eigen::MatrixXd poly_ddT, poly_int_dT, poly_int_dTdivT;
+
     IncompressibleData()
       : type(INCOMPRESSIBLE_NOT_SET) {
 
