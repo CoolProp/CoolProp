@@ -259,6 +259,12 @@ void REFPROPMixtureBackend::check_loaded_fluid() {
 // Both are only ever read or written with REFPROP_mutex() held.
 std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
 bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+void REFPROPMixtureBackend::forget_REFPROP_load_failure() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    // On a platform without REFPROP support the next check simply sets it
+    // back to false.
+    _REFPROP_supported = true;
+}
 bool REFPROPMixtureBackend::REFPROP_supported() {
     const REFPROPLock refprop_lock(REFPROP_mutex());
     /*
@@ -436,16 +442,19 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         }
         memcpy(hmx_bnc.data(), _HMX_path, strlen(_HMX_path) + 1);  // +1 for the NUL; length checked above
 
+        // Check platform support. This also (re)loads the library, so it must
+        // come before the first call into REFPROP: after a REFPROP path change
+        // the library has been unloaded, and GERG04dll below would otherwise
+        // call through a stale function pointer.
+        if (!REFPROP_supported()) {
+            throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
+        }
+
         if (get_config_bool(REFPROP_USE_GERG)) {
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
               ierr_gerg = 0;
             std::array<char, 255> herr_gerg{};
             GERG04dll(&N, &iflag, &ierr_gerg, herr_gerg.data(), 255);
-        }
-
-        // Check platform support
-        if (!REFPROP_supported()) {
-            throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
         }
 
         if (N == 1 && upper(components_joined_raw).find(".MIX") != std::string::npos) {

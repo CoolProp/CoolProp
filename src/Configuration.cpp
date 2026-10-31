@@ -147,7 +147,13 @@ Configuration* _get_config() {
  */
 static void on_config_changed(configuration_keys key) {
     if (key == ALTERNATIVE_REFPROP_PATH || key == ALTERNATIVE_REFPROP_HMX_BNC_PATH || key == ALTERNATIVE_REFPROP_LIBRARY_PATH) {
+        // One lock across both steps, so no other thread can load REFPROP
+        // from the old path in between.
+        const REFPROPLock refprop_lock(REFPROP_mutex());
         CoolProp::force_unload_REFPROP();
+        // The new path deserves a new load attempt, even if an earlier
+        // attempt (with the old path) failed and was cached.
+        CoolProp::REFPROPMixtureBackend::forget_REFPROP_load_failure();
     }
 }
 

@@ -239,6 +239,11 @@ class REFPROPMixtureBackend : public AbstractState
 
     /// Returns true if REFPROP is supported on this platform
     static bool REFPROP_supported();
+    /// Forget a cached failure to load REFPROP, so the next REFPROP_supported()
+    /// tries to load it again. Called when a REFPROP path setting changes:
+    /// without it, a load that failed before the right path was set would
+    /// keep REFPROP unavailable for the rest of the process.
+    static void forget_REFPROP_load_failure();
 
     std::string fluid_param_string(const std::string& ParamName) override;
 
