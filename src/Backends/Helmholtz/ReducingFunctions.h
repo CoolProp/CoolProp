@@ -42,7 +42,7 @@ class ReducingFunction
     /// stays right when a setter changes this object in place, and when a backend's Reducing is replaced by a new object
     /// (set_mixture_parameters, sync_linked_states' copy()) that may reuse the old one's address -- a per-object counter
     /// starting at 0 would match there.
-    std::uint64_t get_version() const {
+    [[nodiscard]] std::uint64_t get_version() const {
         return version;
     }
 
@@ -61,6 +61,8 @@ class ReducingFunction
    public:
     ReducingFunction() : N(0) {};
     virtual ~ReducingFunction() = default;
+    /// No assignment: through a base reference it would copy version without the derived parameters (copy() instead)
+    ReducingFunction& operator=(const ReducingFunction&) = delete;
 
     virtual ReducingFunction* copy() = 0;
 
