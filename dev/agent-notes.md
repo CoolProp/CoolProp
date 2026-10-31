@@ -234,6 +234,23 @@ recorded history of finished or abandoned work were dropped (they remain in
   fastchebpure's `fitcheb` CLI: `fitcheb -f FLUID -d <coolprop checkout>` to
   fit and check, then `fitcheb inject -f FLUID -d <coolprop checkout>` to
   replace the SUPERANCILLARY block, add check points and stamp the hash.
+- **Incompressible caloric fits come in two kinds, both loaded.**  A fluid
+  may ship `density`/`specific_heat` (classic polynomial) and
+  `density_cheb`/`specific_heat_cheb`; `IncompressibleFluid` keeps both and
+  every caloric function takes a `chebyshev` flag (`useChebyshevFit` picks, with
+  fallback to whichever exists).  `IncompressibleBackend` snapshots
+  `INCOMP_PREFER_CHEBYSHEV_CALORIC` in its constructor and must pass it to
+  every caloric call, including residuals inside `T_rho`/`T_c`: a call that
+  falls back to the default argument reads the live config and can mix fits
+  with the cached `_hmass_ref`/`_smass_ref`.  Derived matrices (`ddT`,
+  `int_dT`, `int_dTdivT`, `int_dTdivT_log`) exist only after `validate()`;
+  evaluation throws on an empty one rather than returning 0.  `setTbase()`
+  drops the polynomial entropy matrices (they embed the value of Tbase), so
+  call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
+  only when the fluid has no separate `_cheb` entry for that property.
+- **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
+  which every setter calls (the JSON setter only for changed values).  A side
+  effect wired into one setter is skipped when the key is set another way.
 - **Changing one fluid's viscosity can move other fluids.** Two couplings:
   (1) ECS — `viscosity_ECS` evaluates the reference fluid's
   `calc_viscosity_background()` (R134a moves seven refrigerants by 1–2.6%);

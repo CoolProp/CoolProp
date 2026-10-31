@@ -137,20 +137,35 @@ Configuration* _get_config() {
     return pconfig.get();
 }
 
-void set_config_bool(configuration_keys key, bool val) {
-    _get_config()->get_item(key).set_bool(val);
-}
-void set_config_int(configuration_keys key, int val) {
-    _get_config()->get_item(key).set_integer(val);
-}
-void set_config_double(configuration_keys key, double val) {
-    _get_config()->get_item(key).set_double(val);
-}
-void set_config_string(configuration_keys key, const std::string& val) {
-    _get_config()->get_item(key).set_string(val);
+/// Act on a configuration value that has just been changed.
+/** Every setter calls this after storing the new value, including
+ *  set_config_as_json_string.  Keep all such side effects here: a side effect
+ *  wired into only one setter is silently skipped when the same key is set
+ *  through another one (the REFPROP unload used to live in set_config_string
+ *  alone, so setting ALTERNATIVE_REFPROP_PATH through JSON left the old
+ *  REFPROP library loaded).
+ */
+static void on_config_changed(configuration_keys key) {
     if (key == ALTERNATIVE_REFPROP_PATH || key == ALTERNATIVE_REFPROP_HMX_BNC_PATH || key == ALTERNATIVE_REFPROP_LIBRARY_PATH) {
         CoolProp::force_unload_REFPROP();
     }
+}
+
+void set_config_bool(configuration_keys key, bool val) {
+    _get_config()->get_item(key).set_bool(val);
+    on_config_changed(key);
+}
+void set_config_int(configuration_keys key, int val) {
+    _get_config()->get_item(key).set_integer(val);
+    on_config_changed(key);
+}
+void set_config_double(configuration_keys key, double val) {
+    _get_config()->get_item(key).set_double(val);
+    on_config_changed(key);
+}
+void set_config_string(configuration_keys key, const std::string& val) {
+    _get_config()->get_item(key).set_string(val);
+    on_config_changed(key);
 }
 
 bool get_config_bool(configuration_keys key) {
@@ -186,11 +201,23 @@ void set_config_as_json_string(const std::string& s) {
 
     // Second pass: set the values
     for (auto& [name, value] : doc.items()) {
-        ConfigurationItem& item = _get_config()->get_item(config_string_to_key(name));
+        const configuration_keys key = config_string_to_key(name);
+        ConfigurationItem& item = _get_config()->get_item(key);
+        // Snapshot the old value: a JSON document is commonly a full dump
+        // from get_config_as_json_string being restored, and firing the
+        // side effects for every unchanged key would, for example, unload
+        // REFPROP on every save/restore round-trip.
+        nlohmann::json old_value = nlohmann::json::object();
+        item_to_json(item, old_value);
         try {
             item_from_json(item, value);
         } catch (std::exception& e) {
             throw ValueError(format("Unable to parse json file with error: %s", e.what()));
+        }
+        nlohmann::json new_value = nlohmann::json::object();
+        item_to_json(item, new_value);
+        if (new_value != old_value) {
+            on_config_changed(key);
         }
     }
 }
