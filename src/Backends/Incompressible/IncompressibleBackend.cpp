@@ -425,7 +425,7 @@ CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p
 
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
-    int maxiter = 10;
+    int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
     return result;
@@ -456,7 +456,7 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
 
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
-    int maxiter = 10;
+    int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
     return result;
@@ -494,7 +494,7 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
 //	std::string errstring;
 //	double macheps = DBL_EPSILON;
 //	double tol     = DBL_EPSILON*1e3;
-//	int    maxiter = 10;
+//	int    maxiter = 15;
 //	double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
 //	//if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
 //	return result;
