@@ -602,8 +602,10 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend& HEOS) {
         // which overwrites HEOS._p with the EOS pressure at the trial density.
         const CoolPropDbl p_spec = HEOS._p;
         HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, p_spec);
-        // Householder4/Halley take their step and THEN return, so the last density the
-        // residual evaluated is one step short of the root handed back.  Everything the
+        // Householder4/Halley take their step and THEN return, so on the Halley and Brent
+        // branches of solver_rho_Tp the last density the residual evaluated is one step
+        // short of the root handed back (its generic Householder path puts the state on the
+        // root, but this has to hold for every branch).  Everything the
         // residual cached -- _p included -- therefore describes a slightly different state
         // than _rhomolar does.  Left alone, PropsSI("P","P",p,"T",T,fluid) does not return p
         // (measured 7.4e-10 relative for supercritical nitrogen), and every cached property

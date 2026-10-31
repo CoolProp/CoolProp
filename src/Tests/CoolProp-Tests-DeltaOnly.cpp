@@ -49,6 +49,7 @@
 #    include <cstring>
 #    include <memory>
 #    include <string>
+#    include <utility>
 #    include <vector>
 
 using namespace CoolProp;
@@ -143,6 +144,92 @@ TEST_CASE("HEOS all_deltaonly agrees with full all() on the delta-derivatives", 
         for (std::size_t q = 0; q < 5; ++q) {
             CAPTURE(c.fluids, q, max_abs[q]);
             REQUIRE(max_abs[q] > 1e-12);
+        }
+    }
+}
+
+// The warm-started density solve (solver_rho_Tp's Householder path, reached through update_TP_guessrho and
+// PT_flash_with_guesses) iterates on the delta-only residual, which writes no state, and then puts the state on the
+// density it returns; update_TP_guessrho skips its own update_DmolarT_direct when the state is already there (COO-126).
+// Lock in what the callers see: the state is the one update_DmolarT_direct gives at that density -- p and all fifteen cached
+// alphar derivatives bit for bit, so nothing is left cached from an iterate -- and that density is the root the cold PT
+// flash finds.  (update_DmolarT_direct sets no phase, so phase-checked outputs such as hmolar of a pure fluid or the
+// fugacity coefficients are not defined on this state, before or after the change; at fixed composition they are built
+// from these alphar fields.)
+TEST_CASE("Warm-started density solve leaves the state of update_DmolarT_direct at the root", "[flash][mixture][deltaonly]") {
+    struct WarmCase
+    {
+        std::string backend, fluids;
+        std::vector<double> z;
+        double T, p;
+    };
+    const std::vector<WarmCase> cases = {
+      {"HEOS", "Methane", {1.0}, 150, 5e6},                                                                     // pure, compressed liquid
+      {"HEOS", "Methane", {1.0}, 300, 1e6},                                                                     // pure, gas
+      {"GERG2008", "Methane&Ethane&Propane&n-Butane&Nitrogen", {0.80, 0.10, 0.05, 0.03, 0.02}, 300, 10e6},   // dense supercritical
+      {"GERG2008", "Methane&Ethane&Propane&n-Butane&Nitrogen", {0.80, 0.10, 0.05, 0.03, 0.02}, 250, 0.5e6},  // gas
+      {"HEOS", "CarbonDioxide&Water", {0.98, 0.02}, 400, 20e6},                                                // non-analytic terms
+    };
+    using Acc = CoolPropDbl (AbstractState::*)();
+    const std::vector<std::pair<const char*, Acc>> fields = {
+      {"alphar", &AbstractState::alphar},
+      {"dalphar_dDelta", &AbstractState::dalphar_dDelta},
+      {"dalphar_dTau", &AbstractState::dalphar_dTau},
+      {"d2alphar_dDelta2", &AbstractState::d2alphar_dDelta2},
+      {"d2alphar_dDelta_dTau", &AbstractState::d2alphar_dDelta_dTau},
+      {"d2alphar_dTau2", &AbstractState::d2alphar_dTau2},
+      {"d3alphar_dDelta3", &AbstractState::d3alphar_dDelta3},
+      {"d3alphar_dDelta2_dTau", &AbstractState::d3alphar_dDelta2_dTau},
+      {"d3alphar_dDelta_dTau2", &AbstractState::d3alphar_dDelta_dTau2},
+      {"d3alphar_dTau3", &AbstractState::d3alphar_dTau3},
+      {"d4alphar_dDelta4", &AbstractState::d4alphar_dDelta4},
+      {"d4alphar_dDelta3_dTau", &AbstractState::d4alphar_dDelta3_dTau},
+      {"d4alphar_dDelta2_dTau2", &AbstractState::d4alphar_dDelta2_dTau2},
+      {"d4alphar_dDelta_dTau3", &AbstractState::d4alphar_dDelta_dTau3},
+      {"d4alphar_dTau4", &AbstractState::d4alphar_dTau4},
+    };
+    for (const auto& c : cases) {
+        for (double guess_factor : {0.97, 1.03}) {
+            CAPTURE(c.fluids, c.T, c.p, guess_factor);
+            std::shared_ptr<AbstractState> ref(AbstractState::factory(c.backend, c.fluids));
+            ref->set_mole_fractions(c.z);
+            ref->update(PT_INPUTS, c.p, c.T);
+            const double rho_cold = ref->rhomolar();
+            REQUIRE(ref->phase() != iphase_twophase);
+
+            auto check_state = [&](AbstractState& AS) {
+                const double rho = AS.rhomolar();
+                CHECK(std::abs(rho / rho_cold - 1) < 1e-9);  // the same root as the cold flash
+                std::shared_ptr<AbstractState> fresh(AbstractState::factory(c.backend, c.fluids));
+                fresh->set_mole_fractions(c.z);
+                auto* fresh_heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(fresh.get());
+                REQUIRE(fresh_heos != nullptr);
+                fresh_heos->update_DmolarT_direct(rho, c.T);
+                CHECK(std::abs(fresh->p() / c.p - 1) < 1e-8);  // and it is a root
+                CHECK(bits_of(AS.p()) == bits_of(fresh->p()));
+                for (const auto& f : fields) {
+                    CAPTURE(f.first);
+                    const CoolPropDbl a = (AS.*f.second)(), b = ((*fresh).*f.second)();
+                    CHECK(std::isfinite(a));
+                    CHECK(bits_of(a) == bits_of(b));
+                }
+            };
+            {  // update_TP_guessrho
+                std::shared_ptr<AbstractState> AS(AbstractState::factory(c.backend, c.fluids));
+                AS->set_mole_fractions(c.z);
+                auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+                REQUIRE(heos != nullptr);
+                heos->update_TP_guessrho(c.T, c.p, guess_factor * rho_cold);
+                check_state(*AS);
+            }
+            {  // update_with_guesses: PT_flash_with_guesses reads the density off the state
+                std::shared_ptr<AbstractState> AS(AbstractState::factory(c.backend, c.fluids));
+                AS->set_mole_fractions(c.z);
+                GuessesStructure g;
+                g.rhomolar = guess_factor * rho_cold;
+                AS->update_with_guesses(PT_INPUTS, c.p, c.T, g);
+                check_state(*AS);
+            }
         }
     }
 }

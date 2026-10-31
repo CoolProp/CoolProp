@@ -3001,6 +3001,11 @@ class SolverTPResidDeltaOnly : public FuncWrapper1DWithThreeDerivs
         rhor(HEOS->get_reducing_state().rhomolar),
         tau(HEOS->get_reducing_state().T / T),
         R_u(HEOS->gas_constant()) {}
+    // SolverTPResid rejects a negative density through update_DmolarT_direct; without the state write that has to be
+    // explicit (Householder4 checks it before every evaluation)
+    bool input_not_in_range(double rhomolar) override {
+        return rhomolar < 0;
+    }
     double call(double rhomolar) override {
         delta = rhomolar / rhor;
         d = HEOS->calc_alphar_delta_derivs_nocache(tau, delta);
@@ -3450,22 +3455,21 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         }
     }
 
-    // The generic path iterates on the delta-only residual and then puts the state on the density it returns, which
-    // its callers rely on: PT_flash_with_guesses reads the density off the state, and the phase checks below read
-    // derivatives from it.  (Iterating on SolverTPResid left the state one Householder step short of the root.)
+    // The Householder solves below iterate on the delta-only residual and then put the state on the density they return,
+    // which the callers rely on: PT_flash_with_guesses reads the density off the state, and the phase checks below read
+    // derivatives from it.  (Iterating on SolverTPResid left the state one Householder step short of the root; the
+    // Brent fallbacks in the catch still do.)  An invalid result throws into that catch rather than being returned.
     SolverTPResidDeltaOnly dresid(this, T, p);
     auto householder_onto_state = [&](double rho0, int maxiter) {
         double rho = Householder4(dresid, rho0, 1e-8, maxiter);
-        if (ValidNumber(rho) && rho >= 0) {
-            update_DmolarT_direct(rho, T);
+        if (!ValidNumber(rho) || rho < 0) {
+            throw ValueError();
         }
+        update_DmolarT_direct(rho, T);
         return rho;
     };
     try {
         double rhomolar = householder_onto_state(rhomolar_guess, 20);
-        if (!ValidNumber(rhomolar) || rhomolar < 0) {
-            throw ValueError();
-        }
         if (phase == iphase_liquid) {
             double dpdrho = first_partial_deriv(iP, iDmolar, iT);
             double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
