@@ -7637,7 +7637,12 @@ TEST_CASE("REFPROP with GERG and an unloadable library throws instead of crashin
     // pointer instead, which crashes only if the library was unmapped.
     const UnsetEnvGuard no_root("COOLPROP_REFPROP_ROOT");
     const UnloadableREFPROPSetup setup;
-    CHECK_THROWS_AS(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "METHANE")), CoolProp::NotImplementedError);
+    // The message is asserted, not only the type: the GERG04dll null check
+    // also throws NotImplementedError, so a type-only check would stay green
+    // if the support check were moved back after the GERG call.
+    CHECK_THROWS_MATCHES(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "METHANE")),
+                         CoolProp::NotImplementedError,
+                         Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring("You cannot use the REFPROPMixtureBackend")));
 }
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
