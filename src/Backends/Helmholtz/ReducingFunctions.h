@@ -7,6 +7,7 @@
 #ifndef MIXTURE_BINARY_PAIRS_H
 #define MIXTURE_BINARY_PAIRS_H
 
+#include <atomic>
 #include <vector>
 #include "CoolProp/CoolPropFluid.h"
 #include <memory>
@@ -35,10 +36,17 @@ class ReducingFunction
     std::size_t N;
 
    public:
-    /// Bumped by every parameter setter.  Caches of reducing-function values (e.g. the per-backend
-    /// composition derivatives in HelmholtzEOSMixtureBackend::get_reducing_nderivs) key on it, because
-    /// linked states share this object and a setter changes it in place.
-    std::size_t version = 0;
+    /// A value that no other reducing function, and no earlier parameter set of this one, has had in this process: drawn
+    /// at construction and again by every parameter setter.  Caches of reducing-function values (the per-backend
+    /// composition derivatives in HelmholtzEOSMixtureBackend::get_reducing_nderivs) key on it alone.  That stays right when
+    /// linked states share this object and a setter changes it in place, and when a backend's Reducing is replaced by
+    /// a new object (set_mixture_parameters, copy()) that may reuse the old one's address -- a per-object counter
+    /// starting at 0 would match there.
+    std::size_t version = next_version();
+    static std::size_t next_version() {
+        static std::atomic<std::size_t> counter{0};
+        return ++counter;
+    }
     ReducingFunction() : N(0) {};
     virtual ~ReducingFunction() = default;
 
@@ -189,7 +197,7 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /// Set all beta and gamma values in one shot
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, double betaT, double gammaT, double betaV, double gammaV) {
-        ++version;
+        version = next_version();
         // bound-check indices
         if (i >= N) {
             if (j >= N) {
@@ -212,7 +220,7 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /// Set a parameter
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) override {
-        ++version;
+        version = next_version();
         // bound-check indices
         if (i >= N) {
             if (j >= N) {
@@ -562,7 +570,7 @@ class ConstantReducingFunction : public ReducingFunction
     };
 
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) override {
-        ++version;
+        version = next_version();
         return;
     }
     double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) const override {

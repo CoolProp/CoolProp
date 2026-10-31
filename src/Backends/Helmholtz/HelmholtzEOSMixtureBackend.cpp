@@ -451,11 +451,10 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
         throw ValueError(format("mixing rule [%s] is not understood", model.c_str()));
     }
 }
-/// Set binary mixture floating point parameter for this instance
 const HelmholtzEOSMixtureBackend::ReducingNDerivs& HelmholtzEOSMixtureBackend::get_reducing_nderivs(x_N_dependency_flag xN_flag) {
     ReducingNDerivs& c = reducing_nderivs[xN_flag == XN_DEPENDENT ? 1 : 0];
     const std::vector<CoolPropDbl>& x = mole_fractions;
-    if (c.flag == static_cast<int>(xN_flag) && c.red == Reducing.get() && c.version == Reducing->version && c.x == x) return c;
+    if (c.version == Reducing->version && c.flag == static_cast<int>(xN_flag) && c.x == x) return c;
     const std::size_t N = x.size();
     // Each entry from the reducing function's own n*dY_r/dn_i, so results are bit-identical to the
     // per-call evaluation.  (A one-pass form, dY_r/dx_i minus one shared sum, is another factor N
@@ -467,12 +466,12 @@ const HelmholtzEOSMixtureBackend::ReducingNDerivs& HelmholtzEOSMixtureBackend::g
         c.ndrhor[i] = Reducing->ndrhorbardni__constnj(x, i, xN_flag);
         c.ndTr[i] = Reducing->ndTrdni__constnj(x, i, xN_flag);
     }
-    c.red = Reducing.get();
     c.version = Reducing->version;
     c.flag = static_cast<int>(xN_flag);
     c.x = x;
     return c;
 }
+/// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const double value) {
     cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
