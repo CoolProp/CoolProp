@@ -244,7 +244,10 @@ recorded history of finished or abandoned work were dropped (they remain in
   falls back to the default argument reads the live config and can mix fits
   with the cached `_hmass_ref`/`_smass_ref`.  Derived matrices (`ddT`,
   `int_dT`, `int_dTdivT`, `int_dTdivT_log`) exist only after `validate()`;
-  evaluation throws on an empty one rather than returning 0.
+  evaluation throws on an empty one rather than returning 0.  `setTbase()`
+  drops the polynomial entropy matrices (they embed the value of Tbase), so
+  call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
+  only when the fluid has no separate `_cheb` entry for that property.
 - **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
   which every setter calls (the JSON setter only for changed values).  A side
   effect wired into one setter is skipped when the key is set another way.

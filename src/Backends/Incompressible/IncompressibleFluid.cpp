@@ -269,15 +269,22 @@ void IncompressibleFluid::validate() {
         const char* what;
         bool is_specific_heat;
     };
-    // The Chebyshev slots must hold Chebyshev data: setDensityChebyshev and
-    // setSpecificHeatChebyshev accept anything, and anything else there would
-    // be evaluated as the "Chebyshev" choice without being one.
-    for (const IncompressibleData* data : {&density_cheb, &specific_heat_cheb}) {
-        if (data->type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && data->type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+    // Each kind of fit must sit in its own slot. The setters of the Chebyshev
+    // slots already refuse other fits; the classic slots take any type, since
+    // a fluid may ship a Chebyshev fit under the classic name only. When it
+    // also ships a separate Chebyshev entry, though, the setting at false
+    // would evaluate the Chebyshev fit in the classic slot as the "classic"
+    // choice, and switching to the classic fits would silently do nothing.
+    requireChebyshevOrUnset(density_cheb, "density");
+    requireChebyshevOrUnset(specific_heat_cheb, "specific heat");
+    auto require_distinct_kinds = [this](const IncompressibleData& classic_fit, const IncompressibleData& chebyshev_fit, const char* what) {
+        if (classic_fit.type == IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV && chebyshev_fit.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
             throw ValueError(
-              format("%s (%d): The Chebyshev caloric fit slot of %s holds a fit of type [%d].", __FILE__, __LINE__, name.c_str(), data->type));
+              format("%s (%d): %s has a Chebyshev %s fit in both the classic and the Chebyshev slot.", __FILE__, __LINE__, name.c_str(), what));
         }
-    }
+    };
+    require_distinct_kinds(density, density_cheb, "density");
+    require_distinct_kinds(specific_heat, specific_heat_cheb, "specific heat");
     for (const CaloricFit& fit : {CaloricFit{&density, "density", false}, CaloricFit{&density_cheb, "density", false},
                                   CaloricFit{&specific_heat, "specific heat", true}, CaloricFit{&specific_heat_cheb, "specific heat", true}}) {
         IncompressibleData* data = fit.data;

@@ -185,6 +185,14 @@ class IncompressibleFluid
         return useChebyshevFit(specific_heat, specific_heat_cheb, chebyshev) ? specific_heat_cheb : specific_heat;
     }
 
+    /// Throw unless data is a Chebyshev fit or unset; see setDensityChebyshev.
+    static void requireChebyshevOrUnset(const IncompressibleData& data, const char* what) {
+        if (data.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && data.type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+            throw ValueError(
+              format("The Chebyshev %s fit slot only takes a Chebyshev fit, not one of type [%d].", what, static_cast<int>(data.type)));
+        }
+    }
+
     /// Build the error for a property this fluid carries no fit for.
     /** Returned, not thrown, so each call site keeps its own throw statement.
      *  See the definition in IncompressibleFluid.cpp for why.
@@ -277,14 +285,13 @@ class IncompressibleFluid
     }
     void setTbase(double Tbase) {
         this->Tbase = Tbase;
-        // The entropy integral of a polynomial fit has Tbase built in (see
-        // int_dTdivT_log), so drop the derived matrices: evaluating h or s
-        // then throws until validate() rebuilds them, instead of silently
-        // mixing the old and the new Tbase.
-        for (IncompressibleData* data : {&density, &specific_heat, &density_cheb, &specific_heat_cheb}) {
+        // The entropy integral of a polynomial fit has the value of Tbase
+        // built in (see int_dTdivT_log), so drop it: evaluating s then throws
+        // until validate() rebuilds it, instead of silently mixing the old
+        // and the new Tbase. ddT and int_dT do not depend on the value of
+        // Tbase (they are evaluated at the current T - Tbase) and stay valid.
+        for (IncompressibleData* data : {&density, &specific_heat}) {
             if (data->type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
-                data->ddT.resize(0, 0);
-                data->int_dT.resize(0, 0);
                 data->int_dTdivT.resize(0, 0);
                 data->int_dTdivT_log.resize(0, 0);
             }
@@ -302,10 +309,17 @@ class IncompressibleFluid
         this->specific_heat = std::move(specific_heat);
     }
     /// Setters for the optional Chebyshev alternatives, see density_cheb
+    /** These slots only take Chebyshev fits (or an unset fit): anything else
+     *  there would be evaluated as the "Chebyshev" choice without being one.
+     *  Checked here, not only in validate(), because rho() and c() also work
+     *  on a fluid that never went through validate().
+     */
     void setDensityChebyshev(IncompressibleData density_cheb) {
+        requireChebyshevOrUnset(density_cheb, "density");
         this->density_cheb = std::move(density_cheb);
     }
     void setSpecificHeatChebyshev(IncompressibleData specific_heat_cheb) {
+        requireChebyshevOrUnset(specific_heat_cheb, "specific heat");
         this->specific_heat_cheb = std::move(specific_heat_cheb);
     }
     void setViscosity(IncompressibleData viscosity) {
@@ -347,8 +361,14 @@ class IncompressibleFluid
                && specific_heat_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
     }
     /// True if this fluid has classic fits for both density and specific heat
+    /** A Chebyshev fit stored under the classic name does not count: with
+     *  the setting at false it would be evaluated as the "classic" choice.
+     */
     [[nodiscard]] bool hasClassicCaloric() const {
-        return density.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && specific_heat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+        auto is_classic = [](const IncompressibleData& data) {
+            return data.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && data.type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV;
+        };
+        return is_classic(density) && is_classic(specific_heat);
     }
 
    protected:
