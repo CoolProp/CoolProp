@@ -95,6 +95,85 @@ CoolPropDbl ReducingFunction::ndrhorbardni__constnj(const std::vector<CoolPropDb
         throw ValueError(format("xN dependency flag invalid"));
     }
 }
+void ReducingFunction::first_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, std::vector<CoolPropDbl>& dTr,
+                                                     std::vector<CoolPropDbl>& drhor) const {
+    dTr.resize(N);
+    drhor.resize(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        dTr[i] = dTrdxi__constxj(x, i, xN_flag);
+        drhor[i] = drhormolardxi__constxj(x, i, xN_flag);
+    }
+}
+void ReducingFunction::second_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, STLMatrix& d2Tr,
+                                                      STLMatrix& d2rhor) const {
+    d2Tr.assign(N, std::vector<CoolPropDbl>(N, 0));
+    d2rhor.assign(N, std::vector<CoolPropDbl>(N, 0));
+    for (std::size_t a = 0; a < N; ++a) {
+        for (std::size_t b = 0; b < N; ++b) {
+            d2Tr[a][b] = d2Trdxidxj(x, a, b, xN_flag);
+            d2rhor[a][b] = d2rhormolardxidxj(x, a, b, xN_flag);
+        }
+    }
+}
+// Each output element is the expression of its per-element function (named in CompositionDerivatives) with the same
+// operands in the same order; the i-independent sums are formed once per j instead of once per (i, j).
+void ReducingFunction::composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, bool with_hessian,
+                                               CompositionDerivatives& out) const {
+    if (xN_flag != XN_INDEPENDENT && xN_flag != XN_DEPENDENT) {
+        throw ValueError(format("xN dependency flag invalid"));
+    }
+    first_composition_derivatives(x, xN_flag, out.dTr, out.drhor);
+    // ndTrdni__constnj, ndrhorbardni__constnj
+    out.ndTr.assign(N, 0);
+    out.ndrhor.assign(N, 0);
+    if (N > 0) {
+        const std::size_t kmax = (xN_flag == XN_INDEPENDENT) ? N : N - 1;
+        CoolPropDbl sT = 0, srho = 0;
+        for (std::size_t k = 0; k < kmax; ++k) {
+            sT += x[k] * out.dTr[k];
+            srho += x[k] * out.drhor[k];
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            out.ndTr[i] = out.dTr[i] - sT;
+            out.ndrhor[i] = out.drhor[i] - srho;
+        }
+    }
+    if (!with_hessian) {
+        return;
+    }
+    STLMatrix d2Tr, d2rhor;
+    second_composition_derivatives(x, xN_flag, d2Tr, d2rhor);
+    out.d_ndTr_dxj.assign(N, std::vector<CoolPropDbl>(N, 0));
+    out.d_ndrhor_dxj.assign(N, std::vector<CoolPropDbl>(N, 0));
+    for (std::size_t j = 0; j < N; ++j) {
+        // d_ndTrdni_dxj__constxi
+        if (xN_flag == XN_INDEPENDENT) {
+            CoolPropDbl s = 0;
+            for (std::size_t k = 0; k < N; k++) {
+                s += x[k] * d2Tr[j][k];
+            }
+            for (std::size_t i = 0; i < N; ++i) {
+                out.d_ndTr_dxj[i][j] = d2Tr[i][j] - out.dTr[j] - s;
+            }
+        } else if (j != N - 1) {  // XN_DEPENDENT; the column j == N-1 is 0
+            CoolPropDbl s = 0;
+            for (std::size_t k = 0; k < N - 1; k++) {
+                s += x[k] * d2Tr[k][j];
+            }
+            for (std::size_t i = 0; i < N; ++i) {
+                out.d_ndTr_dxj[i][j] = d2Tr[j][i] - out.dTr[j] - s;
+            }
+        }
+        // d_ndrhorbardni_dxj__constxi (the same form for both flags)
+        CoolPropDbl s = 0;
+        for (std::size_t k = 0; k < N; k++) {
+            s += x[k] * d2rhor[j][k];
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            out.d_ndrhor_dxj[i][j] = d2rhor[j][i] - out.drhor[j] - s;
+        }
+    }
+}
 CoolPropDbl ReducingFunction::ndTrdni__constnj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const {
     if (xN_flag == XN_INDEPENDENT) {
         // GERG Equation 7.54
@@ -246,6 +325,36 @@ CoolPropDbl GERG2008ReducingFunction::d3rhormolardxidxjdxk(const std::vector<Coo
     double line3 =
       -6 * pow(rhor, 4) * dvrmolardxi__constxj(x, i, xN_flag) * dvrmolardxi__constxj(x, j, xN_flag) * dvrmolardxi__constxj(x, k, xN_flag);
     return line1 + line2 + line3;
+}
+
+// As dTrdxi__constxj and drhormolardxi__constxj, with rho_r(x) evaluated once
+void GERG2008ReducingFunction::first_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag,
+                                                             std::vector<CoolPropDbl>& dTr, std::vector<CoolPropDbl>& drhor) const {
+    dTr.resize(N);
+    drhor.resize(N);
+    const CoolPropDbl rhor = rhormolar(x);
+    for (std::size_t i = 0; i < N; ++i) {
+        dTr[i] = dYrdxi__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+        drhor[i] = -rhor * rhor * dvrmolardxi__constxj(x, i, xN_flag);
+    }
+}
+// As d2Trdxidxj and d2rhormolardxidxj, with rho_r(x) and dv_r/dx_j evaluated once
+void GERG2008ReducingFunction::second_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, STLMatrix& d2Tr,
+                                                              STLMatrix& d2rhor) const {
+    d2Tr.assign(N, std::vector<CoolPropDbl>(N, 0));
+    d2rhor.assign(N, std::vector<CoolPropDbl>(N, 0));
+    const double rhor = this->rhormolar(x);
+    const double rhor3 = pow(rhor, 3), rhor2 = pow(rhor, 2);
+    std::vector<double> dvr(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        dvr[i] = this->dvrmolardxi__constxj(x, i, xN_flag);
+    }
+    for (std::size_t a = 0; a < N; ++a) {
+        for (std::size_t b = 0; b < N; ++b) {
+            d2Tr[a][b] = d2Yrdxidxj(x, a, b, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+            d2rhor[a][b] = 2 * rhor3 * dvr[a] * dvr[b] - rhor2 * this->d2vrmolardxidxj(x, a, b, xN_flag);
+        }
+    }
 }
 
 CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl>& x, const STLMatrix& beta, const STLMatrix& gamma, const STLMatrix& Y_c_ij,
