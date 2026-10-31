@@ -163,8 +163,9 @@ class ReducingFunction
         std::vector<CoolPropDbl> ndTr, ndrhor;  ///< ndTrdni__constnj, ndrhorbardni__constnj
         STLMatrix d_ndTr_dxj, d_ndrhor_dxj;     ///< [i][j]: d_ndTrdni_dxj__constxi, d_ndrhorbardni_dxj__constxi (with_hessian only)
     };
-    /// Fill `out` at composition x (x.size() == N).  The [i][j] matrices are filled only if with_hessian; otherwise they
-    /// are left as they are.  The base implementation assembles everything from the per-element functions above.
+    /// Fill `out` at composition x.  The [i][j] matrices are filled only if with_hessian, and cleared otherwise.  If
+    /// x.size() != N every output is cleared (callers then fall back to the per-element functions).  The base
+    /// implementation assembles everything from the per-element functions above.
     virtual void composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, bool with_hessian,
                                          CompositionDerivatives& out) const;
 

@@ -59,6 +59,9 @@ std::vector<CoolPropDbl> check_against_direct(HelmholtzEOSMixtureBackend& heos, 
     auto vec_scale = [](const std::vector<CoolPropDbl>& v) {
         CoolPropDbl m = 0;
         for (CoolPropDbl e : v) {
+            if (!std::isfinite(e)) {
+                return e;  // std::max would absorb a NaN; hand it on so the isfinite REQUIRE below sees it
+            }
             m = std::max(m, std::abs(e));
         }
         return m;
@@ -66,7 +69,11 @@ std::vector<CoolPropDbl> check_against_direct(HelmholtzEOSMixtureBackend& heos, 
     auto mat_scale = [&](const STLMatrix& M) {
         CoolPropDbl m = 0;
         for (const auto& row : M) {
-            m = std::max(m, vec_scale(row));
+            const CoolPropDbl r = vec_scale(row);
+            if (!std::isfinite(r)) {
+                return r;
+            }
+            m = std::max(m, r);
         }
         return m;
     };
@@ -75,7 +82,7 @@ std::vector<CoolPropDbl> check_against_direct(HelmholtzEOSMixtureBackend& heos, 
     REQUIRE(c1.drhor.size() == N);
     REQUIRE(c1.ndTr.size() == N);
     REQUIRE(c1.ndrhor.size() == N);
-    // NaN in a cached entry would make the comparisons below false, but a scale of NaN would not -- check it first
+    // A non-finite cached entry makes its field's scale non-finite (see vec_scale), which these REQUIREs reject
     const CoolPropDbl s_dTr = vec_scale(c1.dTr), s_drhor = vec_scale(c1.drhor), s_ndTr = vec_scale(c1.ndTr), s_ndrhor = vec_scale(c1.ndrhor);
     REQUIRE((std::isfinite(s_dTr) && std::isfinite(s_drhor) && std::isfinite(s_ndTr) && std::isfinite(s_ndrhor)));
     for (std::size_t i = 0; i < N; ++i) {
@@ -157,7 +164,7 @@ TEST_CASE("Cached reducing-function composition derivatives, random compositions
         std::shared_ptr<AbstractState> AS(AbstractState::factory("GERG2008", fluids));
         auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
         REQUIRE(heos != nullptr);
-        const std::size_t N = heos->get_mole_fractions().size() ? heos->get_mole_fractions().size() : heos->get_components().size();
+        const std::size_t N = heos->get_components().size();
         for (int trial = 0; trial < 20; ++trial) {
             std::vector<double> z(N);
             double sum = 0;
@@ -198,6 +205,30 @@ TEST_CASE("Cached reducing-function composition derivatives follow binary-parame
     CHECK(satL->get_binary_interaction_double(0, 1, "betaV") == betaV * 1.05);
     CHECK(bits_of(after[0]) != bits_of(before[0]));
     CHECK(bits_of(after_L[0]) != bits_of(before_L[0]));
+}
+
+TEST_CASE("A first-order refill carries no Hessians from an earlier composition; a wrong-length composition no entries",
+          "[mixture][reducing_nderivs]") {
+    std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Methane&Ethane&Propane"));
+    auto* heos = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(heos != nullptr);
+    AS->set_mole_fractions(std::vector<double>{0.5, 0.3, 0.2});
+    CHECK(heos->get_reducing_derivs(XN_DEPENDENT, /*with_hessian=*/true).d_ndrhor_dxj.size() == 3);
+    AS->set_mole_fractions(std::vector<double>{0.2, 0.3, 0.5});
+    const auto& c = heos->get_reducing_derivs(XN_DEPENDENT);
+    CHECK(c.ndrhor.size() == 3);
+    CHECK(c.d_ndTr_dxj.empty());
+    CHECK(c.d_ndrhor_dxj.empty());
+
+    // composition_derivatives on a composition of the wrong length clears every output instead of reading past it
+    ReducingFunction::CompositionDerivatives out;
+    heos->Reducing->composition_derivatives(std::vector<CoolPropDbl>{0.5, 0.5}, XN_DEPENDENT, true, out);
+    CHECK(out.dTr.empty());
+    CHECK(out.drhor.empty());
+    CHECK(out.ndTr.empty());
+    CHECK(out.ndrhor.empty());
+    CHECK(out.d_ndTr_dxj.empty());
+    CHECK(out.d_ndrhor_dxj.empty());
 }
 
 TEST_CASE("A replaced reducing function never matches a cached entry", "[mixture][reducing_nderivs]") {
