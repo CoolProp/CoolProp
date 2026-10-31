@@ -164,11 +164,11 @@ TEST_CASE("Warm-started density solve leaves the state of update_DmolarT_direct 
         double T, p;
     };
     const std::vector<WarmCase> cases = {
-      {"HEOS", "Methane", {1.0}, 150, 5e6},                                                                     // pure, compressed liquid
-      {"HEOS", "Methane", {1.0}, 300, 1e6},                                                                     // pure, gas
+      {"HEOS", "Methane", {1.0}, 150, 5e6},                                                                  // pure, compressed liquid
+      {"HEOS", "Methane", {1.0}, 300, 1e6},                                                                  // pure, gas
       {"GERG2008", "Methane&Ethane&Propane&n-Butane&Nitrogen", {0.80, 0.10, 0.05, 0.03, 0.02}, 300, 10e6},   // dense supercritical
       {"GERG2008", "Methane&Ethane&Propane&n-Butane&Nitrogen", {0.80, 0.10, 0.05, 0.03, 0.02}, 250, 0.5e6},  // gas
-      {"HEOS", "CarbonDioxide&Water", {0.99, 0.01}, 450, 20e6},                                                // non-analytic terms, well clear of water dropout
+      {"HEOS", "CarbonDioxide&Water", {0.99, 0.01}, 450, 20e6},  // non-analytic terms, well clear of water dropout
     };
     using Acc = CoolPropDbl (AbstractState::*)();
     const std::vector<std::pair<const char*, Acc>> fields = {
