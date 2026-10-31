@@ -122,6 +122,21 @@ void ReducingFunction::composition_derivatives(const std::vector<CoolPropDbl>& x
     if (xN_flag != XN_INDEPENDENT && xN_flag != XN_DEPENDENT) {
         throw ValueError(format("xN dependency flag invalid"));
     }
+    // Matrices from an earlier call must not outlive it: a caller that did not ask for them gets none
+    if (!with_hessian) {
+        out.d_ndTr_dxj.clear();
+        out.d_ndrhor_dxj.clear();
+    }
+    // A composition of the wrong length (e.g. no mole fractions set yet) yields no entries rather than reads past its end
+    if (x.size() != N) {
+        out.dTr.clear();
+        out.drhor.clear();
+        out.ndTr.clear();
+        out.ndrhor.clear();
+        out.d_ndTr_dxj.clear();
+        out.d_ndrhor_dxj.clear();
+        return;
+    }
     first_composition_derivatives(x, xN_flag, out.dTr, out.drhor);
     // ndTrdni__constnj, ndrhorbardni__constnj
     out.ndTr.assign(N, 0);
