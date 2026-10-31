@@ -292,18 +292,33 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             const std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
             const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
 
+            // load_REFPROP can fail after the library itself was opened (when
+            // its functions cannot be bound), and then leaves the library
+            // handle set. Close it again after every failed attempt: a handle
+            // left behind makes the next load_REFPROP call, and the early
+            // return above, report REFPROP as loaded while its function
+            // pointers are unset, so the first call into REFPROP crashes.
+            auto try_load = [&err](const std::string& path, const std::string& name) {
+                if (::load_REFPROP(err, path, name)) return true;
+                std::string unload_err;
+                ::unload_REFPROP(unload_err);
+                return false;
+            };
+
             if (root) {
-                loaded_REFPROP = ::load_REFPROP(err, root.value().c_str(), "");
-                SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
+                loaded_REFPROP = try_load(root.value(), "");
+                if (loaded_REFPROP) {
+                    SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
+                }
             }
             if (!loaded_REFPROP) {
                 if (!alt_rp_name.empty()) {
-                    loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+                    loaded_REFPROP = try_load("", alt_rp_name);
                 } else {
                     if (alt_rp_path.empty()) {
-                        loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                        loaded_REFPROP = try_load(refpropPath, "");
                     } else {
-                        loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                        loaded_REFPROP = try_load(alt_rp_path, "");
                     }
                 }
             }

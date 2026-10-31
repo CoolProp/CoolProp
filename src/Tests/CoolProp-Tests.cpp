@@ -15,6 +15,7 @@
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
+#include "TestUtils.h"
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -7554,6 +7555,33 @@ TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)",
     }
 }
 
+TEST_CASE("REFPROP with GERG and an unloadable library throws instead of crashing", "[REFPROP][configuration]") {
+    // Meant for machines WITHOUT REFPROP, such as CI. With REFPROP_USE_GERG
+    // set, set_REFPROP_fluids used to call GERG04dll before checking that
+    // REFPROP could be loaded at all, i.e. through an unset function pointer,
+    // and the process crashed. It must throw NotImplementedError instead.
+    // COOLPROP_REFPROP_ROOT is tried before the path set here and could load
+    // a real REFPROP, so the test does not apply there.
+    if (std::getenv("COOLPROP_REFPROP_ROOT") != nullptr) {
+        SKIP("COOLPROP_REFPROP_ROOT is set, so a real REFPROP may be loaded");
+    }
+    // An ALTERNATIVE_REFPROP_PATH with a fluids directory passes the path
+    // checks in set_REFPROP_fluids, but holds no REFPROP library to load.
+    const std::filesystem::path dir =
+      std::filesystem::temp_directory_path() / ("cp_refprop_gerg_test_" + std::to_string(CoolProp::tests::test_pid()));
+    std::filesystem::create_directories(dir / "fluids");
+    const std::string saved_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    const bool saved_gerg = CoolProp::get_config_bool(REFPROP_USE_GERG);
+    CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, dir.string());
+    CoolProp::set_config_bool(REFPROP_USE_GERG, true);
+    CHECK_THROWS_AS(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "METHANE")), CoolProp::NotImplementedError);
+    // Restoring the path also clears the load failure cached above, so later
+    // [REFPROP] tests on a machine with REFPROP still get to load it.
+    CoolProp::set_config_bool(REFPROP_USE_GERG, saved_gerg);
+    CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, saved_path);
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+}
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
     // reaches the flash routines by other doors, and HQ_flash's own gate,
