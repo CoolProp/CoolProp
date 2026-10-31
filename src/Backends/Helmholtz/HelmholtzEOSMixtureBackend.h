@@ -175,7 +175,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// entries come from ReducingFunction::nd*dni__constnj itself, so results are unchanged bit for bit.
     struct ReducingNDerivs
     {
-        std::size_t version = 0;  // 0: never filled (ReducingFunction::next_version starts at 1)
+        std::uint64_t version = 0;  // 0: never filled, or being refilled (ReducingFunction versions start at 1)
         int flag = -1;
         std::vector<CoolPropDbl> x, ndrhor, ndTr;
     };

@@ -16,6 +16,7 @@
 
 #    include <array>
 #    include <cmath>
+#    include <cstdint>
 #    include <cstring>
 #    include <memory>
 #    include <string>
@@ -101,18 +102,21 @@ TEST_CASE("Cached reducing-function composition derivatives follow binary-parame
 
     // Fill the caches of the state and of a linked state, then change a parameter through the state.
     const std::vector<CoolPropDbl> before = check_against_direct(*heos, XN_DEPENDENT);
-    check_against_direct(*satL, XN_DEPENDENT);
+    const std::vector<CoolPropDbl> before_L = check_against_direct(*satL, XN_DEPENDENT);
     const double betaV = AS->get_binary_interaction_double(0, 1, "betaV");
     AS->set_binary_interaction_double(0, 1, "betaV", betaV * 1.05);
 
     const std::vector<CoolPropDbl> after = check_against_direct(*heos, XN_DEPENDENT);
-    check_against_direct(*satL, XN_DEPENDENT);
-    // The change must have moved the derivatives, or the checks above prove nothing about invalidation.
+    const std::vector<CoolPropDbl> after_L = check_against_direct(*satL, XN_DEPENDENT);
+    // The change must have reached the linked state (it holds its own copy of the reducing function) and moved the
+    // derivatives on both, or the checks above prove nothing about invalidation.
+    CHECK(satL->get_binary_interaction_double(0, 1, "betaV") == betaV * 1.05);
     CHECK(bits_of(after[0]) != bits_of(before[0]));
+    CHECK(bits_of(after_L[0]) != bits_of(before_L[0]));
 }
 
 TEST_CASE("A replaced reducing function never matches a cached entry", "[mixture][reducing_nderivs]") {
-    // Caches key on ReducingFunction::version alone, so it must be unique per object and per parameter set: a backend
+    // Caches key on ReducingFunction::get_version() alone, so it must be unique per object and per parameter set: a backend
     // whose Reducing is replaced (set_mixture_parameters, sync_linked_states via copy()) can get a new object at the
     // freed address, which a pointer-plus-per-object-counter key would mistake for the old one.
     std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", "Methane&Ethane"));
@@ -121,11 +125,11 @@ TEST_CASE("A replaced reducing function never matches a cached entry", "[mixture
     AS->set_mole_fractions(std::vector<double>{0.3, 0.7});
     check_against_direct(*heos, XN_DEPENDENT);
 
-    const std::size_t v0 = heos->Reducing->version;
+    const std::uint64_t v0 = heos->Reducing->get_version();
     std::shared_ptr<ReducingFunction> replacement(heos->Reducing->copy());
-    CHECK(replacement->version != v0);
+    CHECK(replacement->get_version() != v0);
     replacement->set_binary_interaction_double(0, 1, "betaT", 1.07);
-    const std::size_t v1 = replacement->version;
+    const std::uint64_t v1 = replacement->get_version();
     CHECK(v1 != v0);
     heos->Reducing = replacement;
     check_against_direct(*heos, XN_DEPENDENT);

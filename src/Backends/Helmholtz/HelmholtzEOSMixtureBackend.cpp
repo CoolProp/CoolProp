@@ -454,7 +454,8 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
 const HelmholtzEOSMixtureBackend::ReducingNDerivs& HelmholtzEOSMixtureBackend::get_reducing_nderivs(x_N_dependency_flag xN_flag) {
     ReducingNDerivs& c = reducing_nderivs[xN_flag == XN_DEPENDENT ? 1 : 0];
     const std::vector<CoolPropDbl>& x = mole_fractions;
-    if (c.version == Reducing->version && c.flag == static_cast<int>(xN_flag) && c.x == x) return c;
+    if (c.version == Reducing->get_version() && c.flag == static_cast<int>(xN_flag) && c.x == x) return c;
+    c.version = 0;  // the slot is invalid until the refill below completes, so a throw part-way cannot leave a valid-looking key
     const std::size_t N = x.size();
     // Each entry from the reducing function's own n*dY_r/dn_i, so results are bit-identical to the
     // per-call evaluation.  (A one-pass form, dY_r/dx_i minus one shared sum, is another factor N
@@ -466,9 +467,9 @@ const HelmholtzEOSMixtureBackend::ReducingNDerivs& HelmholtzEOSMixtureBackend::g
         c.ndrhor[i] = Reducing->ndrhorbardni__constnj(x, i, xN_flag);
         c.ndTr[i] = Reducing->ndTrdni__constnj(x, i, xN_flag);
     }
-    c.version = Reducing->version;
     c.flag = static_cast<int>(xN_flag);
     c.x = x;
+    c.version = Reducing->get_version();  // last: the key is valid only once every field is
     return c;
 }
 /// Set binary mixture floating point parameter for this instance

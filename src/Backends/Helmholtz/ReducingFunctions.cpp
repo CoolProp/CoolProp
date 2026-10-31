@@ -1,6 +1,13 @@
 #include "ReducingFunctions.h"
 
+#include <atomic>
+
 namespace CoolProp {
+
+std::uint64_t ReducingFunction::next_version() {
+    static std::atomic<std::uint64_t> counter{0};
+    return ++counter;
+}
 
 CoolPropDbl ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j,
                                                      x_N_dependency_flag xN_flag) const {
