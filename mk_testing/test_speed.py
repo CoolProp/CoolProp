@@ -7,7 +7,7 @@ import numpy as np
 if __name__ == "__main__":
     n = int(1e6)
     plot = False
-    remove_chebs = False
+    remove_chebs = True
 
     FLUIDS_STRING = ["MEG[0.35]", "Water"]
 
