@@ -467,29 +467,45 @@ void JSONIncompressibleLibrary::add_one(const nlohmann::json& fluid_json) {
 
         /// Setters for the coefficients
         if (get_debug_level() >= 20) std::cout << format("Incompressible library: Loading coefficients for %s ", fluid.getName().c_str()) << '\n';
-        // The caloric properties prefer the Chebyshev entries when the JSON
-        // carries them (exact singularity-free enthalpy/entropy integrals,
-        // see dev/incompressible_liquids/NOTES_thermodynamic_consistency.md);
-        // the classic polynomial entries remain the fallback and the format
-        // for every other property. Flip this to false to A/B against the
-        // polynomial caloric path with the same library.
-        static constexpr bool prefer_chebyshev_caloric = true;
-        auto parse_caloric = [this, &fluid_json](const std::string& id) {
-            if (prefer_chebyshev_caloric && fluid_json.contains(id + "_cheb")) {
-                IncompressibleData data = parse_coefficients(fluid_json, id + "_cheb", false);
-                if (data.type != CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
-                    // The entry exists but did not parse as chebyshev (e.g. a
-                    // typo in "type"): failing loudly beats silently running
-                    // on the polynomial fallback while the author believes
-                    // the Chebyshev fit is in use.
-                    throw ValueError(format("The entry [%s_cheb] exists but its type is not \"chebyshev\"; fix or remove it.", id.c_str()));
-                }
-                return data;
+        // The caloric properties (density, specific heat) may come as a
+        // classic entry ("density") and a Chebyshev entry ("density_cheb",
+        // exact singularity-free enthalpy/entropy integrals, see
+        // dev/incompressible_liquids/NOTES_thermodynamic_consistency.md).
+        // Both are loaded and kept; each state picks one through the
+        // INCOMP_PREFER_CHEBYSHEV_CALORIC configuration key. At least one of
+        // the two must be present, so the classic entry is only vital when
+        // there is no Chebyshev entry.
+        auto parse_chebyshev = [this, &fluid_json](const std::string& id) {
+            if (!fluid_json.contains(id + "_cheb")) return IncompressibleData();
+            IncompressibleData data = parse_coefficients(fluid_json, id + "_cheb", false);
+            if (data.type != CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+                // The entry exists but did not parse as chebyshev (e.g. a
+                // typo in "type"): failing loudly beats silently running
+                // on the polynomial fallback while the author believes
+                // the Chebyshev fit is in use.
+                throw ValueError(format("The entry [%s_cheb] exists but its type is not \"chebyshev\"; fix or remove it.", id.c_str()));
             }
-            return parse_coefficients(fluid_json, id, true);
+            return data;
         };
-        fluid.setDensity(parse_caloric("density"));
-        fluid.setSpecificHeat(parse_caloric("specific_heat"));
+        for (const std::string id : {"density", "specific_heat"}) {
+            IncompressibleData chebyshev_data = parse_chebyshev(id);
+            const bool has_chebyshev = chebyshev_data.type != CoolProp::IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+            IncompressibleData classic_data = parse_coefficients(fluid_json, id, !has_chebyshev);
+            if (fluid_json.contains(id) && classic_data.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+                // A non-vital entry with an unknown "type" parses to NOT_SET
+                // without complaint. Here that would make the classic fit
+                // silently fall back to the Chebyshev one when the setting
+                // asks for the classic fit, so reject it as the _cheb check does.
+                throw ValueError(format("The entry [%s] exists but its type is not understood; fix or remove it.", id.c_str()));
+            }
+            if (id == "density") {
+                fluid.setDensity(std::move(classic_data));
+                fluid.setDensityChebyshev(std::move(chebyshev_data));
+            } else {
+                fluid.setSpecificHeat(std::move(classic_data));
+                fluid.setSpecificHeatChebyshev(std::move(chebyshev_data));
+            }
+        }
         fluid.setViscosity(parse_coefficients(fluid_json, "viscosity", false));
         fluid.setConductivity(parse_coefficients(fluid_json, "conductivity", false));
         fluid.setPsat(parse_coefficients(fluid_json, "saturation_pressure", false));

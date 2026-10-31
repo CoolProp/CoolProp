@@ -27,7 +27,8 @@ IncompressibleBackend::IncompressibleBackend() {
     //this->fluid = NULL;
 }
 
-IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) : fluid(fluid) {
+IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid)
+  : fluid(fluid), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
     this->set_reference_state();
     if (this->fluid->is_pure()) {
@@ -42,7 +43,8 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) : fluid
     //}
 }
 
-IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name) : fluid(&get_incompressible_fluid(fluid_name)) {
+IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name)
+  : fluid(&get_incompressible_fluid(fluid_name)), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
     this->set_reference_state();
     if (this->fluid->is_pure()) {
@@ -394,7 +396,7 @@ double IncompressibleBackend::smass_ref() {
 }
 
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
-    return fluid->T_rho(rhomass, p, _fractions[0]);
+    return fluid->T_rho(rhomass, p, _fractions[0], chebyshev_caloric);
 }
 /// Calculate T given pressure and enthalpy
 /**
@@ -423,7 +425,7 @@ CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p
 
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
-    int maxiter = 10;
+    int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
     return result;
@@ -454,7 +456,7 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
 
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
-    int maxiter = 10;
+    int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
     return result;
@@ -492,7 +494,7 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
 //	std::string errstring;
 //	double macheps = DBL_EPSILON;
 //	double tol     = DBL_EPSILON*1e3;
-//	int    maxiter = 10;
+//	int    maxiter = 15;
 //	double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
 //	//if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
 //	return result;
@@ -520,10 +522,10 @@ CoolPropDbl IncompressibleBackend::calc_smass() {
 
 /// Functions that can be used with the solver, they miss the reference values!
 CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x) {
-    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, fluid->rho(T, p, x), calc_drhodTatPx(T, p, x));
+    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
 };
 CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) {
-    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(fluid->rho(T, p, x), calc_drhodTatPx(T, p, x));
+    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
 };
 
 /// Calculate the first partial derivative for the desired derivative

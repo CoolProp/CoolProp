@@ -43,27 +43,27 @@ struct IncompressibleData
 
     /// Chebyshev fits only (type == INCOMPRESSIBLE_CHEBYSHEV). The rows of
     /// coeffs are Chebyshev-in-T coefficients on [cheb_Tmin, cheb_Tmax]; the
-    /// columns multiply powers of (x - cheb_xbase). The derived matrices are
-    /// built once at load time by IncompressibleFluid::validate():
-    ///  - cheb_ddT:        coefficients of d/dT (the density fit needs this
-    ///                     for the pressure terms of h and s)
-    ///  - cheb_int_dT:     coefficients of the indefinite Int f dT (enthalpy)
-    ///  - cheb_int_dTdivT: coefficients of the indefinite Int f/T dT
-    ///                     (entropy; from a Chebyshev-Lobatto re-expansion of
-    ///                     f/T, which converges geometrically since T > 0)
+    /// columns multiply powers of (x - cheb_xbase).
+    double cheb_Tmin = 0.0, cheb_Tmax = 0.0, cheb_xbase = 0.0;
+
+    /// Derived coefficient matrices for the caloric fits (density and
+    /// specific heat, type INCOMPRESSIBLE_POLYNOMIAL or INCOMPRESSIBLE_CHEBYSHEV).
+    /// They are built once at load time by IncompressibleFluid::validate(), so
+    /// that evaluating h and s is a plain evaluation of a stored matrix, in the
+    /// same basis as coeffs:
+    ///  - ddT:        coefficients of d/dT (the density fit needs this for
+    ///                the pressure terms of h and s)
+    ///  - int_dT:     coefficients of the indefinite Int f dT (enthalpy)
+    ///  - int_dTdivT: coefficients of the indefinite Int f/T dT (entropy)
+    ///  - int_dTdivT_log: polynomial fits only. Int f/T dT of a polynomial
+    ///                in (T - Tbase) is a polynomial plus a ln(T) term; this
+    ///                single row holds the factor of ln(T) as a polynomial in
+    ///                (x - xbase). The Chebyshev fits need no log term: they
+    ///                re-expand f/T itself (see chebDivideByTMatrix), which
+    ///                converges geometrically since T > 0.
     /// Integration constants are irrelevant: the backend always subtracts the
     /// same expression evaluated at the reference state.
-    double cheb_Tmin = 0.0, cheb_Tmax = 0.0, cheb_xbase = 0.0;
-    Eigen::MatrixXd cheb_ddT, cheb_int_dT, cheb_int_dTdivT;
-
-    /// Polynomial fits only (type == INCOMPRESSIBLE_POLYNOMIAL), built once by
-    /// IncompressibleFluid::validate(); empty until then, in which case the
-    /// evaluators fall back to Polynomial2DFrac. Columns multiply (x - xbase)^j.
-    ///  - poly_ddT:        d/dT, rows are powers of (T - Tbase)
-    ///  - poly_int_dT:     indefinite Int f dT, rows are powers of (T - Tbase)
-    ///  - poly_int_dTdivT: indefinite Int f/T dT, built for the Tbase at validate()
-    ///                     time; row 0 multiplies ln(T), row k multiplies T^k
-    Eigen::MatrixXd poly_ddT, poly_int_dT, poly_int_dTdivT;
+    Eigen::MatrixXd ddT, int_dT, int_dTdivT, int_dTdivT_log;
 
     IncompressibleData()
       : type(INCOMPRESSIBLE_NOT_SET) {
@@ -120,6 +120,14 @@ class IncompressibleFluid
      *  integration for internal energy and entropy.
      */
     IncompressibleData specific_heat;
+    /// Optional Chebyshev alternatives to density and specific_heat
+    /** The fluid data may ship both a classic fit ("density") and a
+     *  Chebyshev fit ("density_cheb") of the same property; both are kept.
+     *  Which one is evaluated is chosen per call, see useChebyshevFit() and the
+     *  INCOMP_PREFER_CHEBYSHEV_CALORIC configuration key. Either may be
+     *  missing (type INCOMPRESSIBLE_NOT_SET), in which case the other is used.
+     */
+    IncompressibleData density_cheb, specific_heat_cheb;
     /// Viscosity coefficients
     /** If 2D, the rows are temperature and the columns are concentration.
      *  If 1D, should be a column vector of temperature coefficients
@@ -158,6 +166,32 @@ class IncompressibleFluid
     IncompressibleData mole2input;
 
     Polynomial2DFrac poly;
+
+    /// Decide which fit to evaluate for a caloric property.
+    /** True (use the Chebyshev fit) if chebyshev is true and that fit exists,
+     *  or if the classic fit does not exist; false (use the classic fit)
+     *  otherwise. With neither fit present the classic one is chosen; it is
+     *  unset, and evaluating it reports the missing property.
+     */
+    static bool useChebyshevFit(const IncompressibleData& classic_fit, const IncompressibleData& chebyshev_fit, bool chebyshev) {
+        const bool has_classic = classic_fit.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+        const bool has_chebyshev = chebyshev_fit.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+        return has_chebyshev && (chebyshev || !has_classic);
+    }
+    [[nodiscard]] const IncompressibleData& densityFit(bool chebyshev) const {
+        return useChebyshevFit(density, density_cheb, chebyshev) ? density_cheb : density;
+    }
+    [[nodiscard]] const IncompressibleData& specificHeatFit(bool chebyshev) const {
+        return useChebyshevFit(specific_heat, specific_heat_cheb, chebyshev) ? specific_heat_cheb : specific_heat;
+    }
+
+    /// Throw unless data is a Chebyshev fit or unset; see setDensityChebyshev.
+    static void requireChebyshevOrUnset(const IncompressibleData& data, const char* what) {
+        if (data.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && data.type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+            throw ValueError(
+              format("The Chebyshev %s fit slot only takes a Chebyshev fit, not one of type [%d].", what, static_cast<int>(data.type)));
+        }
+    }
 
     /// Build the error for a property this fluid carries no fit for.
     /** Returned, not thrown, so each call site keeps its own throw statement.
@@ -251,6 +285,17 @@ class IncompressibleFluid
     }
     void setTbase(double Tbase) {
         this->Tbase = Tbase;
+        // The entropy integral of a polynomial fit has the value of Tbase
+        // built in (see int_dTdivT_log), so drop it: evaluating s then throws
+        // until validate() rebuilds it, instead of silently mixing the old
+        // and the new Tbase. ddT and int_dT do not depend on the value of
+        // Tbase (they are evaluated at the current T - Tbase) and stay valid.
+        for (IncompressibleData* data : {&density, &specific_heat}) {
+            if (data->type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
+                data->int_dTdivT.resize(0, 0);
+                data->int_dTdivT_log.resize(0, 0);
+            }
+        }
     }
     void setxbase(double xbase) {
         this->xbase = xbase;
@@ -262,6 +307,20 @@ class IncompressibleFluid
     }
     void setSpecificHeat(IncompressibleData specific_heat) {
         this->specific_heat = std::move(specific_heat);
+    }
+    /// Setters for the optional Chebyshev alternatives, see density_cheb
+    /** These slots only take Chebyshev fits (or an unset fit): anything else
+     *  there would be evaluated as the "Chebyshev" choice without being one.
+     *  Checked here, not only in validate(), because rho() and c() also work
+     *  on a fluid that never went through validate().
+     */
+    void setDensityChebyshev(IncompressibleData density_cheb) {
+        requireChebyshevOrUnset(density_cheb, "density");
+        this->density_cheb = std::move(density_cheb);
+    }
+    void setSpecificHeatChebyshev(IncompressibleData specific_heat_cheb) {
+        requireChebyshevOrUnset(specific_heat_cheb, "specific heat");
+        this->specific_heat_cheb = std::move(specific_heat_cheb);
     }
     void setViscosity(IncompressibleData viscosity) {
         this->viscosity = std::move(viscosity);
@@ -292,6 +351,26 @@ class IncompressibleFluid
     /// A function to test the density coefficients for 1D or 2D
     bool is_pure();
 
+    /// The current value of the INCOMP_PREFER_CHEBYSHEV_CALORIC configuration
+    /// key. It is the default for the chebyshev argument of the caloric
+    /// functions below; the backend reads it once per state instead.
+    static bool chebyshevCaloricPreferred();
+    /// True if this fluid has Chebyshev fits for both density and specific heat
+    [[nodiscard]] bool hasChebyshevCaloric() const {
+        return density_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET
+               && specific_heat_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET;
+    }
+    /// True if this fluid has classic fits for both density and specific heat
+    /** A Chebyshev fit stored under the classic name does not count: with
+     *  the setting at false it would be evaluated as the "classic" choice.
+     */
+    [[nodiscard]] bool hasClassicCaloric() const {
+        auto is_classic = [](const IncompressibleData& data) {
+            return data.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && data.type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV;
+        };
+        return is_classic(density) && is_classic(specific_heat);
+    }
+
    protected:
     /// Base functions that handle the custom function types
     double baseExponential(const IncompressibleData& data, double y, double ybase);
@@ -304,9 +383,15 @@ class IncompressibleFluid
      * be necessary, but gives a clearer structure.
      */
     /// Density as a function of temperature, pressure and composition.
-    double rho(double T, double p, double x);
+    /** The caloric functions (rho, c, their derivatives and integrals, and
+     *  their inverses) take a trailing chebyshev flag: true evaluates the
+     *  Chebyshev fit where the fluid ships one, false the classic fit where
+     *  the fluid ships one (see useChebyshevFit). It defaults to the current value
+     *  of the INCOMP_PREFER_CHEBYSHEV_CALORIC configuration key.
+     */
+    double rho(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     /// Heat capacities as a function of temperature, pressure and composition.
-    double c(double T, double p, double x);
+    double c(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     double cp(double T, double p, double x) {
         throw ValueError(format("%s (%d): Please use the c-function instead.", __FILE__, __LINE__));
     }
@@ -344,7 +429,7 @@ class IncompressibleFluid
      */
     /// Partial derivative of density
     //  with respect to temperature at constant pressure and composition
-    double drhodTatPx(double T, double p, double x);
+    double drhodTatPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     ///// Partial derivative of entropy
     ////  with respect to temperature at constant pressure and composition
     //double dsdTatPx  (double T, double p, double x){return c(T,p,x)/T;};
@@ -354,11 +439,11 @@ class IncompressibleFluid
     /// Partial derivative of entropy
     //  with respect to temperature at constant pressure and composition
     //  integrated in temperature
-    double dsdTatPxdT(double T, double p, double x);
+    double dsdTatPxdT(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     /// Partial derivative of enthalpy
     //  with respect to temperature at constant pressure and composition
     //  integrated in temperature
-    double dhdTatPxdT(double T, double p, double x);
+    double dhdTatPxdT(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
 
     /// Mass fraction conversion function
     /** If the fluid type is mass-based, it does not do anything. Otherwise,
@@ -379,9 +464,9 @@ class IncompressibleFluid
      * done here, but in the backend, T(h,p) for example.
      */
     /// Temperature as a function of density, pressure and composition.
-    double T_rho(double Dmass, double p, double x);
+    double T_rho(double Dmass, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
-    double T_c(double Cmass, double p, double x);
+    double T_c(double Cmass, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     /// Temperature as a function of entropy as a function of temperature, pressure and composition.
     double T_s(double Smass, double p, double x) {
         throw NotImplementedError(format("%s (%d): T from entropy is not implemented in the fluid, use the backend.", __FILE__, __LINE__));
