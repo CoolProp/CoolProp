@@ -19,6 +19,7 @@ dipole moment                   debye
 surface tension                 N/m
 */
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 
@@ -259,6 +260,21 @@ void REFPROPMixtureBackend::check_loaded_fluid() {
 // Both are only ever read or written with REFPROP_mutex() held.
 std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
 bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+
+/// ::load_REFPROP, but close the library again when the load fails.
+/** load_REFPROP can fail after the library itself was opened (when its
+ *  functions cannot be bound), and then leaves the library handle set. A
+ *  handle left behind makes the next load_REFPROP call, and the early return
+ *  in REFPROP_supported(), report REFPROP as loaded while its function
+ *  pointers are unset, so the first call into REFPROP crashes. Every load in
+ *  this file goes through here. Call with REFPROP_mutex() held.
+ */
+static bool load_REFPROP_or_close(std::string& err, const std::string& path, const std::string& name) {
+    if (::load_REFPROP(err, path, name)) return true;
+    std::string unload_err;
+    ::unload_REFPROP(unload_err);
+    return false;
+}
 void REFPROPMixtureBackend::forget_REFPROP_load_failure() {
     const REFPROPLock refprop_lock(REFPROP_mutex());
     // On a platform without REFPROP support the next check simply sets it
@@ -292,33 +308,25 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             const std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
             const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
 
-            // load_REFPROP can fail after the library itself was opened (when
-            // its functions cannot be bound), and then leaves the library
-            // handle set. Close it again after every failed attempt: a handle
-            // left behind makes the next load_REFPROP call, and the early
-            // return above, report REFPROP as loaded while its function
-            // pointers are unset, so the first call into REFPROP crashes.
-            auto try_load = [&err](const std::string& path, const std::string& name) {
-                if (::load_REFPROP(err, path, name)) return true;
-                std::string unload_err;
-                ::unload_REFPROP(unload_err);
-                return false;
-            };
-
             if (root) {
-                loaded_REFPROP = try_load(root.value(), "");
+                loaded_REFPROP = load_REFPROP_or_close(err, root.value(), "");
                 if (loaded_REFPROP) {
-                    SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
+                    // SETPATHdll reads a fixed-length Fortran string of this
+                    // many characters, so hand it a zero-padded buffer of that
+                    // size rather than the shorter std::string storage.
+                    std::array<char, 400> root_path{};
+                    std::copy_n(root.value().begin(), std::min(root.value().size(), root_path.size()), root_path.begin());
+                    SETPATHdll(root_path.data(), root_path.size());
                 }
             }
             if (!loaded_REFPROP) {
                 if (!alt_rp_name.empty()) {
-                    loaded_REFPROP = try_load("", alt_rp_name);
+                    loaded_REFPROP = load_REFPROP_or_close(err, "", alt_rp_name);
                 } else {
                     if (alt_rp_path.empty()) {
-                        loaded_REFPROP = try_load(refpropPath, "");
+                        loaded_REFPROP = load_REFPROP_or_close(err, refpropPath, "");
                     } else {
-                        loaded_REFPROP = try_load(alt_rp_path, "");
+                        loaded_REFPROP = load_REFPROP_or_close(err, alt_rp_path, "");
                     }
                 }
             }
@@ -466,6 +474,11 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         }
 
         if (get_config_bool(REFPROP_USE_GERG)) {
+            // The loader only insists on SETUPdll, so a REFPROP without GERG
+            // support loads with this pointer unset.
+            if (GERG04dll == nullptr) {
+                throw NotImplementedError("REFPROP_USE_GERG is set, but the loaded REFPROP library has no GERG04dll.");
+            }
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
               ierr_gerg = 0;
             std::array<char, 255> herr_gerg{};
@@ -3065,7 +3078,7 @@ THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_
 bool force_load_REFPROP() {
     const REFPROPLock refprop_lock(REFPROP_mutex());
     std::string err;
-    if (!load_REFPROP(err)) {
+    if (!load_REFPROP_or_close(err, "", "")) {
         if (CoolProp::get_debug_level() > 5) {
             std::cout << format("Error while loading REFPROP: %s", err) << '\n';
         }
@@ -3094,7 +3107,7 @@ bool force_unload_REFPROP() {
 void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, double& T0, double& p0, int& ierr, char* herr, int l1, int l2) {
     const REFPROPLock refprop_lock(REFPROP_mutex());
     std::string err;
-    bool loaded_REFPROP = ::load_REFPROP(err);
+    bool loaded_REFPROP = load_REFPROP_or_close(err, "", "");
     if (!loaded_REFPROP) {
         throw ValueError(format("Not able to load REFPROP; err is: %s", err.c_str()));
     }
