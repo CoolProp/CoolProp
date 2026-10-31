@@ -862,7 +862,10 @@ class MixtureDerivatives
         return HEOS.Reducing->Tr(HEOS.get_mole_fractions());
     }
     static CoolPropDbl dTrdxi__constxj(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag) {
-        return HEOS.Reducing->dTrdxi__constxj(HEOS.get_mole_fractions(), i, xN_flag);
+        // from the per-state cache (HelmholtzEOSMixtureBackend::get_reducing_derivs); an index outside the composition (e.g.
+        // no mole fractions set yet) goes to the reducing function as before
+        const auto& c = HEOS.get_reducing_derivs(xN_flag);
+        return i < c.dTr.size() ? c.dTr[i] : HEOS.Reducing->dTrdxi__constxj(HEOS.get_mole_fractions(), i, xN_flag);
     }
     static CoolPropDbl d2Trdxi2__constxj(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag) {
         return HEOS.Reducing->d2Trdxi2__constxj(HEOS.get_mole_fractions(), i, xN_flag);
@@ -875,13 +878,14 @@ class MixtureDerivatives
         return HEOS.Reducing->d3Trdxidxjdxk(HEOS.get_mole_fractions(), i, j, k, xN_flag);
     }
     static CoolPropDbl ndTrdni__constnj(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag) {
-        // an index outside the composition (e.g. no mole fractions set yet) goes to the reducing function as before
-        const auto& c = HEOS.get_reducing_nderivs(xN_flag);
+        const auto& c = HEOS.get_reducing_derivs(xN_flag);
         return i < c.ndTr.size() ? c.ndTr[i] : HEOS.Reducing->ndTrdni__constnj(HEOS.get_mole_fractions(), i, xN_flag);
     }
     static CoolPropDbl d_ndTrdni_dxj__constxi(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                               CoolProp::x_N_dependency_flag xN_flag) {
-        return HEOS.Reducing->d_ndTrdni_dxj__constxi(HEOS.get_mole_fractions(), i, j, xN_flag);
+        const auto& c = HEOS.get_reducing_derivs(xN_flag, /*with_hessian=*/true);
+        return i < c.d_ndTr_dxj.size() && j < c.d_ndTr_dxj.size() ? c.d_ndTr_dxj[i][j]
+                                                                  : HEOS.Reducing->d_ndTrdni_dxj__constxi(HEOS.get_mole_fractions(), i, j, xN_flag);
     }
     static CoolPropDbl d2_ndTrdni_dxj_dxk__constxi(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
                                                    CoolProp::x_N_dependency_flag xN_flag) {
@@ -907,7 +911,10 @@ class MixtureDerivatives
         return HEOS.Reducing->rhormolar(HEOS.get_mole_fractions());
     }
     static CoolPropDbl drhormolardxi__constxj(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag) {
-        return HEOS.Reducing->drhormolardxi__constxj(HEOS.get_mole_fractions(), i, xN_flag);
+        // from the per-state cache (HelmholtzEOSMixtureBackend::get_reducing_derivs); an index outside the composition (e.g.
+        // no mole fractions set yet) goes to the reducing function as before
+        const auto& c = HEOS.get_reducing_derivs(xN_flag);
+        return i < c.drhor.size() ? c.drhor[i] : HEOS.Reducing->drhormolardxi__constxj(HEOS.get_mole_fractions(), i, xN_flag);
     }
     static CoolPropDbl d2rhormolardxidxj(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                          CoolProp::x_N_dependency_flag xN_flag) {
@@ -930,12 +937,15 @@ class MixtureDerivatives
         return HEOS.Reducing->d2rhormolar_dxidbetaV(HEOS.get_mole_fractions(), i, xN_flag);
     }
     static CoolPropDbl ndrhorbardni__constnj(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag) {
-        const auto& c = HEOS.get_reducing_nderivs(xN_flag);
+        const auto& c = HEOS.get_reducing_derivs(xN_flag);
         return i < c.ndrhor.size() ? c.ndrhor[i] : HEOS.Reducing->ndrhorbardni__constnj(HEOS.get_mole_fractions(), i, xN_flag);
     }
     static CoolPropDbl d_ndrhorbardni_dxj__constxi(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j,
                                                    CoolProp::x_N_dependency_flag xN_flag) {
-        return HEOS.Reducing->d_ndrhorbardni_dxj__constxi(HEOS.get_mole_fractions(), i, j, xN_flag);
+        const auto& c = HEOS.get_reducing_derivs(xN_flag, /*with_hessian=*/true);
+        return i < c.d_ndrhor_dxj.size() && j < c.d_ndrhor_dxj.size()
+                 ? c.d_ndrhor_dxj[i][j]
+                 : HEOS.Reducing->d_ndrhorbardni_dxj__constxi(HEOS.get_mole_fractions(), i, j, xN_flag);
     }
     static CoolPropDbl d2_ndrhorbardni_dxj_dxk__constxi(CoolProp::HelmholtzEOSMixtureBackend& HEOS, std::size_t i, std::size_t j, std::size_t k,
                                                         CoolProp::x_N_dependency_flag xN_flag) {

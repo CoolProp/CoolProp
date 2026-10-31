@@ -38,7 +38,7 @@ class ReducingFunction
    public:
     /// A value that no other reducing function, and no earlier parameter set of this one, has had in this process: drawn
     /// at construction and again by every parameter setter (renew_version).  Caches of reducing-function values (the
-    /// per-backend composition derivatives in HelmholtzEOSMixtureBackend::get_reducing_nderivs) key on it alone.  That
+    /// per-backend composition derivatives in HelmholtzEOSMixtureBackend::get_reducing_derivs) key on it alone.  That
     /// stays right when a setter changes this object in place, and when a backend's Reducing is replaced by a new object
     /// (set_mixture_parameters, sync_linked_states' copy()) that may reuse the old one's address -- a per-object counter
     /// starting at 0 would match there.
@@ -152,6 +152,32 @@ class ReducingFunction
 
     virtual CoolPropDbl ndrhorbardni__constnj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
     virtual CoolPropDbl ndTrdni__constnj(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
+
+    /// The composition derivatives of T_r and rho_r that the fugacity coefficients and their composition derivatives
+    /// read, at one composition, all at once (COO-124).  Element [i] / [i][j] equals the per-element function named in
+    /// its comment, evaluated at the same (x, xN_flag); computing them together lets the shared terms (the i-independent
+    /// sums, and for GERG rho_r(x) and dv_r/dx_j) be computed once instead of once per element.
+    struct CompositionDerivatives
+    {
+        std::vector<CoolPropDbl> dTr, drhor;    ///< dTrdxi__constxj, drhormolardxi__constxj
+        std::vector<CoolPropDbl> ndTr, ndrhor;  ///< ndTrdni__constnj, ndrhorbardni__constnj
+        STLMatrix d_ndTr_dxj, d_ndrhor_dxj;     ///< [i][j]: d_ndTrdni_dxj__constxi, d_ndrhorbardni_dxj__constxi (with_hessian only)
+    };
+    /// Fill `out` at composition x (x.size() == N).  The [i][j] matrices are filled only if with_hessian; otherwise they
+    /// are left as they are.  The base implementation assembles everything from the per-element functions above.
+    virtual void composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, bool with_hessian,
+                                         CompositionDerivatives& out) const;
+
+   protected:
+    /// The second derivatives d2Trdxidxj and d2rhormolardxidxj at x, [a][b] for every a, b (both orders: the per-element
+    /// functions are not guaranteed bit-symmetric).  Overridden where the entries share expensive terms.
+    virtual void second_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, STLMatrix& d2Tr,
+                                                STLMatrix& d2rhor) const;
+    /// The first derivatives dTrdxi__constxj and drhormolardxi__constxj at x.  Overridden as above.
+    virtual void first_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, std::vector<CoolPropDbl>& dTr,
+                                               std::vector<CoolPropDbl>& drhor) const;
+
+   public:
     virtual CoolPropDbl PSI_rho(const std::vector<CoolPropDbl>& x, std::size_t i, x_N_dependency_flag xN_flag) const;
     virtual CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const;
     virtual CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
@@ -403,6 +429,15 @@ class GERG2008ReducingFunction : public ReducingFunction
     CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl>& x, std::size_t i, std::size_t j, std::size_t k,
                                      x_N_dependency_flag xN_flag) const override;
 
+   protected:
+    /// rho_r(x) and dv_r/dx_j once for all entries: each per-element drhormolardxi__constxj / d2rhormolardxidxj call
+    /// re-evaluates rho_r(x) (O(N^2)), and d2rhormolardxidxj also both dv_r/dx (O(N) each)
+    void first_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, std::vector<CoolPropDbl>& dTr,
+                                       std::vector<CoolPropDbl>& drhor) const override;
+    void second_composition_derivatives(const std::vector<CoolPropDbl>& x, x_N_dependency_flag xN_flag, STLMatrix& d2Tr,
+                                        STLMatrix& d2rhor) const override;
+
+   public:
     /** \brief Generalized reducing term \f$Y_r\f$
      *
      * \f[

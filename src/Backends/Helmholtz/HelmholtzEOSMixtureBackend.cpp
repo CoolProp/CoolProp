@@ -451,26 +451,27 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
         throw ValueError(format("mixing rule [%s] is not understood", model.c_str()));
     }
 }
-const HelmholtzEOSMixtureBackend::ReducingNDerivs& HelmholtzEOSMixtureBackend::get_reducing_nderivs(x_N_dependency_flag xN_flag) {
-    ReducingNDerivs& c = reducing_nderivs[xN_flag == XN_DEPENDENT ? 1 : 0];
+const ReducingFunction::CompositionDerivatives& HelmholtzEOSMixtureBackend::get_reducing_derivs(x_N_dependency_flag xN_flag, bool with_hessian) {
+    ReducingDerivsCache& c = reducing_derivs[xN_flag == XN_DEPENDENT ? 1 : 0];
     const std::vector<CoolPropDbl>& x = mole_fractions;
-    if (c.version == Reducing->get_version() && c.flag == static_cast<int>(xN_flag) && c.x == x) return c;
-    c.version = 0;  // the slot is invalid until the refill below completes, so a throw part-way cannot leave a valid-looking key
-    const std::size_t N = x.size();
-    // Each entry from the reducing function's own n*dY_r/dn_i, so results are bit-identical to the
-    // per-call evaluation.  (A one-pass form, dY_r/dx_i minus one shared sum, is another factor N
-    // cheaper but differs in the last bits -- amplified by the cancellation in that difference -- so it
-    // is left for a separate change that can be checked on its own.)
-    c.ndrhor.resize(N);
-    c.ndTr.resize(N);
-    for (std::size_t i = 0; i < N; ++i) {
-        c.ndrhor[i] = Reducing->ndrhorbardni__constnj(x, i, xN_flag);
-        c.ndTr[i] = Reducing->ndTrdni__constnj(x, i, xN_flag);
+    if (c.version == Reducing->get_version() && c.flag == static_cast<int>(xN_flag) && c.x == x) {
+        if (with_hessian && !c.has_hessian) {
+            // The first-derivative half is valid; add the Hessians.  Invalid while that runs, as below.
+            const std::uint64_t v = c.version;
+            c.version = 0;
+            Reducing->composition_derivatives(x, xN_flag, true, c.d);
+            c.has_hessian = true;
+            c.version = v;
+        }
+        return c.d;
     }
+    c.version = 0;  // the slot is invalid until the refill below completes, so a throw part-way cannot leave a valid-looking key
+    Reducing->composition_derivatives(x, xN_flag, with_hessian, c.d);
+    c.has_hessian = with_hessian;
     c.flag = static_cast<int>(xN_flag);
     c.x = x;
     c.version = Reducing->get_version();  // last: the key is valid only once every field is
-    return c;
+    return c.d;
 }
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
