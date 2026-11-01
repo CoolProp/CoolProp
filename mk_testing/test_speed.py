@@ -6,8 +6,10 @@ import numpy as np
 
 if __name__ == "__main__":
     n = int(1e6)
-    plot = False
-    remove_chebs = True
+    plot = True
+    # remove_chebs = True
+
+    CP.set_config_bool(CP.INCOMP_PREFER_CHEBYSHEV_CALORIC, False)
 
     FLUIDS_STRING = ["MEG[0.35]", "Water"]
 
@@ -20,14 +22,14 @@ if __name__ == "__main__":
 
     for fld_string, fld, fldconc in zip(FLUIDS_STRING, FLUIDS, FLUIDCONS):
         fluid_json = json.load(open(f"dev/incompressible_liquids/json/{fld}.json"))  # noqa: SIM115
-        if remove_chebs:
-            fluid_json["name"] = fluid_json["name"] + "_mod"
-            fluid_json.pop("density_cheb", None)
-            fluid_json.pop("specific_heat_cheb", None)
-            CP.add_fluids_as_JSON("INCOMP", json.dumps([fluid_json]))
-            fluid = CP.AbstractState("INCOMP", f"{fld}_mod")
-        else:
-            fluid = CP.AbstractState("INCOMP", f"{fld}")
+        # if remove_chebs:
+        #     fluid_json["name"] = fluid_json["name"] + "_mod"
+        #     fluid_json.pop("density_cheb", None)
+        #     fluid_json.pop("specific_heat_cheb", None)
+        #     CP.add_fluids_as_JSON("INCOMP", json.dumps([fluid_json]))
+        #     fluid = CP.AbstractState("INCOMP", f"{fld}_mod")
+        # else:
+        fluid = CP.AbstractState("INCOMP", f"{fld}")
 
         if fldconc:
             fluid.set_mass_fractions(fldconc)
