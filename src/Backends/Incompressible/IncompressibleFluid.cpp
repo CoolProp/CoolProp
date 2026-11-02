@@ -1145,15 +1145,16 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
     }
 }
 
-TEST_CASE("Precomputed polynomial h/s/rho coefficients match the Polynomial2DFrac path", "[IncompressibleFluids]") {
+// The derived h/s/ddT matrices are compared with Polynomial2DFrac in CoolProp-Tests.cpp.
+TEST_CASE("Polynomial density and specific heat match the Polynomial2DFrac path", "[IncompressibleFluids]") {
     Eigen::MatrixXd cp_coeffs(3, 3);
     cp_coeffs << 3800.0, 20.0, -5.0, 4.0, 0.5, 0.1, 0.01, -0.002, 0.0005;
     Eigen::MatrixXd rho_coeffs(3, 3);
     rho_coeffs << 1000.0, -30.0, 4.0, -0.5, 0.02, -0.003, -0.002, 0.0001, 0.00002;
 
-    const double xbase = 0.25, T0 = 310.0;
+    const double xbase = 0.25;
     CoolProp::Polynomial2DFrac poly;
-    // Tbase = 0 takes the plain-power branch of the reference integral, 300 the centred one.
+    // Tbase = 0 takes the plain-power branch, 300 the centred one.
     for (const double Tbase : {0.0, 300.0}) {
         CoolProp::IncompressibleData density, specific_heat;
         density.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
@@ -1170,20 +1171,10 @@ TEST_CASE("Precomputed polynomial h/s/rho coefficients match the Polynomial2DFra
         fluid.validate();
 
         for (const double x : {0.0, 0.2, 0.4}) {
-            // Indefinite integrals agree only up to a constant, so compare their change from T0.
-            const double h0 = poly.integral(cp_coeffs, T0, x, 0, 0, 0, Tbase, xbase);
-            const double s0 = poly.integral(cp_coeffs, T0, x, 0, -1, 0, Tbase, xbase);
-            const double h0_new = fluid.dhdTatPxdT(T0, 1e5, x, false);
-            const double s0_new = fluid.dsdTatPxdT(T0, 1e5, x, false);
             for (const double T : {285.0, 340.0, 365.0}) {
                 CAPTURE(Tbase, T, x);
                 CHECK(fluid.rho(T, 1e5, x, false) == Catch::Approx(poly.evaluate(rho_coeffs, T, x, 0, 0, Tbase, xbase)).epsilon(1e-10));
                 CHECK(fluid.c(T, 1e5, x, false) == Catch::Approx(poly.evaluate(cp_coeffs, T, x, 0, 0, Tbase, xbase)).epsilon(1e-10));
-                CHECK(fluid.drhodTatPx(T, 1e5, x, false) == Catch::Approx(poly.derivative(rho_coeffs, T, x, 0, 0, 0, Tbase, xbase)).epsilon(1e-10));
-                CHECK(fluid.dhdTatPxdT(T, 1e5, x, false) - h0_new
-                      == Catch::Approx(poly.integral(cp_coeffs, T, x, 0, 0, 0, Tbase, xbase) - h0).epsilon(1e-10));
-                CHECK(fluid.dsdTatPxdT(T, 1e5, x, false) - s0_new
-                      == Catch::Approx(poly.integral(cp_coeffs, T, x, 0, -1, 0, Tbase, xbase) - s0).epsilon(1e-10));
             }
         }
     }
