@@ -2288,6 +2288,20 @@ static CoolPropDbl solve_trial_rho_warm(HelmholtzEOSMixtureBackend& phase, CoolP
     return rg;
 }
 
+// True if every trial mole number Y_i is finite.  The TPD updates take exp(d_i - ln phi_i(y));
+// at a spurious density root ln phi_i can be O(1e4) (e.g. the deep alpha^r well near delta ~ 1
+// of GERG-2008 methane/ethane at 162.6 K, 12.2 MPa), and a GDEM extrapolation (factor up to 19)
+// can push ln Y past the exp() range, so Y_i overflows and the normalized trial composition
+// becomes NaN.  Such a trial cannot be continued; the callers treat it as non-conclusive.
+static bool trial_moles_finite(const std::vector<CoolPropDbl>& Y) {
+    CoolPropDbl sumY = 0;
+    for (CoolPropDbl Yi : Y) {
+        if (!ValidNumber(Yi)) return false;
+        sumY += Yi;
+    }
+    return ValidNumber(sumY) && sumY > 0;
+}
+
 void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     const std::size_t N = z.size();
     CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
@@ -2490,7 +2504,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         const int max_ss_loops = trials[t].near_pure ? 1 : 4;
         const double cntol = 1e-7;
         bool ss_decided = false;
-        bool ss_stable = false;  // SS concluded this trial is stable (stationary point with tm >= 0, or trivial solution)
+        bool ss_stable = false;      // SS concluded this trial is stable (stationary point with tm >= 0, or trivial solution)
+        bool trial_aborted = false;  // Y went non-finite: this trial is non-conclusive
 
         for (int loop = 0; loop < max_ss_loops && !ss_decided; ++loop) {
             std::array<double, 2> esq_pair = {0, 0};
@@ -2499,6 +2514,11 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             // A near-pure trial takes a single SS step: its detections all come on the first step.
             const int ss_steps = trials[t].near_pure ? 1 : 2;
             for (int kk = 0; kk < ss_steps && !ss_decided; ++kk) {
+                // Y comes from the Wilson guess, the previous SS step, or a GDEM step
+                if (!trial_moles_finite(Y)) {
+                    trial_aborted = ss_decided = true;
+                    break;
+                }
                 // Normalize Y to get trial composition
                 CoolPropDbl sumY = 0;
                 for (std::size_t i = 0; i < N; ++i)
@@ -2620,6 +2640,11 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         // If SS did not conclusively decide stability, use quasi-Newton
         // minimization in alpha variables. See [Michelsen1982a] Eq. 25-27.
         //
+        // A trial whose moles went non-finite cannot be continued: non-conclusive (see trial_moles_finite).
+        if (trial_aborted) {
+            any_uncertain = true;
+            continue;
+        }
         // When SS did decide, the trial is stable and the minimizer is skipped.  Either SS reached
         // a stationary point with tm >= 0, which the minimizer would only re-confirm, or the
         // proximity test found the trial converging to the trivial solution ([M&M2007] Ch. 12);
@@ -2703,6 +2728,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
         CoolPropDbl sumY = 0;
         for (std::size_t i = 0; i < N; ++i)
             sumY += Y[i];
+        if (!trial_moles_finite(Y)) return false;  // non-conclusive, see trial_moles_finite
         std::vector<CoolPropDbl> y_norm(N);
         for (std::size_t i = 0; i < N; ++i)
             y_norm[i] = Y[i] / sumY;
@@ -2817,6 +2843,7 @@ bool StabilityRoutines::StabilityEvaluationClass::minimize_tpd(std::vector<CoolP
             sumY = 0;
             for (std::size_t i = 0; i < N; ++i)
                 sumY += Y[i];
+            if (!trial_moles_finite(Y)) return false;  // non-conclusive, see trial_moles_finite
             for (std::size_t i = 0; i < N; ++i)
                 y_norm[i] = Y[i] / sumY;
 
@@ -3232,6 +3259,17 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
             double esq = 0;
             for (std::size_t i = 0; i < N; ++i) {
                 double lnK_new = std::log(HEOS.SatL->fugacity_coefficient(i)) - std::log(HEOS.SatV->fugacity_coefficient(i));
+                // A phase sits on a spurious root where phi_i overflowed or underflowed in BOTH phases
+                // (see solve_trial_rho_warm): inf - inf.  An infinite lnK alone is survivable (Rachford-Rice
+                // clamps it); a NaN one would make the K-factors, and every composition after them, NaN.
+                if (std::isnan(lnK_new)) {
+                    // Report it as non-convergence: PT_flash_mixtures then falls back to the single-phase
+                    // solve (as it did when the NaN used to run on into the convergence gate) instead of
+                    // failing the flash -- this is almost always a stability false positive.
+                    IO.nonconvergence = true;
+                    throw SolutionError(format("PT flash: non-finite K-factor during successive substitution at T = %g K, p = %g Pa",
+                                               static_cast<double>(IO.T), static_cast<double>(IO.p)));
+                }
                 double diff = lnK_new - lnK[i];
                 err[i] = diff;
                 esq += IO.z[i] * diff * diff;
@@ -3470,11 +3508,19 @@ void SaturationSolvers::PTflash_twophase::solve_michelsen() {
                     V_new += v_new[i];
                     L_new += l_new[i];
                 }
+                // A phase has vanished (Rachford-Rice pinned beta at 0 or 1, so the reduced gradient
+                // beta*(1-beta)*(...) is identically zero): the empty phase's trial composition is
+                // 0/0.  No step can be taken; stop and let the convergence gate below classify the
+                // collapsed split, rather than burn the remaining inner iterations on NaN density solves.
+                if (!(V_new > 0) || !(L_new > 0)) break;
                 std::vector<CoolPropDbl> x_trial(N), y_trial(N);
+                bool trial_finite = true;
                 for (std::size_t i = 0; i < N; ++i) {
                     y_trial[i] = v_new[i] / V_new;
                     x_trial[i] = l_new[i] / L_new;
+                    trial_finite = trial_finite && ValidNumber(x_trial[i]) && ValidNumber(y_trial[i]);
                 }
+                if (!trial_finite) break;
 
                 bool eval_ok = false;
                 try {

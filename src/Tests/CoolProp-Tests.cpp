@@ -15,7 +15,9 @@
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
+#include "TestUtils.h"
 #include <atomic>
+#include <cstdlib>
 #include <chrono>
 #include <filesystem>
 #include <map>
@@ -7554,6 +7556,94 @@ TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)",
     }
 }
 
+namespace {
+/// Unset an environment variable for one scope and restore it afterwards.
+/// (Setting it to an empty string is not enough: the REFPROP loader treats a
+/// present but empty COOLPROP_REFPROP_ROOT as set.)
+class UnsetEnvGuard
+{
+    std::string name_;
+    bool had_old_;
+    std::string old_;
+
+   public:
+    explicit UnsetEnvGuard(const char* name) : name_(name), had_old_(std::getenv(name) != nullptr) {
+        if (had_old_) old_ = std::getenv(name);
+#    if defined(_WIN32)
+        (void)_putenv_s(name, "");  // an empty value removes it on Windows
+#    else
+        (void)unsetenv(name);
+#    endif
+    }
+    ~UnsetEnvGuard() {
+        if (!had_old_) return;
+#    if defined(_WIN32)
+        (void)_putenv_s(name_.c_str(), old_.c_str());
+#    else
+        (void)setenv(name_.c_str(), old_.c_str(), 1);
+#    endif
+    }
+    UnsetEnvGuard(const UnsetEnvGuard&) = delete;
+    UnsetEnvGuard& operator=(const UnsetEnvGuard&) = delete;
+    UnsetEnvGuard(UnsetEnvGuard&&) = delete;
+    UnsetEnvGuard& operator=(UnsetEnvGuard&&) = delete;
+};
+
+/// Point REFPROP at a directory that has a fluids folder but no REFPROP
+/// library, with GERG enabled, for one scope; restore everything afterwards,
+/// also when an assertion throws. Restoring the path also clears the load
+/// failure cached meanwhile, so later [REFPROP] tests can load REFPROP again.
+class UnloadableREFPROPSetup
+{
+    std::filesystem::path dir_;
+    std::string saved_path_, saved_library_;
+    bool saved_gerg_;
+
+   public:
+    UnloadableREFPROPSetup()
+      : dir_(std::filesystem::temp_directory_path() / ("cp_refprop_gerg_test_" + std::to_string(CoolProp::tests::test_pid()))),
+        saved_path_(CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH)),
+        saved_library_(CoolProp::get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH)),
+        saved_gerg_(CoolProp::get_config_bool(REFPROP_USE_GERG)) {
+        std::filesystem::create_directories(dir_ / "fluids");
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH, "");
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, dir_.string());
+        CoolProp::set_config_bool(REFPROP_USE_GERG, true);
+    }
+    ~UnloadableREFPROPSetup() {
+        CoolProp::set_config_bool(REFPROP_USE_GERG, saved_gerg_);
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH, saved_library_);
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, saved_path_);
+        std::error_code ec;
+        std::filesystem::remove_all(dir_, ec);
+    }
+    UnloadableREFPROPSetup(const UnloadableREFPROPSetup&) = delete;
+    UnloadableREFPROPSetup& operator=(const UnloadableREFPROPSetup&) = delete;
+    UnloadableREFPROPSetup(UnloadableREFPROPSetup&&) = delete;
+    UnloadableREFPROPSetup& operator=(UnloadableREFPROPSetup&&) = delete;
+};
+}  // namespace
+
+TEST_CASE("REFPROP with GERG and an unloadable library throws instead of crashing", "[REFPROP][configuration]") {
+    // With REFPROP_USE_GERG set, set_REFPROP_fluids used to call GERG04dll
+    // before checking that REFPROP could be loaded at all, i.e. through an
+    // unset function pointer, and the process crashed. It must throw
+    // NotImplementedError instead. COOLPROP_REFPROP_ROOT (set in CI, where
+    // REFPROP is built) is tried before ALTERNATIVE_REFPROP_PATH, so it is
+    // unset for this test; ALTERNATIVE_REFPROP_LIBRARY_PATH is cleared for the
+    // same reason. The setting of the path also unloads any REFPROP an
+    // earlier test loaded. The crash is only certain to show up in a process
+    // that never loaded REFPROP; after an unload the old order calls a stale
+    // pointer instead, which crashes only if the library was unmapped.
+    const UnsetEnvGuard no_root("COOLPROP_REFPROP_ROOT");
+    const UnloadableREFPROPSetup setup;
+    // The message is asserted, not only the type: the GERG04dll null check
+    // also throws NotImplementedError, so a type-only check would stay green
+    // if the support check were moved back after the GERG call.
+    CHECK_THROWS_MATCHES(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "METHANE")),
+                         CoolProp::NotImplementedError,
+                         Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring("You cannot use the REFPROPMixtureBackend")));
+}
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
     // reaches the flash routines by other doors, and HQ_flash's own gate,
