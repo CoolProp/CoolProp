@@ -8884,6 +8884,34 @@ struct ChebyshevCaloricSetting
     ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
 };
 
+TEST_CASE("INCOMP PS flash converges on the classic fits for large entropy constants", "[INCOMP]") {
+    // s carries a large ln(T) constant on the classic fits; an absolute 2e-13 K Brent tolerance cannot be met there.
+    const ChebyshevCaloricSetting classic(false);
+    const double p = 101325.0;
+    // Tlow keeps MEA at x = 0 above its freezing point (273.1 K); IcePG has no freezing fit.
+    struct Case
+    {
+        std::string name;
+        double x, Tlow;
+    };
+    for (const auto& [name, x, Tlow] : std::vector<Case>{{"MEA", 0.0, 274.0}, {"IcePG", 0.2, 230.5}}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
+        AS->set_mass_fractions(std::vector<double>{x});
+        const double Tmin = Tlow, Tmax = AS->Tmax() - 0.5;
+        for (int i = 0; i <= 400; ++i) {
+            const double T = Tmin + (Tmax - Tmin) * i / 400.0;
+            CAPTURE(name, x, T);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double s = AS->smass();
+            const double h = AS->hmass();
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-6);
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-6);
+        }
+    }
+}
+
 TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime", "[INCOMP]") {
     const double p = 101325.0;
     SECTION("Precomputed polynomial matrices match the per-call Polynomial2DFrac evaluation") {

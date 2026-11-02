@@ -455,7 +455,8 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
     PSmass_residual res = PSmass_residual(this, p, _fractions[0], smass - s_ref() + smass_ref());
 
     double macheps = DBL_EPSILON;
-    double tol = DBL_EPSILON * 1e3;
+    // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve and Brent bisects.
+    double tol = 1e-12 * fluid->getTmax();
     int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
