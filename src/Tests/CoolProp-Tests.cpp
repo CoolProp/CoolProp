@@ -8884,8 +8884,8 @@ struct ChebyshevCaloricSetting
     ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
 };
 
-TEST_CASE("INCOMP PS flash converges on the classic fits for large entropy constants", "[INCOMP]") {
-    // s carries a large ln(T) constant on the classic fits; an absolute 2e-13 K Brent tolerance cannot be met there.
+TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {
+    // Smoke test only: grid targets s(T) converge within 15 iterations even with the old absolute Brent tolerance, so it does not guard the 1e-12*Tmax fix.
     const ChebyshevCaloricSetting classic(false);
     const double p = 101325.0;
     // Tlow keeps MEA at x = 0 above its freezing point (273.1 K); IcePG has no freezing fit.
