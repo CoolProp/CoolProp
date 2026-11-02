@@ -54,9 +54,9 @@ double evaluateAwayFromPole(double x_den, Func fnc) {
 /// 0 * dx, so a single-column (pure fluid) matrix never touches xbase.
 double polyEvalMatrix(const Eigen::MatrixXd& M, double T, double x, double Tbase, double xbase) {
     if (M.rows() < 1 || M.cols() < 1) {
-        // Same reasoning as chebEvalMatrix below: an empty derived matrix
-        // must be loud, not a silent 0.0.
-        throw CoolProp::ValueError("Polynomial coefficient matrix is empty; the fluid was not loaded through validate().");
+        // An empty fit must be loud, not a silent 0.0.
+        throw CoolProp::ValueError(
+          "Polynomial coefficient matrix is empty: the fit has no coefficients, or the fluid was not loaded through validate().");
     }
     const double dT = T - Tbase;
     const double dx = x - xbase;
