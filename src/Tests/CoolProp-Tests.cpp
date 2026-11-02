@@ -7646,15 +7646,16 @@ TEST_CASE("REFPROP with GERG and an unloadable library throws instead of crashin
 }
 TEST_CASE("REFPROP reference state reloads REFPROP from the configured path after a path change", "[REFPROP][configuration]") {
     // set_reference_stateS("REFPROP::...") calls REFPROP_SETREF, which used to
-    // load REFPROP from the default location and ignore COOLPROP_REFPROP_ROOT
-    // and the ALTERNATIVE_REFPROP_* settings. Once a REFPROP path change had
-    // unloaded the library, a REFPROP that exists only at the configured path
-    // (as in CI, where it is found through COOLPROP_REFPROP_ROOT) could then not
-    // be loaded for the reference state.
+    // load REFPROP through the system library search path and ignore
+    // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings. Once REFPROP
+    // had been unloaded, a REFPROP that exists only at the configured path (as
+    // in CI, where it is found through COOLPROP_REFPROP_ROOT) could then not be
+    // loaded for the reference state.
     CoolProp::Skip_if_No_REFPROP();
     {
-        // Make sure REFPROP is loaded, then unload it through a path "change"
-        // (set_config_string fires the hook even for an unchanged value).
+        // Use REFPROP once. Destroying the backend unloads it already; the path
+        // "change" below (set_config_string fires the hook even for an unchanged
+        // value) makes sure it is unloaded either way.
         std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
         AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0);
     }

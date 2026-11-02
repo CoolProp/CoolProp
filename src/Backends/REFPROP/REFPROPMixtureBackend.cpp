@@ -3108,9 +3108,9 @@ void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, d
     const REFPROPLock refprop_lock(REFPROP_mutex());
     // Load through REFPROP_supported(), like every REFPROP backend does, so that
     // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings are honoured.
-    // Loading from the default location here instead used to fail once a REFPROP
-    // path change had unloaded a library that exists only at the configured
-    // path. REFPROP_supported() prints the reason when the load fails.
+    // Loading through the system library search path here instead used to fail
+    // once a REFPROP path change had unloaded a library that exists only at the
+    // configured path. REFPROP_supported() prints the reason when the load fails.
     if (!REFPROPMixtureBackend::REFPROP_supported()) {
         throw ValueError("Not able to load REFPROP; check COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings.");
     }
