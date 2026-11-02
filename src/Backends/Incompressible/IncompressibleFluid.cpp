@@ -1250,4 +1250,82 @@ TEST_CASE("Transport, saturation and freezing fits match a direct evaluation of 
     }
 }
 
+TEST_CASE("Row-vector and single-column fits are functions of x and T only", "[IncompressibleFluids]") {
+    using Data = CoolProp::IncompressibleData;
+    const double Tbase = 300.0, xbase = 0.25;
+    const auto make = [](Data::IncompressibleTypeEnum type, const Eigen::MatrixXd& coeffs) {
+        Data data;
+        data.type = type;
+        data.coeffs = coeffs;
+        return data;
+    };
+    const auto fluid_with_Tfreeze = [&](const Data& data) {
+        CoolProp::IncompressibleFluid fluid;
+        fluid.setTbase(Tbase);
+        fluid.setxbase(xbase);
+        fluid.setTfreeze(data);
+        return fluid;
+    };
+
+    // Every shipped T_freeze fit is a 1 x n row, i.e. a function of x alone.
+    Eigen::MatrixXd row_poly(1, 3), row_exp(1, 3), row_offset(1, 4);
+    row_poly << 270.0, -40.0, 12.0;
+    row_exp << 2.0, 1.0, 0.5;
+    row_offset << 0.1, 255.0, -30.0, 8.0;
+
+    for (const double p : {1.0, 5.0e5}) {
+        for (const double x : {0.0, 0.2, 0.4}) {
+            CAPTURE(p, x);
+            const double dx = x - xbase;
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_POLYNOMIAL, row_poly)).Tfreeze(p, x)
+                  == Catch::Approx(270.0 - 40.0 * dx + 12.0 * dx * dx).epsilon(1e-12));
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_EXPPOLYNOMIAL, row_poly)).Tfreeze(p, x)
+                  == Catch::Approx(std::exp(270.0 - 40.0 * dx + 12.0 * dx * dx)).epsilon(1e-12));
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_EXPONENTIAL, row_exp)).Tfreeze(p, x)
+                  == Catch::Approx(std::exp(2.0 / (x + 1.0) - 0.5)).epsilon(1e-12));
+            const double dz = x - 0.1;
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_POLYOFFSET, row_offset)).Tfreeze(p, x)
+                  == Catch::Approx(255.0 - 30.0 * dz + 8.0 * dz * dz).epsilon(1e-12));
+        }
+    }
+
+    // A pure single-column fit with the default (unset) xbase must not touch x - xbase.
+    Eigen::MatrixXd column(3, 1);
+    column << 1000.0, -0.5, 0.002;
+    CoolProp::IncompressibleFluid pure;
+    pure.setTbase(Tbase);
+    pure.setDensity(make(Data::INCOMPRESSIBLE_POLYNOMIAL, column));
+    for (const double T : {285.0, 340.0}) {
+        const double dT = T - Tbase;
+        CHECK(pure.rho(T, 1e5, 0.3, false) == Catch::Approx(1000.0 - 0.5 * dT + 0.002 * dT * dT).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Malformed incompressible fits keep their error messages", "[IncompressibleFluids]") {
+    using Catch::Matchers::ContainsSubstring;
+    using Data = CoolProp::IncompressibleData;
+    const auto fluid_with_viscosity = [](Data::IncompressibleTypeEnum type, const Eigen::MatrixXd& coeffs) {
+        Data data;
+        data.type = type;
+        data.coeffs = coeffs;
+        CoolProp::IncompressibleFluid fluid;
+        fluid.setTbase(300.0);
+        fluid.setxbase(0.25);
+        fluid.setViscosity(data);
+        return fluid;
+    };
+
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_EXPONENTIAL, Eigen::MatrixXd::Ones(2, 2)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("Your matrix (2,2) cannot be converted into a vector (x,1)."));
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_EXPONENTIAL, Eigen::MatrixXd::Ones(4, 1)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("You have to provide a 3,1 matrix of coefficients, not  (4,1)."));
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYOFFSET, Eigen::MatrixXd::Ones(1, 1)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("You have to provide a vector (1D matrix) of coefficients, not  (1,1)."));
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYOFFSET, Eigen::MatrixXd::Ones(2, 2)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("You have to provide a vector (1D matrix) of coefficients, not  (2,2)."));
+    // validate() never looks at viscosity, so the message must not blame it alone.
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYNOMIAL, Eigen::MatrixXd(0, 0)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("the fit has no coefficients"));
+}
+
 #endif /* ENABLE_CATCH */
