@@ -3106,10 +3106,13 @@ bool force_unload_REFPROP() {
 
 void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, double& T0, double& p0, int& ierr, char* herr, int l1, int l2) {
     const REFPROPLock refprop_lock(REFPROP_mutex());
-    std::string err;
-    bool loaded_REFPROP = load_REFPROP_or_close(err, "", "");
-    if (!loaded_REFPROP) {
-        throw ValueError(format("Not able to load REFPROP; err is: %s", err.c_str()));
+    // Load through REFPROP_supported(), like every REFPROP backend does, so that
+    // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings are honoured.
+    // Loading from the default location here instead used to fail once a REFPROP
+    // path change had unloaded a library that exists only at the configured
+    // path. REFPROP_supported() prints the reason when the load fails.
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
+        throw ValueError("Not able to load REFPROP; check COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings.");
     }
     SETREFdll(hrf, &ixflag, x0, &h0, &s0, &T0, &p0, &ierr, herr, l1, l2);
 }
