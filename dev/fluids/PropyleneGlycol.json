@@ -52,7 +52,7 @@
       "T_r": 674.0,
       "Tmax": 674.0,
       "Tmin": 273.0,
-      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))",
+      "description": "rho'' = rhoc*exp(sum(n_i*theta^t_i))",
       "max_abserror_percentage": 0.07,
       "n": [
         -2.0507,
@@ -72,7 +72,7 @@
         12.0
       ],
       "type": "rhoV",
-      "using_tau_r": true
+      "using_tau_r": false
     }
   },
   "EOS": [
