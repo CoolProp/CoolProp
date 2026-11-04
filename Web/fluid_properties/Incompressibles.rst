@@ -435,6 +435,11 @@ are secondary heat transfer fluids, but there are also aqueous solutions of
 ammonia :cite:`Melinder2010`, :download:`MAM<../_static/fluid_properties/Incompressibles_reports/MAM_fitreport.pdf>`,
 and lithium bromide :cite:`Patek2006`, :download:`LiBr<../_static/fluid_properties/Incompressibles_reports/LiBr_fitreport.pdf>`,
 which can be used to model absorption chillers.
+The LiBr viscosity is backed by measurements up to 383 K for mass fractions up to
+65 % :cite:`Flessner2023` and from 383 to 473 K for 45 to 65 % :cite:`Lee1990`,
+the thermal conductivity from 293 to 463 K for 30 to 65 % :cite:`DiGuilio1990`.
+Outside these ranges, e.g. in dilute solutions above 383 K or above 65 %, both
+are extrapolations of the fit.
 
 
 .. note::

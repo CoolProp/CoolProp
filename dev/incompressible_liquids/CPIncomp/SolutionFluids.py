@@ -12,7 +12,7 @@ class LiBrData(SolutionData):
         SolutionData.__init__(self)
         self.name = "LiBr"
         self.description = "Lithium-bromide solution - aq"
-        self.reference = "Patek2006"
+        self.reference = "Patek2006,Flessner2023,Lee1990,DiGuilio1990,IAPWS-SR6-2011"
 
         self.temperature.data = np.array([2.73000e+02, 2.84947e+02, 2.96895e+02, 3.08842e+02, 3.20789e+02, 3.32737e+02, 3.44684e+02, 3.56632e+02, 3.68579e+02, 3.80526e+02, 3.92474e+02, 4.04421e+02, 4.16368e+02, 4.28316e+02, 4.40263e+02, 4.52211e+02, 4.64158e+02, 4.76105e+02, 4.88053e+02, 5.00000e+02])  # Kelvin
         self.concentration.data = np.array([0.00000e+00, 3.94737e-02, 7.89474e-02, 1.18421e-01, 1.57895e-01, 1.97368e-01, 2.36842e-01, 2.76316e-01, 3.15789e-01, 3.55263e-01, 3.94737e-01, 4.34211e-01, 4.73684e-01, 5.13158e-01, 5.52632e-01, 5.92105e-01, 6.31579e-01, 6.71053e-01, 7.10526e-01, 7.50000e-01])  # mass fraction
@@ -143,13 +143,21 @@ class LiBrData(SolutionData):
 
 
 def _water_viscosity_sr608(T):
-    """Liquid water at 0.1 MPa, IAPWS SR6-08(2011), Pa-s. Valid 253-383 K."""
+    """Liquid water at 0.1 MPa, IAPWS SR6-08(2011), Pa-s.
+
+    The release covers 253-383 K. LiBrData uses it up to 500 K; see the
+    viscosity comment there for the error beyond 383 K.
+    """
     t = T / 300.0
     return 1e-6 * (280.68 * t**-1.9 + 511.45 * t**-7.7 + 61.131 * t**-19.6 + 0.45903 * t**-40.0)
 
 
 def _water_conductivity_sr608(T):
-    """Liquid water at 0.1 MPa, IAPWS SR6-08(2011), W/m-K. Valid 273-383 K."""
+    """Liquid water at 0.1 MPa, IAPWS SR6-08(2011), W/m-K.
+
+    The release covers 273-383 K. LiBrData uses it up to 463 K; see the
+    conductivity comment there for the error beyond 383 K.
+    """
     t = T / 300.0
     return 1.6630 * t**-1.15 - 1.7781 * t**-3.4 + 1.1567 * t**-6.0 - 0.432115 * t**-7.6
 

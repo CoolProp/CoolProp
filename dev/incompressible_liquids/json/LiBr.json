@@ -164,7 +164,7 @@
     "type": "notdefined"
   },
   "name": "LiBr",
-  "reference": "Patek2006",
+  "reference": "Patek2006,Flessner2023,Lee1990,DiGuilio1990,IAPWS-SR6-2011",
   "saturation_pressure": {
     "NRMS": 0.002129276,
     "coeffs": [
