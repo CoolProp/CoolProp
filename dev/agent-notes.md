@@ -218,6 +218,12 @@ recorded history of finished or abandoned work were dropped (they remain in
 
 ## Fluid data, superancillaries and transport
 
+- **Validate E/Z SMILES against the stored InChI.** Slash directions depend
+  on traversal and branch order; matching slash characters alone do not
+  identify E versus Z. An `@` on an alkene carbon does not encode double-bond
+  stereochemistry. For metadata corrections, parse the SMILES with a chemistry
+  toolkit and compare its InChI and InChIKey with `INFO.INCHI_STRING` and
+  `INFO.INCHI_KEY`.
 - **Superancillary provenance.** fastchebpure fits superancillaries from the
   CoolProp EOS via its submodule pin, and the docs deviation plots download a
   pinned fastchebpure release.  Changing a fluid's EOS in `dev/fluids` trips the
