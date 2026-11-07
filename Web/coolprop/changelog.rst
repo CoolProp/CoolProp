@@ -274,6 +274,8 @@ Performance:
 
 Bug fixes:
 
+* BICUBIC/TTSE: no out-of-bounds table reads at the grid edges, after a failed update, with ``Ny > Nx``, or before fractions are set; transport-property derivatives are refused.
+
 * Cubic EOS (SRK/PR): exact Omega constants (`#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__); P- and T-input flashes, Q,T/P,Q from the superancillary, robust density roots near the critical point and above Tc, T,P phase labels and fresh-state caloric properties (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
 
 * HEOS mixture ``T_critical()``, ``p_critical()`` and ``rhomolar_critical()`` skip unstable critical points instead of throwing when the tracer also found one, e.g. R454B (`#3528 <https://github.com/CoolProp/CoolProp/issues/3528>`__).
