@@ -10245,10 +10245,16 @@ TEST_CASE("Tabular backends refuse outputs before a successful update", "[BICUBI
     }
     SECTION("a pure fluid with tables but no update has no valid saturation state") {
         // Small grid: the tables are built on first use
-        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend + "?{\"grid\":{\"Nx\":5,\"Ny\":5}}", "Water"));
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend + R"(?{"grid":{"Nx":5,"Ny":5}})", "Water"));
         CHECK_THROWS_WITH(AS->T(), Catch::Matchers::ContainsSubstring("no valid state"));
         CHECK_THROWS_AS(AS->rhomolar(), CoolProp::ValueError);
         CHECK_THROWS_AS(AS->speed_sound(), CoolProp::ValueError);
+        // A saturation update that fails after taking Q from its inputs (p above the
+        // table's saturation range) must not leave that Q behind with unset indices
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 3e7, 0.5));
+        CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, 700));
+        CHECK_THROWS_WITH(AS->hmolar(), Catch::Matchers::ContainsSubstring("no valid state"));
         // A successful saturation update still gives values
         AS->update(CoolProp::PQ_INPUTS, 101325, 0.5);
         CHECK(AS->T() == Catch::Approx(373.12).epsilon(1e-2));

@@ -2,6 +2,7 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
 #    include "TabularBackends.h"
+#    include <exception>
 #    include "CoolProp/CoolProp.h"
 #    include "CoolProp/SchemaValidation.h"
 #    include "CoolProp/detail/json.h"
@@ -1128,6 +1129,24 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
 
     // To start, set quality to value that is impossible
     _Q = -1000;
+    // Several branches assign _Q from the inputs before a step that can still throw
+    // (e.g. PQ/QT outside the saturation table); the saturation accessors key on _Q,
+    // so put it back to the impossible value whenever update() exits by an exception.
+    struct InvalidateQOnThrow
+    {
+        double& Q;
+        const int uncaught = std::uncaught_exceptions();
+        explicit InvalidateQOnThrow(double& q) : Q(q) {}
+        InvalidateQOnThrow(const InvalidateQOnThrow&) = delete;
+        InvalidateQOnThrow& operator=(const InvalidateQOnThrow&) = delete;
+        InvalidateQOnThrow(InvalidateQOnThrow&&) = delete;
+        InvalidateQOnThrow& operator=(InvalidateQOnThrow&&) = delete;
+        ~InvalidateQOnThrow() {
+            if (std::uncaught_exceptions() > uncaught) {
+                Q = -1000;
+            }
+        }
+    } invalidate_Q_on_throw{_Q};
 
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
@@ -1302,7 +1321,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     // It's liquid, move the cell to the left
                                     cached_single_phase_i--;
                                 } else {
-                                    if (cached_single_phase_i > single_phase_logpT.Nx - 2) {
+                                    // i + 1 must still be a cell (coeffs_pT has Nx - 1 rows)
+                                    if (cached_single_phase_i + 1 > single_phase_logpT.Nx - 2) {
                                         throw ValueError(format("P,T are near saturation, but cannot move the cell to the right"));
                                     }
                                     // It's vapor, move to the right
@@ -1560,7 +1580,9 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
                     pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
                 } else {
-                    (void)pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
+                    if (!pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV)) {
+                        throw ValueError(format("T [%g K] is not within the saturation table", _T));
+                    }
                 }
                 _p = _Q * pV + (1 - _Q) * pL;
                 cached_saturation_iL = iL;
