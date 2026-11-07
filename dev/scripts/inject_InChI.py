@@ -30,6 +30,15 @@ for fname in glob.glob('../fluids/*.json'):
     fluid = jj['INFO']['NAME']
 
     def doset(result):
+        # A CAS search can return an unrelated compound (this is how several
+        # fluids once got wrong InChIKeys and ChemSpider IDs; see COO-171).
+        # The stored InChIKey has been checked against PubChem and RDKit, so
+        # it is the reference: never overwrite a record whose key disagrees.
+        stored_key = jj['INFO'].get('INCHI_KEY')
+        if stored_key and result.inchikey != stored_key:
+            print('%s: ChemSpider hit %s has InChIKey %s, stored is %s; not updating'
+                  % (fluid, result.csid, result.inchikey, stored_key))
+            return
         jj['INFO']['INCHI_STRING'] = result.inchi
         jj['INFO']['INCHI_KEY'] = result.inchikey
         jj['INFO']['CHEMSPIDER_ID'] = result.csid
