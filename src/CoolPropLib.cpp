@@ -288,6 +288,10 @@ EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1,
         if (size_Prop1 != size_Prop2)
             throw CoolProp::ValueError(
               format("Length of input parameter 1 [%d] is not equal to length of input parameter 2 [%d]", size_Prop1, size_Prop2));
+        if (size_Prop1 < 0 || (size_Prop1 > 0 && (Prop1 == nullptr || Prop2 == nullptr)))
+            throw CoolProp::ValueError(format("Invalid input arrays (length %ld)", size_Prop1));
+        if (length_fractions < 0 || (length_fractions > 0 && fractions == nullptr))
+            throw CoolProp::ValueError(format("Invalid fractions array (length %ld)", length_fractions));
         // make vectors out of double pointer
         std::vector<double> _prop1(Prop1, Prop1 + size_Prop1);
         std::vector<double> _prop2(Prop2, Prop2 + size_Prop2);
@@ -403,7 +407,8 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, 
     // bytes of it, so a buffer without a terminator within its declared length is never read past its end.
     std::string info;
     try {
-        if (Output != nullptr && n > 0) info.assign(Output, strnlen(Output, static_cast<std::size_t>(n)));
+        if (Output == nullptr) throw CoolProp::ValueError("Output buffer is null");
+        if (n > 0) info.assign(Output, strnlen(Output, static_cast<std::size_t>(n)));
         int key = CoolProp::get_parameter_index(param);
         std::string s = CoolProp::get_parameter_information(key, info);
         str2buf(s, Output, n);
@@ -949,7 +954,7 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handl
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
 
-        for (int i = 0; i < length; i++) {
+        for (long i = 0; i < length; i++) {
             try {
                 AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1 + i), *(value2 + i));
                 *(T + i) = AS->T();
@@ -977,7 +982,7 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, co
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
 
-        for (int i = 0; i < length; i++) {
+        for (long i = 0; i < length; i++) {
             try {
                 AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1 + i), *(value2 + i));
                 *(out + i) = AS->keyed_output(static_cast<CoolProp::parameters>(output));
@@ -1001,7 +1006,7 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, co
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
 
-        for (int i = 0; i < length; i++) {
+        for (long i = 0; i < length; i++) {
             try {
                 AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1 + i), *(value2 + i));
                 *(out1 + i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[0]));
