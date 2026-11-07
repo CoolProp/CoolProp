@@ -8835,6 +8835,15 @@ TEST_CASE("PropsSImulti with empty input vectors returns empty result instead of
     REQUIRE(IO2[0].size() == 1);
     CHECK(IO2[0][0] > 0);
 }
+TEST_CASE("PropsSImulti and Props1SImulti with an empty output list return an empty result", "[PropsSImulti]") {
+    // _PropsSI_outputs padded the column count to max(1, outputs.size()) and
+    // then read outputs[0] of the empty vector -> segfault.
+    std::vector<std::string> no_outputs;
+    std::vector<std::string> fluids{"Water"};
+    std::vector<double> fractions{1.0};
+    CHECK(CoolProp::PropsSImulti(no_outputs, "T", {300.0}, "P", {101325.0}, "HEOS", fluids, fractions).empty());
+    CHECK(CoolProp::Props1SImulti(no_outputs, "HEOS", fluids, fractions).empty());
+}
 TEST_CASE("first_saturation_deriv mixture: dT/dP via Gernert vs finite-difference along bubble curve", "[first_saturation_deriv][2091]") {
     // Issue #2091: the mixture path used the pure-fluid Clapeyron
     // expression (T*Δv / Δh) and silently returned wrong values.

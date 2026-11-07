@@ -165,8 +165,8 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         for (std::size_t i = 0; i < pairs.size(); ++i) {
             const std::string& fluid = pairs[i];
 
-            // Must end with ']'
-            if (fluid[fluid.size() - 1] != ']') throw ValueError(format("Fluid entry [%s] must end with ']' character", pairs[i].c_str()));
+            // Must be non-empty (strsplit keeps empty pieces, e.g. "Water[0.5]&") and end with ']'
+            if (fluid.empty() || fluid.back() != ']') throw ValueError(format("Fluid entry [%s] must end with ']' character", pairs[i].c_str()));
 
             // Split at '[', but first remove the ']' from the end by taking a substring
             std::vector<std::string> name_fraction = strsplit(fluid.substr(0, fluid.size() - 1), '[');
@@ -359,6 +359,12 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
         IO.clear();
         return;
     }
+    // Every column of IO is filled from output_parameters[j]; an empty
+    // output list would otherwise index into an empty vector below.
+    if (output_parameters.empty()) {
+        IO.clear();
+        throw ValueError("At least one output must be requested");
+    }
     const bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
     // If all trivial outputs, never do a state update
     bool all_trivial_outputs = true;
@@ -403,7 +409,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
 
     // Resize the output matrix
     const std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
-    const std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
+    const std::size_t N2 = output_parameters.size();
     IO.resize(N1, std::vector<double>(N2, _HUGE));
 
     // Throw an error if at the end, there were no successes
@@ -844,6 +850,15 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
+    };
+    SECTION("empty component in fluid string with fractions") {
+        // strsplit keeps empty pieces; each of these must be a ValueError, not an out-of-range index
+        std::vector<double> x;
+        for (const char* bad : {"Water[0.5]&", "&Water[1]", "Water[0.5]&&Ethanol[0.5]"}) {
+            INFO(bad);
+            CHECK_THROWS_WITH(CoolProp::extract_fractions(bad, x), Catch::Matchers::ContainsSubstring("must end with ']'"));
+            CHECK(!ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, bad)));
+        }
     };
     SECTION("bad mole fraction length") {
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
