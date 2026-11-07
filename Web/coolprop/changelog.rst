@@ -281,7 +281,7 @@ Bug fixes:
 
 * ``AbstractState::factory`` refuses empty or >256-component fluid lists and repeated ``::`` prefixes; factory-string options are capped at 64 KiB and tabular/SVDSBTL grid sizes set there at 10\ :sup:`6` points.
 
-* C API: buffer and array lengths are checked before every copy (negative lengths, ``Props1SImulti`` output count, ``get_parameter_information_string`` input), no C++ exception escapes ``Props1``/``Props1SI``/``PropsSI``/``HAPropsSI``, and new ``AbstractState_fluid_names_checkedMemory``/``AbstractState_backend_name_checkedMemory`` take the output-buffer length.
+* C API: buffer and array lengths are checked before every copy (negative lengths, ``Props1SImulti`` output count, ``get_parameter_information_string`` input), ``Props1``/``Props1SI``/``PropsSI``/``HAPropsSI`` catch exceptions instead of terminating the host, and new ``AbstractState_fluid_names_checkedMemory``/``AbstractState_backend_name_checkedMemory`` take the output-buffer length.
 
 * Cubic EOS (SRK/PR): exact Omega constants (`#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__); P- and T-input flashes, Q,T/P,Q from the superancillary, robust density roots near the critical point and above Tc, T,P phase labels and fresh-state caloric properties (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
 

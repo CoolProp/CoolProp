@@ -22,7 +22,7 @@ const double kCanary = -12345.678;
 std::string errstring() {
     std::vector<char> buf(4096, '\0');
     get_global_param_string("errstring", buf.data(), static_cast<int>(buf.size()));
-    return std::string(buf.data());
+    return {buf.data()};
 }
 
 }  // namespace
@@ -65,6 +65,19 @@ TEST_CASE("PropsSImulti refuses negative result dimensions", "[CAPI]") {
     CHECK(resdim1 == 0);
     CHECK(resdim2 == 0);
     CHECK(result[0] == kCanary);
+}
+
+TEST_CASE("PropsSImulti refuses negative input lengths", "[CAPI]") {
+    char backend[] = "HEOS";
+    const double z[] = {1.0};
+    double T[] = {300.0};
+    double p[] = {101325.0};
+    std::vector<double> result(4, kCanary);
+    long resdim1 = 2, resdim2 = 2;
+    PropsSImulti("Dmolar", "T", T, -5, "P", p, -5, backend, "Water", z, 1, result.data(), &resdim1, &resdim2);
+    CHECK(resdim1 == 0);
+    CHECK(result[0] == kCanary);
+    CHECK(errstring().find("Invalid input arrays") != std::string::npos);
 }
 
 TEST_CASE("HandleException refuses a negative message-buffer length", "[CAPI]") {
@@ -128,7 +141,9 @@ TEST_CASE("AbstractState_set_fractions refuses a negative count", "[CAPI]") {
     REQUIRE(errcode == 0);
     const double z[] = {0.5, 0.5};
     AbstractState_set_fractions(handle, z, -1, &errcode, message, sizeof(message));
-    CHECK(errcode != 0);
+    // Refused by the explicit check (errcode 1, our message), not by a length_error from the vector
+    CHECK(errcode == 1);
+    CHECK(std::string(message).find("Invalid fractions array") != std::string::npos);
     AbstractState_free(handle, &errcode, message, sizeof(message));
 }
 
@@ -139,7 +154,7 @@ TEST_CASE("get_parameter_information_string reads the info key only within n byt
     {
         char output[16];
         char after[32];
-    } buf;
+    } buf{};
     std::memset(buf.output, 'A', sizeof(buf.output));
     std::memset(buf.after, 'B', sizeof(buf.after));
     buf.after[sizeof(buf.after) - 1] = '\0';
