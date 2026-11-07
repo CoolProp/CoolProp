@@ -23,19 +23,21 @@ using std::shared_ptr;
 #include <mutex>
 
 void str2buf(const std::string& str, char* buf, int n) {
-    if (str.size() < static_cast<unsigned int>(n)) {
+    if (n > 0 && str.size() < static_cast<unsigned int>(n)) {
         strncpy(buf, str.c_str(), n - 1);
         buf[n - 1] = '\0';
     } else {
         throw CoolProp::ValueError("Buffer is too small; must be at least " + std::to_string(str.size()) + " characters in size");
     }
 }
+// A negative buffer_length would wrap to a huge value in the size_t cast below, so it has to be
+// rejected before the comparison; it is reported as errcode 2 like any other buffer that is too small.
 void HandleException(long* errcode, char* message_buffer, const long buffer_length) {
     try {
         throw;  // Rethrow the error, and here we handle the error
     } catch (CoolProp::HandleError& e) {
         std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+        if (buffer_length > 0 && errmsg.size() < static_cast<std::size_t>(buffer_length)) {
             *errcode = 1;
             std::memcpy(message_buffer, errmsg.c_str(), errmsg.size() + 1);  // guarded above: size + null fits
         } else {
@@ -43,7 +45,7 @@ void HandleException(long* errcode, char* message_buffer, const long buffer_leng
         }
     } catch (CoolProp::CoolPropBaseError& e) {
         std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+        if (buffer_length > 0 && errmsg.size() < static_cast<std::size_t>(buffer_length)) {
             *errcode = 1;
             std::memcpy(message_buffer, errmsg.c_str(), errmsg.size() + 1);  // guarded above: size + null fits
         } else {
@@ -151,13 +153,22 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char* Ref, double T, doubl
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char* FluidName, const char* Output) {
     fpu_reset_guard guard;
-    double val = Props1SI(Output, FluidName);
-    if (!ValidNumber(val))
-        // Error code was already set in Props1SI
-        return val;
-    // val is valid; so, Output is already checked in Props1SI -> get_parameter_index won't throw
-    CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
-    return convert_from_SI_to_kSI(iOutput, val);
+    try {
+        double val = Props1SI(Output, FluidName);
+        if (!ValidNumber(val))
+            // Error code was already set in Props1SI
+            return val;
+        // A valid val does not mean Output is a parameter name: Props1SI accepts its two
+        // arguments in either order, so get_parameter_index can still throw here, and
+        // convert_from_SI_to_kSI throws for outputs it has no unit rule for (e.g. Tcrit)
+        CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
+        return convert_from_SI_to_kSI(iOutput, val);
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+    return _HUGE;
 }
 EXPORT_CODE double CONVENTION PropsS(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref) {
     return Props(Output, Name1[0], Prop1, Name2[0], Prop2, Ref);
@@ -202,7 +213,14 @@ EXPORT_CODE double CONVENTION saturation_ancillary(const char* fluid_name, const
 }
 EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output) {
     fpu_reset_guard guard;
-    return CoolProp::Props1SI(std::string(FluidName), std::string(Output));
+    try {
+        return CoolProp::Props1SI(std::string(FluidName), std::string(Output));
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+    return _HUGE;
 }
 EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, const char* FluidNames, const double* fractions,
                                           const long length_fractions, double* result, long* resdim1) {
@@ -225,7 +243,8 @@ EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, co
         if (_result.size() == 0) {
             *resdim1 = 0;
         } else {
-            if (_result.size() > static_cast<size_t>(*resdim1))
+            // The result is a single row with one entry per output; that is the dimension the caller allocated for
+            if (*resdim1 < 0 || _result[0].size() > static_cast<size_t>(*resdim1))
                 throw CoolProp::ValueError(format("Result vector [%d] is bigger than allocated memory [%d]", _result[0].size(), *resdim1));
             *resdim1 = static_cast<long>(_result[0].size());
             for (size_t i = 0; i < _result[0].size(); i++) {
@@ -233,14 +252,27 @@ EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, co
             }
         }
     } catch (std::exception& e) {
+        // Signal the error to the caller through a zero result dimension
+        *resdim1 = 0;
         CoolProp::set_error_string(e.what());
     } catch (...) {
+        *resdim1 = 0;
         CoolProp::set_error_string("Undefined error");
     }
 }
 EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName) {
     fpu_reset_guard guard;
-    return CoolProp::PropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
+    // No C++ exception may escape the C API. CoolProp::PropsSI catches what its body throws (unless built with
+    // NO_ERROR_CATCHING), but copying the arguments here and formatting them into the error string inside its
+    // catch handler both allocate, so std::bad_alloc can still arrive here.
+    try {
+        return CoolProp::PropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+    return _HUGE;
 }
 EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1, double* Prop1, const long size_Prop1, const char* Name2,
                                          double* Prop2, const long size_Prop2, char* backend, const char* FluidNames, const double* fractions,
@@ -272,7 +304,7 @@ EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1,
             *resdim1 = 0;
             *resdim2 = 0;
         } else {
-            if (_result.size() > static_cast<size_t>(*resdim1) || _result[0].size() > static_cast<size_t>(*resdim2))
+            if (*resdim1 < 0 || *resdim2 < 0 || _result.size() > static_cast<size_t>(*resdim1) || _result[0].size() > static_cast<size_t>(*resdim2))
                 throw CoolProp::ValueError(
                   format("Result matrix [%d x %d] is bigger than allocated memory [%d x %d]", _result.size(), _result[0].size(), *resdim1, *resdim2));
             *resdim1 = static_cast<long>(_result.size());
@@ -367,9 +399,13 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char* param, char* Out
     return 0;
 }
 EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, char* Output, int n) {
+    // Output is in/out: on entry it holds the info key ("IO", "short", "long", "units").  Read at most n
+    // bytes of it, so a buffer without a terminator within its declared length is never read past its end.
+    std::string info;
     try {
+        if (Output != nullptr && n > 0) info.assign(Output, strnlen(Output, static_cast<std::size_t>(n)));
         int key = CoolProp::get_parameter_index(param);
-        std::string s = CoolProp::get_parameter_information(key, Output);
+        std::string s = CoolProp::get_parameter_information(key, info);
         str2buf(s, Output, n);
         return 1;
     } catch (std::exception& e) {
@@ -381,9 +417,9 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, 
         // (see src/DataStructures.cpp)
         // if n is too small, str2buf throws string
         // "Buffer size is too small"
-        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): %s)", param, Output, n, e.what()));
+        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): %s)", param, info.c_str(), n, e.what()));
     } catch (...) {
-        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): Undefined error)", param, Output, n));
+        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): Undefined error)", param, info.c_str(), n));
     }
     return 0;
 }
@@ -459,7 +495,14 @@ EXPORT_CODE void CONVENTION apply_simple_mixing_rule(const char* identifier1, co
 EXPORT_CODE double CONVENTION HAPropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Name3,
                                         double Prop3) {
     fpu_reset_guard guard;
-    return HumidAir::HAPropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
+    try {
+        return HumidAir::HAPropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+    return _HUGE;
 }
 EXPORT_CODE double CONVENTION cair_sat(double T) {
     fpu_reset_guard guard;
@@ -531,8 +574,8 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
     }
     return -1;
 }
-EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* fluids, long* errcode, char* message_buffer,
-                                                      const long buffer_length) {
+EXPORT_CODE void CONVENTION AbstractState_fluid_names_checkedMemory(const long handle, char* fluids, const long fluids_length, long* errcode,
+                                                                    char* message_buffer, const long buffer_length) {
     *errcode = 0;
     fpu_reset_guard guard;
 
@@ -540,16 +583,21 @@ EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* f
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::vector<std::string> _fluids = AS->fluid_names();
         std::string fluidsstring = strjoin(_fluids, CoolProp::get_config_string(LIST_STRING_DELIMITER));
-        if (fluidsstring.size() < static_cast<std::size_t>(buffer_length)) {
+        if (fluids_length > 0 && fluidsstring.size() < static_cast<std::size_t>(fluids_length)) {
             std::memcpy(fluids, fluidsstring.c_str(), fluidsstring.size() + 1);  // guarded above: size + null fits
         } else {
-            throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", fluidsstring.size(),
-                                              static_cast<std::size_t>(buffer_length)));
+            throw CoolProp::ValueError(
+              format("Length of string [%d] is greater than allocated buffer length [%ld]", fluidsstring.size(), fluids_length));
         }
 
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }
+}
+EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* fluids, long* errcode, char* message_buffer,
+                                                      const long buffer_length) {
+    // No length is passed for fluids; the documented contract is that it holds at least buffer_length characters
+    AbstractState_fluid_names_checkedMemory(handle, fluids, buffer_length, errcode, message_buffer, buffer_length);
 }
 EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long* errcode, char* message_buffer, const long buffer_length) {
     *errcode = 0;
@@ -564,8 +612,14 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
                                                         const long buffer_length) {
     *errcode = 0;
     fpu_reset_guard guard;
-    std::vector<double> _fractions(fractions, fractions + N);
     try {
+        if (N < 0 || (N > 0 && fractions == nullptr)) {
+            throw CoolProp::ValueError(format("Invalid fractions array (N=%ld)", N));
+        }
+        std::vector<double> _fractions;
+        if (N > 0) {
+            _fractions.assign(fractions, fractions + N);
+        }
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         if (AS->using_mole_fractions()) {
             AS->set_mole_fractions(_fractions);
@@ -1024,7 +1078,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         CoolProp::PhaseEnvelopeData pe = AS->get_phase_envelope_data();
-        if (pe.T.size() > static_cast<std::size_t>(length)) {
+        if (length < 0 || pe.T.size() > static_cast<std::size_t>(length)) {
             throw CoolProp::ValueError(format("Length of phase envelope vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(pe.T.size()), static_cast<int>(length)));
         }
@@ -1054,12 +1108,12 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         CoolProp::PhaseEnvelopeData pe = AS->get_phase_envelope_data();
         *actual_length = static_cast<long>(pe.T.size());
-        if (pe.T.size() > static_cast<std::size_t>(length)) {
+        if (length < 0 || pe.T.size() > static_cast<std::size_t>(length)) {
             throw CoolProp::ValueError(format("Length of phase envelope vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(pe.T.size()), static_cast<int>(length)));
         }
         *actual_components = static_cast<long>(pe.x.size());
-        if (static_cast<std::size_t>(*actual_components) > static_cast<std::size_t>(maxComponents)) {
+        if (maxComponents < 0 || static_cast<std::size_t>(*actual_components) > static_cast<std::size_t>(maxComponents)) {
             throw CoolProp::ValueError(format("Length of phase envelope composition vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(*actual_components), static_cast<int>(maxComponents)));
         }
@@ -1096,7 +1150,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_spinodal_data(const long handle, c
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         CoolProp::SpinodalData spin = AS->get_spinodal_data();
-        if (spin.tau.size() > static_cast<std::size_t>(length)) {
+        if (length < 0 || spin.tau.size() > static_cast<std::size_t>(length)) {
             throw CoolProp::ValueError(format("Length of spinodal vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(spin.tau.size()), static_cast<int>(length)));
         }
@@ -1117,7 +1171,7 @@ EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle,
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::vector<CoolProp::CriticalState> pts = AS->all_critical_points();
-        if (pts.size() > static_cast<std::size_t>(length)) {
+        if (length < 0 || pts.size() > static_cast<std::size_t>(length)) {
             throw CoolProp::ValueError(format("Length of critical point vector [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(pts.size()), static_cast<int>(length)));
         }
@@ -1161,23 +1215,28 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long han
     }
 }
 
-EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
-                                                       const long buffer_length) {
+EXPORT_CODE void CONVENTION AbstractState_backend_name_checkedMemory(const long handle, char* backend, const long backend_length, long* errcode,
+                                                                     char* message_buffer, const long buffer_length) {
     *errcode = 0;
     fpu_reset_guard guard;
 
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::string backendstring = AS->backend_name();
-        if (backendstring.size() < static_cast<std::size_t>(buffer_length)) {
+        if (backend_length > 0 && backendstring.size() < static_cast<std::size_t>(backend_length)) {
             std::memcpy(backend, backendstring.c_str(), backendstring.size() + 1);  // guarded above: size + null fits
         } else {
-            throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", backendstring.size(),
-                                              static_cast<std::size_t>(buffer_length)));
+            throw CoolProp::ValueError(
+              format("Length of string [%d] is greater than allocated buffer length [%ld]", backendstring.size(), backend_length));
         }
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }
+}
+EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
+                                                       const long buffer_length) {
+    // No length is passed for backend; the documented contract is that it holds at least buffer_length characters
+    AbstractState_backend_name_checkedMemory(handle, backend, buffer_length, errcode, message_buffer, buffer_length);
 }
 
 EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long* errcode, char* message_buffer, const long buffer_length) {
@@ -1200,7 +1259,7 @@ EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, 
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::string temp = AS->fluid_param_string(param);
-        if (temp.size() < static_cast<std::size_t>(return_buffer_length)) {
+        if (return_buffer_length > 0 && temp.size() < static_cast<std::size_t>(return_buffer_length)) {
             std::memcpy(return_buffer, temp.c_str(), temp.size() + 1);  // guarded above: size + null fits
         } else {
             *errcode = 2;
@@ -1249,19 +1308,27 @@ EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* 
 }
 
 EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName) {
-    return static_cast<int>(CoolProp::is_valid_fluid_string(fluidName));
+    try {
+        return static_cast<int>(CoolProp::is_valid_fluid_string(fluidName));
+    } catch (...) {
+        return 0;
+    }
 }
 
 EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid,
                                              const long fluid_length) {
     std::string _fluid, _backend;
-    CoolProp::extract_backend(fluid_string, _backend, _fluid);
-    if (_backend.size() < static_cast<std::size_t>(backend_length)) {
+    try {
+        CoolProp::extract_backend(fluid_string, _backend, _fluid);
+    } catch (...) {
+        return -1;
+    }
+    if (backend_length > 0 && _backend.size() < static_cast<std::size_t>(backend_length)) {
         std::memcpy(backend, _backend.c_str(), _backend.size() + 1);  // guarded above: size + null fits
     } else {
         return -1;
     }
-    if (_fluid.size() < static_cast<std::size_t>(fluid_length)) {
+    if (fluid_length > 0 && _fluid.size() < static_cast<std::size_t>(fluid_length)) {
         std::memcpy(fluid, _fluid.c_str(), _fluid.size() + 1);  // guarded above: size + null fits
     } else {
         return -1;
