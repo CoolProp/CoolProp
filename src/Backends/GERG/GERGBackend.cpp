@@ -15,6 +15,7 @@
 #include "GERGAncillaries.h"
 #include "GERGData.h"
 #include "Backends/Helmholtz/ExcessHEFunction.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/Helmholtz/ReducingFunctions.h"
 
 namespace CoolProp {
@@ -1125,9 +1126,16 @@ std::string resolve_component(GERGModel model, const std::string& user_name) {
 
     // Otherwise resolve through CoolProp's normal alias/CAS machinery, so
     // users can spell components the way they do everywhere else in CoolProp.
+    // A component is a bare fluid name, so look it up in the fluid library
+    // directly (as HelmholtzEOSMixtureBackend does) rather than through
+    // get_fluid_param_string(): that parses its argument as a complete
+    // "BACKEND::fluid" string and runs AbstractState::factory() on it, so a
+    // component spelled "GERG2008::<rest>" would construct another GERG
+    // backend from inside this constructor -- one level of recursion per
+    // prefix, with no bound, until the stack is exhausted.
     std::string cas;
     try {
-        cas = get_fluid_param_string(user_name, "CAS");
+        cas = get_library().get(user_name).CAS;
     } catch (const std::exception&) {
         throw ValueError(format("[%s] is not a fluid CoolProp recognises, so it cannot be a GERG component", user_name.c_str()));
     }

@@ -170,6 +170,13 @@ TEST_CASE("AbstractState::factory: non-empty options on an opted-out backend thr
     REQUIRE_THROWS(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(R"(HEOS?{"some_key":1})", "Water")));
 }
 
+TEST_CASE("AbstractState::factory: an empty fluid_names vector is refused", "[FactoryOptions]") {
+    for (const std::string backend : {"?", "", "TTSE", "BICUBIC", "HEOS", "SRK", "PR"}) {
+        CAPTURE(backend);
+        CHECK_THROWS_AS(CoolProp::AbstractState::factory(backend, std::vector<std::string>{}), CoolProp::ValueError);
+    }
+}
+
 TEST_CASE("AbstractState::build_options_json: default returns empty string", "[FactoryOptions]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     REQUIRE(AS->build_options_json().empty());

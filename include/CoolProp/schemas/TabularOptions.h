@@ -29,7 +29,7 @@ inline constexpr const char kTabularOptionsSchemaJson[] = R"JSON({
       "type": "object",
       "additionalProperties": false,
       "required": ["Nx", "Ny"],
-      "description": "Per-instance single-phase grid sizing. Overrides the TABULAR_NX / TABULAR_NY configuration globals for this instance only. Both axes must be given together so the instance's resolution never depends on the globals' later values.",
+      "description": "Per-instance single-phase grid sizing. Overrides the TABULAR_NX / TABULAR_NY configuration globals for this instance only. Both axes must be given together so the instance's resolution never depends on the globals' later values. Nx*Ny may not exceed 1000000 grid points; that bound is enforced by TabularBackend::parse_options because JSON Schema cannot constrain a product.",
       "properties": {
         "Nx": {"type": "integer", "minimum": 2, "maximum": 100000,
                 "description": "Number of grid points along the x axis (enthalpy for the PH table, temperature for the PT table)."},

@@ -238,8 +238,8 @@ inline PureInfo get_pure_info(GERGModel model, const std::string& gerg_name) {
 /// Resolve a CoolProp fluid name/alias/CAS to the corresponding GERG
 /// component name, throwing ValueError if it cannot be resolved or if it
 /// falls outside the given model's published component set.  Defined in
-/// GERGBackend.cpp because it needs get_fluid_param_string(), which would
-/// otherwise pull all of CoolProp.h into this data-only header.
+/// GERGBackend.cpp because it needs the fluid library, which would
+/// otherwise pull FluidLibrary.h into this data-only header.
 std::string resolve_component(GERGModel model, const std::string& user_name);
 
 /// Pure-fluid residual coefficients (GERG-2004 monograph Table A3.2 and its
