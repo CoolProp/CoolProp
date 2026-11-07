@@ -4141,7 +4141,7 @@
     "INCHI_STRING": "InChI=1S/C3HClF4/c4-1-2(5)3(6,7)8/h1H/b2-1-",
     "NAME": "R1224YDZ",
     "REFPROP_NAME": "R1224YDZ",
-    "SMILES": "?"
+    "SMILES": "Cl/C=C(\\F)C(F)(F)F"
   },
   "STATES": {
     "critical": {

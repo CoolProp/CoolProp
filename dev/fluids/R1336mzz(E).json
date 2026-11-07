@@ -3849,7 +3849,7 @@
     "INCHI_STRING": "InChI=1S/C4H2F6/c5-3(6,7)1-2-4(8,9)10/h1-2H/b2-1+",
     "NAME": "R1336mzz(E)",
     "REFPROP_NAME": "N/A",
-    "SMILES": "?"
+    "SMILES": "C(=C/C(F)(F)F)\\C(F)(F)F"
   },
   "STATES": {
     "critical": {

@@ -5578,7 +5578,7 @@
     "INCHI_STRING": "InChI=1S/C3H8O2/c1-3(5)2-4/h3-5H,2H2,1H3",
     "NAME": "PropyleneGlycol",
     "REFPROP_NAME": "N/A",
-    "SMILES": "?"
+    "SMILES": "CC(O)CO"
   },
   "STATES": {
     "critical": {
