@@ -1207,6 +1207,20 @@ TEST_CASE("GERG rejects a name CoolProp cannot resolve at all", "[GERG]") {
     CHECK_THROWS_AS(AbstractState::factory("GERG2008", std::vector<std::string>{"NOT A FLUID"}), CoolProp::ValueError);
 }
 
+TEST_CASE("GERG component names are looked up as names, not as fluid strings", "[GERG]") {
+    // A "::" in a component name must not select a backend: "GERG2008::Methane"
+    // used to build a nested GERG backend, one level per prefix, until the
+    // stack ran out.
+    CHECK_THROWS_AS(resolve_component(GERGModel::GERG_2008, "GERG2008::Methane"), CoolProp::ValueError);
+    CHECK_THROWS_AS(resolve_component(GERGModel::GERG_2008, "SRK::Methane"), CoolProp::ValueError);
+    std::string deep;
+    for (int i = 0; i < 20000; ++i) {
+        deep += "GERG2008::";
+    }
+    deep += "Methane";
+    CHECK_THROWS_AS(AbstractState::factory("GERG2008", std::vector<std::string>{deep}), CoolProp::ValueError);
+}
+
 TEST_CASE("GERG refuses transport properties", "[GERG]") {
     // AbstractState::viscosity()/conductivity()/surface_tension()
     // (AbstractState.cpp:793-813) each do `if (!_cached) _cached = calc_*();

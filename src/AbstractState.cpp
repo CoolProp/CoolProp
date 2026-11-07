@@ -188,6 +188,26 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << '\n';
     }
 
+    // No backend can be built from zero fluid names: the "?" / "" branch
+    // below reads element 0, and the HEOS / cubic backends would otherwise
+    // hand back a state with no components[0].
+    if (fluid_names.empty()) {
+        throw ValueError("factory: fluid_names cannot be empty");
+    }
+
+    // The component count is simply the number of '&'-separated names in the
+    // (possibly user-supplied) fluid string.  The mixture backends size their
+    // per-component data and N x N interaction matrices from it before any
+    // other validation (the cubic backends even accept a repeated name), so a
+    // long enough string turns into gigabytes of allocation.  Refuse absurd
+    // counts here, before any backend is constructed, so that every family
+    // (including the tabular ones, which recurse into factory()) is covered.
+    constexpr std::size_t max_components = 256;
+    if (fluid_names.size() > max_components) {
+        throw ValueError(format("Size of fluid vector [%d] is larger than the maximum number of components [%d]",
+                                static_cast<int>(fluid_names.size()), static_cast<int>(max_components)));
+    }
+
     // Split off any "?<options>" suffix once at the entry-point so the
     // rest of the dispatch operates on the unadorned backend / fluid
     // strings.  PropsSI calls extract_backend() first, which splits
@@ -291,6 +311,14 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
             // No '::' found, default to HEOS.
             return factory("HEOS" + suffix, clean_fluid_names);
         } else {
+            // Resolve exactly one "BACKEND::" prefix here.  An empty or "?"
+            // backend (and TTSE/BICUBIC without "&XXXX") lands straight back
+            // in this branch, so every further "::" in the remainder would
+            // cost one more level of recursion and a long enough fluid
+            // string would exhaust the stack.
+            if (clean_fluid_names[0].find("::", idel + 2) != std::string::npos) {
+                throw ValueError("factory: the fluid string may contain only one '::' backend delimiter");
+            }
             std::string inner_backend = clean_fluid_names[0].substr(0, idel) + suffix;
             std::vector<std::string> inner_fluid = {clean_fluid_names[0].substr(idel + 2)};
             return factory(inner_backend, inner_fluid);
@@ -1374,6 +1402,22 @@ TEST_CASE("Check AbstractState", "[AbstractState]") {
     }
     SECTION("good backend - incomp") {
         CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "DEB")));
+    }
+    SECTION("too many components") {
+        // The cubic backends accept a repeated name, so without the bound this would build 1000 x 1000 matrices
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PR", std::vector<std::string>(1000, "R32"))));
+    }
+    SECTION("backend parsed from the fluid string") {
+        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("?", "HEOS::Water")));
+        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("", "::Water")));
+        // Only one "::" is resolved; repeated delimiters must throw rather than recurse once per "::"
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("?", "::::Water")));
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("?", "TTSE::TTSE::Water")));
+        std::string nested;
+        for (int i = 0; i < 20000; ++i) {
+            nested += "::";
+        }
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("?", nested + "Water")));
     }
     // SECTION("good backend - REFPROP") {
     //     CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water")));

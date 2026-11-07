@@ -36,7 +36,7 @@ inline constexpr const char kSVDSBTLOptionsSchemaJson[] = R"JSON({
     "grid": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Per-region SVD grid sizing.",
+      "description": "Per-region SVD grid sizing. NT*NR (each defaulting to the preset value when omitted) may not exceed 1000000 grid points; that bound is enforced at construction because JSON Schema cannot constrain a product.",
       "properties": {
         "NT": {"type": "integer", "minimum": 2, "maximum": 100000,
                 "description": "Number of points along the secondary (non-log) axis."},

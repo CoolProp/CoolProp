@@ -368,6 +368,15 @@ void CoolProp::TabularBackend::parse_options(const std::string& options_json) {
         if (grid.contains("Ny")) {
             Ny_requested = grid.at("Ny").get<std::size_t>();
         }
+        // The schema bounds each axis on its own; JSON Schema cannot bound their
+        // product.  The two single-phase tables hold 2 x 38 x Nx x Ny doubles
+        // (3 TB at 100000 x 100000), all allocated in the constructor, so cap the
+        // number of grid points here before any table is sized.  Written as a
+        // division so the product cannot wrap on 32-bit size_t.
+        if (Ny_requested != 0 && Nx_requested > max_grid_points / Ny_requested) {
+            throw ValueError(
+              format("Tabular grid Nx*Ny = %zux%zu exceeds the maximum of %zu grid points", Nx_requested, Ny_requested, max_grid_points));
+        }
     }
 }
 
@@ -2090,6 +2099,11 @@ TEST_CASE("Tabular backends accept factory-string grid options", "[Tabular],[Fac
         CHECK_THROWS_AS(std::shared_ptr<AbstractState>(AbstractState::factory(R"(TTSE&HEOS?{"Nx":30})", "Water")), ValueError);
         // out-of-range value
         CHECK_THROWS_AS(std::shared_ptr<AbstractState>(AbstractState::factory(R"(BICUBIC&HEOS?{"grid":{"Nx":1,"Ny":30}})", "Water")), ValueError);
+        // each axis within range but Nx*Ny over the grid-point cap (must throw
+        // before any table is allocated: 100000x100000 would be terabytes)
+        CHECK_THROWS_AS(std::shared_ptr<AbstractState>(AbstractState::factory(R"(BICUBIC&HEOS?{"grid":{"Nx":100000,"Ny":100000}})", "Water")),
+                        ValueError);
+        CHECK_THROWS_AS(std::shared_ptr<AbstractState>(AbstractState::factory(R"(TTSE&HEOS?{"grid":{"Nx":1001,"Ny":1000}})", "Water")), ValueError);
         // one axis without the other (grid requires both so the instance never
         // depends on the globals' later values)
         CHECK_THROWS_AS(std::shared_ptr<AbstractState>(AbstractState::factory(R"(BICUBIC&HEOS?{"grid":{"Nx":30}})", "Water")), ValueError);
