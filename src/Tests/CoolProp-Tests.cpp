@@ -15,7 +15,9 @@
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
+#include "TestUtils.h"
 #include <atomic>
+#include <cstdlib>
 #include <chrono>
 #include <filesystem>
 #include <map>
@@ -7554,6 +7556,116 @@ TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)",
     }
 }
 
+namespace {
+/// Unset an environment variable for one scope and restore it afterwards.
+/// (Setting it to an empty string is not enough: the REFPROP loader treats a
+/// present but empty COOLPROP_REFPROP_ROOT as set.)
+class UnsetEnvGuard
+{
+    std::string name_;
+    bool had_old_;
+    std::string old_;
+
+   public:
+    explicit UnsetEnvGuard(const char* name) : name_(name), had_old_(std::getenv(name) != nullptr) {
+        if (had_old_) old_ = std::getenv(name);
+#    if defined(_WIN32)
+        (void)_putenv_s(name, "");  // an empty value removes it on Windows
+#    else
+        (void)unsetenv(name);
+#    endif
+    }
+    ~UnsetEnvGuard() {
+        if (!had_old_) return;
+#    if defined(_WIN32)
+        (void)_putenv_s(name_.c_str(), old_.c_str());
+#    else
+        (void)setenv(name_.c_str(), old_.c_str(), 1);
+#    endif
+    }
+    UnsetEnvGuard(const UnsetEnvGuard&) = delete;
+    UnsetEnvGuard& operator=(const UnsetEnvGuard&) = delete;
+    UnsetEnvGuard(UnsetEnvGuard&&) = delete;
+    UnsetEnvGuard& operator=(UnsetEnvGuard&&) = delete;
+};
+
+/// Point REFPROP at a directory that has a fluids folder but no REFPROP
+/// library, with GERG enabled, for one scope; restore everything afterwards,
+/// also when an assertion throws. Restoring the path also clears the load
+/// failure cached meanwhile, so later [REFPROP] tests can load REFPROP again.
+class UnloadableREFPROPSetup
+{
+    std::filesystem::path dir_;
+    std::string saved_path_, saved_library_;
+    bool saved_gerg_;
+
+   public:
+    UnloadableREFPROPSetup()
+      : dir_(std::filesystem::temp_directory_path() / ("cp_refprop_gerg_test_" + std::to_string(CoolProp::tests::test_pid()))),
+        saved_path_(CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH)),
+        saved_library_(CoolProp::get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH)),
+        saved_gerg_(CoolProp::get_config_bool(REFPROP_USE_GERG)) {
+        std::filesystem::create_directories(dir_ / "fluids");
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH, "");
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, dir_.string());
+        CoolProp::set_config_bool(REFPROP_USE_GERG, true);
+    }
+    ~UnloadableREFPROPSetup() {
+        CoolProp::set_config_bool(REFPROP_USE_GERG, saved_gerg_);
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH, saved_library_);
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, saved_path_);
+        std::error_code ec;
+        std::filesystem::remove_all(dir_, ec);
+    }
+    UnloadableREFPROPSetup(const UnloadableREFPROPSetup&) = delete;
+    UnloadableREFPROPSetup& operator=(const UnloadableREFPROPSetup&) = delete;
+    UnloadableREFPROPSetup(UnloadableREFPROPSetup&&) = delete;
+    UnloadableREFPROPSetup& operator=(UnloadableREFPROPSetup&&) = delete;
+};
+}  // namespace
+
+TEST_CASE("REFPROP with GERG and an unloadable library throws instead of crashing", "[REFPROP][configuration]") {
+    // With REFPROP_USE_GERG set, set_REFPROP_fluids used to call GERG04dll
+    // before checking that REFPROP could be loaded at all, i.e. through an
+    // unset function pointer, and the process crashed. It must throw
+    // NotImplementedError instead. COOLPROP_REFPROP_ROOT (set in CI, where
+    // REFPROP is built) is tried before ALTERNATIVE_REFPROP_PATH, so it is
+    // unset for this test; ALTERNATIVE_REFPROP_LIBRARY_PATH is cleared for the
+    // same reason. The setting of the path also unloads any REFPROP an
+    // earlier test loaded. The crash is only certain to show up in a process
+    // that never loaded REFPROP; after an unload the old order calls a stale
+    // pointer instead, which crashes only if the library was unmapped.
+    const UnsetEnvGuard no_root("COOLPROP_REFPROP_ROOT");
+    const UnloadableREFPROPSetup setup;
+    // The message is asserted, not only the type: the GERG04dll null check
+    // also throws NotImplementedError, so a type-only check would stay green
+    // if the support check were moved back after the GERG call.
+    CHECK_THROWS_MATCHES(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "METHANE")),
+                         CoolProp::NotImplementedError,
+                         Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring("You cannot use the REFPROPMixtureBackend")));
+}
+TEST_CASE("REFPROP reference state reloads REFPROP from the configured path after a path change", "[REFPROP][configuration]") {
+    // set_reference_stateS("REFPROP::...") calls REFPROP_SETREF, which used to
+    // load REFPROP through the system library search path and ignore
+    // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings. Once REFPROP
+    // had been unloaded, a REFPROP that exists only at the configured path (as
+    // in CI, where it is found through COOLPROP_REFPROP_ROOT) could then not be
+    // loaded for the reference state.
+    CoolProp::Skip_if_No_REFPROP();
+    {
+        // Use REFPROP once. Destroying the backend unloads it already; the path
+        // "change" below (set_config_string fires the hook even for an unchanged
+        // value) makes sure it is unloaded either way.
+        std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+        AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0);
+    }
+    CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH));
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("REFPROP::PROPANE", "DEF"));
+    // A REFPROP state still works afterwards.
+    std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0));
+}
+
 TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
     // Guarding only at update()'s switch is the wrong altitude.  The quality
     // reaches the flash routines by other doors, and HQ_flash's own gate,
@@ -8775,6 +8887,385 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[2000.0]]}
         }])";
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
+    }
+}
+/// Set INCOMP_PREFER_CHEBYSHEV_CALORIC for one scope and restore the previous
+/// value on exit, also when an assertion throws, so no other test inherits it.
+struct ChebyshevCaloricSetting
+{
+    bool saved;
+    explicit ChebyshevCaloricSetting(bool value) : saved(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC)) {
+        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, value);
+    }
+    ~ChebyshevCaloricSetting() {
+        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, saved);
+    }
+    ChebyshevCaloricSetting(const ChebyshevCaloricSetting&) = delete;
+    ChebyshevCaloricSetting& operator=(const ChebyshevCaloricSetting&) = delete;
+    ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
+    ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
+};
+
+TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {
+    // Smoke test only: grid targets s(T) converge within 15 iterations even with the old absolute Brent tolerance, so it does not guard the 1e-12*Tmax fix.
+    const ChebyshevCaloricSetting classic(false);
+    const double p = 101325.0;
+    // Tlow keeps MEA at x = 0 above its freezing point (273.1 K); IcePG has no freezing fit.
+    struct Case
+    {
+        std::string name;
+        double x, Tlow;
+    };
+    for (const auto& [name, x, Tlow] : std::vector<Case>{{"MEA", 0.0, 274.0}, {"IcePG", 0.2, 230.5}}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
+        AS->set_mass_fractions(std::vector<double>{x});
+        const double Tmin = Tlow, Tmax = AS->Tmax() - 0.5;
+        for (int i = 0; i <= 400; ++i) {
+            const double T = Tmin + (Tmax - Tmin) * i / 400.0;
+            CAPTURE(name, x, T);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double s = AS->smass();
+            const double h = AS->hmass();
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-6);
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-6);
+        }
+    }
+}
+
+TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime", "[INCOMP]") {
+    const double p = 101325.0;
+    SECTION("Precomputed polynomial matrices match the per-call Polynomial2DFrac evaluation") {
+        // A classic-only solution with a 2D density and specific heat. The
+        // derivative and integrals are now evaluated from matrices built in
+        // validate(); the reference is the old per-call path through
+        // Polynomial2DFrac, on the very same coefficients. Run with a nonzero
+        // Tbase (the ln(T) term mixes every power of (T - Tbase)) and with
+        // Tbase == 0 (the case Polynomial2DFrac::integral special-cases).
+        const Eigen::MatrixXd C_rho = (Eigen::MatrixXd(3, 2) << 1050.0, -40.0, -0.6, 0.3, -2.5e-3, 1.0e-3).finished();
+        const Eigen::MatrixXd C_cp =
+          (Eigen::MatrixXd(4, 3) << 3600.0, 900.0, -150.0, 2.1, -1.5, 0.4, 4.0e-3, 2.0e-3, -1.0e-3, -3.0e-5, 1.0e-5, 2.0e-6).finished();
+        auto matrix_rows = [](const Eigen::MatrixXd& M) {
+            std::vector<std::vector<double>> rows(M.rows(), std::vector<double>(M.cols()));
+            for (Eigen::Index i = 0; i < M.rows(); ++i) {
+                for (Eigen::Index j = 0; j < M.cols(); ++j) {
+                    rows[i][j] = M(i, j);
+                }
+            }
+            return rows;
+        };
+        for (const double Tbase : {300.0, 0.0}) {
+            CAPTURE(Tbase);
+            const double xbase = 0.2;
+            const std::string name = std::string("CatchRuntimeClassicFluid") + (Tbase > 0 ? "A" : "B");
+            const nlohmann::json definition = {{"name", name},
+                                               {"description", "x"},
+                                               {"reference", "x"},
+                                               {"Tmin", 250.0},
+                                               {"Tmax", 350.0},
+                                               {"TminPsat", 350.0},
+                                               {"xid", "mass"},
+                                               {"xmin", 0.0},
+                                               {"xmax", 0.5},
+                                               {"Tbase", Tbase},
+                                               {"xbase", xbase},
+                                               {"density", {{"type", "polynomial"}, {"coeffs", matrix_rows(C_rho)}}},
+                                               {"specific_heat", {{"type", "polynomial"}, {"coeffs", matrix_rows(C_cp)}}}};
+            const std::string json = nlohmann::json::array({definition}).dump();
+            REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+            CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+            CoolProp::Polynomial2DFrac poly;
+            const double T_ref = 280.0;
+            for (const double T : {255.0, 300.0, 333.3, 349.0}) {
+                for (const double x : {0.0, 0.2, 0.45}) {
+                    CAPTURE(T);
+                    CAPTURE(x);
+                    const double drho = fluid.drhodTatPx(T, p, x, false);
+                    const double drho_reference = poly.derivative(C_rho, T, x, 0, 0, 0, Tbase, xbase);
+                    CHECK(std::abs(drho - drho_reference) <= 1e-12 * std::max(1.0, std::abs(drho_reference)));
+                    // The integrals are indefinite, and the two paths may use
+                    // different integration constants, so compare differences
+                    // from a common reference temperature, as the backend does.
+                    const double dh = fluid.dhdTatPxdT(T, p, x, false) - fluid.dhdTatPxdT(T_ref, p, x, false);
+                    const double dh_reference =
+                      poly.integral(C_cp, T, x, 0, 0, 0, Tbase, xbase) - poly.integral(C_cp, T_ref, x, 0, 0, 0, Tbase, xbase);
+                    CHECK(std::abs(dh - dh_reference) <= 1e-10 * std::max(1.0, std::abs(dh_reference)));
+                    const double ds = fluid.dsdTatPxdT(T, p, x, false) - fluid.dsdTatPxdT(T_ref, p, x, false);
+                    const double ds_reference =
+                      poly.integral(C_cp, T, x, 0, -1, 0, Tbase, xbase) - poly.integral(C_cp, T_ref, x, 0, -1, 0, Tbase, xbase);
+                    CAPTURE(ds);
+                    CAPTURE(ds_reference);
+                    CHECK(std::abs(ds - ds_reference) <= 1e-9 * std::max(1.0, std::abs(ds_reference)));
+                }
+            }
+        }
+    }
+    SECTION("The setting picks the fit; each state keeps the choice it was created with") {
+        // Constant fits that differ between the two kinds, so every value
+        // tells which fit produced it.
+        const std::string json = R"([{
+            "name": "CatchRuntimeSelectableFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "polynomial", "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+        const std::string fluid = "INCOMP::CatchRuntimeSelectableFluid";
+        {
+            const ChebyshevCaloricSetting setting(true);
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) == Catch::Approx(900.0).epsilon(1e-12));
+            CHECK(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) == Catch::Approx(4000.0).epsilon(1e-12));
+        }
+        {
+            const ChebyshevCaloricSetting setting(false);
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) == Catch::Approx(1000.0).epsilon(1e-12));
+            CHECK(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) == Catch::Approx(2000.0).epsilon(1e-12));
+        }
+
+        // A state reads the setting once, when it is created. With constant
+        // density the pressure terms of h cancel between two temperatures,
+        // so h(340) - h(300) is exactly cp * 40 K for the fit in use.
+        auto dh_over_40K = [&](CoolProp::AbstractState& state) {
+            state.update(CoolProp::PT_INPUTS, p, 300.0);
+            const double h1 = state.hmass();
+            state.update(CoolProp::PT_INPUTS, p, 340.0);
+            return state.hmass() - h1;
+        };
+        std::unique_ptr<CoolProp::AbstractState> chebyshev_state;
+        {
+            const ChebyshevCaloricSetting setting(true);
+            chebyshev_state.reset(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSelectableFluid"));
+        }
+        {
+            const ChebyshevCaloricSetting setting(false);
+            std::unique_ptr<CoolProp::AbstractState> classic_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSelectableFluid"));
+            // Created under true, so still Chebyshev after the switch
+            chebyshev_state->update(CoolProp::PT_INPUTS, p, 320.0);
+            CHECK(chebyshev_state->rhomass() == Catch::Approx(900.0).epsilon(1e-12));
+            CHECK(dh_over_40K(*chebyshev_state) == Catch::Approx(4000.0 * 40.0).epsilon(1e-12));
+            classic_state->update(CoolProp::PT_INPUTS, p, 320.0);
+            CHECK(classic_state->rhomass() == Catch::Approx(1000.0).epsilon(1e-12));
+            CHECK(dh_over_40K(*classic_state) == Catch::Approx(2000.0 * 40.0).epsilon(1e-12));
+            // s(340) - s(300) = cp ln(340/300) for constant cp and density
+            classic_state->update(CoolProp::PT_INPUTS, p, 300.0);
+            const double s1 = classic_state->smass();
+            classic_state->update(CoolProp::PT_INPUTS, p, 340.0);
+            CHECK(classic_state->smass() - s1 == Catch::Approx(2000.0 * std::log(340.0 / 300.0)).epsilon(1e-10));
+        }
+
+        // The JSON configuration route reaches the same setting
+        {
+            const ChebyshevCaloricSetting setting(true);
+            CoolProp::set_config_as_json_string(R"({"INCOMP_PREFER_CHEBYSHEV_CALORIC": false})");
+            CHECK_FALSE(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC));
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) == Catch::Approx(1000.0).epsilon(1e-12));
+        }
+    }
+    SECTION("A fluid with only one kind of fit uses it whatever the setting") {
+        const std::string json = R"([{
+            "name": "CatchRuntimeChebyshevOnlyFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }, {
+            "name": "CatchRuntimeClassicOnlyFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[1000.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+        for (const bool chebyshev : {true, false}) {
+            CAPTURE(chebyshev);
+            const ChebyshevCaloricSetting setting(chebyshev);
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, "INCOMP::CatchRuntimeChebyshevOnlyFluid") == Catch::Approx(900.0).epsilon(1e-12));
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, "INCOMP::CatchRuntimeClassicOnlyFluid") == Catch::Approx(1000.0).epsilon(1e-12));
+        }
+    }
+    SECTION("Load-time checks on the classic and Chebyshev fits") {
+        // The classification decides which name list the fluid is filed
+        // under, once; it must not depend on the setting. The message is
+        // asserted so the check cannot pass on an unrelated load error.
+        const std::string json = R"([{
+            "name": "CatchRuntimeMismatchedFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "mass", "xmin": 0.0, "xmax": 0.5,
+            "density":            {"type": "polynomial", "coeffs": [[1000.0, 1.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0, 1.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", json), Catch::Matchers::ContainsSubstring("disagree on whether the fluid is pure"));
+
+        // A classic entry with an unknown type must not be dropped silently
+        const std::string bad_type = R"([{
+            "name": "CatchRuntimeBadTypeFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "polynomal", "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", bad_type), Catch::Matchers::ContainsSubstring("[density] exists but its type"));
+
+        // A Chebyshev fit under the classic name next to a separate Chebyshev
+        // entry would make the setting at false evaluate a Chebyshev fit as
+        // the "classic" one, so it must be rejected.
+        const std::string chebyshev_twice = R"([{
+            "name": "CatchRuntimeChebyshevTwiceFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", chebyshev_twice),
+                          Catch::Matchers::ContainsSubstring("in both the classic and the Chebyshev slot"));
+
+        // ...but a Chebyshev fit under the classic name alone still loads, and
+        // does not count as a classic fit.
+        const std::string chebyshev_as_classic = R"([{
+            "name": "CatchRuntimeChebyshevAsClassicFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", chebyshev_as_classic));
+        CHECK_FALSE(CoolProp::get_incompressible_fluid("CatchRuntimeChebyshevAsClassicFluid").hasClassicCaloric());
+
+        // The Chebyshev slot setters refuse other fits themselves, so a fluid
+        // built in C++ cannot get around the check by skipping validate().
+        CoolProp::IncompressibleData polynomial;
+        polynomial.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        polynomial.coeffs = Eigen::MatrixXd::Constant(1, 1, 1000.0);
+        CoolProp::IncompressibleFluid fluid;
+        CHECK_THROWS_WITH(fluid.setDensityChebyshev(polynomial), Catch::Matchers::ContainsSubstring("only takes a Chebyshev fit"));
+        CHECK_THROWS_WITH(fluid.setSpecificHeatChebyshev(polynomial), Catch::Matchers::ContainsSubstring("only takes a Chebyshev fit"));
+    }
+    SECTION("Changing Tbase after validate() makes s throw until validate() runs again") {
+        // The polynomial entropy integral has the value of Tbase built in; a
+        // stale matrix would give a wrong entropy without any error. The
+        // derivative and the enthalpy integral do not, and keep working.
+        CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MEG");
+        const double T = 300.0, x = 0.3;
+        const double h_before = fluid.dhdTatPxdT(T, p, x, false);
+        const double drho_before = fluid.drhodTatPx(T, p, x, false);
+        const double new_Tbase = fluid.getTbase() + 20.0;
+        fluid.setTbase(new_Tbase);
+        CHECK_THROWS_WITH(fluid.dsdTatPxdT(T, p, x, false), Catch::Matchers::ContainsSubstring("not loaded through validate()"));
+        // Still the same matrices, now evaluated at the new T - Tbase: a
+        // different value, but no error.
+        double h_after = 0.0, drho_after = 0.0;
+        CHECK_NOTHROW(h_after = fluid.dhdTatPxdT(T, p, x, false));
+        CHECK_NOTHROW(drho_after = fluid.drhodTatPx(T, p, x, false));
+        CHECK(h_after != h_before);
+        CHECK(drho_after != drho_before);
+        // The Chebyshev fits do not depend on Tbase and keep working
+        CHECK_NOTHROW(fluid.dsdTatPxdT(T, p, x, true));
+        // validate() rebuilds the entropy integral for the NEW Tbase: its
+        // derivative must be the specific heat (which uses the new Tbase)
+        // divided by T. A matrix built for the old Tbase fails this.
+        fluid.validate();
+        REQUIRE(fluid.getTbase() == new_Tbase);
+        const double dT = 0.01;
+        const double dsdT = (fluid.dsdTatPxdT(T + dT, p, x, false) - fluid.dsdTatPxdT(T - dT, p, x, false)) / (2 * dT);
+        CHECK(dsdT == Catch::Approx(fluid.c(T, p, x, false) / T).epsilon(1e-7));
+    }
+    SECTION("Shipped fluids: the classic fits give consistent h and s, and match where the Chebyshev fit is a conversion") {
+        // dh/dT == cp and ds/dT == cp/T on the classic fits, by central
+        // differences through the public interface, on a solution (MEG), a
+        // pure fluid with Tbase inside its range (Water), one with
+        // Tbase == 0 (DEB) and one probed far from a large Tbase (LiqNa,
+        // Tbase 1450 K, probed at 900 K where it does not boil at 1 atm),
+        // which stresses the ln(T) term of the entropy integral.
+        struct Probe
+        {
+            std::string fluid;
+            double T;
+        };
+        const ChebyshevCaloricSetting setting(false);
+        for (const Probe& probe :
+             {Probe{"INCOMP::MEG[0.35]", 300.0}, Probe{"INCOMP::Water", 350.0}, Probe{"INCOMP::DEB", 300.0}, Probe{"INCOMP::LiqNa", 900.0}}) {
+            CAPTURE(probe.fluid);
+            const double dT = 0.01;
+            const double cp = CoolProp::PropsSI("C", "T", probe.T, "P", p, probe.fluid);
+            const double dhdT = (CoolProp::PropsSI("Hmass", "T", probe.T + dT, "P", p, probe.fluid)
+                                 - CoolProp::PropsSI("Hmass", "T", probe.T - dT, "P", p, probe.fluid))
+                                / (2 * dT);
+            const double dsdT = (CoolProp::PropsSI("Smass", "T", probe.T + dT, "P", p, probe.fluid)
+                                 - CoolProp::PropsSI("Smass", "T", probe.T - dT, "P", p, probe.fluid))
+                                / (2 * dT);
+            CAPTURE(cp);
+            CAPTURE(dhdT);
+            CAPTURE(dsdT);
+            REQUIRE(ValidNumber(cp));
+            // Same tolerance and reasoning as the Chebyshev test above: dh/dT
+            // also carries the small pressure term p * d(dh/dp)/dT.
+            CHECK(std::abs(dhdT / cp - 1) < 1e-4);
+            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-4);
+        }
+
+        // MEG's Chebyshev entries are exact basis conversions of its classic
+        // polynomial (see the Chebyshev test case above), so the two paths
+        // must agree on h and s differences to near rounding, which checks
+        // the precomputed polynomial integrals on real coefficients.
+        const std::string meg = "MEG";
+        std::unique_ptr<CoolProp::AbstractState> classic_state(CoolProp::AbstractState::factory("INCOMP", meg));
+        std::unique_ptr<CoolProp::AbstractState> chebyshev_state;
+        {
+            const ChebyshevCaloricSetting chebyshev_setting(true);
+            chebyshev_state.reset(CoolProp::AbstractState::factory("INCOMP", meg));
+        }
+        for (CoolProp::AbstractState* state : {classic_state.get(), chebyshev_state.get()}) {
+            state->set_mass_fractions(std::vector<double>(1, 0.35));
+        }
+        auto h_and_s_rise = [&](CoolProp::AbstractState& state) {
+            state.update(CoolProp::PT_INPUTS, p, 260.0);
+            const double h1 = state.hmass(), s1 = state.smass();
+            state.update(CoolProp::PT_INPUTS, p, 360.0);
+            return std::make_pair(state.hmass() - h1, state.smass() - s1);
+        };
+        const auto classic_rise = h_and_s_rise(*classic_state);
+        const auto chebyshev_rise = h_and_s_rise(*chebyshev_state);
+        CAPTURE(classic_rise.first);
+        CAPTURE(chebyshev_rise.first);
+        CAPTURE(classic_rise.second);
+        CAPTURE(chebyshev_rise.second);
+        CHECK(std::abs(classic_rise.first / chebyshev_rise.first - 1) < 1e-9);
+        CHECK(std::abs(classic_rise.second / chebyshev_rise.second - 1) < 1e-9);
+    }
+    SECTION("Every shipped fluid evaluates h and s with either setting") {
+        // Both fits are now loaded for every fluid, so a classic fit that the
+        // Chebyshev default used to hide must still load and evaluate.
+        std::vector<std::string> names;
+        std::istringstream ss(CoolProp::get_global_param_string("incompressible_list_pure") + ","
+                              + CoolProp::get_global_param_string("incompressible_list_solution"));
+        for (std::string name; std::getline(ss, name, ',');) {
+            if (!name.empty() && name.compare(0, RUNTIME_TEST_FLUID_PREFIX.size(), RUNTIME_TEST_FLUID_PREFIX) != 0) names.push_back(name);
+        }
+        REQUIRE(names.size() == 127);
+        for (const bool chebyshev : {true, false}) {
+            const ChebyshevCaloricSetting setting(chebyshev);
+            for (const std::string& name : names) {
+                CAPTURE(chebyshev);
+                CAPTURE(name);
+                CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+                // Every shipped fluid carries both kinds. Without this, a
+                // classic fit lost at load would fall back to the Chebyshev
+                // one and every check below would still pass.
+                CHECK(fluid.hasClassicCaloric());
+                CHECK(fluid.hasChebyshevCaloric());
+                const double T = 0.5 * (fluid.getTmin() + fluid.getTmax());
+                const double x = fluid.is_pure() ? 0.0 : 0.5 * (fluid.getxmin() + fluid.getxmax());
+                // A throw inside CHECK is reported as a failure of that
+                // CHECK, and the sweep carries on with the next fluid.
+                CHECK(ValidNumber(fluid.rho(T, p, x, chebyshev)));
+                CHECK(ValidNumber(fluid.drhodTatPx(T, p, x, chebyshev)));
+                CHECK(ValidNumber(fluid.dhdTatPxdT(T, p, x, chebyshev)));
+                CHECK(ValidNumber(fluid.dsdTatPxdT(T, p, x, chebyshev)));
+            }
+        }
     }
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {

@@ -324,15 +324,22 @@ because the integral is taken with respect to the physical temperature :math:`T`
 :math:`T_\text{in}`, even though :math:`c` itself is expressed in the centred variable.
 
 To structure the problem, we introduce a variable :math:`D(j,T)`,
-the indefinite integral of :math:`(T-T_\text{base})^j/T` with respect to :math:`T`,
-evaluated at the point :math:`T`. As a first step for simplification, one
-has to expand the binomial :math:`(T-T_{base})^j` to a series before dividing by
-:math:`T` and integrating term by term:
+the indefinite integral of :math:`T_\text{in}^j/T = (T-T_\text{base})^j/T` with
+respect to :math:`T`, evaluated at the point :math:`T`. Writing
+:math:`T = T_\text{in} + T_\text{base}` and dividing the polynomial
+:math:`T_\text{in}^j` by it leaves a polynomial in :math:`T_\text{in}` and a single
+remainder term proportional to :math:`1/T`, so that
 
 .. math::
 
     \left( \frac{\partial s}{\partial T} \right)_p          &= \frac{c\left( x_\text{in},T_\text{in} \right)}{T} \quad\text{so that}\quad \int \left( \frac{\partial s}{\partial T} \right)_p dT = \sum_{i=0}^n x_\text{in}^i \cdot \sum_{j=0}^m C_{c}[i,j] \cdot D(j,T) \\
-    D(j,T)          &= (-1)^j \cdot \ln \left( T \right) \cdot T_{base}^j + \sum_{k=0}^{j-1} \binom{j}{k} \cdot \frac{(-1)^k}{j-k} \cdot T^{j-k} \cdot T_{base}^k
+    D(j,T)          &= \left(-T_{base}\right)^j \cdot \ln \left( T \right) + \sum_{k=0}^{j-1} \frac{\left(-T_{base}\right)^k}{j-k} \cdot T_\text{in}^{j-k}
+
+The polynomial part stays in the centred variable :math:`T_\text{in}`, so CoolProp
+collects it, together with the factors of :math:`\ln(T)`, into two coefficient
+matrices once, when the fluid is loaded. The same is done for the derivative of
+the density and for the integral of the heat capacity used for enthalpy, so that
+every caloric evaluation is a plain polynomial evaluation.
 
 Dividing by the physical :math:`T` rather than :math:`T_\text{in}` is what keeps this
 well-defined at :math:`T = T_\text{base}`: the only term that depends on a logarithm
@@ -355,6 +362,29 @@ freezing temperature have a different, genuine pole in their own functional form
 (at a fit-coefficient-dependent point, not necessarily :math:`T_\text{base}`); that
 case is still handled by a tiny linear interpolation across the pole rather than
 an exact formula, since the function genuinely diverges there.
+
+Chebyshev fits for density and heat capacity
+---------------------------------------------
+
+Most fluids also ship Chebyshev fits of density and heat capacity, and these are
+used by default: their enthalpy and entropy integrals are exact and they have no
+base temperature. The classic polynomial fits described above are still loaded,
+and you can switch back to them with the configuration key
+``INCOMP_PREFER_CHEBYSHEV_CALORIC``, for example to compare the two.
+
+.. code-block:: python
+
+    import CoolProp.CoolProp as CP
+    CP.set_config_bool(CP.INCOMP_PREFER_CHEBYSHEV_CALORIC, False)
+    CP.PropsSI('C', 'T', 300, 'P', 101325, 'INCOMP::MEG[0.3]')  # classic fit
+
+The key affects density, heat capacity, enthalpy, entropy and internal energy
+only. A fluid that ships only one kind of fit uses that fit whatever the
+setting. Each ``AbstractState`` reads the setting once, when it is created, and
+keeps that choice for its whole life, because its reference enthalpy and entropy
+were computed from the selected fits. Change the setting before creating the
+states it should apply to. ``PropsSI`` creates a new state on every call, so it
+follows the setting immediately.
 
 .. _Equations:
 

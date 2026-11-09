@@ -109,7 +109,12 @@
       "widely with the NT/NR/rank build options, so an entry count alone can't bound memory.")                                                       \
     X(CHEBYSHEV_DENSITY_SOLVER, "CHEBYSHEV_DENSITY_SOLVER", false,                                                                                   \
       "If true, the HEOS and GERG mixture PT flash finds density roots with the Chebyshev all-roots solver (certified isolation of every root, "     \
-      "spinodal-branch selection), falling back to the existing solvers where it cannot answer.  Experimental.")
+      "spinodal-branch selection), falling back to the existing solvers where it cannot answer.  Experimental.")                                     \
+    X(INCOMP_PREFER_CHEBYSHEV_CALORIC, "INCOMP_PREFER_CHEBYSHEV_CALORIC", true,                                                                      \
+      "If true (default), incompressible fluids evaluate density and specific heat (and so enthalpy and entropy) from their Chebyshev fits "         \
+      "where the fluid data ships them.  If false, the classic polynomial fits are used instead, where the fluid data ships those.  Each "           \
+      "incompressible AbstractState reads this setting once, when it is created, so change it before creating the states it should apply to; "       \
+      "PropsSI creates a new state on every call and so follows the setting immediately.")
 
 // Use preprocessor to create the Enum
 enum configuration_keys

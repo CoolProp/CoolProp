@@ -29,6 +29,15 @@ class IncompressibleBackend : public AbstractState
 
     IncompressibleFluid* fluid;
 
+    /// Evaluate density and specific heat from the fluid's Chebyshev fits
+    /// (true) or its classic fits (false), see IncompressibleFluid::useChebyshevFit.
+    /// Read once from INCOMP_PREFER_CHEBYSHEV_CALORIC when the state is
+    /// created and never changed afterwards: the reference enthalpy and
+    /// entropy cached in _hmass_ref and _smass_ref were computed from the
+    /// fits selected here, and mixing them with the other fits would shift
+    /// h and s by a constant.
+    bool chebyshev_caloric = true;
+
     /// Set the fractions
     /**
     @param fractions The vector of fractions of the components converted to the correct input
@@ -209,10 +218,10 @@ class IncompressibleBackend : public AbstractState
 
     /// We start with the functions that do not need a reference state
     CoolPropDbl calc_rhomass() override {
-        return fluid->rho(_T, _p, _fractions[0]);
+        return fluid->rho(_T, _p, _fractions[0], chebyshev_caloric);
     };
     CoolPropDbl calc_cmass() {
-        return fluid->c(_T, _p, _fractions[0]);
+        return fluid->c(_T, _p, _fractions[0], chebyshev_caloric);
     };
     CoolPropDbl calc_cpmass() override {
         return cmass();
@@ -253,27 +262,27 @@ class IncompressibleBackend : public AbstractState
 	 */
     /// Partial derivative of density with respect to temperature at constant pressure and composition
     double calc_drhodTatPx(double T, double p, double x) {
-        return fluid->drhodTatPx(T, p, x);
+        return fluid->drhodTatPx(T, p, x, chebyshev_caloric);
     };
     /// Partial derivative of entropy with respect to temperature at constant pressure and composition
     double calc_dsdTatPx(double T, double p, double x) {
-        return fluid->c(T, p, x) / T;
+        return fluid->c(T, p, x, chebyshev_caloric) / T;
     };
     /// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
     double calc_dhdTatPx(double T, double p, double x) {
-        return fluid->c(T, p, x);
+        return fluid->c(T, p, x, chebyshev_caloric);
     };
     /// Partial derivative of entropy
     ///  with respect to temperature at constant pressure and composition
     ///  integrated in temperature
     double calc_dsdTatPxdT(double T, double p, double x) {
-        return fluid->dsdTatPxdT(T, p, x);
+        return fluid->dsdTatPxdT(T, p, x, chebyshev_caloric);
     };
     /// Partial derivative of enthalpy
     ///  with respect to temperature at constant pressure and composition
     ///  integrated in temperature
     double calc_dhdTatPxdT(double T, double p, double x) {
-        return fluid->dhdTatPxdT(T, p, x);
+        return fluid->dhdTatPxdT(T, p, x, chebyshev_caloric);
     };
 
     /* Other useful derivatives

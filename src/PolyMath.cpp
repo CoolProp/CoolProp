@@ -1363,9 +1363,11 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
     }
 
     SECTION("Derivative of an ordinary polynomial is exact at x_base, not just epsilon-close") {
-        // IncompressibleFluid::drhodTatPx (and, through it, every enthalpy and
-        // entropy evaluation) differentiates an ordinary, non-fractional
-        // (firstExponent==0) centered polynomial via Polynomial2DFrac. The
+        // IncompressibleFluid::drhodTatPx used to differentiate an ordinary,
+        // non-fractional (firstExponent==0) centered polynomial via
+        // Polynomial2DFrac on every call; it now evaluates a derivative matrix
+        // built once in IncompressibleFluid::validate(), but this guards the
+        // same Polynomial2DFrac path for its other callers. The
         // bookkeeping exponent goes to -1 for that call, but the
         // corresponding coefficient is multiplied by (0 + 0) == 0 in
         // deriveCoeffs, so the "negative exponent" term Polynomial2DFrac
