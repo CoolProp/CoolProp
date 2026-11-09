@@ -1195,6 +1195,17 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
                     throw ValueError(
                       format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
                 }
+                // The superancillary extends below the EOS limits; apply the same lower
+                // bound as the iterative path below (gh-3394)
+                if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS) == false) {
+                    CoolPropDbl Tmin_satL = NAN, Tmin_satV = NAN;
+                    HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
+                    const CoolPropDbl Tmin_sat = std::max(Tmin_satL, Tmin_satV) - 1e-13;
+                    if (T < Tmin_sat - 0.1) {
+                        throw ValueError(format("Temperature to QT_flash [%0.8Lg K] must be in range [%0.8Lg K, %0.8Lg K]", T, Tmin_sat - 0.1,
+                                                Tcrit_num));
+                    }
+                }
                 auto rhoL = superanc.eval_sat(T, 'D', 0);
                 auto rhoV = superanc.eval_sat(T, 'D', 1);
                 auto p = superanc.eval_sat(T, 'P', 1);
@@ -1497,6 +1508,16 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
                 if (HEOS._p > pmax_num) {
                     throw ValueError(
                       format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
+                }
+                // The superancillary extends below the EOS limits; apply the same lower
+                // bound as the iterative path below (gh-3394)
+                if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS) == false) {
+                    CoolPropDbl pmin_satL = NAN, pmin_satV = NAN;
+                    HEOS.calc_pmin_sat(pmin_satL, pmin_satV);
+                    const CoolPropDbl pmin_sat = std::max(pmin_satL, pmin_satV);
+                    if (HEOS._p < pmin_sat * 0.999999) {
+                        throw ValueError(format("Pressure to PQ_flash [%6g Pa] must be in range [%8Lg Pa, %8Lg Pa]", HEOS._p, pmin_sat, pmax_num));
+                    }
                 }
                 auto T = superanc.get_T_from_p(HEOS._p);
                 auto rhoL = superanc.eval_sat(T, 'D', 0);
