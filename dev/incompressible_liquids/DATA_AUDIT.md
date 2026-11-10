@@ -38,14 +38,17 @@ steps, source `MultiTherm2004` (vendor SI table, form PG-1C EXP 5/04).
 
 - Vapour pressure is published only from 110 °C (`TminPsat` = 383.15 K).
   Within 110…340 °C the rows at 130, 170, 190, 210, 230, 270, 290, 310 and
-  330 °C are also `NaN`. They do not follow any grid (140/150/160 °C and
-  240/250/260 °C are consecutive), so they are presumed missing from the
-  transcription; this has not been checked against the source PDF. The
-  fitter masks them.
+  330 °C are also `NaN`, because the source table leaves those cells blank.
+  The fitter masks them.
+- All 38 rows of every array were checked value by value against the SI
+  table (form PG-1C EXP 5/04) and match exactly.
 - The 5.8 % psat residual is a single outlier at 260 °C (6400 Pa); the
-  neighbours at 250 °C and 280 °C fit within 0.6 %. Filling the gaps would
-  barely move it. It points to a possible transcription error in the 260 °C
-  row and is worth checking against the source table.
+  neighbours at 250 °C and 280 °C fit within 0.6 %. It is the vendor's own
+  value, not a transcription slip: the table gives 48.0 mmHg = 64.0 hPa, and
+  the °F table (form PG-1F EXP 5/04) agrees at 500 °F. Leave it as published.
+- The source SI table's 270 °C row misprints the °F column (554 instead of
+  518) and g/cc (0.760, copied from the 290 °C row). The kg/m³ value (768)
+  fits the linear trend and is the one used.
 - Viscosity spans four orders of magnitude. The fitter's alternatives are
   worse, not better: a cubic `exppolynomial` (its cap for a pure fluid) is
   off by up to 49 % and the `logexponential` by 35 %; only a degree-6

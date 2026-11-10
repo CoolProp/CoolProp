@@ -652,11 +652,9 @@ class MultiThermPG1(PureData):
         # Vapor pressure is only published from 110 C upward, so the 14 rows
         # below that (-30 C ... 100 C) are NaN and TminPsat is set to 110 C.
         # Within the populated range the rows at 130, 170, 190, 210, 230, 270,
-        # 290, 310 and 330 C are also NaN: they follow no grid and are presumed
-        # missing from this transcription of the source table (not yet checked
-        # against the source).  The fitter masks NaNs, so psat is
-        # fitted to the 15 populated points (110 ... 340 C).  Fill the missing
-        # rows from the source table if they become available.
+        # 290, 310 and 330 C are also NaN: the source table leaves those cells
+        # blank (checked against form PG-1C EXP 5/04).  The fitter masks NaNs,
+        # so psat is fitted to the 15 populated points (110 ... 340 C).
         # Source values are in hPa (mbar); the array below is already in Pa.
         self.saturation_pressure.data = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.100000E+1, 1.900000E+1, np.nan, 5.600000E+1, 9.300000E+1, 1.500000E+2, np.nan, 3.700000E+2, np.nan, 8.500000E+2, np.nan, 1.800000E+3, np.nan, 3.570000E+3, 4.900000E+3, 6.400000E+3, np.nan, 1.230000E+4, np.nan, 2.130000E+4, np.nan, 3.680000E+4, np.nan, 6.130000E+4]) # Pa
         self.Tmin = np.min(self.temperature.data)
