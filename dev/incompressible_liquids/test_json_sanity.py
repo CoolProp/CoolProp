@@ -58,11 +58,11 @@ PROPERTIES = ["density", "specific_heat", "conductivity", "viscosity", "saturati
 
 # The three composition-conversion blocks. add_one parses these through the
 # same parse_coefficients as the properties, so the loader-contract check
-# applies to them identically. Their coefficient VALUES are not checked: 24
-# blocks already ship as an all-zero "polynomial", which the value tests would
-# reject, and clearing that data is a separate change. It is inert today --
-# inputFromMass/inputFromVolume throw NotImplementedError wherever a conversion
-# is actually needed (the cross-basis case, which is every one of the 24).
+# applies to them identically, and a block that is present gets the same value
+# checks as a property. 24 of them used to ship the all-zero template as a
+# "polynomial" (#3302). That was inert only because inputFromMass and
+# inputFromVolume throw NotImplementedError; once their evaluation switch is
+# enabled, such a block returns a fabricated 0 instead of an error.
 CONVERSIONS = ["mass2input", "volume2input", "mole2input"]
 
 # Parsed by add_one with vital=true: for these, an unrecognised "type"
@@ -161,18 +161,21 @@ def _flatten(coeffs):
 
 
 def _iter_property_coeffs():
-    """Yield ``(filename, property, flat_coeffs)`` for every fitted property shipped.
+    """Yield ``(filename, block, flat_coeffs)`` for every fitted block shipped.
 
-    Walks every fluid JSON in ``JSON_DIR``. Properties that carry no
-    coefficients are asserted to be typed ``notdefined`` and are then skipped,
-    so the three checks below see only blocks that claim to be real fits.
+    Walks every fluid JSON in ``JSON_DIR``: the six properties, plus whichever
+    conversion blocks the file carries. Blocks that carry no coefficients are
+    asserted to be typed ``notdefined`` and are then skipped, so the three
+    checks below see only blocks that claim to be real fits.
     """
     files = sorted(glob.glob(os.path.join(JSON_DIR, "*.json")))
     assert files, "no fluid JSON files found in {0}".format(JSON_DIR)
     for path in files:
         with open(path) as fh:
             fluid = json.load(fh)
-        for prop in PROPERTIES:
+        # Conversions are optional per file (see test_loader_contract_satisfied),
+        # so only the ones present are walked; the six properties are required.
+        for prop in PROPERTIES + [conv for conv in CONVERSIONS if conv in fluid]:
             # Require the block to exist rather than defaulting to {}: toJSON
             # always emits all of PROPERTIES, so an omitted one means data was
             # lost, and .get(prop, {}) would silently let that pass as
@@ -297,3 +300,33 @@ def test_known_guesses_match_the_fitter():
     assert sorted(_FALLBACK_GUESSES) == _FITTER_GUESSES, (
         "the fallback literals in this module have drifted from IncompressibleData's "
         "*_GUESS constants: {0} vs {1}".format(sorted(_FALLBACK_GUESSES), _FITTER_GUESSES))
+
+
+def test_every_committed_file_is_strict_json():
+    """No committed file may contain a bare NaN or Infinity token.
+
+    Python's json module accepts NaN, Infinity and -Infinity by default, even
+    though they are not valid JSON and the C++ loader has no reason to accept
+    them. Both writers pass allow_nan=False so they cannot emit one, and this
+    is the matching check on the FILES.
+
+    It exists as its own corpus-wide test because the other non-finite guards
+    all have a hole in them. test_all_coefficients_finite walks the property
+    and conversion blocks, so it never sees a Chebyshev entry, Tbase, Trange,
+    xbase or NRMS. The digit-cap tests in test_writer_output.py skip the four
+    legacy DigitalFluids entirely, and for those four a non-finite value
+    would just be one more expected offender. This one reads every number in
+    every file, exemptions included.
+    """
+    def rejectConstant(token):
+        raise AssertionError("{0} is not valid JSON".format(token))
+
+    files = sorted(glob.glob(os.path.join(JSON_DIR, "*.json")))
+    assert files, "no fluid JSON files found in {0}".format(JSON_DIR)
+    for path in files:
+        with open(path) as fh:
+            text = fh.read()
+        try:
+            json.loads(text, parse_constant=rejectConstant)
+        except AssertionError as err:
+            raise AssertionError("{0}: {1}".format(os.path.basename(path), err))

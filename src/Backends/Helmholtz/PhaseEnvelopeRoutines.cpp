@@ -218,7 +218,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                     Spline<double, double> spl(env.rhomolar_vap, env.x[i]);
                     IO.x[i] = spl.interpolate(IO.rhomolar_vap);
 
-                    if (IO.x[i] < 0 || IO.x[i] > 1) {
+                    if (!is_in_closed_range(0.0, 1.0, static_cast<double>(IO.x[i]))) {  // NaN retries too
                         // Try again, but with a smaller step
                         IO.rhomolar_vap /= factor;
                         factor = 1 + (factor - 1) / 2;

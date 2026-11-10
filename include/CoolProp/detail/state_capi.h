@@ -37,7 +37,7 @@ extern "C"
         // Each call above catches them and stashes the message; last_error() returns
         // it (or NULL) so the Cython shim can re-raise a Python exception -- matching
         // the legacy State's `except *` behaviour.  Cleared on the next successful call.
-        const char* (*last_error)();
+        const char* (*last_error)(void);  // NOLINT(modernize-redundant-void-arg) -- (void) is the C prototype; () is not
         // Set the composition (mole fractions) of a mixture handle, so the shim's
         // set_Fluid can honour bracketed strings like "R32[0.5]&R134a[0.5]".
         // Appended after last_error to keep the existing field offsets stable.

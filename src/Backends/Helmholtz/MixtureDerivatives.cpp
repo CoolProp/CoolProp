@@ -57,10 +57,32 @@ CoolPropDbl MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(HelmholtzEOSMixtur
     CoolPropDbl val = dln_fugacity_coefficient_dxj__constT_p_xi(HEOS, i, j, xN_flag);
     const std::vector<CoolPropDbl>& x = HEOS.get_mole_fractions();
     std::size_t N = x.size();
-    if (i == N - 1) {
-        val += -1 / x[N - 1];
-    } else if (i == j) {
-        val += 1 / x[j];
+    // Ideal-gas contribution d(ln x_i)/dx_j, which depends on the composition convention:
+    //  * XN_DEPENDENT: x_{N-1} = 1 - sum_{k<N-1} x_k is the dependent mole fraction, so
+    //    d(ln x_{N-1})/dx_j = -1/x_{N-1} for every j, and d(ln x_i)/dx_j = delta_ij/x_i for i < N-1.
+    //  * XN_INDEPENDENT: all x_i are treated as independent, so d(ln x_i)/dx_j = delta_ij/x_i for
+    //    EVERY i, including the last component.  (Previously this branch was missing: the function
+    //    applied the XN_DEPENDENT term -1/x_{N-1} to the last row regardless of the flag, so the
+    //    last-component row was wrong for XN_INDEPENDENT callers.  GH #3342: this fed a corrupted
+    //    last row into the new mole-number Gibbs Hessian of the PT-flash minority-phase fallback,
+    //    flipping its smallest eigenvalue negative -- see PTflash_twophase::solve_michelsen.)
+    //    NOTE: consumers that assemble a Hessian in the fugacity-COEFFICIENT derivative must call
+    //    dln_fugacity_coefficient_dxj__constT_p_xi and add their own mole-number projection instead
+    //    of this (full fugacity) derivative -- feeding this one double-counts the ideal term and
+    //    drops the projection, breaking the Hessian's symmetry.  The PT-flash Phase-2 Gibbs Hessian
+    //    and the Michelsen stability classifier (minimize_tpd) both do so correctly; see
+    //    VLERoutines.cpp.  Fixing the XN_INDEPENDENT branch below without also fixing the stability
+    //    classifier flipped its MSVC verdict for methanol/benzene (GH #3357, jakobreichert).
+    if (xN_flag == XN_DEPENDENT) {
+        if (i == N - 1) {
+            val += -1 / x[N - 1];
+        } else if (i == j) {
+            val += 1 / x[j];
+        }
+    } else {  // XN_INDEPENDENT
+        if (i == j) {
+            val += 1 / x[j];
+        }
     }
     return val;
 }
@@ -1151,7 +1173,8 @@ class DerivativeFixture
       HEOS_minus_2tau, HEOS_plus_2delta, HEOS_minus_2delta, HEOS_plus_T__constp, HEOS_minus_T__constp, HEOS_plus_p__constT, HEOS_minus_p__constT,
       HEOS_plus_T__constrho, HEOS_minus_T__constrho, HEOS_plus_rho__constT, HEOS_minus_rho__constT;
     std::vector<shared_ptr<CoolProp::HelmholtzEOSMixtureBackend>> HEOS_plus_z, HEOS_minus_z, HEOS_plus_z__constTrho, HEOS_minus_z__constTrho,
-      HEOS_plus_n, HEOS_minus_n, HEOS_plus_2z, HEOS_minus_2z, HEOS_plus_2z__constTrho, HEOS_minus_2z__constTrho;
+      HEOS_plus_n, HEOS_minus_n, HEOS_plus_2z, HEOS_minus_2z, HEOS_plus_2z__constTrho, HEOS_minus_2z__constTrho, HEOS_plus_z__constTP,
+      HEOS_minus_z__constTP;
     CoolProp::x_N_dependency_flag xN;
     double dtau, ddelta, dz, dn, tol, dT, drho, dp;
     DerivativeFixture() : xN(XN_INDEPENDENT), dtau(1e-6), ddelta(1e-6), dz(1e-6), dn(1e-6), dT(1e-3), drho(1e-3), dp(1), tol(5e-6) {
@@ -1255,6 +1278,32 @@ class DerivativeFixture
                                      HEOS_minus_2z[i]->T_reducing() / HEOS->tau());
             HEOS_minus_z__constTrho[i]->set_mole_fractions(zz);
             HEOS_minus_z__constTrho[i]->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar(), HEOS->T());
+        }
+
+        // Varying mole fractions at constant T, p -- for d(ln f_i)/dx_j |__constT_p_xi, the
+        // convention the flash/stability Hessians consume (GH #3357).  The const-T,rho states
+        // above validate the __constT_rho_xi sibling only; this one covers __constT_p_xi, which
+        // had no derivative coverage (which is how its XN_INDEPENDENT ideal-term bug went
+        // unnoticed).  Perturb x_j exactly as above -- compensating the last component only under
+        // XN_DEPENDENT, leaving the sum un-normalized under XN_INDEPENDENT (the analytic
+        // continuation the XN_INDEPENDENT derivative differentiates; the backend does not
+        // renormalize) -- then re-solve at the base T and p.
+        HEOS_plus_z__constTP.resize(4);
+        HEOS_minus_z__constTP.resize(4);
+        for (int i = 0; i < HEOS_plus_z__constTP.size(); ++i) {
+            init_state(HEOS_plus_z__constTP[i]);
+            init_state(HEOS_minus_z__constTP[i]);
+            std::vector<double> zp = HEOS->get_mole_fractions(), zm = HEOS->get_mole_fractions();
+            zp[i] += dz;
+            zm[i] -= dz;
+            if (xN == CoolProp::XN_DEPENDENT) {
+                zp[zp.size() - 1] -= dz;
+                zm[zm.size() - 1] += dz;
+            }
+            HEOS_plus_z__constTP[i]->set_mole_fractions(zp);
+            HEOS_plus_z__constTP[i]->update(CoolProp::PT_INPUTS, HEOS->p(), HEOS->T());
+            HEOS_minus_z__constTP[i]->set_mole_fractions(zm);
+            HEOS_minus_z__constTP[i]->update(CoolProp::PT_INPUTS, HEOS->p(), HEOS->T());
         }
 
         // Varying mole numbers
@@ -1394,6 +1443,28 @@ class DerivativeFixture
                     // Forward difference in composition
                     CHECK_NOTHROW(numeric = (-3 * g(*HEOS, i, xN) + 4 * g(*HEOS_plus_z[j], i, xN) - g(*HEOS_plus_2z[j], i, xN)) / (2 * dz));
                 }
+                CAPTURE(name);
+                CAPTURE(i);
+                CAPTURE(j);
+                CAPTURE(analytic);
+                CAPTURE(numeric);
+                CAPTURE(xN);
+                double error = mix_deriv_err_func(numeric, analytic);
+                CAPTURE(error);
+                CHECK(error < tol);
+            }
+        }
+    }
+    // Finite-difference check of a composition derivative taken at constant T and p (as
+    // opposed to two_comp's constant reduced delta/tau).  Central difference of g in x_j
+    // across the HEOS_(plus|minus)_z__constTP states.  All base mole fractions are >> 2*dz,
+    // so a central difference is always valid (no forward-difference fallback needed).
+    void two_comp_constTP(const std::string& name, two_mole_fraction_pointer f, one_mole_fraction_pointer g) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                double analytic = f(*HEOS, i, j, xN);
+                double numeric = 500;
+                CHECK_NOTHROW(numeric = (g(*HEOS_plus_z__constTP[j], i, xN) - g(*HEOS_minus_z__constTP[j], i, xN)) / (2 * dz));
                 CAPTURE(name);
                 CAPTURE(i);
                 CAPTURE(j);
@@ -1605,6 +1676,9 @@ class DerivativeFixture
               MD::d_nd_ndalphardni_dnj_dxk__consttau_delta, DELTA);
 
         // Xn-dep only        two_comp("dln_fugacity_dxj__constT_rho_xi", MD::dln_fugacity_dxj__constT_rho_xi, MD::ln_fugacity);
+        // d(ln f_i)/dx_j at constant T, p -- both x_N conventions (the fixture runs XN_INDEPENDENT
+        // by default, the branch whose ideal term was wrong in GH #3357/#3342).
+        two_comp_constTP("dln_fugacity_dxj__constT_p_xi", MD::dln_fugacity_dxj__constT_p_xi, MD::ln_fugacity);
         three("d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau", MD::d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau,
               MD::d_ndln_fugacity_i_dnj_ddxk__consttau_delta, DELTA);
         three("d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta", MD::d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta,

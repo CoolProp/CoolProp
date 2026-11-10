@@ -77,6 +77,18 @@ Interpolator inherit AS implemented by TTSE BICUBIC
 class AbstractState
 {
    protected:
+    /// Drop every cached property value, keeping the bulk state (T, p, rhomolar, Q) and the
+    /// cached critical/reducing states.  For a solver that has just moved the state to a new
+    /// density: the cached values belong to the density last evaluated, not the one now set,
+    /// and clearing them is cheaper than re-evaluating to refill them.
+    ///
+    /// Protected, not public: a backend may cache something it cannot recompute (REFPROP's
+    /// saturated liquid/vapour densities arrive from a DLL flash and their accessors throw
+    /// when unset), so this is for a backend or a flash routine that knows what it invalidated.
+    void clear_cached_properties() {
+        cache.clear();
+    }
+
     /// Some administrative variables
     long _fluid_type;
     phases _phase;               ///< The key for the phase from CoolProp::phases enum
@@ -323,6 +335,40 @@ class AbstractState
     /// Mixture backends must override.
     virtual PhaseMolarMasses calc_phase_molar_masses();
 
+    /// A Qmass input pair's molar sibling, and which slot (1=value1, 2=value2)
+    /// carries the Qmass value.
+    struct QmassPairMapping
+    {
+        CoolProp::input_pairs molar;
+        int qmass_slot;
+    };
+
+    /// Map a Qmass input pair to its molar sibling and Qmass slot.
+    static QmassPairMapping qmass_pair_mapping(CoolProp::input_pairs pair);
+
+    /// Throw if the Qmass component of a Qmass input pair is not in [0,1] (NaN
+    /// included).  update_Qmass_pair applies this itself; a backend that rewrites
+    /// the pair to its molar sibling instead of iterating must call it directly,
+    /// or the range goes unchecked -- REFPROP's DQFL2 will extrapolate a quality
+    /// above 1 rather than refuse it.
+    static void check_Qmass_pair_range(CoolProp::input_pairs pair, double v1, double v2);
+
+    /// Throw if the vapor quality carried by an input pair is outside [0,1] (NaN
+    /// included).  Qmass pairs go to check_Qmass_pair_range; for every other pair
+    /// the Q slot is found with split_input_pair, so no hand-kept list of pairs is
+    /// needed.  A known pair without a quality passes untouched (so a pair the
+    /// backend does not support still reaches its own "not supported" error).  A
+    /// pair split_input_pair does not know -- INPUT_PAIR_INVALID, an out-of-range
+    /// value, or a pair added to the enum but not registered -- throws ValueError
+    /// ("Unknown input pair [N]; ..."): the check fails closed, never skipped.
+    /// Backends call this as the first statement of update() so a bad quality is
+    /// refused before any cached state is cleared or overwritten.
+    static void check_input_quality(CoolProp::input_pairs pair, double v1, double v2);
+
+    /// Throw OutOfRangeError unless 0 <= Q <= 1 (NaN included).  The single home of
+    /// the "Input vapor quality [Q] must be between 0 and 1, got <Q>" message.
+    static void check_input_quality_value(double Q);
+
     /// Default iterative Qmass-pair solver (secant on Qmolar). Backends may
     /// override to use a native fast path (e.g. REFPROP TQFLSHdll kq=2).
     virtual void update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2);
@@ -470,6 +516,10 @@ class AbstractState
     /// Using this backend, calculate the ozone depletion potential (ODP)
     virtual CoolPropDbl calc_ODP() {
         throw NotImplementedError("calc_ODP is not implemented for this backend");
+    };
+    /// Using this backend, get the standard molar enthalpy of formation of the ideal gas at 298.15 K
+    virtual CoolPropDbl calc_Hmolar_formation() {
+        throw NotImplementedError("calc_Hmolar_formation is not implemented for this backend");
     };
     /// Using this backend, calculate the flame hazard
     virtual CoolPropDbl calc_flame_hazard() {

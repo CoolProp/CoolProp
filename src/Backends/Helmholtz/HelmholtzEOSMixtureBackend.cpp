@@ -39,8 +39,14 @@
 #include "MixtureParameters.h"
 #include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
+#include "CoolProp/expression/ExpressionCorrelation.h"
+#include "ChebDensitySolver.h"
 #include <atomic>
 #include <cstdlib>
+#include <map>
+#include <mutex>
+#include <random>
+#include <sstream>
 
 // Instrumentation only: counts the number of EOS derivative-cache evaluations
 // across all HEOS instances. Atomic so concurrent calls do not race (#2844).
@@ -103,6 +109,8 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     _phase = iphase_unknown;
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
+    cheb_density.reset();  // a new model: resolve the Chebyshev solver again
+    cheb_density_resolved = false;
 
     // Drop the cached ECS transport reference fluids: they are tied to the
     // OLD component's reference-fluid name, so a post-construction component
@@ -318,6 +326,39 @@ std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::g
     return components[0].EOS().get_superanc();
 }
 
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_p(CoolPropDbl p) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl pmax_num = superanc.get_pmax();
+    if (p > pmax_num) {
+        throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", p, pmax_num));
+    }
+    const double Tsat = superanc.get_T_from_p(p);
+    return SuperancSatPoint{Tsat, superanc.eval_sat(Tsat, 'D', 0), superanc.eval_sat(Tsat, 'D', 1), p};
+}
+
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+    if (T > Tcrit_num) {
+        throw ValueError(format("Temperature [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+    }
+    return SuperancSatPoint{T, superanc.eval_sat(T, 'D', 0), superanc.eval_sat(T, 'D', 1), superanc.eval_sat(T, 'P', 1)};
+}
+
 void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     if (!is_pure()) {
         return;
@@ -381,6 +422,7 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
 }
 
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -412,6 +454,7 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const double value) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -458,6 +501,7 @@ double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const std::string& value) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -481,6 +525,7 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t
 };
 
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string& EOS_name) {
+    cheb_density_resolved = false;  // a different EOS: resolve the Chebyshev solver again
 
     if (i < components.size()) {
         CoolPropFluid& fluid = components[i];
@@ -739,6 +784,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute() {
             case ViscosityDiluteVariables::VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017:
                 eta_dilute = TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(*this);
                 break;
+            case ViscosityDiluteVariables::VISCOSITY_DILUTE_EXPRESSION:
+                if (!components[0].transport.viscosity_dilute.expression_data.correlation)
+                    throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+                eta_dilute = components[0].transport.viscosity_dilute.expression_data.correlation->eval(*this);
+                break;
             default:
                 throw ValueError(
                   format("dilute viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
@@ -763,6 +813,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL: {
             initial_density = TransportRoutines::viscosity_initial_density_dependence_empirical(*this);
+            break;
+        }
+        case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EXPRESSION: {
+            // The formula yields this stage's contribution directly, in Pa-s -- the
+            // same convention as the EMPIRICAL form and as the other four stages.
+            // It is NOT the Rainwater-Friend B_eta, which the host would have to
+            // scale by eta_dilute*rho; the dilute viscosity is a within-correlation
+            // intermediate and is deliberately not exposed to the DSL.
+            if (!components[0].transport.viscosity_initial.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            initial_density = components[0].transport.viscosity_initial.expression_data.correlation->eval(*this);
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_NOT_SET: {
@@ -799,6 +860,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
         case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017:
             residual = TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017(*this);
             break;
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_EXPRESSION:
+            if (!components[0].transport.viscosity_higher_order.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            residual = components[0].transport.viscosity_higher_order.expression_data.correlation->eval(*this);
+            break;
         default:
             throw ValueError(
               format("higher order viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
@@ -807,7 +873,24 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
     return initial_density + residual;
 }
 
+/// Transport properties are only defined for a single phase.  Inside the two-phase
+/// region the saturated liquid and vapor have different values and there is no
+/// meaningful bulk value, so refuse rather than evaluate a single-phase correlation
+/// at the overall density (#3446).  Q = 0 and Q = 1 are the saturated phases.  The
+/// tolerance matches the 1e-9 band in which the pure-fluid flashes already label a
+/// state two-phase, so a state on the saturation curve to within roundoff passes.
+/// Written so that a NaN quality throws.  A metastable value can still be had by
+/// imposing the phase with specify_phase().
+static void check_transport_property_defined(HelmholtzEOSMixtureBackend& HEOS, const char* property) {
+    const double Q_tol = 1e-9, Q = HEOS.Q();
+    if (HEOS.phase() == iphase_twophase && !(Q <= Q_tol || Q >= 1 - Q_tol)) {
+        throw ValueError(
+          format("%s is not defined for two-phase states (Q = %g); evaluate the saturated liquid (Q = 0) or vapor (Q = 1) instead", property, Q));
+    }
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
+    check_transport_property_defined(*this, "Viscosity");
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_viscosity_contributions(dilute, initial_density, residual, critical);
@@ -818,6 +901,12 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            // The mixture's (T, rho) may fall inside the pure component's dome.  Relabel
+            // the phase so the two-phase check lets the correlation be evaluated there
+            // regardless (#3446).  Relabel after the update rather than imposing it before:
+            // a re-flash with an imposed phase would replace psat in p() by the EOS pressure,
+            // which the friction-theory viscosity models read.
+            HEOS->specify_phase(iphase_gas);
             summer += mole_fractions[i] * log(HEOS->viscosity());
         }
         return exp(summer);
@@ -825,6 +914,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity() {
 }
 void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
                                                               CoolPropDbl& critical) {
+    check_transport_property_defined(*this, "Viscosity");
     if (is_pure_or_pseudopure) {
         // Reset the variables
         dilute = 0;
@@ -878,6 +968,9 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER:
                     critical = TransportRoutines::viscosity_heavywater_hardcoded(*this);
                     break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HEAVYWATER_IAPWS2020:
+                    critical = TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(*this);
+                    break;
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_HELIUM:
                     critical = TransportRoutines::viscosity_helium_hardcoded(*this);
                     break;
@@ -921,6 +1014,7 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
 }
 void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual,
                                                                  CoolPropDbl& critical) {
+    check_transport_property_defined(*this, "Thermal conductivity");
     if (is_pure_or_pseudopure) {
         // Reset the variables
         dilute = 0;
@@ -961,6 +1055,9 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
                 case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER:
                     initial_density = TransportRoutines::conductivity_hardcoded_heavywater(*this);
                     break;
+                case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_HEAVYWATER_IAPWS2021:
+                    initial_density = TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(*this);
+                    break;
                 case CoolProp::TransportPropertyData::CONDUCTIVITY_HARDCODED_R23:
                     initial_density = TransportRoutines::conductivity_hardcoded_R23(*this);
                     break;
@@ -1000,6 +1097,11 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
                 break;
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_NONE:
                 dilute = 0.0;
+                break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_EXPRESSION:
+                if (!components[0].transport.conductivity_dilute.expression_data.correlation)
+                    throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+                dilute = components[0].transport.conductivity_dilute.expression_data.correlation->eval(*this);
                 break;
             default:
                 throw ValueError(
@@ -1045,6 +1147,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
         case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_POLYNOMIAL_AND_EXPONENTIAL:
             lambda_residual = TransportRoutines::conductivity_residual_polynomial_and_exponential(*this);
             break;
+        case ConductivityResidualVariables::CONDUCTIVITY_RESIDUAL_EXPRESSION:
+            if (!components[0].transport.conductivity_residual.expression_data.correlation)
+                throw ValueError(format("expression correlation not set for fluid %s", name().c_str()));
+            lambda_residual = components[0].transport.conductivity_residual.expression_data.correlation->eval(*this);
+            break;
         default:
             throw ValueError(
               format("residual conductivity type [%d] is invalid for fluid %s", components[0].transport.conductivity_residual.type, name().c_str()));
@@ -1052,6 +1159,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity_background() {
     return lambda_residual;
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
+    check_transport_property_defined(*this, "Thermal conductivity");
     if (is_pure_or_pseudopure) {
         CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
         calc_conductivity_contributions(dilute, initial_density, residual, critical);
@@ -1062,6 +1170,12 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity() {
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
+            // The mixture's (T, rho) may fall inside the pure component's dome.  Relabel
+            // the phase so the two-phase check lets the correlation be evaluated there
+            // regardless (#3446).  Relabel after the update rather than imposing it before:
+            // a re-flash with an imposed phase would replace psat in p() by the EOS pressure,
+            // which the friction-theory viscosity models read.
+            HEOS->specify_phase(iphase_gas);
             summer += mole_fractions[i] * HEOS->conductivity();
         }
         return summer;
@@ -1183,6 +1297,21 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP100() {
         return v;
     }
 }
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_Hmolar_formation() {
+    // Pure and pseudo-pure only.  The ideal-gas mole-fraction sum would be
+    // exact, but a mixture is not a compound and the analogous entropy
+    // quantity is not linear, so the two would not stay consistent.
+    if (components.size() != 1) {
+        throw ValueError(format("calc_Hmolar_formation is only valid for pure and pseudo-pure fluids, %zu components", components.size()));
+    }
+    CoolPropDbl v = components[0].standard_state.hmolar;
+    if (!ValidNumber(v)) {
+        throw ValueError(format("No standard enthalpy of formation is available for fluid [%s]; the source database "
+                                "does not provide a value for this species",
+                                components[0].name.c_str()));
+    }
+    return v;
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500() {
     if (components.size() != 1) {
         throw ValueError(format("For now, calc_GWP500 is only valid for pure and pseudo-pure fluids, %d components", components.size()));
@@ -1194,15 +1323,25 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500() {
         return v;
     }
 }
+CriticalState HelmholtzEOSMixtureBackend::calc_unique_stable_critical_point() {
+    // The tracer also returns unstable points (e.g. negative-pressure ones at liquid-like
+    // densities, see #3528); only the stable ones are candidates for "the" critical point
+    std::vector<CriticalState> critpts = calc_all_critical_points();
+    std::vector<CriticalState> stable;
+    for (const auto& pt : critpts) {
+        if (pt.stable) {
+            stable.push_back(pt);
+        }
+    }
+    if (stable.size() != 1) {
+        throw ValueError(format("critical point finding routine found %d stable critical points (%d in total)", static_cast<int>(stable.size()),
+                                static_cast<int>(critpts.size())));
+    }
+    return stable[0];
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].T;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().T;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1215,13 +1354,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].p;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().p;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1234,13 +1367,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].rhomolar;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().rhomolar;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1453,6 +1580,11 @@ void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs& input_pair, C
 }
 
 void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Refuse a quality outside [0,1] (NaN included) before anything is touched:
+    // pre_update() clears the cached state, and a half-written _Q would pair with
+    // stale SatL/SatV to give a meaningless extrapolated hmass() etc. (#2195).
+    check_input_quality(input_pair, value1, value2);
+
     // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
     // before delegating to the molar-pair flash. Pure / pseudo-pure go through
     // mass_to_molar_inputs in the existing flow (handled below).
@@ -1538,37 +1670,27 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _smolar = value2;
             FlashRoutines::HS_flash(*this);
             break;
-        // Validate quality BEFORE assigning to _Q so a thrown exception
-        // does not leave the cached state half-mutated. Without this, a
-        // subsequent hmass() / smass() / etc. would use the stale SatL/
-        // SatV pointers from a prior valid update plus the new bad _Q
-        // and return a meaningless extrapolated value (#2195).
         case QT_INPUTS:
-            if ((value1 < 0) || (value1 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
             FlashRoutines::QT_flash(*this);
             break;
         case PQ_INPUTS:
-            if ((value2 < 0) || (value2 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _p = value1;
             _Q = value2;
             FlashRoutines::PQ_flash(*this);
             break;
         case QSmolar_INPUTS:
-            if ((value1 < 0) || (value1 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _smolar = value2;
             FlashRoutines::QS_flash(*this);
             break;
         case HmolarQ_INPUTS:
-            if ((value2 < 0) || (value2 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _hmolar = value1;
             _Q = value2;
             FlashRoutines::HQ_flash(*this);
             break;
         case DmolarQ_INPUTS:
-            if ((value2 < 0) || (value2 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _rhomolar = value1;
             _Q = value2;
             FlashRoutines::DQ_flash(*this);
@@ -1593,6 +1715,8 @@ const std::vector<CoolPropDbl> HelmholtzEOSMixtureBackend::calc_mass_fractions()
 
 void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2,
                                                      const GuessesStructure& guesses) {
+    check_input_quality(input_pair, value1, value2);
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
@@ -1623,19 +1747,16 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
         case DmolarQ_INPUTS:
             _rhomolar = value1;
             _Q = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::DQ_flash_with_guesses(*this, guesses);
             break;
         case HmolarQ_INPUTS:
             _hmolar = value1;
             _Q = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::HQ_flash_with_guesses(*this, guesses);
             break;
         case QSmolar_INPUTS:
             _Q = value1;
             _smolar = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::QS_flash_with_guesses(*this, guesses);
             break;
         default:
@@ -1782,19 +1903,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     else if (_p >= components[0].EOS().ptriple * 0.9999 && _p <= psat_max) {
 
         // First try the superancillaries, use them to determine the state if you can
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                CoolPropDbl pmax_num = superanc.get_pmax();
-                if (_p > pmax_num) {
-                    throw ValueError(
-                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
-                }
-                auto Tsat = superanc.get_T_from_p(_p);
-                auto rhoL = superanc.eval_sat(Tsat, 'D', 0);
-                auto rhoV = superanc.eval_sat(Tsat, 'D', 1);
+        {
+            const auto sat = superanc_saturation_at_p(_p);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto Tsat = sat->T;
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
                 auto psat = _p;
 
                 if (other == iT) {
@@ -1834,6 +1949,40 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         break;
                     default:
                         throw ValueError(format("bad input for other"));
+                }
+                // At the critical point itself (p == pc, which a superancillary maps onto the end of its
+                // table) the saturated states coincide, and Q is 0/0, +-inf, or a huge number whose sign is
+                // rounding noise in y_V - y_L.  It used to fall through as two-phase with rho = NaN (SRK CO2,
+                // P,H at exactly pc, on x86-64 where rhoL == rhoV to the bit), or could misclassify a liquid
+                // as gas elsewhere.  Decide on the state, not the bits: where the saturated densities coincide
+                // to 1e-10 (the tables agree to ~1e-12 at their critical end, and the sign of y_V - y_L is
+                // reliable well inside 1e-10; for a cubic the band is ~1e-20 in 1 - T/Tc, i.e. p within a few
+                // ulp of pc), classify as the p > psat_max branch above does, against the critical value.  A
+                // non-finite tabulated density is an error, not a critical point.
+                if (!ValidNumber(rhoL) || !ValidNumber(rhoV)) {
+                    throw ValueError(format("superancillary saturated densities are not finite at p = %g Pa", static_cast<double>(_p)));
+                }
+                if (!std::isfinite(Q) || !(std::abs(rhoV - rhoL) > 1e-10 * std::abs(rhoL))) {
+                    bool gas_like = false;
+                    switch (other) {
+                        case iDmolar:
+                            gas_like = value < rhomolar_crit_;
+                            break;
+                        case iSmolar:
+                            gas_like = value > smolar_critical();
+                            break;
+                        case iHmolar:
+                            gas_like = value > hmolar_critical();
+                            break;
+                        default:  // iUmolar; any other key already threw above
+                            gas_like = value > umolar_critical();
+                            break;
+                    }
+                    this->_phase = gas_like ? iphase_supercritical_gas : iphase_supercritical_liquid;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = 1e9;
+                    return;
                 }
                 // Start off by setting variables based on assumption that the state is two-phase
                 if (Q < -1e-9) {
@@ -2228,14 +2377,13 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         }
     } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                auto rhoL = superanc.eval_sat(_T, 'D', 0);
-                auto rhoV = superanc.eval_sat(_T, 'D', 1);
-                auto psat = superanc.eval_sat(_T, 'P', 1);
+        {
+            const auto sat = superanc_saturation_at_T(_T);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
+                auto psat = sat->p;
                 _rhoLanc = rhoL;
                 _rhoVanc = rhoV;
                 _rhoLmolar = rhoL;
@@ -2819,18 +2967,26 @@ class SolverTPResid : public FuncWrapper1DWithThreeDerivs
     };
     double second_deriv(double rhomolar) override {
         // d2p/drho2|T / pspecified
-        return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->calc_d3alphar_dDelta3()) / p;
+        // d3alphar_dDelta3(), not calc_d3alphar_dDelta3(): the calc_ form re-runs the
+        // whole derivative evaluation, while the cached accessor reads the value that
+        // call()'s update_DmolarT_direct already computed at this (tau, delta).
+        return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->d3alphar_dDelta3()) / p;
     };
     double third_deriv(double rhomolar) override {
         // d3p/drho3|T / pspecified
-        return R_u * T / POW2(rhor)
-               * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4()) / p;
+        return R_u * T / POW2(rhor) * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->d4alphar_dDelta4())
+               / p;
     };
 };
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
     return 0.9 / SRK_covolume();
 }
 
+// SRK_covolume() and solver_rho_Tp_SRK() are approximate seeds for the HEOS mixture solvers, not an
+// SRK EOS.  Their Omega_a/Omega_b literals carry #2745's transcription error (~4e-10 relative); the
+// exact values are in Backends/Cubics/CubicConstants.h.  They are deliberately left as they are: the
+// mixture PT flash's stability test is knife-edge sensitive to them and the exact values flip a
+// subcooled-liquid case to a spurious two-phase result (Linear COO-150).  Switch them once that is fixed.
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     double b = 0;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
@@ -2841,7 +2997,152 @@ CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     }
     return b;
 }
+// ---------------------------------------------------------------- Chebyshev all-roots density solver
+
+struct ChebDensityEntry
+{
+    std::shared_ptr<const ChebDensity::Tables> tab;
+    double Tmin = 0;  ///< the tables cover T >= Tmin
+};
+namespace {
+std::mutex cheb_cache_mtx;
+std::map<std::string, std::shared_ptr<const ChebDensityEntry>> cheb_cache;  // by model key, see cheb_model_key
+
+// Key of the model the tables are built from: backend, components, gas-constant configuration, and a fingerprint of
+// the mixture parameters -- the reducing temperature and density and alphar at fixed points, as exact hex floats, at
+// every pure component, the equimolar mixture and three asymmetric compositions (at x_i = x_j the GERG reducing
+// function is symmetric under beta -> 1/beta, so the equimolar point alone cannot tell those parameters apart) -- so a
+// backend whose interaction parameters were changed does not pick up tables built for other parameters.
+std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
+    std::string key = HEOS.backend_name();
+    const auto& comps = HEOS.get_components();
+    for (const auto& c : comps)
+        key += "|" + c.name;
+    std::ostringstream os;
+    os << std::hexfloat;
+    auto add = [&](double v) { os << '|' << v; };
+    add(get_config_bool(NORMALIZE_GAS_CONSTANTS) ? 1.0 : 0.0);
+    add(get_config_double(R_U_CODATA));
+    const std::size_t N = comps.size();
+    std::vector<std::vector<CoolPropDbl>> xs;
+    for (std::size_t i = 0; i < N; ++i) {
+        std::vector<CoolPropDbl> x(N, 0.0);
+        x[i] = 1;
+        xs.push_back(x);
+    }
+    if (N > 1) {
+        xs.emplace_back(N, 1.0 / static_cast<double>(N));
+        for (int form = 0; form < 3; ++form) {  // weights i+1, N-i, 1/(i+1)^2
+            std::vector<CoolPropDbl> x(N);
+            double sum = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                const double w = form == 0 ? static_cast<double>(i + 1) : form == 1 ? static_cast<double>(N - i) : 1.0 / ((i + 1.0) * (i + 1.0));
+                sum += (x[i] = w);
+            }
+            for (auto& v : x)
+                v /= sum;
+            xs.push_back(x);
+        }
+    }
+    for (const auto& x : xs) {
+        add(HEOS.Reducing->Tr(x));
+        add(HEOS.Reducing->rhormolar(x));
+        add(HEOS.calc_alphar_deriv_nocache(0, 0, x, 0.8, 0.7));
+        add(HEOS.calc_alphar_deriv_nocache(0, 1, x, 1.3, 1.6));
+    }
+    return key + os.str();
+}
+}  // namespace
+
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
+    if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
+    try {
+        return solver_rho_Tp_cheb_impl(T, p);
+    } catch (...) {
+        return -1;  // never fail the flash from here: the existing solvers answer instead
+    }
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p) {
+    // the gas-constant configuration is part of the model the tables were built for
+    const bool R_norm = get_config_bool(NORMALIZE_GAS_CONSTANTS);
+    const double R_u = get_config_double(R_U_CODATA);
+    if (cheb_density_resolved && (R_norm != cheb_R_normalized || R_u != cheb_R_u)) cheb_density_resolved = false;
+    if (!cheb_density_resolved) {
+        cheb_density_resolved = true;
+        cheb_R_normalized = R_norm;
+        cheb_R_u = R_u;
+        cheb_density.reset();
+        // Multiparameter Helmholtz models only: the cubic backends derive from this class, but their components carry
+        // no multiparameter EOS
+        const std::string be = backend_name();
+        const bool supported = be == get_backend_string(HEOS_BACKEND_MIX) || be == get_backend_string(HEOS_BACKEND_PURE)
+                               || be == get_backend_string(GERG2008_BACKEND) || be == get_backend_string(GERG2004_BACKEND);
+        if (supported && mole_fractions.size() == components.size()) {
+            try {
+                const std::string key = cheb_model_key(*this);
+                std::scoped_lock lk(cheb_cache_mtx);
+                const auto it = cheb_cache.find(key);
+                if (it != cheb_cache.end()) {
+                    cheb_density = it->second;
+                } else {
+                    auto e = std::make_shared<ChebDensityEntry>();
+                    double Tcmax = 0;
+                    for (const auto& c : components)
+                        Tcmax = std::max(Tcmax, static_cast<double>(c.EOS().reduce.T));
+                    e->Tmin = std::max(60.0, 0.3 * Tcmax);
+                    // the tau range: Tr(x) over the pure components and random compositions (a composition beyond
+                    // the sampled maximum is declined by assemble() and solved by the existing solvers)
+                    const std::size_t Nc = components.size();
+                    double Trmax = 0;
+                    std::vector<CoolPropDbl> xx(Nc);
+                    for (std::size_t i = 0; i < Nc; ++i) {
+                        std::fill(xx.begin(), xx.end(), 0.0);
+                        xx[i] = 1;
+                        Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                    }
+                    std::mt19937_64 g(12345);
+                    for (int s = 0; s < 500; ++s) {
+                        double sum = 0;
+                        for (auto& v : xx) {
+                            const double u = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53;
+                            sum += (v = -std::log(u));
+                        }
+                        for (auto& v : xx)
+                            v /= sum;
+                        Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                    }
+                    ChebDensity::BuildOptions o;
+                    o.delta_max = 4.0;
+                    o.tau_max = 1.02 * Trmax / e->Tmin;
+                    try {
+                        e->tab = ChebDensity::Tables::build(*this, o);
+                    } catch (...) {
+                        e->tab.reset();  // cached as declined below, so later backends do not retry
+                    }
+                    if (e->tab) cheb_density = e;
+                    cheb_cache[key] = cheb_density;  // null too: the model is declined, do not try again
+                }
+            } catch (...) {
+                cheb_density.reset();  // e.g. a component without a multiparameter EOS: the existing solvers
+            }
+        }
+    }
+    if (!cheb_density || !(T >= cheb_density->Tmin) || !(p > 0) || !std::isfinite(p)) return -1;
+    const std::vector<CoolPropDbl>& mf = get_mole_fractions_ref();
+    for (const CoolPropDbl v : mf)
+        if (!std::isfinite(v)) return -1;  // e.g. a non-finite trial composition: leave it to the existing solver
+    thread_local ChebDensity::Tables::State S;
+    thread_local std::vector<double> x;
+    x.assign(mf.begin(), mf.end());
+    if (!cheb_density->tab->assemble(T, x, S)) return -1;
+    return cheb_density->tab->stable_root(S, p);
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
+    {  // the Chebyshev all-roots solver, when enabled and able to answer
+        const CoolPropDbl rc = solver_rho_Tp_cheb(T, p);
+        if (rc > 0) return rc;
+    }
     // Find the densities along the isotherm where dpdrho|T = 0 (if you can)
     CoolPropDbl light = -1, heavy = -1;
     StationaryPointReturnFlag retval = solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);
@@ -2964,18 +3265,84 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             auto rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             auto rhoLtripleancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(Ttriple()));
 
+            // The dense-branch bracket, each end defined once.  The fast path below is only
+            // allowed to return a root INSIDE this bracket and the Brent call searches exactly
+            // it -- that identity is the whole reason the fast path cannot reach a density the
+            // bracketed solve could not, so two drifting copies would break it silently.
+            //
+            // Lambdas rather than values because rhomolar_critical() can throw for a mixture
+            // (calc_all_critical_points finding != 1 point), and it must throw INSIDE one of
+            // the try blocks: before the fast path existed, that throw happened as an argument
+            // to the Brent call, where the catch chain swallowed it and fell through to the
+            // narrower solve.  Evaluating it eagerly here would turn a case the old code
+            // recovered from into an escape out of solver_rho_Tp.
+            auto rho_dense_lo = [&] { return rhoLancval * 0.99; };
+            auto rho_dense_hi = [&] { return rhomolar_critical() * 4; };
+
+            // Fast path before the bracketed solve below.  Brent uses no derivatives, so it
+            // pays ~10 EOS evaluations here where a derivative method needs ~3 -- measured
+            // 11.8 us vs 5.1 us for REFPROP's TPFLSHdll on compressed water.  The subcritical
+            // liquid branch above already has exactly this shape (Halley first, bracketed
+            // solve on failure), so this is that pattern applied to the branch that was
+            // missing it.
+            //
+            // The result is accepted ONLY if it is a valid, thermodynamically sensible root
+            // INSIDE the bracket the Brent call below would have searched.  That is what
+            // makes this safe: the fast path cannot return a density the existing code would
+            // not have been able to return, and anything else falls through to it unchanged.
+            try {
+                const CoolPropDbl rho_lo = rho_dense_lo();
+                const CoolPropDbl rho_hi = rho_dense_hi();
+                // Householder4 rather than Halley or Newton, measured on this branch over
+                // 20000 compressed-liquid points (Water / n-Propane / Nitrogen):
+                //     Householder4   7.10 / 2.17 / 4.44 us
+                //     Halley         8.08 / 2.58 / 5.11
+                //     Newton        12.04 / 3.65 / 7.33
+                // The ordering is a consequence of the cached-accessor fix in this same
+                // commit: alpha^r and all four of its delta-derivatives now come out of ONE
+                // evaluation, so a higher-order method gets its faster convergence for free
+                // and a lower-order one just pays more iterations at the same per-iteration
+                // cost.
+                //
+                // The subcritical liquid branch above keeps Halley deliberately: measured the
+                // same way it is 5.07 / 1.742 / 3.029 us against Householder4's
+                // 4.965 / 1.737 / 2.974, i.e. within noise, because its saturated-liquid seed
+                // already converges in ~2.3 iterations and convergence ORDER barely matters at
+                // that point.  Here the seed can be 38% out, which is what makes the order
+                // worth having.  Not worth changing iterates there for ~1%.
+                //
+                // maxiter is deliberately small.  When the fast path fails it is pure waste on
+                // top of the bracketed solve that follows, and a run needing more than ~20
+                // steps from a saturated-liquid seed is not the case this is buying.
+                const double rho_fast = Householder4(resid, rhoLancval, 1e-8, 20);
+                // The residual is re-checked explicitly because the xtol_rel exit returns
+                // as soon as its STEP is small, whatever the residual: as dp/drho -> 0 near a
+                // spinodal the step vanishes and it hands back an unconverged density.  Brent
+                // cannot do that (it needs a sign-bracketed root), so without this check the
+                // fast path could return a density the bracketed solve could not have.
+                // Evaluating it here also moves the state onto rho_fast, which is what makes
+                // the two derivative checks below apply to the root rather than to the
+                // pre-step iterate.
+                if (ValidNumber(rho_fast) && rho_fast >= rho_lo && rho_fast <= rho_hi && std::abs(resid.call(rho_fast)) < 1e-8
+                    && first_partial_deriv(iP, iDmolar, iT) > 0 && second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) > 0) {
+                    return rho_fast;
+                }
+            } catch (const std::exception&) {
+                // Fall through to the bracketed solve.
+            }
+
             // Next we try with a Brent method bounded solver since the function should be 1-1 in most cases
             // But some EOS have a maximum in pressure so if rhoc*4 is after the maximum in pressure, this method will fail
             // and fall back to a narrower range of densities
             try {
-                double rhomolar = Brent(resid, rhoLancval * 0.99, rhomolar_critical() * 4, DBL_EPSILON, 1e-8, 100);
+                double rhomolar = Brent(resid, rho_dense_lo(), rho_dense_hi(), DBL_EPSILON, 1e-8, 100);
                 if (!ValidNumber(rhomolar)) {
                     throw ValueError();
                 }
                 return rhomolar;
             } catch (...) {
                 try {
-                    double rhomolar = Brent(resid, rhoLancval * 0.99, rhoLtripleancval * 1.1, DBL_EPSILON, 1e-8, 100);
+                    double rhomolar = Brent(resid, rho_dense_lo(), rhoLtripleancval * 1.1, DBL_EPSILON, 1e-8, 100);
                     if (!ValidNumber(rhomolar)) {
                         throw ValueError();
                     }
@@ -3084,6 +3451,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                                 rhomolar_guess, e.what()));
     }
 }
+// Seed constants: see the note above SRK_covolume() (Linear COO-150).
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
     CoolPropDbl rhomolar = NAN, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
@@ -3593,10 +3961,13 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta) {
     // A pure-delta derivative (nTau == 0, orders 0-4) needs no tau-derivatives, so use the cheaper
-    // delta-only alphar evaluation.  all_deltaonly() is bit-for-bit identical to all() on those
-    // fields, so every such caller (the pressure / dp-drho / spinodal density residuals, and also
-    // the transport-property pressure evals) gets the same result -- just faster.  Any request that
-    // needs a tau-derivative (nTau > 0) or an out-of-range order falls through to the full path.
+    // delta-only alphar evaluation.  all_deltaonly() agrees with all() on those fields -- bit-for-bit
+    // on orders 0-2, and to within a few ULP on orders 3-4, where compiler FMA contraction can
+    // differ between the two functions (see ResidualHelmholtzNonAnalytic::all_deltaonly in
+    // src/Helmholtz.cpp).  Every caller of this function asks for nDelta 0, 1 or 2 -- the pressure /
+    // dp-drho / spinodal density residuals and the transport-property pressure evals -- so they are
+    // all in the bit-for-bit range and get the same result, just faster.  Any request that needs a
+    // tau-derivative (nTau > 0) or an out-of-range order falls through to the full path.
     if (nTau == 0 && nDelta >= 0 && nDelta <= 4) {
         HelmholtzDerivatives derivs = residual_helmholtz->all_deltaonly(*this, mole_fractions, tau, delta);
         return derivs.get(0, nDelta);

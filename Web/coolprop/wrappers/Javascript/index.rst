@@ -12,7 +12,7 @@ Pre-Compiled Binaries
 
 * You can load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/Web/coolprop/wrappers/Javascript/index.html>`_, which is also included at the above download.
 
-* A live demo of the Javascript library in action can be found in the `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_ repository.
+* A live demo of the Javascript library in action can be found in the `Web Thermodynamics Example using CoolProp <https://github.com/dvd101x/web-thermodynamics>`_ repository.
 
 
 Serving the JS
@@ -46,7 +46,7 @@ We run the emscripten-based builds in a docker container and you can follow `the
 
 Linux (deprecated)
 ------------------
-We are following the instructions from `emscripten.org <https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
+We are following the instructions from `emscripten.org <https://emscripten.org/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
 
 1. First download node.js, clang++ and llvm using::
 
@@ -84,7 +84,7 @@ We are following the instructions from `emscripten.org <https://kripken.github.i
 
 Windows (deprecated)
 --------------------
-1. Download the `EMSDK installer <https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
+1. Download the `EMSDK installer <https://emscripten.org/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
 
 2. In the ``%HOME%/.emscripten`` file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like::
 

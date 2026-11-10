@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <system_error>
 #include <vector>
 
 #if !defined(NO_FMTLIB)
@@ -105,34 +106,24 @@ inline bool strstartswith(const std::string& s, const std::string& other) {
     return s.find(other) == 0;
 };
 
-/**
-     * @brief Convert a number encoded as a string to a double
-     * @param s The string to be converted
-     *
-     * @note
-     */
-inline double string2double(const std::string& s) {
-    std::string mys = s;  //copy
-    // replace D with e (FORTRAN style scientific definition)
-    if (mys.find('D') != std::string::npos) {
-        std::size_t pos = mys.find('D'), len = 1;
-        mys.replace(pos, len, "e");
-    }
-    // replace d with e (FORTRAN style scientific definition)
-    if (mys.find('d') != std::string::npos) {
-        std::size_t pos = mys.find('d'), len = 1;
-        mys.replace(pos, len, "e");
-    }
+/// Parse a decimal number at the start of [first, last) with '.' as the decimal
+/// separator, whatever the C locale.  strtod, atof and std::stod follow
+/// LC_NUMERIC, so a host program that calls setlocale(LC_NUMERIC, "de_DE")
+/// would make them stop at the '.'.
+///
+/// Accepts an optional leading '+' or '-', then the same decimal syntax as
+/// strtod (digits [. digits] [(e|E)[+|-]digits], plus inf and nan).  Unlike
+/// strtod it does not skip leading whitespace and does not accept hex.
+///
+/// Returns std::errc() and sets value and end on success.  Returns
+/// std::errc::invalid_argument, with end == first, if no number starts at first.
+/// Returns std::errc::result_out_of_range, with end past the number, if it
+/// overflows or underflows a double; value is then unchanged.
+std::errc parse_double_C(const char* first, const char* last, double& value, const char*& end);
 
-    const char* cs = mys.c_str();
-    char* pEnd;
-    double val = strtod(cs, &pEnd);
-    if ((pEnd - &(cs[0])) != static_cast<int>(s.size())) {
-        // Found a character that is not able to be converted to number
-        throw CoolProp::ValueError(format("Unable to convert this string to a number:%s", cs));
-    } else {
-        return val;
-    }
-}
+/// Convert a whole string to a double, accepting a FORTRAN-style 'D' or 'd'
+/// exponent and surrounding whitespace.  Independent of the C locale.  Throws
+/// CoolProp::ValueError if any of the string is not part of the number.
+double string2double(const std::string& s);
 
 #endif

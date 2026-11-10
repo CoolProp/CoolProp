@@ -11,7 +11,7 @@
 # noise (misc-include-cleaner, misc-const-correctness,
 # readability-isolate-declaration, etc.) before any bug-finding signal
 # could be acted on. Switched to a positive whitelist of high-signal
-# categories. The clang-tidy CI workflow (dev_clangtidy.yml) is
+# categories. The clang-tidy CI job (dev_checks.yml) is
 # informational-only, so this config defines what gets surfaced as
 # "interesting" in the artifact.
 #
@@ -26,10 +26,16 @@
 #   -cppcoreguidelines-narrowing-conversions / -bugprone-narrowing-conversions :
 #       WarnOnEquivalentBitWidth was added in clang-tidy 13; without it
 #       the check is too noisy on uint→int conversions, so disabled
-#   Aliases (one suppression covers both):
+#   Aliases.  Suppressing one name does NOT suppress the other: clang-tidy
+#   resolves each spelling independently, so an alias-only entry leaves the
+#   primary check live.  List BOTH spellings.  (This bit us on PR #3400,
+#   where -cppcoreguidelines-avoid-c-arrays alone left 9 live
+#   modernize-avoid-c-arrays findings on a header whose C arrays are
+#   deliberate hot-path stack scratch.)
 #     cppcoreguidelines-avoid-c-arrays = modernize-avoid-c-arrays
 #     cppcoreguidelines-non-private-member-variables-in-classes
 #       = misc-non-private-member-variables-in-classes
+#     cppcoreguidelines-avoid-magic-numbers = readability-magic-numbers
 #     cppcoreguidelines-explicit-virtual-functions, hicpp-use-override
 #       = modernize-use-override
 #     bugprone-narrowing-conversions = cppcoreguidelines-narrowing-conversions
@@ -50,11 +56,14 @@ Checks: |
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
   -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
   -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-explicit-virtual-functions,
   -cppcoreguidelines-narrowing-conversions,
   -cppcoreguidelines-non-private-member-variables-in-classes,
+  -misc-non-private-member-variables-in-classes,
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-pro-bounds-constant-array-index,
@@ -62,10 +71,29 @@ Checks: |
   -modernize-use-trailing-return-type,
 
 WarningsAsErrors: '*'
-HeaderFilterRegex: '*'
+# Report findings in project headers, not just in the .cpp being analysed.
+# This used to read '*', which is not a valid regex and matched nothing, so
+# every finding in a header was dropped as "non-user code" -- a changed header
+# was only checked when clang-tidy-diff analysed it standalone, and that fails
+# outright for headers that are not self-contained.
+#
+# The dependencies arrive via -I, not -isystem, so SystemHeaders does not hide
+# them; ExcludeHeaderFilterRegex does.  It drops the CPM cache (the in-tree
+# .cpm_cache/, preflight's ~/.cache/CPM/, and any other CPM_SOURCE_CACHE via
+# its <package>/<40-hex-hash>/ layout), CPM's no-cache _deps/, vendored
+# externals/, and the generated data headers.  The key needs clang-tidy >= 19:
+# clang-tidy 18 prints a parse error on the unknown key, discards the whole
+# file and runs its default checks -- still exiting 0.
+HeaderFilterRegex: '.*'
+ExcludeHeaderFilterRegex: '(/\.cpm_cache/|/\.cache/CPM/|/[0-9a-f]{40}/|/_deps/|/externals/|/include/[A-Za-z0-9_]+_(JSON|CBOR)\.h$|/include/gitrevision\.h$)'
 FormatStyle:     file
 CheckOptions:
   - key:             performance-for-range-copy.WarnOnAllAutoCopies
+    value:           'true'
+  # Catch2's CHECK/REQUIRE macros expand to do { } while (false); without this
+  # every assertion in a test (and in the TEST_CASEs embedded in src/) is a
+  # finding -- ~1200 of them on the v8.0.0..master diff alone.
+  - key:             cppcoreguidelines-avoid-do-while.IgnoreMacros
     value:           'true'
   # modernize-use-override tuning (CoolProp-7ue): allow `override final`
   # together rather than collapsing to `final` only, and don't add `override`

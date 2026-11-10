@@ -36,11 +36,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
 
+# Least privilege (#3304).  Every job declares its own `permissions:` block;
+# this workflow-level default only covers a job added later without one.  The
+# artifact upload and cache actions authenticate with the Actions runtime
+# token, not GITHUB_TOKEN, so `contents: read` is enough for them.
+permissions:
+  contents: read
+
 jobs:
   asan:
     name: address sanitizer
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     # Guardrail (CoolProp-xuu).  Without this the job inherits GitHub's 6-hour
     # default cap; when a test runs away the job is silently reported as
     # `cancelled` rather than a real failure (that is exactly how the
@@ -90,6 +99,12 @@ jobs:
         # -j$(nproc): every other build job already parallelises; the ASan job
         # historically did not, leaving the compile serial on the multi-vCPU runner.
         run: cmake --build build --config Asan -j$(nproc)
+      # The [locale] tests load fluids under a decimal-comma LC_NUMERIC; the runner
+      # image ships no such locale, and without it those tests would SKIP green.
+      - name: Generate de_DE.UTF-8 locale for the [locale] tests
+        run: |
+          sudo locale-gen de_DE.UTF-8
+          locale -a | grep -qi '^de_DE\.utf-\?8$'
       - name: run all the compiled Catch tests with address sanitizer
         # detect_stack_use_after_return is deliberately NOT enabled here
         # (CoolProp-xuu).  With REFPROP present — which CI builds — the 6
@@ -202,6 +217,7 @@ jobs:
           set +e
           timeout --signal=INT --kill-after=60 "$budget" \
             env ASAN_OPTIONS=detect_odr_violation=1 \
+                COOLPROP_REQUIRE_LOCALE_TESTS=1 \
                 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 \
                 ./CatchTestRunner "~[slow]" --benchmark-samples 1
           rc=$?
@@ -224,6 +240,8 @@ jobs:
     # If you need to test the workflow on a branch, open a draft PR.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -268,6 +286,8 @@ jobs:
     # retroactively. Open a draft PR to exercise it on a branch.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -290,7 +310,7 @@ jobs:
             # Pin nanobind: the cp312 wheel below regenerates the committed type
             # stub (REGEN_STUB), and the drift gate diffs it byte-for-byte, so the
             # stubgen toolchain must be reproducible.  Bump deliberately together
-            # with wrappers/Python/_nanobind/CoolProp.pyi (bd CoolProp-1gas).
+            # with wrappers/Python/_nanobind/CoolProp.pyi and Plot.pyi (bd CoolProp-1gas).
             uv pip install "nanobind==2.12.0" cython scikit-build-core ninja
             # Only the native cp312-abi3 build regenerates the stub (stubgen imports
             # the just-built CoolProp.abi3.so -- safe natively, impossible when
@@ -317,46 +337,53 @@ jobs:
           done
           ls dist/coolprop-*-cp312-abi3-*.whl >/dev/null
 
-      - name: Drift gate — committed nanobind stub matches stubgen output
+      - name: Drift gate — committed nanobind stubs match stubgen output
         shell: bash
         run: |
           set -euo pipefail
           # The cp312 leg above built with COOLPROP_NANOBIND_REGEN_STUB=ON, so its
-          # wheel carries a FRESHLY regenerated CoolProp.pyi (stubgen run against the
-          # just-built native .so). It must match the committed copy that every
+          # wheel carries FRESHLY regenerated stubs (stubgen run against the
+          # just-built native .so). They must match the committed copies that every
           # OTHER (incl. cross-compiled) wheel ships verbatim; a diff means a binding
-          # changed without regenerating the stub (bd CoolProp-1gas).
+          # changed without regenerating the stubs (bd CoolProp-1gas).  The stubs
+          # form the stub package CoolProp/CoolProp/ (module + Plot submodule); the
+          # committed copies are _nanobind/CoolProp.pyi and _nanobind/Plot.pyi.
+          # unzip fails (set -e) when a stub is missing from the wheel.
           WHL=$(ls dist/coolprop-*-cp312-abi3-*.whl)
           rm -rf _stubcheck && mkdir _stubcheck
-          unzip -q -o "$WHL" -d _stubcheck "CoolProp/CoolProp.pyi" "CoolProp/py.typed"
+          unzip -q -o "$WHL" -d _stubcheck \
+            "CoolProp/CoolProp/__init__.pyi" "CoolProp/CoolProp/Plot.pyi" "CoolProp/py.typed"
           ok=1
-          diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp.pyi || ok=0
-          diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed     || ok=0
+          diff -u wrappers/Python/_nanobind/CoolProp.pyi _stubcheck/CoolProp/CoolProp/__init__.pyi || ok=0
+          diff -u wrappers/Python/_nanobind/Plot.pyi     _stubcheck/CoolProp/CoolProp/Plot.pyi     || ok=0
+          diff -u wrappers/Python/_nanobind/py.typed     _stubcheck/CoolProp/py.typed              || ok=0
           if [ "$ok" -ne 1 ]; then
             # The unified diff above shows exactly what drifted. Emit a copy-paste
             # regen recipe (matches wrappers/Python/_nanobind/README.md), then fail
             # with a single concise annotation.
             {
               echo
-              echo "Committed nanobind stub is out of sync with stubgen output."
-              echo "Regenerate it from a NATIVE abi3 build and commit the result:"
+              echo "Committed nanobind stubs are out of sync with stubgen output."
+              echo "Regenerate them from a NATIVE abi3 build and commit the result:"
               echo
               echo "  uv pip install 'nanobind==2.12.0' cython scikit-build-core ninja"
               echo "  COOLPROP_NANOBIND=ON uv build --wheel --no-build-isolation \\"
               echo "    --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \\"
               echo "    --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON \\"
               echo "    --out-dir dist ."
-              echo "  unzip -o -j dist/coolprop-*-cp312-abi3-*.whl \\"
-              echo "    CoolProp/CoolProp.pyi CoolProp/py.typed -d wrappers/Python/_nanobind/"
+              echo "  WHL=\$(ls dist/coolprop-*-cp312-abi3-*.whl)"
+              echo "  unzip -p \"\$WHL\" CoolProp/CoolProp/__init__.pyi > wrappers/Python/_nanobind/CoolProp.pyi"
+              echo "  unzip -p \"\$WHL\" CoolProp/CoolProp/Plot.pyi > wrappers/Python/_nanobind/Plot.pyi"
+              echo "  unzip -p \"\$WHL\" CoolProp/py.typed > wrappers/Python/_nanobind/py.typed"
               echo
               echo "(nanobind must be PINNED to the gate's version for a byte-exact match;"
               echo " see wrappers/Python/_nanobind/README.md.)"
               echo
             } >&2
-            echo "::error::Committed nanobind stub is stale — see the regen recipe in the log above."
+            echo "::error::Committed nanobind stubs are stale — see the regen recipe in the log above."
             exit 1
           fi
-          echo "Committed nanobind stub is in sync."
+          echo "Committed nanobind stubs are in sync."
 
       - name: Run the pytest suite on 3.9-3.14 against the matching wheel
         shell: bash
@@ -366,6 +393,7 @@ jobs:
           # single cp312-abi3 wheel (the crux of abi3 -- it must work on each).
           ran=0
           ran_abi3=0   # legs that ran the cp312-abi3 wheel (3.12/3.13/3.14)
+          ran_mpl=0    # legs where matplotlib installed, i.e. the Plots suite ran
           for PY in 3.9 3.10 3.11 3.12 3.13 3.14; do
             is_abi3=0
             case "$PY" in
@@ -396,6 +424,19 @@ jobs:
             fi
             uv pip install "$WHL"   # broken/incompatible wheel -> hard fail via set -e
             uv pip install mypy || echo "::warning::mypy unavailable on $PY; test_stub mypy check will skip"
+            # CoolProp.Plots imports matplotlib at module scope, so without it
+            # the whole Plots suite (test_derivatives_plots, test_isoline_tracer)
+            # silently importorskips (CoolProp-dgxi).  Per-leg this is a warning,
+            # because a brand-new interpreter can genuinely lack a matplotlib
+            # wheel -- but if it is missing on EVERY leg the suite reverts to
+            # zero coverage and the job would still be green, which is the exact
+            # condition this install exists to remove.  Counted and asserted
+            # below, the same way the abi3 wheel is.
+            if uv pip install matplotlib; then
+              ran_mpl=$((ran_mpl + 1))
+            else
+              echo "::warning::matplotlib unavailable on $PY; Plots tests will skip on this leg"
+            fi
             python -c "import sys; print('Python', sys.version.split()[0])"
             pytest wrappers/Python/pytest -q
             ran=$((ran + 1))
@@ -408,6 +449,7 @@ jobs:
           # actually be exercised on at least one of them, else a broken abi3 wheel
           # could green the job on the 3.9-3.11 per-version legs alone (CoolProp-1tbe.12).
           test "$ran_abi3" -gt 0 || { echo "::error::the cp312-abi3 wheel ran on NO interpreter (3.12/3.13/3.14) -- it is the v8 crux and must be tested"; exit 1; }
+          test "$ran_mpl" -gt 0 || { echo "::error::matplotlib installed on NO interpreter -- the whole Plots suite importorskipped and this job proves nothing about it"; exit 1; }
 
       - name: PDSim cimport contract (compile + run against the abi3 wheel)
         shell: bash
@@ -445,19 +487,36 @@ jobs:
     # upload are load-bearing: they keep this workflow informational across
     # every code path.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    # An explicit label, not ubuntu-latest (still 24.04, whose image carries
+    # only clang-tidy 16-18): the 26.04 image ships clang-tidy 20, 21 and 22,
+    # and 21 is the major version macOS preflight runs (Homebrew llvm), so CI
+    # and local runs see the same check set.  When ubuntu-latest moves, this
+    # job does not move with it.
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history for git diff against base
 
-      - name: Install clang-tidy-18 + ninja
+      # clang-tidy >= 19 is REQUIRED: .clang-tidy uses ExcludeHeaderFilterRegex
+      # (new in 19), and clang-tidy 18 rejects the whole config on that
+      # unknown key, runs its default checks and still exits 0.
+      - name: Install ninja; check clang-tidy-21
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 ninja-build
-          sudo update-alternatives --install \
-            /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
-          clang-tidy --version
+          # clang-tidy-21 is preinstalled on the image, so naming it is a no-op
+          # today; it keeps the job working if the image ever drops it.
+          sudo apt-get install -y clang-tidy-21 ninja-build
+          # Every use below names /usr/bin/clang-tidy-21 explicitly, so what the
+          # bare `clang-tidy` alternative points at does not matter (on 24.04
+          # it silently stayed at 18).  Assert the version actually used.
+          /usr/bin/clang-tidy-21 --version
+          if ! /usr/bin/clang-tidy-21 --version | grep -q 'version 21\.'; then
+            echo "::error::/usr/bin/clang-tidy-21 is not version 21"
+            exit 1
+          fi
 
       - name: Cache CPM packages
         uses: actions/cache@v6
@@ -489,13 +548,15 @@ jobs:
 
       - name: Locate clang-tidy-diff.py
         id: diff_script
+        # Pinned to the clang-tidy-21 package's copy.  A `find /usr | head -1`
+        # used to pick whichever copy the runner image listed first -- LLVM
+        # 17's, or the Android NDK's -- rather than the one matching the
+        # installed clang-tidy.
         run: |
-          path=$(find /usr -name 'clang-tidy-diff*.py' 2>/dev/null | head -1)
-          if [ -z "$path" ]; then
-            echo "clang-tidy-diff.py not found via apt; falling back to upstream raw"
-            curl -sSL -o /tmp/clang-tidy-diff.py \
-              https://raw.githubusercontent.com/llvm/llvm-project/release/18.x/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
-            path=/tmp/clang-tidy-diff.py
+          path=/usr/lib/llvm-21/share/clang/clang-tidy-diff.py
+          if [ ! -f "$path" ]; then
+            echo "::error::$path not found; clang-tidy-21 did not install it"
+            exit 1
           fi
           echo "path=$path" >> "$GITHUB_OUTPUT"
           echo "Using: $path"
@@ -518,8 +579,9 @@ jobs:
             | python3 ${{ steps.diff_script.outputs.path }} \
                 -p1 \
                 -path ${{ github.workspace }}/build \
+                -clang-tidy-binary /usr/bin/clang-tidy-21 \
                 -regex '.*\.(c|cpp|h|hpp)$' \
-                -j$(nproc) \
+                -j"$(nproc)" \
                 2>&1 | tee clang-tidy-diff.log
           echo "clang-tidy-diff.log size: $(wc -l < clang-tidy-diff.log) lines"
 
@@ -550,7 +612,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -587,10 +649,17 @@ jobs:
       # gate that can quietly lose coverage as the cache warms up across
       # runs, without ever failing the job. See ccache.dev/manual, "Using
       # ccache with other tools" / GitHub codeql issues #9882, #19447.
+      #
+      # -DCOOLPROP_USE_CCACHE=OFF is what enforces that. CMakeLists.txt now
+      # auto-enables ccache whenever find_program locates it, so merely
+      # omitting a launcher flag no longer keeps it out: the protection would
+      # rest on ccache being absent from the runner image's PATH, and would
+      # break silently the day that changes. Opt out explicitly instead.
       - name: Configure CPP
         if: ${{ matrix.language == 'cpp' }}
         run: cmake
                -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+               -DCOOLPROP_USE_CCACHE=OFF
                -B ${{github.workspace}}/build
                -S .
 
@@ -613,6 +682,8 @@ jobs:
     # Triggers: PR + workflow_dispatch + Sunday cron (skip Thursday codeql cron).
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '15 8 * * 0')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -669,6 +740,8 @@ jobs:
     # Triggers: push master + PR + workflow_dispatch + Sunday cron.
     if: github.event_name != 'schedule' || github.event.schedule == '15 8 * * 0'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -727,11 +800,13 @@ jobs:
     # source-built CoolProp and runs in the wheel-build workflow, not here.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -781,11 +856,13 @@ jobs:
     # dev/scripts/check_superanc_release_pin.py.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -816,7 +893,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -844,6 +921,8 @@ jobs:
     # to downstream consumers at compile time.  Real gate — no continue-on-error.
     if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -864,6 +943,7 @@ jobs:
         run: |
           cmake -B build_shared -S . \
             -DCOOLPROP_SHARED_LIBRARY=ON \
+            -DCMAKE_INSTALL_INCLUDEDIR=cp-headers \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -873,3 +953,26 @@ jobs:
 
       - name: Run installed-header hygiene gate
         run: ./dev/ci/check-installed-headers.sh build_shared
+
+  atct-regenerator:
+    name: ATcT regenerator tests
+    # Offline gate for dev/atct/. The tests parse a committed HTML fixture and
+    # read dev/fluids/*.json -- no network, no C++ build. Deliberately NO paths
+    # filter so this can be a required check without deadlocking unrelated PRs.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python -m pip install --upgrade pytest
+
+      - name: Run the ATcT regenerator tests
+        run: python -m pytest dev/atct/test_fetch_atct_formation.py -v

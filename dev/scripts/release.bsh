@@ -144,7 +144,7 @@ else
         echo    "CoolProp nightly binaries"   >  "$BINFOLDER/README.rst.txt"
         echo    "-------------------------"   >> "$BINFOLDER/README.rst.txt"
         echo -n "Development binaries of the" >> "$BINFOLDER/README.rst.txt"
-        echo -n " \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
+        echo -n " \`CoolProp project <https://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
         echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
         RSYNC_OPTS="-a --chmod=Dug=rwx,Do=rx,Fug=rw,Fo=r -z --stats --delete"
         #for i in {1..2}; do for j in $BINFOLDER/Python/*.tar.gz; do binstar upload --force -u coolprop -t pypi -c dev $j; done; done

@@ -2,4 +2,5 @@
   local:
     *nlohmann*;
     *valijson*;
+    *charconv*;
 };

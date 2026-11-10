@@ -4129,5 +4129,97 @@
       "smolar": 261.44580746049974,
       "smolar_units": "J/mol/K"
     }
+  },
+  "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Perkins-JCED-2017-R1233zdE",
+      "dilute": {
+        "type": "expression",
+        "note": "Eq. (5) and Table 1 of Perkins, Huber & Assael, J. Chem. Eng. Data 62:2659 (2017), in W/(m K). Tc = 439.6 K is the paper's own value (Mondejar et al. 2015 EOS), not the Tc of the Akasaka & Lemmon (2022) EOS that CoolProp now uses.",
+        "formula": "let Tr = T/Tc\nsum(i: A[i]*Tr^i)",
+        "state_variables": [
+          "T"
+        ],
+        "constants": {
+          "Tc": 439.6
+        },
+        "arrays": {
+          "A": [
+            -0.0140033,
+            0.037816,
+            -0.00245832
+          ]
+        }
+      },
+      "residual": {
+        "type": "expression",
+        "note": "Eq. (6) and Table 1 of Perkins et al. (2017), in W/(m K). Tc = 439.6 K and rhoc = 480.219 kg/m^3 are the paper's own reducing values (REFPROP: 3.68 mol/L). Eq. (6) as printed sums i = 1..5, but Table 1 lists i = 1..6 and REFPROP 10.0/10.1 carry all six; the i = 6 terms are required to reproduce Table 2 (300 K / 1308.8 kg/m^3: 0.091399 with six terms, 0.696 without).",
+        "formula": "let Tr = T/Tc\nlet rhor = Dmass/rhoc\nsum(i: (B1[i] + B2[i]*Tr)*rhor^d[i])",
+        "state_variables": [
+          "T",
+          "Dmass"
+        ],
+        "constants": {
+          "Tc": 439.6,
+          "rhoc": 480.219
+        },
+        "arrays": {
+          "B1": [
+            0.00862816,
+            -0.0208988,
+            0.0511968,
+            -0.0349076,
+            0.00975727,
+            -0.000926484
+          ],
+          "B2": [
+            0.000914709,
+            -0.00407914,
+            0.00845668,
+            -0.0108985,
+            0.00538262,
+            -0.000806009
+          ],
+          "d": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        }
+      },
+      "critical": {
+        "type": "simplified_Olchowy_Sengers",
+        "note": "Eqs. (7)-(10) of Perkins et al. (2017): R_D = 1.02, gamma = 1.239, Gamma = 0.059, xi0 = 0.213e-9 m, qD^-1 = 0.5980e-9 m (fitted), T_ref = 1.5 Tc = 659.4 K with the paper's Tc = 439.6 K. Paper, REFPROP 10.0 and REFPROP 10.1 agree on every constant. The correlation was fitted with the Mondejar et al. (2015) EOS and an ECS viscosity; CoolProp uses the Akasaka & Lemmon (2022) EOS and its own viscosity model, and this block takes Tc, pc and rhoc from the EOS, so the enhancement differs from the paper's near the critical point. At Table 2's 445 K / 168.52 kg/m^3 the paper gives 0.026141 W/(m K); the paper's equations on REFPROP 10.0's Mondejar EOS with the paper's viscosity (19.053 uPa s) give 0.0261406, on the Akasaka & Lemmon EOS 0.026048, and CoolProp 0.026049. The Table 2 points at 300 K, where the enhancement is small, agree with the paper to 1e-4 on either EOS.",
+        "GAMMA": 0.059,
+        "R0": 1.02,
+        "gamma": 1.239,
+        "qD": 1672240802.6755853,
+        "zeta0": 2.13e-10,
+        "T_ref": 659.4
+      }
+    },
+    "viscosity": {
+      "BibTeX": "Bell-PURDUE-2016-ETA",
+      "C": 0.8089,
+      "_note": "C and rhosr_critical were both refit for the Akasaka and Lemmon (JPCRD 2022) EOS that replaced Mondejar et al. in v8.0.0. rhosr_critical is not a fitted parameter: it is rho_c*R*(tau*dalphar_dtau - alphar) at the EOS critical point, the quantity that normalises x = rho*s_r/rhosr_critical, so it tracks whichever EOS ships. For R32, R22 and R152A, whose EOS were never replaced, the stored constant equals the value computed from the current EOS to seven digits. The value here is what the shipped EOS gives; the previous -47978.147551213806 came from Mondejar and left x = 1.011 rather than 1 at the critical point. C = 0.8089 is then fitted on top of it against the 61 primary liquid viscosity points of Miyara, Alam and Kariya, Int. J. Refrig. 92:86-93, 2018 (doi 10.1016/j.ijrefrig.2018.05.021), Table 3: 313.67-433.32 K, 1.005-4.074 MPa, stated combined standard uncertainty 3.0%. AAD 2.62%, bias -0.07%, comparable to REFPROP 10 ECS (2.78%) over the same states. The published C = 1.2474 was fitted to Hulse, Basu, Singh and Thomas, JCED 57:3581-3586, 2012, superseded by the later measurements; it runs ~50-70% high in the liquid. That diagnosis, and the first refit (C = 0.671156, against figure-digitized Meng and Cui data; on the superseded normaliser that is 13.9% low against Miyara, and 15.5% low if rescored on the rhosr_critical shipping here), are due to J. P. Kauffman in GitHub issue #1826, 2019-05-07. Miyara covers only 314-433 K; over 243-313 K, where only the paywalled Meng and Cui measurements exist, this pair sits 6.7% above REFPROP 10 ECS. c_liq, c_vap and x_crossover are the universal reference-fluid coefficients and are unchanged. Remaining limitation: saturated vapor is ~10% high whatever C is, because the vapor is dominated by the dilute-gas term, whose Lennard-Jones parameters are Chung estimates rather than fitted values. Fitting script: dev/scripts/fit_R1233zdE_viscosity.py",
+      "c_liq": [
+        0.6100913843,
+        0.4508958312,
+        -0.017063,
+        0.000564
+      ],
+      "c_vap": [
+        0.0,
+        1.2,
+        -0.308598,
+        0.035317
+      ],
+      "rhosr_critical": -48503.78752999625,
+      "type": "rhosr-CS",
+      "x_crossover": 2
+    }
   }
 }

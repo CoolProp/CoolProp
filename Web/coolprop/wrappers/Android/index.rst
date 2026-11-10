@@ -34,7 +34,7 @@ Windows
 Linux & OSX
 -----------
 
-* Install NDK from here: https://developer.android.com/ndk/downloads/index.html
+* Install NDK from here: https://developer.android.com/ndk/downloads
 
 * To Build
     - Check out the sources for CoolProp::
@@ -47,7 +47,7 @@ Linux & OSX
 
         mkdir -p CoolProp/build && cd CoolProp/build
 
-    - If a target architecture other than the default (armeabi) is desired, the ndk-build can be modified by editing wrappers/Android/Android.mk.template.  For details see https://developer.android.com/ndk/guides/index.html
+    - If a target architecture other than the default (armeabi) is desired, the ndk-build can be modified by editing wrappers/Android/Android.mk.template.  For details see https://developer.android.com/ndk/guides
     - Construct the makefile using CMake::
 
         cmake .. -DCOOLPROP_ANDROID_MODULE=ON -DNDK_PATH=~/Downloads/android-ndk-r10e (change path based on your installation)

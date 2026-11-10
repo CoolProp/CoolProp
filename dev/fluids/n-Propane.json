@@ -4467,7 +4467,22 @@
     "INCHI_STRING": "InChI=1S/C3H8/c1-3-2/h3H2,1-2H3",
     "NAME": "n-Propane",
     "REFPROP_NAME": "PROPANE",
-    "SMILES": "CCC"
+    "SMILES": "CCC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "74-98-6*0",
+        "source": "ATcT",
+        "uncertainty": 150.0,
+        "units": "J/mol",
+        "value": -105000.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

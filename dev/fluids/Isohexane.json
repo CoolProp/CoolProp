@@ -4420,7 +4420,22 @@
     "INCHI_STRING": "InChI=1S/C6H14/c1-4-5-6(2)3/h6H,4-5H2,1-3H3",
     "NAME": "Isohexane",
     "REFPROP_NAME": "IHEXANE",
-    "SMILES": "CCCC(C)C"
+    "SMILES": "CCCC(C)C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "107-83-5*0",
+        "source": "ATcT",
+        "uncertainty": 730.0,
+        "units": "J/mol",
+        "value": -173720.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

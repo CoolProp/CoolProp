@@ -4354,7 +4354,22 @@
     "INCHI_STRING": "InChI=1S/C2H4F2/c1-2(3)4/h2H,1H3",
     "NAME": "R152A",
     "REFPROP_NAME": "R152A",
-    "SMILES": "CC(F)F"
+    "SMILES": "CC(F)F",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-37-6*0",
+        "source": "ATcT",
+        "uncertainty": 530.0,
+        "units": "J/mol",
+        "value": -502730.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

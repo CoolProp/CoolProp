@@ -6,7 +6,8 @@ v8 package presents the *same* import tree: ``CoolProp.CoolProp`` is the nanobin
 core (it also exports the ``_capi`` PyCapsule used by the ``State`` shim),
 ``CoolProp.HumidAirProp`` is a thin SI re-export shim, ``CoolProp.State`` is the
 capsule shim, and the pure-Python submodules (``Plots``, ``BibtexParser``,
-``GUI``, ``tests``) are shipped unchanged.  Keep this in lock-step with the
+``tests``) are shipped unchanged.  (``GUI``, the dead wxPython app, was removed
+in #3472.)  Keep this in lock-step with the
 legacy ``__init__.py`` (see bd CoolProp-r9sq.3, the import-tree parity gate).
 """
 from __future__ import absolute_import

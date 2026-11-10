@@ -11,6 +11,7 @@
 #ifndef CUBIC_H
 #define CUBIC_H
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 #include <cmath>
@@ -114,17 +115,23 @@ class AbstractCubic
 {
 
    protected:
-    double rho_r,                                               ///< The reducing density to be used [mol/m3]
-      T_r;                                                      ///< The reducing temperature to be used [K]
-    std::vector<double> Tc,                                     ///< Vector of critical temperatures (in K)
-      pc,                                                       ///< Vector of critical pressures (in Pa)
-      acentric;                                                 ///< Vector of acentric factors (unitless)
-    double R_u;                                                 ///< The universal gas constant  in J/(mol*K)
-    double Delta_1,                                             ///< The first cubic constant
-      Delta_2;                                                  ///< The second cubic constant
-    int N;                                                      ///< Number of components in the mixture
-    std::vector<std::vector<double>> k;                         ///< The interaction parameters (k_ii = 0)
-    double cm;                                                  ///< The volume translation parameter
+    double rho_r,                        ///< The reducing density to be used [mol/m3]
+      T_r;                               ///< The reducing temperature to be used [K]
+    std::vector<double> Tc,              ///< Vector of critical temperatures (in K)
+      pc,                                ///< Vector of critical pressures (in Pa)
+      acentric;                          ///< Vector of acentric factors (unitless)
+    double R_u;                          ///< The universal gas constant  in J/(mol*K)
+    double Delta_1,                      ///< The first cubic constant
+      Delta_2;                           ///< The second cubic constant
+    int N;                               ///< Number of components in the mixture
+    std::vector<std::vector<double>> k;  ///< The interaction parameters (k_ii = 0)
+    /// The per-component volume translation parameters \f$c_i\f$ [m^3/mol].
+    ///
+    /// Deliberately NOT named `c`: AbstractCubicAlphaFunction already has a protected
+    /// `std::vector<double> c` for the Mathias-Copeman/Twu constants, and
+    /// AbstractCubicBackend::set_alpha_from_components binds a local `const std::vector<double>& c`
+    /// to the alpha coefficients.  A third `c` in the same neighbourhood is a shadowing trap.
+    std::vector<double> c_translation;
     std::vector<shared_ptr<AbstractCubicAlphaFunction>> alpha;  ///< The vector of alpha functions for the pure components
     /// Cache: aii_term values for the most recent tau.  Populated lazily by _ensure_aii_cache().
     mutable double m_tau_cache;
@@ -257,6 +264,49 @@ class AbstractCubic
     }
 
     /**
+     * \brief Throw unless component i's volume translation stays strictly inside its covolume
+     *
+     * The repulsive pole sits at \f$v = b - c\f$, so \f$b - c \le 0\f$ inverts the repulsive
+     * branch -- and the model does NOT then fail loudly: only quantities needing \f$\alpha^r\f$
+     * itself go NaN, while p, h and c_p keep returning finite nonsense.  The invariant therefore
+     * has to be enforced at every mutator that can break it, which is why it lives here on the
+     * data rather than in one caller.  Note \f$b_{0,ii} \propto T_c/p_c\f$, so the Tc and pc
+     * setters break it just as surely as the c setters do.
+     */
+    void require_below_covolume(std::size_t i, double c);
+
+    /**
+     * \brief Refresh everything derived from Tc[i] or pc[i] after either has changed
+     *
+     * a0_ii depends on Tc[i]^2/pc[i] and Tr_over_Tci on T_r/Tc[i], so both are refreshed in the
+     * existing alpha function; b0_ii depends on Tc[i]/pc[i], so its cache entry is marked stale.
+     */
+    void refresh_after_critical_change(std::size_t i) {
+        alpha[i]->set_a0(a0_ii(i));
+        alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
+        if (i < m_b0_ii_cache.size()) {
+            m_b0_ii_cache_valid[i] = 0;
+        }
+        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+    }
+
+    /**
+     * \brief Undo a Tc/pc change that would have left the covolume at or below the translation
+     *
+     * `slot` is the member that was just written, passed by reference so the restore happens
+     * here rather than being duplicated at both call sites.
+     */
+    void rollback_critical_unless_translation_fits(std::size_t i, double previous, double& slot) {
+        try {
+            require_below_covolume(i, c_translation[i]);
+        } catch (...) {
+            slot = previous;
+            refresh_after_critical_change(i);
+            throw;
+        }
+    }
+
+    /**
      * \brief Set the critical temperature of the i-th component [K]
      *
      * Updates Tc[i], refreshes the alpha function's a0 and Tr/Tci ratio, and
@@ -264,16 +314,10 @@ class AbstractCubic
      * up the new value consistently.
      */
     void set_Tci(std::size_t i, double Tci) {
+        const double previous = Tc[i];
         Tc[i] = Tci;
-        // a0_ii depends on Tc[i]^2/pc[i], and Tr_over_Tci = T_r/Tc[i].
-        // Refresh both in the existing alpha function so its parameters stay consistent.
-        alpha[i]->set_a0(a0_ii(i));
-        alpha[i]->set_Tr_over_Tci(T_r / Tc[i]);
-        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
-        if (i < m_b0_ii_cache.size()) {
-            m_b0_ii_cache_valid[i] = 0;
-        }
-        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+        refresh_after_critical_change(i);
+        rollback_critical_unless_translation_fits(i, previous, Tc[i]);
     }
     /**
      * \brief Set the critical pressure of the i-th component [Pa]
@@ -282,14 +326,10 @@ class AbstractCubic
      * cache so that all subsequent evaluations pick up the new value consistently.
      */
     void set_pci(std::size_t i, double pci) {
+        const double previous = pc[i];
         pc[i] = pci;
-        // a0_ii depends on Tc[i]^2/pc[i]; refresh it in the existing alpha function.
-        alpha[i]->set_a0(a0_ii(i));
-        // b0_ii depends on Tc[i]/pc[i]; mark the affected entry as stale.
-        if (i < m_b0_ii_cache.size()) {
-            m_b0_ii_cache_valid[i] = 0;
-        }
-        m_tau_cache = std::numeric_limits<double>::quiet_NaN();  // invalidate aii cache
+        refresh_after_critical_change(i);
+        rollback_critical_unless_translation_fits(i, previous, pc[i]);
     }
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
     void set_C_MC(std::size_t i, double c1, double c2, double c3) {
@@ -388,16 +428,73 @@ class AbstractCubic
      */
     virtual double d3_bm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
     /**
-	* \brief The term \f$c_{\rm m}\f$ (volume translation)
+	* \brief The mixture volume translation \f$c_{\rm m} = \sum_i x_i c_i\f$
+	*
+	* The linear mixing rule is not a modelling choice.  Privat, Jaubert & Le Guennec, Fluid Phase
+	* Equilibria 427 (2016) 414-420 start from the general quadratic rule and show that only the
+	* arithmetic-mean combining rule preserves phase equilibria -- and that this choice degenerates
+	* the quadratic rule to the linear one.  So there is no \f$c_{ij}\f$ to store or expose.
+	* \param x The vector of mole fractions
 	*/
-    virtual double cm_term();
-    /// Set the volume translation parameter
+    virtual double cm_term(const std::vector<double>& x);
+    /** \brief The first composition derivative of \f$c_{\rm m}\f$
+     * \param x The vector of mole fractions
+     * \param i The first index
+     * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise
+     */
+    virtual double d_cm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent);
+    // No d2_cm_term_dxidxj / d3_cm_term_dxidxjdxk.  Under the linear rule c_m = sum_i x_i*c_i
+    // they are identically zero, and every consumer (d2_PI_12's T1, d3_PI_12's U2, L_term,
+    // L3_term, d2/d3_psi_minus) folds that zero in by hand.  Declaring them virtual would invite
+    // an override that those hardcoded zeros would then silently ignore.
+
+    /// Set the volume translation of every component to the same value.  All-or-nothing: every
+    /// component is validated before any is written, so a rejected value leaves c untouched.
     void set_cm(double val) {
-        cm = val;
+        for (std::size_t i = 0; i < c_translation.size(); ++i) {
+            require_below_covolume(i, val);
+        }
+        std::fill(c_translation.begin(), c_translation.end(), val);
     }
-    /// Get the volume translation parameter
-    double get_cm() {
-        return cm;
+    /// Set the volume translation of the i-th component
+    void set_cm(std::size_t i, double val) {
+        if (i >= c_translation.size()) {
+            throw CoolProp::ValueError("index out of range in set_cm");
+        }
+        require_below_covolume(i, val);
+        c_translation[i] = val;
+    }
+    /// Get the volume translation of the i-th component
+    double get_cm(std::size_t i) const {
+        if (i >= c_translation.size()) {
+            throw CoolProp::ValueError("index out of range in get_cm");
+        }
+        return c_translation[i];
+    }
+    /// Get the whole vector of volume translations, for copy propagation
+    const std::vector<double>& get_cm_vector() const {
+        return c_translation;
+    }
+    /// Set the whole vector of volume translations, for copy propagation.  Also the entry point
+    /// used directly on a bare AbstractCubic -- the HEOS "-SRK"/"-PengRobinson" fluids have no
+    /// backend wrapper to validate on their behalf -- so it checks rather than trusting the donor.
+    void set_cm_vector(const std::vector<double>& c) {
+        if (c.size() != c_translation.size()) {
+            throw CoolProp::ValueError("size mismatch in set_cm_vector");
+        }
+        for (std::size_t i = 0; i < c.size(); ++i) {
+            require_below_covolume(i, c[i]);
+        }
+        c_translation = c;
+    }
+    /**
+	* \brief The factor \f$1 + c_{\rm m}\rho\f$ common to every composition derivative of \f$A\f$
+	*
+	* Named rather than inlined at each of the three call sites so they cannot drift apart, and so
+	* that the one place the translation enters those derivatives is greppable.
+	*/
+    double one_plus_cm_rho(double delta, const std::vector<double>& x) {
+        return 1.0 + cm_term(x) * delta * rho_r;
     }
 
     /// Modify the surface parameter Q_k of the sub group sgi
@@ -481,7 +578,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      * \param idelta How many derivatives to take with respect to \f$\delta\f$
      *
-     * \f[ \Pi_{12} = (1+\Delta_1\bm\rhor \delta)(1+\Delta_2\bm\rhor \delta) \f]
+     * \f[ \Pi_{12} = (1+(\Delta_1 b_m + c_m)\rho_r \delta)(1+(\Delta_2 b_m + c_m)\rho_r \delta) \f]
      */
     double PI_12(double delta, const std::vector<double>& x, std::size_t idelta);
     /**
@@ -561,7 +658,7 @@ class AbstractCubic
      * \param x The vector of mole fractions
      * \param idelta How many derivatives to take with respect to \f$\delta\f$
      *
-     * \f[  \psi^{(+)} = \dfrac{\ln\left(\dfrac{\Delta_1\bm\rhor \delta+1}{\Delta_2\bm\rhor \delta+1}\right)}{\bm(\Delta_1-\Delta_2)}  \f]
+     * \f[  \psi^{(+)} = \dfrac{\ln\left(\dfrac{(\Delta_1 b_m + c_m)\rho_r \delta+1}{(\Delta_2 b_m + c_m)\rho_r \delta+1}\right)}{b_m(\Delta_1-\Delta_2)}  \f]
      */
     double psi_plus(double delta, const std::vector<double>& x, std::size_t idelta);
     /**
@@ -596,47 +693,49 @@ class AbstractCubic
     double d3_psi_plus_dxidxjdxk(double delta, const std::vector<double>& x, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k,
                                  bool xN_independent);
 
-    /** \brief The term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+    /** \brief The reciprocal covolume \f$1/b_{\rm m}\f$, a factor of \f$\psi^{(+)}\f$
      *
-     * \f$c\f$ is given by
      * \f[
-     * c = \frac{1}{b_m}
+     * \mathrm{inv\_bm} = \frac{1}{b_m}
      * \f]
+     *
+     * Formerly called c_term, which had nothing to do with the volume translation c and sat
+     * directly beside cm_term.
      * \param x The vector of mole fractions
      */
-    double c_term(const std::vector<double>& x) {
+    double inv_bm_term(const std::vector<double>& x) {
         return 1 / bm_term(x);
     };
     /**
-     * \brief The first composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+     * \brief The first composition derivative of \f$1/b_{\rm m}\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      * \param x The vector of mole fractions
      * \param i The first index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
-    double d_c_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
+    double d_inv_bm_term_dxi(const std::vector<double>& x, std::size_t i, bool xN_independent) {
         return -d_bm_term_dxi(x, i, xN_independent) / pow(bm_term(x), 2);
     };
     /**
-     * \brief The second composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+     * \brief The second composition derivative of \f$1/b_{\rm m}\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      * \param x The vector of mole fractions
      * \param i The first index
      * \param j The second index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
-    double d2_c_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
+    double d2_inv_bm_term_dxidxj(const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
         double bm = bm_term(x);
         return (2 * d_bm_term_dxi(x, i, xN_independent) * d_bm_term_dxi(x, j, xN_independent) - bm * d2_bm_term_dxidxj(x, i, j, xN_independent))
                / pow(bm, 3);
     };
     /**
-     * \brief The third composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
+     * \brief The third composition derivative of \f$1/b_{\rm m}\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      * \param x The vector of mole fractions
      * \param i The first index
      * \param j The second index
      * \param k The third index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
-    double d3_c_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
+    double d3_inv_bm_term_dxidxjdxk(const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
         double bm = bm_term(x);
         return 1 / pow(bm, 4)
                * (2 * bm
@@ -651,7 +750,7 @@ class AbstractCubic
      * \brief The term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
      *
      * \f[
-     * A = \log\left(\frac{\Delta_1\delta\rho_r b_m+1}{\Delta_2\delta\rho_r b+1}\right)
+     * A = \log\left(\frac{(\Delta_1 b_m + c_m)\delta\rho_r+1}{(\Delta_2 b_m + c_m)\delta\rho_r+1}\right)
      * \f]
      *
      * \param delta The reduced density \f$\delta = \frac{\rho}{\rho_c}\f$
@@ -659,7 +758,7 @@ class AbstractCubic
      */
     double A_term(double delta, const std::vector<double>& x) {
         double bm = bm_term(x);
-        double cm = cm_term();
+        double cm = cm_term(x);
         return log((delta * rho_r * (Delta_1 * bm + cm) + 1) / (delta * rho_r * (Delta_2 * bm + cm) + 1));
     };
     /**
@@ -669,9 +768,39 @@ class AbstractCubic
      * \param i The first index
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
+    /**
+     * \brief The building block \f$K_i\f$ of the composition derivatives of \f$A\f$
+     *
+     * Differentiating \f$A = \ln[(1 + (\Delta_1 b + c)\rho)/(1 + (\Delta_2 b + c)\rho)]\f$ gives
+     * \f$\partial A/\partial x_i = \rho(\Delta_1-\Delta_2) K_i / \Pi_{12}\f$ with
+     * \f$K_i = b_i(1 + c\rho) - b c_i \rho\f$.  The \f$(1 + c\rho)\f$ factor is easy to lose because
+     * \f$\Pi_{12}\f$ in the denominator already carries \f$c\f$, which makes the expression look
+     * translation-aware when it is not.
+     */
+    double K_term(double delta, const std::vector<double>& x, std::size_t i, bool xN_independent) {
+        return d_bm_term_dxi(x, i, xN_independent) * one_plus_cm_rho(delta, x) - bm_term(x) * d_cm_term_dxi(x, i, xN_independent) * delta * rho_r;
+    };
+    /// \brief \f$L_{ij} = \partial K_i/\partial x_j = b_{ij}(1+c\rho) + \rho(b_i c_j - b_j c_i)\f$
+    ///
+    /// Not symmetric in (i,j): the antisymmetric part is cancelled by the \f$-K_i \Pi_j\f$ term in
+    /// d2_A_term_dxidxj.  Do not "fix" it by symmetrising.
+    double L_term(double delta, const std::vector<double>& x, std::size_t i, std::size_t j, bool xN_independent) {
+        return d2_bm_term_dxidxj(x, i, j, xN_independent) * one_plus_cm_rho(delta, x)
+               + delta * rho_r
+                   * (d_bm_term_dxi(x, i, xN_independent) * d_cm_term_dxi(x, j, xN_independent)
+                      - d_bm_term_dxi(x, j, xN_independent) * d_cm_term_dxi(x, i, xN_independent));
+    };
+    /// \brief \f$L_{ijk} = \partial L_{ij}/\partial x_k\f$
+    double L3_term(double delta, const std::vector<double>& x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent) {
+        return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent) * one_plus_cm_rho(delta, x)
+               + delta * rho_r
+                   * (d2_bm_term_dxidxj(x, i, j, xN_independent) * d_cm_term_dxi(x, k, xN_independent)
+                      + d2_bm_term_dxidxj(x, i, k, xN_independent) * d_cm_term_dxi(x, j, xN_independent)
+                      - d2_bm_term_dxidxj(x, j, k, xN_independent) * d_cm_term_dxi(x, i, xN_independent));
+    };
     double d_A_term_dxi(double delta, const std::vector<double>& x, std::size_t i, bool xN_independent) {
         std::size_t idelta = 0;
-        return delta * rho_r * d_bm_term_dxi(x, i, xN_independent) * (Delta_1 - Delta_2) / PI_12(delta, x, idelta);
+        return delta * rho_r * (Delta_1 - Delta_2) * K_term(delta, x, i, xN_independent) / PI_12(delta, x, idelta);
     };
     /**
      * \brief The second composition derivative of the term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -685,8 +814,7 @@ class AbstractCubic
         std::size_t idelta = 0;
         double PI12 = PI_12(delta, x, idelta);
         return delta * rho_r * (Delta_1 - Delta_2) / pow(PI12, 2)
-               * (PI12 * d2_bm_term_dxidxj(x, i, j, xN_independent)
-                  - d_PI_12_dxi(delta, x, 0, j, xN_independent) * d_bm_term_dxi(x, i, xN_independent));
+               * (PI12 * L_term(delta, x, i, j, xN_independent) - d_PI_12_dxi(delta, x, 0, j, xN_independent) * K_term(delta, x, i, xN_independent));
     };
     /**
      * \brief The third composition derivative of the term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -704,12 +832,12 @@ class AbstractCubic
         double lead = delta * rho_r * (Delta_1 - Delta_2) / pow(PI12, 3);
         return lead
                * (-PI12
-                    * (d_PI_12_dxi(delta, x, idelta, j, xN_independent) * d2_bm_term_dxidxj(x, i, k, xN_independent)
-                       + d_PI_12_dxi(delta, x, idelta, k, xN_independent) * d2_bm_term_dxidxj(x, i, j, xN_independent)
-                       + d_bm_term_dxi(x, i, xN_independent) * d2_PI_12_dxidxj(delta, x, idelta, j, k, xN_independent))
-                  + pow(PI12, 2) * d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent)
+                    * (d_PI_12_dxi(delta, x, idelta, k, xN_independent) * L_term(delta, x, i, j, xN_independent)
+                       + d_PI_12_dxi(delta, x, idelta, j, xN_independent) * L_term(delta, x, i, k, xN_independent)
+                       + K_term(delta, x, i, xN_independent) * d2_PI_12_dxidxj(delta, x, idelta, j, k, xN_independent))
+                  + pow(PI12, 2) * L3_term(delta, x, i, j, k, xN_independent)
                   + 2 * d_PI_12_dxi(delta, x, idelta, j, xN_independent) * d_PI_12_dxi(delta, x, idelta, k, xN_independent)
-                      * d_bm_term_dxi(x, i, xN_independent));
+                      * K_term(delta, x, i, xN_independent));
     };
     // Allows to modify the unifac interaction parameters aij, bij and cij. Only for use with VTPR backend.
     virtual void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter, const double value) {

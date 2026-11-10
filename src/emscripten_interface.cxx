@@ -80,6 +80,7 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
       .value("iP_max", CoolProp::iP_max)
       .value("iP_min", CoolProp::iP_min)
       .value("idipole_moment", CoolProp::idipole_moment)
+      .value("iHmolar_formation", CoolProp::iHmolar_formation)
       .value("iT", CoolProp::iT)
       .value("iP", CoolProp::iP)
       .value("iQ", CoolProp::iQ)

@@ -1,0 +1,645 @@
+name: Packaging (offline build)
+
+# Keeps the Linux packaging path honest.  See GH #3388: the 2014 wrappers/DEB
+# attempt broke the day a cmake-format pass removed a space and nobody found
+# out for twelve years, because no CI job ran it.  This job builds CoolProp the
+# way OBS, sbuild and mock do -- from the release tarball, in a sandbox with no
+# network -- so a regression in dependency handling or the install layout shows
+# up on the commit that caused it.
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop' ]
+    tags: [ 'v*' ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'dev/packaging/**'
+      - 'dev/generate_headers.py'
+      - '.github/workflows/packaging_offline.yml'
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'dev/packaging/**'
+      - 'dev/generate_headers.py'
+      - '.github/workflows/packaging_offline.yml'
+  # Manual runs.  The whole workflow always runs, because obs-build consumes
+  # the tarball artifact that offline-build produces, so there is no way to
+  # reach OBS without building the tarball first.  What the inputs decide is
+  # whether OBS is touched at all and which package is written to.
+  workflow_dispatch:
+    inputs:
+      push_to_obs:
+        description: 'Push to OBS and wait for the builds'
+        type: boolean
+        default: true
+      obs_project:
+        description: 'OBS project, e.g. home:jowr (blank uses the OBS_PROJECT variable)'
+        type: string
+        default: ''
+      obs_package:
+        description: 'OBS package (blank uses the OBS_PACKAGE variable, or coolprop)'
+        type: string
+        default: ''
+
+# Neither job needs to write anything through the Actions token: they build,
+# inspect and (for obs-build) talk to OBS with its own credentials.  This was a
+# workflow-level setting on the separate OBS workflow before it was folded in
+# here, and dropping it would silently hand the job whatever the repository
+# default happens to be, in the one place that handles a secret.
+# download-artifact uses the runtime token rather than GITHUB_TOKEN, so read is
+# enough for the hand-off between the two jobs.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  offline-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      # The FHS install work makes CMAKE_INSTALL_PREFIX actually take effect,
+      # which is one edit away from making the DEFAULT prefix stop working --
+      # and every wrapper build job reads install_root/ without ever passing a
+      # prefix, so nothing else here would notice.  Configure both ways and
+      # check both answers.
+      - name: Check the install prefix defaults
+        run: |
+          set -euo pipefail
+          expect_prefix() {
+            local build="$1" want="$2"; shift 2
+            if ! cmake -S . -B "${build}" -DCOOLPROP_SHARED_LIBRARY=ON "$@" > "${build}.log" 2>&1; then
+              echo "configure failed for [$*]:" >&2
+              cat "${build}.log" >&2
+              exit 1
+            fi
+
+            local got
+            got="$(sed -n 's/^CMAKE_INSTALL_PREFIX:PATH=//p' "${build}/CMakeCache.txt")"
+            if [ "${got}" != "${want}" ]; then
+              echo "CMAKE_INSTALL_PREFIX check failed for [$*]: want '${want}', got '${got}'" >&2
+              exit 1
+            fi
+
+            # Only CMAKE_INSTALL_PREFIX is asserted now.  Before #3311 the
+            # release-artifact rules interpolated ${COOLPROP_INSTALL_PREFIX}
+            # into four absolute DESTINATIONs, so that variable needed its own
+            # check; #3311 made every DESTINATION relative, so the cache entry
+            # above is the single thing that decides where anything lands.
+            echo "ok: [$*] -> ${got}"
+          }
+          expect_prefix "${RUNNER_TEMP}/pfx-default" "${GITHUB_WORKSPACE}/install_root"
+          expect_prefix "${RUNNER_TEMP}/pfx-explicit" "/usr" -DCMAKE_INSTALL_PREFIX=/usr
+          expect_prefix "${RUNNER_TEMP}/pfx-legacy" "/opt/cp" -DCOOLPROP_INSTALL_PREFIX=/opt/cp
+          # Both empty forms, which is what an unset shell variable expands to in
+          # `cmake -DCOOLPROP_INSTALL_PREFIX="$PREFIX"`.  Each must fall back to
+          # the default rather than leaving the prefix empty: an empty prefix
+          # sends every relative DESTINATION to /lib and /include, and the four
+          # rules that interpolate COOLPROP_INSTALL_PREFIX to the filesystem
+          # root.  Asserting only the three cases above let exactly that through.
+          # Both empty forms ABORT since #3311 landed; they used to fall back to
+          # install_root.  Asserted below with expect_configure_failure.
+          # Trailing slash, through both variables.  A PATH cache entry is
+          # normalised on the way in and an untyped -D is not, so a prefix as
+          # ordinary as "$PREFIX/" once left the two variables disagreeing and
+          # aborted the configure.  Assert the normalised value.
+          expect_prefix "${RUNNER_TEMP}/pfx-slash-legacy" "/opt/cp" -DCOOLPROP_INSTALL_PREFIX=/opt/cp/
+          expect_prefix "${RUNNER_TEMP}/pfx-slash-cmake" "/usr" -DCMAKE_INSTALL_PREFIX=/usr/
+
+          # A prefix that collapses to nothing must ABORT, not configure.  This
+          # is the other half of the same guard: ";" expands to zero arguments,
+          # which writes an empty prefix that would send every relative
+          # DESTINATION to /lib and /include.
+          expect_configure_failure() {
+            local build="$1"; shift
+            if cmake -S "${GITHUB_WORKSPACE}" -B "${build}" "$@" > "${build}.log" 2>&1; then
+              echo "expected the configure to fail for [$*], but it succeeded" >&2
+              exit 1
+            fi
+            if ! grep -q "must not be empty" "${build}.log"; then
+              echo "configure failed for [$*] but not with the prefix guard:" >&2
+              tail -20 "${build}.log" >&2
+              exit 1
+            fi
+            echo "ok: [$*] -> aborted as expected"
+          }
+          expect_configure_failure "${RUNNER_TEMP}/pfx-collapse-legacy" "-DCOOLPROP_INSTALL_PREFIX=;"
+          expect_configure_failure "${RUNNER_TEMP}/pfx-collapse-cmake" "-DCMAKE_INSTALL_PREFIX=;"
+          expect_configure_failure "${RUNNER_TEMP}/pfx-empty-legacy" "-DCOOLPROP_INSTALL_PREFIX="
+          expect_configure_failure "${RUNNER_TEMP}/pfx-empty-cmake" "-DCMAKE_INSTALL_PREFIX="
+
+      - name: Build the offline release tarball
+        run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"
+
+      - name: Unpack the tarball
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/src"
+          tar -x -f "${RUNNER_TEMP}"/dist/coolprop-*.tar.gz -C "${RUNNER_TEMP}/src"
+          # Exactly one top-level directory is expected; anything else means the
+          # tarball layout changed and the steps below would silently guess.
+          mapfile -t roots < <(find "${RUNNER_TEMP}/src" -mindepth 1 -maxdepth 1 -type d)
+          if [ "${#roots[@]}" -ne 1 ]; then
+            echo "expected one directory in the tarball, found ${#roots[@]}" >&2
+            printf '%s\n' "${roots[@]}" >&2
+            exit 1
+          fi
+          echo "COOLPROP_SRC=${roots[0]}" >> "${GITHUB_ENV}"
+
+      # COOLPROP_VENDOR_THIRD_PARTY=OFF makes cmake/dependencies.cmake resolve
+      # Eigen and fmt with find_package instead of CPM, so they have to come
+      # from the system.  They are installed here, before the network is taken
+      # away, because that is exactly how a distribution build works: sbuild,
+      # mock and OBS install the declared BuildRequires into the chroot first
+      # and only then cut the network.  These two packages are the build-time
+      # half of the dependencies libcoolprop-devel and libcoolprop-dev already
+      # declare at install time.
+      - name: Install the build dependencies the distribution recipes declare
+        run: |
+          set -euo pipefail
+          # Fail if the four copies of the dependency list have drifted apart.
+          # Installing the right packages here while a recipe has lost one is
+          # exactly how this job went green on a build that was broken for
+          # Debian, so the check runs before the install, not after it.
+          python3 dev/packaging/check-build-deps.py
+          # Error-Mode=any turns a partially failed index refresh into a
+          # failure.  Plain "apt-get update" exits 0 when some sources fail and
+          # the install then silently resolves against a stale package list.
+          sudo apt-get update -o APT::Update::Error-Mode=any
+          sudo apt-get install -y libeigen3-dev libfmt-dev
+
+      - name: Build and install with the network switched off
+        run: |
+          set -euo pipefail
+          # Written to a file rather than passed to bash -c, so that the quoting
+          # stays readable and the variables below are plain shell variables.
+          cat > "${RUNNER_TEMP}/offline-build.sh" <<'SCRIPT'
+          set -euo pipefail
+          cmake -S "${COOLPROP_SRC}" -B "${RUNNER_TEMP}/build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCOOLPROP_SHARED_LIBRARY=ON \
+            -DCOOLPROP_INSTALL_CMAKE_PACKAGE=ON \
+            -DCOOLPROP_INSTALL_LEGACY_LAYOUT=OFF \
+            -DCOOLPROP_INSTALL_FLAT_HEADERS=OFF \
+            -DCOOLPROP_VENDOR_THIRD_PARTY=OFF \
+            -DCOOLPROP_REQUIRE_VENDORED_DEPS=ON \
+            -DCOOLPROP_NO_EXAMPLES=ON
+          cmake --build "${RUNNER_TEMP}/build" -j "$(nproc)"
+          DESTDIR="${RUNNER_TEMP}/destdir" cmake --install "${RUNNER_TEMP}/build"
+          SCRIPT
+
+          # "unshare --net" gives the build a network namespace with nothing in
+          # it, the same situation as an OBS or sbuild chroot.  Anything that
+          # still reaches for the network fails here; there is no fallback to
+          # the host network, and no "keep going" branch.
+          sudo --preserve-env=COOLPROP_SRC,RUNNER_TEMP \
+            unshare --net -- bash "${RUNNER_TEMP}/offline-build.sh"
+
+      - name: Check the installed layout
+        run: |
+          set -euo pipefail
+          root="${RUNNER_TEMP}/destdir/usr"
+
+          # Find the library rather than assuming a libdir name, but insist on
+          # exactly one match: two would mean the install rules are firing
+          # twice, which is as much of a bug as none at all.
+          mapfile -t sonames < <(find "${root}" -name 'libCoolProp.so' -type l)
+          if [ "${#sonames[@]}" -ne 1 ]; then
+            echo "expected exactly one libCoolProp.so symlink, found ${#sonames[@]}" >&2
+            printf '%s\n' "${sonames[@]:-(none)}" >&2
+            exit 1
+          fi
+          libdir="$(dirname "${sonames[0]}")"
+          echo "libdir: ${libdir#"${root}"}"
+
+          for f in \
+              "${libdir}/libCoolProp.so.8" \
+              "${libdir}/pkgconfig/coolprop.pc" \
+              "${libdir}/cmake/CoolProp/CoolPropConfig.cmake" \
+              "${libdir}/cmake/CoolProp/CoolPropTargets.cmake" \
+              "${root}/include/CoolProp/CoolProp.h" \
+              "${root}/include/CoolProp/CoolPropLib.h" ; do
+            if [ ! -e "${f}" ]; then
+              echo "missing from the install: ${f}" >&2
+              exit 1
+            fi
+          done
+
+          # The flat deprecation shims must stay out of /usr/include: names like
+          # Solvers.h, MatrixMath.h and Exceptions.h are far too generic to
+          # share a system include directory with other packages.
+          stray="$(find "${root}/include" -maxdepth 1 -name '*.h' -printf '%f\n')"
+          if [ -n "${stray}" ]; then
+            echo "flat headers leaked into the include root:" >&2
+            echo "${stray}" >&2
+            exit 1
+          fi
+
+          echo "COOLPROP_INSTALL_ROOT=${root}" >> "${GITHUB_ENV}"
+          echo "COOLPROP_INSTALL_LIBDIR=${libdir}" >> "${GITHUB_ENV}"
+
+      - name: Build a consumer against the install
+        run: |
+          set -euo pipefail
+          root="${COOLPROP_INSTALL_ROOT}"
+          libdir="${COOLPROP_INSTALL_LIBDIR}"
+          work="${RUNNER_TEMP}/consumer"
+          mkdir -p "${work}"
+
+          # The C API only, so this checks the packaged library and headers
+          # without dragging Eigen into the test.
+          cat > "${work}/main.c" <<'EOF'
+          #include <CoolProp/CoolPropLib.h>
+          #include <stdio.h>
+          #include <stdlib.h>
+
+          int main(void) {
+              /* Normal boiling point of water, expected near 373.12 K. */
+              double T_sat_K = PropsSI("T", "P", 101325.0, "Q", 0.0, "Water");
+              printf("T_sat_K = %.4f\n", T_sat_K);
+              if (!(T_sat_K > 372.0 && T_sat_K < 374.0)) {
+                  fprintf(stderr, "unexpected saturation temperature\n");
+                  return 1;
+              }
+              return 0;
+          }
+          EOF
+
+          # Check the prefix that was actually baked into the .pc before
+          # overriding it below.  Without this, a coolprop.pc generated with a
+          # wrong prefix would still sail through the compile, because the
+          # override replaces exactly the value under test.
+          if ! grep -qx 'prefix=/usr' "${libdir}/pkgconfig/coolprop.pc"; then
+            echo "coolprop.pc has the wrong baked-in prefix:" >&2
+            grep '^prefix=' "${libdir}/pkgconfig/coolprop.pc" >&2
+            exit 1
+          fi
+
+          echo "== via pkg-config =="
+          # The .pc has prefix=/usr baked in and this is a DESTDIR install, so
+          # its prefix has to be redirected at the staging root.  Two ways that
+          # look right and are not:
+          #
+          #   --define-prefix recomputes the prefix by stripping two components
+          #   from the .pc file's directory, which is wrong whenever libdir is
+          #   multiarch (lib/x86_64-linux-gnu/pkgconfig is three), and yields
+          #   -I<root>/lib/include.
+          #
+          #   --define-variable=prefix= is GLOBAL: it overrides prefix in every
+          #   .pc resolved, not just this one.  That was harmless while
+          #   Requires was empty, but coolprop.pc now requires eigen3 and fmt,
+          #   whose own .pc files are prefix-relative, so it would relocate
+          #   /usr/include/eigen3 to <destdir>/usr/include/eigen3 and the
+          #   compile would fail on a perfectly correct file.
+          #
+          # So rewrite this one file's own prefix line in a scratch copy and
+          # leave the system dependencies where they are.  The baked-in value
+          # was asserted just above, so the substitution cannot silently no-op.
+          pcdir="${work}/pkgconfig"
+          mkdir -p "${pcdir}"
+          sed "s|^prefix=/usr$|prefix=${root}|" \
+            "${libdir}/pkgconfig/coolprop.pc" >"${pcdir}/coolprop.pc"
+          if ! grep -qx "prefix=${root}" "${pcdir}/coolprop.pc"; then
+            echo "rewriting the staged coolprop.pc prefix did not take:" >&2
+            grep '^prefix=' "${pcdir}/coolprop.pc" >&2
+            exit 1
+          fi
+          # Prepended, not replacing: eigen3.pc and fmt.pc come from the system
+          # directories that pkg-config searches by default.
+          export PKG_CONFIG_PATH="${pcdir}"
+          cflags="$(pkg-config --cflags coolprop)"
+          libs="$(pkg-config --libs coolprop)"
+          echo "cflags: ${cflags}"
+          echo "libs:   ${libs}"
+          # Unquoted on purpose: pkg-config hands back several arguments in one
+          # string and they have to word-split.  Quoting passes "-I... -L... -l..."
+          # as a single argument and the compile fails.
+          # shellcheck disable=SC2086
+          cc "${work}/main.c" ${cflags} ${libs} -o "${work}/consumer_pc"
+          LD_LIBRARY_PATH="${libdir}" "${work}/consumer_pc"
+
+          # The C API needs no third-party header, so compiling only it hides
+          # a .pc that fails to name Eigen and fmt.  The installed C++ headers
+          # do include them, so build a C++ consumer through pkg-config too.
+          # dev/ci/cmake-consumer/cpp_api.cpp includes numerics/PolyMath.h
+          # precisely to pull the transitive Eigen include in, so it fails
+          # when the flags are incomplete.
+          #
+          # This build asks for COOLPROP_VENDOR_THIRD_PARTY=OFF, so the
+          # library compiled against the system Eigen and fmt and coolprop.pc
+          # has to require them; with vendoring ON the .pc names the bundled
+          # copies in Cflags instead.  Assert the shape that matches this
+          # build before relying on the compile.
+          # Requires.private rather than Requires: pkg-config emits a private
+          # requirement's Cflags unconditionally and gates only its Libs on
+          # --static, which is what header-only dependencies want.  Naming them
+          # publicly would put -lfmt on every dynamic consumer's link line and
+          # give their binary a libfmt NEEDED entry the CMake package does not
+          # create, since CoolProp links fmt::fmt-header-only.
+          if ! grep -qx 'Requires.private: eigen3 fmt' \
+               "${libdir}/pkgconfig/coolprop.pc"; then
+            echo "coolprop.pc does not require the system Eigen and fmt that" >&2
+            echo "COOLPROP_VENDOR_THIRD_PARTY=OFF made it compile against:" >&2
+            grep -E '^(Requires|Requires.private|Cflags):' \
+              "${libdir}/pkgconfig/coolprop.pc" >&2
+            exit 1
+          fi
+
+          cpp_cflags="$(pkg-config --cflags coolprop)"
+          cpp_libs="$(pkg-config --libs coolprop)"
+          echo "c++ cflags: ${cpp_cflags}"
+          # shellcheck disable=SC2086
+          c++ -std=c++17 "${COOLPROP_SRC}/dev/ci/cmake-consumer/cpp_api.cpp" \
+            ${cpp_cflags} ${cpp_libs} -o "${work}/consumer_pc_cxx"
+          LD_LIBRARY_PATH="${libdir}" "${work}/consumer_pc_cxx"
+
+          echo "== via find_package(CoolProp) =="
+          cat > "${work}/CMakeLists.txt" <<'EOF'
+          cmake_minimum_required(VERSION 3.14)
+          project(coolprop_consumer C)
+          find_package(CoolProp REQUIRED)
+          add_executable(consumer main.c)
+          target_link_libraries(consumer PRIVATE CoolProp::CoolProp)
+          EOF
+          cmake -S "${work}" -B "${work}/build" \
+            -DCMAKE_PREFIX_PATH="${root}" \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build "${work}/build"
+          LD_LIBRARY_PATH="${libdir}" "${work}/build/consumer"
+
+      - name: Upload the tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: coolprop-source-tarball
+          path: ${{ runner.temp }}/dist/
+          if-no-files-found: error
+
+  # Builds the same tarball on OBS, for real distributions, and fails if any
+  # target fails.  That is what puts the openSUSE Build Service result into
+  # this repository's checks instead of on a web page somebody has to remember
+  # to open, and it replaces uploading the tarball and the spec by hand.
+  #
+  # It lives here rather than in a workflow of its own for two reasons.  The
+  # obvious one is that the tarball is built once instead of twice.  The one
+  # that matters more is that OBS then builds the BYTE-IDENTICAL artifact the
+  # offline job just proved, rather than a second tarball that ought to be the
+  # same; dev/packaging/obs/_service says that is the goal, and downloading the
+  # artifact is what actually delivers it.  As a side effect a tarball that
+  # already failed to build offline never reaches OBS, which saves a slow round
+  # trip on a failure we have in hand.
+  #
+  # This job is now the ONLY thing that builds this package on OBS.  There used
+  # to be a second path, an OBS webhook in .obs/workflows.yml that re-ran the
+  # package's source services on a release tag, and it was removed because it
+  # never did anything: its services were mode="manual", which a server-side run
+  # skips, and nothing published the tarball they were meant to fetch.  The
+  # ordering was against it too.  A webhook fires when GitHub RECEIVES the push,
+  # which is before any of this has run, so a webhook-triggered rebuild reports
+  # the PREVIOUS sources against the new commit.  Do not reintroduce one without
+  # solving that.
+  #
+  # Setup, once, before it does anything (see dev/packaging/README.md):
+  #   Repository variables: OBS_PROJECT (e.g. home:jowr), OBS_PACKAGE, OBS_APIURL
+  #   Repository secrets:   OBS_USERNAME, OBS_PASSWORD
+  #
+  # A manual run (Actions -> this workflow -> Run workflow) can override the two
+  # names through the inputs above, which is how a one-off build goes to a
+  # staging project without editing the repository variable that every automatic
+  # run uses.  The credentials are NOT overridable: they are secrets, and a
+  # dispatch input would put them in the run's parameters in plain text.
+  obs-build:
+    needs: offline-build
+    runs-on: ubuntu-latest
+    # Two gates.  An unset OBS_PROJECT means this repository has no OBS package
+    # configured, which is a legitimate state rather than a failure, so the job
+    # is skipped.  A pull request from a fork gets no secrets, so it would fail
+    # on the credential check through no fault of the contributor.
+    #
+    # A project that IS configured, on a branch that DOES get secrets, but with
+    # the credentials missing is a different thing entirely: obs-upload.sh
+    # fails loudly on that rather than skipping.
+    #
+    # Tags are no longer excluded.  They used to be, so that the OBS webhook
+    # could own the package on a release tag without CI replacing its sources
+    # underneath it.  That webhook is gone, so there is nothing left to collide
+    # with and no reason to leave a tag unbuilt.
+    #
+    # Whether a tag PUSH actually reaches this job is a separate question and
+    # is worth checking on the first one rather than assuming: this workflow
+    # carries a paths: filter as well as tags: ['v*'], both have to be
+    # satisfied, and a tag push usually introduces no new commits for the paths
+    # filter to match.  Dispatching the workflow against the tag is the
+    # dependable route, and is now allowed.
+    #
+    # On a manual run the obs_project input stands in for the variable, so a
+    # repository that has never set OBS_PROJECT can still be pointed at a
+    # project by hand; and push_to_obs turns the job off for a manual run that
+    # only wants the offline build.  Outside a workflow_dispatch the inputs
+    # context is empty, and an empty value compares equal to '', so both of
+    # those clauses fall back to the behaviour above on a push or a pull
+    # request.
+    #
+    # A manual run is deliberately NOT skipped when it cannot push, whether
+    # that is because no project is configured or because it was started
+    # against a tag.  Skipping is the right answer for an automatic run, where
+    # it means "this repository has no OBS package", but somebody who ticked
+    # push_to_obs asked for an OBS build in so many words, and answering that
+    # with a skipped job and a green run is the quiet no-op this whole file is
+    # written to avoid.  The job starts instead and its first step says what is
+    # wrong, which is why the tag clause below only applies to other events.
+    #
+    # push_to_obs is read twice, through both contexts, and that is not
+    # redundance for its own sake.  'inputs' honours the declared boolean, so
+    # an unticked box is false; 'github.event.inputs' is always strings, where
+    # the string "false" would be TRUTHY and would push to OBS against the
+    # explicit wish of whoever unticked it.  Requiring both to agree fails
+    # closed whichever way a future API change resolves the value.  The
+    # opposite spelling, inputs.push_to_obs == true, must NOT be used: it is
+    # false for the string "true", which is the same silent skip in reverse.
+    if: >-
+      (vars.OBS_PROJECT != '' || github.event_name == 'workflow_dispatch')
+      && (github.event_name != 'workflow_dispatch'
+          || (inputs.push_to_obs && github.event.inputs.push_to_obs != 'false'))
+      && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
+    # The wait for OBS is unbounded in the script, so the bound lives here.
+    timeout-minutes: 120
+    # One OBS package cannot hold two commits at once, and this group is
+    # deliberately not keyed by ref: two branches pushing at the same time are
+    # exactly the case that needs serialising.  The workflow-level concurrency
+    # above is per ref and so would not catch it.
+    #
+    # It IS keyed by the project and package, because since the obs_project
+    # input exists two runs in flight no longer necessarily write the same
+    # place.  A one-off build to a staging project has no reason to hold up a
+    # master push's verdict on the real one, and runs that DO share a package
+    # still serialise, which is the whole rationale.
+    #
+    # cancel-in-progress is false, which is not the obvious choice.  A job joins
+    # its group only once it is ready to run, which here is after offline-build
+    # finishes, so arrival order follows build duration rather than push order.
+    # Cancelling on arrival would therefore let a run whose offline build was
+    # slow cancel a newer one that overtook it, and the newer commit would be
+    # left with a cancelled check and no OBS verdict at all.  Queueing instead
+    # keeps each commit's commit-and-watch atomic against the other and gives
+    # every commit a real result.  The package can still end up holding the
+    # older sources when two pushes overlap; the next push corrects that, and
+    # each run's check still reports the sources that run actually committed.
+    concurrency:
+      group: packaging-obs-${{ inputs.obs_project || vars.OBS_PROJECT }}-${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
+      cancel-in-progress: false
+
+    steps:
+      # Everything this job needs in order to reach OBS at all, in one place
+      # and before the checkout, so a manual run that cannot get there says why
+      # instead of failing later and less clearly.  It is not instant: the job
+      # waits for offline-build to produce the tarball first, so the feedback
+      # comes after that build, not within seconds of pressing the button.
+      # What it does save is installing osc and downloading the artifact, and
+      # what it really buys is an accurate message instead of an osc traceback.
+      #
+      # Everything here can only fire on a manual run.  Every other event is
+      # skipped by the condition above when the project is unset, and an
+      # automatic run that reaches this point has a project from a repository
+      # variable that nobody typed in a hurry.
+      - name: Check this run can reach OBS
+        env:
+          OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
+          # Named OSC_* to match what obs-upload.sh reads, so the two agree.
+          OSC_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OSC_PASSWORD: ${{ secrets.OBS_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${OBS_PROJECT}" ]]; then
+            echo "::error::No OBS project to push to. Either set the OBS_PROJECT repository variable, or fill in the obs_project input when starting the run. Untick push_to_obs to run only the offline build."
+            exit 1
+          fi
+
+          # Emptiness is not enough, and this is the case that motivated the
+          # check.  A dispatch input is taken verbatim, and ANY non-empty
+          # string is truthy to the '||' above, so a single space left behind
+          # by a copy-paste out of the OBS web UI passes an empty-looking name
+          # AND silently overrides a perfectly good OBS_PROJECT variable.
+          # Checking the shape catches that, and the odder values too.
+          name_pattern='^[A-Za-z0-9][A-Za-z0-9._:+-]*$'
+          if [[ ! "${OBS_PROJECT}" =~ ${name_pattern} ]]; then
+            echo "::error::OBS project '${OBS_PROJECT}' is not a valid project name. Expected something like home:jowr, with no spaces."
+            exit 1
+          fi
+          if [[ ! "${OBS_PACKAGE}" =~ ${name_pattern} ]]; then
+            echo "::error::OBS package '${OBS_PACKAGE}' is not a valid package name. Expected something like coolprop, with no spaces."
+            exit 1
+          fi
+
+          # The credentials are the other half of "is this set up".
+          # obs-upload.sh checks them too, which is what protects it when it is
+          # run by hand; checking here as well means a repository that was
+          # never set up finds out before osc is installed.
+          if [[ -z "${OSC_USERNAME}" || -z "${OSC_PASSWORD}" ]]; then
+            echo "::error::Both the OBS_USERNAME and OBS_PASSWORD secrets are needed and at least one is missing. See dev/packaging/README.md."
+            exit 1
+          fi
+
+          echo "OBS target: ${OBS_PROJECT}/${OBS_PACKAGE}"
+
+      # No fetch-depth here: the tarball is downloaded rather than built, so
+      # this checkout only supplies the recipes and the upload script.
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Install osc
+        # From PyPI, which is upstream's own package, NOT from apt.  Ubuntu
+        # 24.04 ships osc 0.169.1, which is far too old for this job:
+        #
+        #   osc 1.6.0  reading credentials from environment variables
+        #
+        # That is load-bearing here, so an apt osc would prompt for a password.
+        # Keep the pin at or above that version when bumping it.  Note the job
+        # deliberately does NOT use 'results --fail-on-error'; see the comment
+        # in dev/packaging/obs-upload.sh for why it cannot be trusted.
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'osc==1.27.3'
+          # 'osc --version' is not a valid invocation (it exits 2) and
+          # 'osc version' talks to the server, so it asks for credentials.
+          # '--help' is the smoke test that needs neither.
+          osc --help > /dev/null
+          python -m pip show osc | sed -n 's/^Version: /osc version: /p'
+
+      - name: Download the tarball the offline build proved
+        uses: actions/download-artifact@v8
+        with:
+          name: coolprop-source-tarball
+          path: ${{ runner.temp }}/dist
+
+      - name: Check the recipes agree with each other
+        # Cheap, and it catches the class of mistake that is most annoying to
+        # debug from an OBS log: the spec, the .dsc and the Debian control file
+        # disagreeing about a version or a build dependency.
+        run: dev/packaging/check-build-deps.py
+
+      - name: Push to OBS and wait for the builds
+        env:
+          OSC_APIURL: ${{ vars.OBS_APIURL || 'https://api.opensuse.org' }}
+          OSC_USERNAME: ${{ secrets.OBS_USERNAME }}
+          OSC_PASSWORD: ${{ secrets.OBS_PASSWORD }}
+          # The project and package names go through the environment rather
+          # than being pasted into the script body.  A ${{ }} expansion is
+          # substituted before the shell ever sees the line, so a value with a
+          # quote or a semicolon in it would become script rather than an
+          # argument.  These particular values are set by a maintainer, but the
+          # habit is what keeps the next one safe.
+          # A blank input falls through to the variable: '' is falsy to ||,
+          # and so is the empty inputs context of a push or pull request.
+          OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
+        run: |
+          set -euo pipefail
+          # Exactly one tarball is expected.  Globbing it into the argument
+          # list without checking would pass two paths to --tarball on the day
+          # a stale file survives, and the script would use only the first.
+          mapfile -t tarballs < <(find "${RUNNER_TEMP}/dist" -maxdepth 1 -name 'coolprop-*.tar.gz' -type f | sort)
+          if [[ ${#tarballs[@]} -ne 1 ]]; then
+            echo "::error::expected exactly one tarball, found ${#tarballs[@]}: ${tarballs[*]-none}"
+            exit 1
+          fi
+          dev/packaging/obs-upload.sh \
+            --tarball "${tarballs[0]}" \
+            --project "${OBS_PROJECT}" \
+            --package "${OBS_PACKAGE}"
+
+      - name: Where to look
+        # always(), so the link is there when the push FAILED, which is when it
+        # is most wanted.  But not when there is no project to link to: the
+        # guard above has already said so, and a URL with an empty project
+        # segment printed under that error is noise.  A step's own env: is not
+        # visible to its own if:, so the fallback is spelled out again here.
+        if: ${{ always() && (inputs.obs_project || vars.OBS_PROJECT) != '' }}
+        env:
+          OBS_APIURL: ${{ vars.OBS_APIURL || 'https://api.opensuse.org' }}
+          # A blank input falls through to the variable: '' is falsy to ||,
+          # and so is the empty inputs context of a push or pull request.
+          OBS_PROJECT: ${{ inputs.obs_project || vars.OBS_PROJECT }}
+          OBS_PACKAGE: ${{ inputs.obs_package || vars.OBS_PACKAGE || 'coolprop' }}
+        run: |
+          set -euo pipefail
+          # The build logs live on the web UI, not on the API host.
+          web="${OBS_APIURL/api./build.}"
+          echo "OBS package: ${web%/}/package/show/${OBS_PROJECT}/${OBS_PACKAGE}" >> "${GITHUB_STEP_SUMMARY}"

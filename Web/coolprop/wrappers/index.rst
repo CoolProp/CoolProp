@@ -25,7 +25,7 @@ Target                                                  Operating Systems       
 :ref:`Rust <Rust>`                                      linux, OSX, win              3-party wrapper on crates.io
 :ref:`Scilab <Scilab>`                                  linux, OSX, win              Wrapper is SWIG based (experimental)
 :ref:`Julia <Julia>`                                    linux, OSX, win
-`Modelica <https://github.com/modelica/ExternalMedia>`_ linux, OSX, win
+:ref:`Modelica <Modelica>`                              linux, OSX, win
 :ref:`PHP <PHP>`                                        linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
 :ref:`Labview <Labview>`                                Windows only
@@ -57,7 +57,7 @@ On all platforms for which CoolProp is supported, the compilation of one of the 
 
 Windows
 -------
-On Windows, download the newest binary installer for CMake from `CMake downloads <https://www.cmake.org/cmake/resources/software.html>`_.  Run the installer.  Check that at the command prompt you can do something like::
+On Windows, download the newest binary installer for CMake from `CMake downloads <https://cmake.org/download/>`_.  Run the installer.  Check that at the command prompt you can do something like::
 
     C:\Users\XXXX>cmake -version
     cmake version 4.3.2
@@ -122,6 +122,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     Java/index.rst
     Javascript/index.rst
     Julia/index.rst
+    Modelica/index.rst
     Labview/index.rst
     Python/index.rst
     LibreOffice/index.rst

@@ -112,6 +112,13 @@ class GERG2008DepartureFunction : public DepartureFunction
     GERG2008DepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                               const std::vector<double>& eta, const std::vector<double>& epsilon, const std::vector<double>& beta,
                               const std::vector<double>& gamma, std::size_t Npower) {
+        // Every vector is sliced at Npower below, so check lengths before touching any
+        CoolProp::check_coefficient_lengths("GERG2008DepartureFunction",
+                                            {n.size(), d.size(), t.size(), eta.size(), epsilon.size(), beta.size(), gamma.size()});
+        if (Npower > n.size()) {
+            throw CoolProp::ValueError(format("GERG2008DepartureFunction: Npower (%d) exceeds the number of terms (%d)", static_cast<int>(Npower),
+                                              static_cast<int>(n.size())));
+        }
         /// Break up into power and gaussian terms
         {
             std::vector<CoolPropDbl> _n(n.begin(), n.begin() + Npower);
@@ -151,6 +158,13 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
     GaussianExponentialDepartureFunction(const std::vector<double>& n, const std::vector<double>& d, const std::vector<double>& t,
                                          const std::vector<double>& l, const std::vector<double>& eta, const std::vector<double>& epsilon,
                                          const std::vector<double>& beta, const std::vector<double>& gamma, std::size_t Npower) {
+        // Every vector is sliced at Npower below, so check lengths before touching any
+        CoolProp::check_coefficient_lengths("GaussianExponentialDepartureFunction",
+                                            {n.size(), d.size(), t.size(), l.size(), eta.size(), epsilon.size(), beta.size(), gamma.size()});
+        if (Npower > n.size()) {
+            throw CoolProp::ValueError(format("GaussianExponentialDepartureFunction: Npower (%d) exceeds the number of terms (%d)",
+                                              static_cast<int>(Npower), static_cast<int>(n.size())));
+        }
         /// Break up into power and gaussian terms
         {
             std::vector<CoolPropDbl> _n(n.begin(), n.begin() + Npower);

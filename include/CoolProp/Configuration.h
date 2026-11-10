@@ -205,7 +205,9 @@ class Configuration
                 case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE: {
                     double d;
                     try {
-                        d = std::stod(envval);
+                        // string2double, not std::stod, so that a host's decimal-comma
+                        // C locale does not change how the value is read.
+                        d = string2double(envval);
                     } catch (...) {
                         auto skey = config_key_to_string(key);
                         std::string msg = "Unable to convert \"" + std::string(envval) + "\" to double for key [" + skey + "]";

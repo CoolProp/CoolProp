@@ -91,6 +91,8 @@ Path Issues
 
     and the environment variable ``COOLPROP_REFPROP_ROOT`` should be set to the absolute path of the folder ``REFPROP`` in the above folder structure. After REFPROP is loaded, the ``SETPATHdll`` function will be called with the value of the environment variable ``COOLPROP_REFPROP_ROOT``.
 
+    On linux and mac ``COOLPROP_REFPROP_ROOT`` is **required** to load predefined mixtures from ``.MIX`` files (e.g. ``REFPROP::R410A.MIX``). A ``.MIX`` file lists its components by file name (``R32.FLD``). REFPROP resolves the components in its internal search path, which is empty by default. The ``SETPATHdll`` call invoked from ``COOLPROP_REFPROP_ROOT`` sets this path and allows to load the correct pure fluids. Mixtures specified with their components directly (``REFPROP::R32&R125``) do not need the environment variable.
+
     The shared library that should be in the folder (in the place of ``librefprop.dylib``) depends on the operating system:
     
     * mac (darwin, osx): ``librefprop.dylib``

@@ -20,6 +20,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #include "CoolProp/DataStructures.h"
 #include "GeneralizedCubic.h"
 #include "CubicsLibrary.h"
+#include "CubicConstants.h"
 #include "CoolProp/Configuration.h"
 #include "CoolProp/AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
@@ -132,7 +133,16 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         return reducing;
     };
     CoolPropDbl calc_rhomolar_max_bound() override {
-        return 0.9 / get_cubic()->bm_term(mole_fractions);
+        // The repulsive term -ln(1 - (b_m - c_m)*rho) has its pole at rho = 1/(b_m - c_m), not at
+        // 1/b_m.  Both signs of the translation occur in practice and both break the untranslated
+        // bound: a sufficiently negative c puts 0.9/b_m PAST the pole (where p, h and cp return
+        // finite nonsense rather than NaN), and a positive c puts it BELOW real saturated-liquid
+        // densities.
+        const double bmc = get_cubic()->bm_term(mole_fractions) - get_cubic()->cm_term(mole_fractions);
+        if (!(bmc > 0)) {
+            throw ValueError(format("Volume translation is too large: b_m - c_m = %g m^3/mol must be positive", bmc));
+        }
+        return 0.9 / bmc;
     };
     CoolPropDbl calc_reduced_density() override {
         return _rhomolar / get_cubic()->get_rhor();
@@ -165,9 +175,26 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     }
     CoolPropDbl calc_rhomolar_critical() override {
         if (is_pure_or_pseudopure) {
-            // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
-            double v_c_Lmol = 2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514;  // [L/mol]
-            return 1 / (v_c_Lmol / 1000.0);
+            // The EOS's own critical volume, v_c = Z_c R Tc / pc with Z_c = 1/3 (SRK) or
+            // 0.307401308698703848... (PR, from dp/dv = d2p/dv2 = 0; see CubicConstants.h).  The
+            // curve fit used before (A. Kazakov's, over CoolProp's Helmholtz fluids) is a real-fluid
+            // estimate, 15-25% above the cubic's value, and it decides gas vs liquid in
+            // recalculate_singlephase_phase: compressed liquids within ~0.5% of Tc were labelled gas.
+            // Kept for cubics without a superancillary code.
+            double v_c_untranslated;
+            const int code = get_superanc_eos_code();
+            if (code == CubicSuperAncillary::SRK_CODE || code == CubicSuperAncillary::PR_CODE) {
+                const double Zc = (code == CubicSuperAncillary::SRK_CODE) ? CoolProp::CubicConstants::SRK_Zc() : CoolProp::CubicConstants::PR_Zc();
+                v_c_untranslated = Zc * cubic->get_R_u() * cubic->get_Tc()[0] / cubic->get_pc()[0];
+            } else {
+                v_c_untranslated = (2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514) / 1000.0;
+            }
+            // A volume translation leaves Tc and pc alone but moves the critical volume by -c.
+            const double v_c = v_c_untranslated - get_cubic()->cm_term(mole_fractions);  // [m^3/mol]
+            if (!(v_c > 0)) {
+                throw ValueError(format("Volume translation is too large: the translated critical molar volume (%g m^3/mol) is not positive", v_c));
+            }
+            return 1 / v_c;
         } else {
             return HelmholtzEOSMixtureBackend::calc_rhomolar_critical();
         }
@@ -266,7 +293,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int& Nsolns, double& rho0, double& rho1, double& rho2);
 
     /// In this class, we are already doing cubic evaluation, just delegate to our function.
-    /// solver_rho_Tp(T, p, phase) THROWS when the requested-phase root does not exist, but
+    /// solver_rho_Tp(T, p, phase) can THROW (no gaseous root; for a pure SRK/PR, !(p > 0), no
+    /// physical root, or several physical roots and a phase that is neither gas nor liquid; with a
+    /// single physical root it returns that root whatever the phase), but
     /// callers of solver_rho_Tp_SRK (e.g. FlashRoutines::PT_flash_mixtures) expect the
     /// base-class negative-sentinel contract -- they test `rho > 0 && ValidNumber(rho)` and
     /// are not wrapped in a try/catch.  Honor that contract here so a cubic-mixture
@@ -320,6 +349,14 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     // Copy the entire kij matrix from another instance in one shot
     void copy_k(AbstractCubicBackend* donor);
 
+    /// Copy the volume-translation parameter from another instance.
+    ///
+    /// get_copy() constructs a brand-new AbstractCubic from Tc/pc/acentric/R_u, whose constructor
+    /// zeroes the translation.  copy_internals() replays only the kij matrix and the components
+    /// vector, so without this the copy silently reverts to an untranslated EOS -- which would leave
+    /// TPD_state, critical_state and transient_pure_state disagreeing with their parent.
+    void copy_cm(AbstractCubicBackend* donor);
+
     //
     void copy_all_alpha_functions(AbstractCubicBackend* donor);
 
@@ -341,13 +378,57 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         return CubicSuperAncillary::UNKNOWN_CODE;
     }
 
+    /// Map a reduced superancillary density \f$\tilde\rho = \rho_{\rm EOS} b_m\f$ back to a real
+    /// molar density, applying the volume translation.
+    ///
+    /// The Chebyshev superancillary tables describe the UNTRANSLATED cubic, so the volume they
+    /// imply is \f$v_{\rm EOS} = b_m/\tilde\rho\f$ and the physical volume is
+    /// \f$v = v_{\rm EOS} - c_m\f$.  Without this correction every saturation density returned for
+    /// a translated fluid is the untranslated one, which then misclassifies states in
+    /// update_DmolarT().
+    double untranslate_superanc_rho(double rho_tilde, double bm) {
+        const double v = bm / rho_tilde - get_cubic()->cm_term(mole_fractions);
+        if (!(v > 0)) {
+            throw ValueError(format("Volume translation is too large: the translated saturation molar volume (%g m^3/mol) is not positive", v));
+        }
+        return 1.0 / v;
+    }
+
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value) override;
 
     void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) override;
 
-    /// Return the maximum temperature [K] supported by the cubic superancillary.
-    /// Inverts Ttilde_max = R*T*b/a(T) analytically using am evaluated at T=Tc.
+    /// Approximate maximum temperature [K] of the cubic superancillary: inverts
+    /// Ttilde_max = R*T*b/a(T) using a evaluated at Tc instead of at T.  Since the table ends at the
+    /// critical point this is Tc to round-off for the in-tree alphas; the library itself no longer
+    /// uses it (the range checks work in Ttilde), only tests do.
     double calc_superanc_Tmax();
+
+    /// Saturation state at pressure p from the cubic Chebyshev superancillary, found by inverting
+    /// p_sat(T) (#3441).  The classic pL/pV ancillaries the base class would otherwise fall back
+    /// to are never populated for a cubic, so this is used regardless of ENABLE_SUPERANCILLARIES,
+    /// just as update_DmolarT() does.
+    std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p) override;
+
+    /// Saturation state at temperature T from the cubic Chebyshev superancillary.  Like
+    /// superanc_saturation_at_p it ignores ENABLE_SUPERANCILLARIES; it throws above Tc, below the
+    /// table and for NaN, and maps T within round-off of Tc onto the end of the table (the
+    /// critical point).
+    std::optional<SuperancSatPoint> superanc_saturation_at_T(CoolPropDbl T) override;
+
+   private:
+    /// Evaluate the cubic superancillary at T (pure fluid with a superancillary code).  Returns false,
+    /// without throwing, when T lies outside the table (below its low-T end, above its end -- the
+    /// critical point -- by more than round-off, or NaN).  T within round-off above the end maps onto
+    /// it.  The one place the cubic evaluates the table at a temperature.
+    bool cubic_superanc_eval(double T, SuperancSatPoint& out);
+    /// cubic_superanc_eval that throws ValueError above Tc and outside the table.
+    SuperancSatPoint cubic_superanc_at_T(double T);
+    /// Temperatures at the low and high ends of the superancillary table, cached by
+    /// superanc_saturation_at_p (which re-validates them on every use).  NaN until first needed.
+    double superanc_Tmin_cache = NAN, superanc_Tmax_cache = NAN;
+
+   public:
 };
 
 class SRKBackend : public AbstractCubicBackend

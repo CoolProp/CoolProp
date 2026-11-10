@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+#
+# Build the offline source tarball that every downstream packaging recipe
+# consumes.  See GH #3388.
+#
+# The tarball is a plain export of the tree at a given git revision, plus:
+#   - externals/cpm/, holding every CPM dependency (see vendor-deps.sh), so the
+#     build needs no network;
+#   - dev/gitrevision.txt, because dev/generate_headers.py falls back to that
+#     file when it cannot run git, which is the case in every build chroot.
+#
+# Usage:
+#   dev/packaging/make-release-tarball.sh [--ref <git-ref>] [--output-dir <dir>]
+#
+# Defaults: --ref HEAD, --output-dir dist/
+#
+# Output:
+#   <output-dir>/coolprop-<version>.tar.gz
+#   <output-dir>/coolprop-<version>.tar.gz.sha256
+#
+# The tarball is byte-for-byte reproducible for a given revision: entries are
+# sorted, ownership is zeroed and timestamps come from the commit date, so
+# rebuilding it does not churn the checksum that OBS and the .spec pin.
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ref="HEAD"
+output_dir="${repo_root}/dist"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ref)        ref="$2"; shift 2 ;;
+        --output-dir) output_dir="$2"; shift 2 ;;
+        -h|--help)    sed -n '2,25p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        *)            echo "make-release-tarball.sh: unknown argument '$1'" >&2; exit 2 ;;
+    esac
+done
+
+commit="$(git -C "${repo_root}" rev-parse "${ref}")"
+commit_epoch="$(git -C "${repo_root}" show -s --format=%ct "${commit}")"
+
+work_dir="$(mktemp -d)"
+trap 'rm -rf "${work_dir}"' EXIT
+
+# Parse the version out of the CMakeLists.txt OF THE REVISION BEING EXPORTED,
+# not the one on disk.  With --ref, or simply an edited working tree, those two
+# disagree, and the tarball would be named for one revision while containing
+# another -- a mis-named tarball, which is the 2014 failure class this script
+# exists to avoid, and one the parser below cannot see by itself.
+version_source="${work_dir}/CMakeLists.at-ref.txt"
+git -C "${repo_root}" show "${commit}:CMakeLists.txt" > "${version_source}"
+
+# Read one COOLPROP_VERSION_* component out of that file.
+#
+# The 2014 packaging script did this with `cut -d " " -f 3` and started
+# returning an empty string the day cmake-format removed the space in
+# "set (COOLPROP_VERSION_MAJOR 5)".  Nobody noticed for years, because it
+# failed silently.  Hence the regex tolerates both spellings AND the result is
+# asserted to be a number before it is used anywhere.
+read_version_component() {
+    local name="$1" value
+    value="$(sed -n -E \
+        "s/^[[:space:]]*set[[:space:]]*\\([[:space:]]*${name}[[:space:]]+([0-9]+)[[:space:]]*\\).*/\\1/p" \
+        "${version_source}" | head -1)"
+    if [[ ! "${value}" =~ ^[0-9]+$ ]]; then
+        echo "error: could not read ${name} from CMakeLists.txt (got '${value}')." >&2
+        echo "       Fix the parser here rather than shipping a mis-named tarball; GH #3388." >&2
+        exit 1
+    fi
+    printf '%s' "${value}"
+}
+
+version_major="$(read_version_component COOLPROP_VERSION_MAJOR)"
+version_minor="$(read_version_component COOLPROP_VERSION_MINOR)"
+version_patch="$(read_version_component COOLPROP_VERSION_PATCH)"
+
+# COOLPROP_VERSION_REVISION is "dev" between releases and empty on a release
+# tag.  It is part of the library file name (libCoolProp.so.8.0.1dev), so it is
+# part of the tarball name too, otherwise a snapshot tarball would claim to be
+# the release.
+#
+# An empty result here is ambiguous in a way the numeric components are not: it
+# means either "this is a release" or "the parse broke".  Guessing wrong ships a
+# dev snapshot named as the release, which is the 2014 failure mode again.  So
+# find the whole line first and fail if it is missing, then insist the value is
+# letters and digits only -- it goes into an RPM Version tag -- before deciding
+# the revision really is empty.
+# The "|| true" masks nothing: grep exits 1 when it matches nothing, which under
+# `set -o pipefail` would kill the script before the emptiness check below could
+# report why.  That check is the real gate and it aborts.
+revision_line="$(grep -E '^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION([[:space:]]|\))' \
+    "${version_source}" | head -1 || true)"
+if [[ -z "${revision_line}" ]]; then
+    echo "error: no COOLPROP_VERSION_REVISION line found in CMakeLists.txt." >&2
+    echo "       Refusing to guess whether this tree is a release or a snapshot." >&2
+    exit 1
+fi
+
+version_revision="$(printf '%s' "${revision_line}" | sed -n -E \
+    's/^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION[[:space:]]*([A-Za-z0-9]*)[[:space:]]*\).*/\1/p')"
+
+# The sed above prints nothing when the line does not match its shape, for
+# instance once somebody quotes the value.  That is indistinguishable from a
+# genuinely empty revision unless we re-check the line itself.
+if [[ -z "${version_revision}" ]] \
+   && ! [[ "${revision_line}" =~ ^[[:space:]]*set[[:space:]]*\([[:space:]]*COOLPROP_VERSION_REVISION[[:space:]]*\) ]]; then
+    echo "error: could not parse COOLPROP_VERSION_REVISION from:" >&2
+    echo "         ${revision_line}" >&2
+    echo "       Fix the parser here rather than shipping a mis-named tarball; GH #3388." >&2
+    exit 1
+fi
+
+version="${version_major}.${version_minor}.${version_patch}${version_revision}"
+if [[ -n "${version_revision}" ]]; then
+    echo "note: this is a ${version_revision} snapshot, not a release tarball" >&2
+fi
+
+name="coolprop-${version}"
+stage="${work_dir}/${name}"
+
+echo "==> Exporting ${ref} (${commit:0:12}) as ${name}"
+mkdir -p "${stage}"
+git -C "${repo_root}" archive --format=tar "${commit}" | tar -x -C "${stage}"
+
+# generate_headers.py shells out to git for the revision and falls back to this
+# file when there is no repository, which is the situation in every build
+# chroot.
+echo "${commit}" > "${stage}/dev/gitrevision.txt"
+
+echo "==> Vendoring dependencies into the export"
+
+# Keep CPM's download cache out of the export.  cmake/dependencies.cmake means
+# to default it to <repo>/.cpm_cache, which would put a second copy of every
+# dependency inside the tarball; naming a cache elsewhere makes that impossible
+# rather than relying on it to stay away.  An inherited CPM_SOURCE_CACHE is
+# honoured and saves re-downloading ten dependencies: it cannot point inside
+# this run's fresh mktemp stage, so the guarantee holds either way.
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE:-${work_dir}/cpm-cache}"
+
+"${stage}/dev/packaging/vendor-deps.sh"
+
+# Ship the source, not somebody's build directory.  Fail rather than quietly
+# tar up leftovers that would inflate the archive and confuse dpkg-source.
+# The parentheses are load-bearing: without them -maxdepth would apply only to
+# the first -name and the other branches would search the whole tree.
+strays="$(find "${stage}" -maxdepth 1 \
+    \( -name '.cpm_cache' -o -name 'install_root' -o -name 'build*' -o -name 'dist' \) \
+    -printf '%f\n')"
+if [[ -n "${strays}" ]]; then
+    echo "error: build leftovers found in the export, refusing to ship them:" >&2
+    echo "${strays}" >&2
+    exit 1
+fi
+
+echo "==> Creating the tarball"
+mkdir -p "${output_dir}"
+tarball="${output_dir}/${name}.tar.gz"
+
+# --sort, --mtime, --owner/--group and --numeric-owner together make the
+# archive reproducible; gzip -n keeps the timestamp out of the gzip header.
+tar --create \
+    --directory "${work_dir}" \
+    --sort=name \
+    --mtime="@${commit_epoch}" \
+    --owner=0 --group=0 --numeric-owner \
+    --file - \
+    "${name}" \
+  | gzip -9 -n > "${tarball}"
+
+( cd "${output_dir}" && sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256" )
+
+echo "==> ${tarball}"
+echo "    $(cat "${output_dir}/${name}.tar.gz.sha256")"
+echo "    $(du -h "${tarball}" | cut -f1)"

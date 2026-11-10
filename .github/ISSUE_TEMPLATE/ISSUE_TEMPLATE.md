@@ -15,7 +15,7 @@ If you have an issue to report, please continue and fill out the applicable sect
 Before posting an issue, please:  
     * Check the [CoolProp User Group](https://goo.gl/Pa7FBT) for common solutions.  
     * Check that your issue isn't already filed under [CoolProp Issues](https://github.com/CoolProp/CoolProp/issues).  
-    * Check the CoolProp [latest release](http://www.coolprop.org) and [development version](http://www.coolprop.org/dev) documentation.  
+    * Check the CoolProp [latest release](https://www.coolprop.org) and [development version](https://www.coolprop.org/dev) documentation.  
 
 ### Description
 

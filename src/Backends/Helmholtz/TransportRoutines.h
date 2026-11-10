@@ -113,7 +113,19 @@ class TransportRoutines
      */
     static CoolPropDbl viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
 
+    /// Viscosity of heavy water from the IAPWS 2007 revised release (IAPWS R4-84(2007)), no critical enhancement; kept as a backup model
     static CoolPropDbl viscosity_heavywater_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
+
+    /** \brief Viscosity of heavy water, IAPWS R17-20 (Assael et al., J. Phys. Chem. Ref. Data 50:033102, 2021), Eq. (10)
+     *
+     * The full formulation for general and scientific use, mu = mu0 * mu1 * mu2, including the critical enhancement mu2.
+     * @returns Viscosity in Pa-s
+     */
+    static CoolPropDbl viscosity_heavywater_IAPWS2020_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
+    /// Critical-enhancement factor mu2 [-] of IAPWS R17-20, Eqs. (14)-(21)
+    static CoolPropDbl viscosity_critical_heavywater_IAPWS2020(HelmholtzEOSMixtureBackend& HEOS);
+    /// Correlation length xi [m] of IAPWS R17-20, Eqs. (20)-(21); also used by IAPWS R18-21, Eqs. (22)-(24)
+    static CoolPropDbl correlation_length_heavywater_IAPWS2020(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_water_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
@@ -246,7 +258,18 @@ class TransportRoutines
     static CoolPropDbl conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_residual_polynomial_and_exponential(HelmholtzEOSMixtureBackend& HEOS);
 
+    /// Thermal conductivity of heavy water from the IAPWS 2007 revised release (IAPWS R4-84(2007)); kept as a backup model
     static CoolPropDbl conductivity_hardcoded_heavywater(HelmholtzEOSMixtureBackend& HEOS);
+
+    /** \brief Thermal conductivity of heavy water, IAPWS R18-21 (Huber et al., J. Phys. Chem. Ref. Data 51:013102, 2022), Eq. (15)
+     *
+     * The formulation for general and scientific use, lambda = lambda0 * lambda1 + lambda2, with lambda2 evaluated with the full
+     * IAPWS R17-20 viscosity (including its critical enhancement).
+     * @returns Thermal conductivity in W/m/K
+     */
+    static CoolPropDbl conductivity_hardcoded_heavywater_IAPWS2021(HelmholtzEOSMixtureBackend& HEOS);
+    /// Critical enhancement lambda2 [W/m/K] of IAPWS R18-21, Eqs. (18)-(24)
+    static CoolPropDbl conductivity_critical_heavywater_IAPWS2021(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_hardcoded_water(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_hardcoded_R23(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_hardcoded_helium(HelmholtzEOSMixtureBackend& HEOS);

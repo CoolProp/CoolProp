@@ -208,14 +208,14 @@ def get_milestone_items(milestone: str, what: str):
 def generate_issues(milestone):
     # Get the items associated with the milestone
     issues = get_milestone_items(milestone, "issue")
-    rst = 'Issues closed:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`_ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
+    rst = 'Issues closed:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`__ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
     return rst
 
 
 def generate_prs(milestone):
     # Get the items associated with the milestone
     issues = get_milestone_items(milestone, "pr")
-    rst = 'Pull requests merged:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
+    rst = 'Pull requests merged:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`__ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
     return rst
 
 

@@ -11,9 +11,12 @@
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/Configuration.h"
 
+#include <optional>
 #include <vector>
 
 namespace CoolProp {
+
+struct ChebDensityEntry;  // Chebyshev all-roots density solver for a component set, see solver_rho_Tp_cheb
 
 class FlashRoutines;
 
@@ -122,6 +125,25 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// ValueError on mixtures / pseudo-pure fluids.
     std::shared_ptr<EquationOfState::SuperAncillary_t> get_superanc();
 
+    /// A saturation point from a superancillary: temperature, coexisting densities and pressure.
+    struct SuperancSatPoint
+    {
+        CoolPropDbl T, rhomolarL, rhomolarV, p;
+    };
+    /// Evaluate the saturation state at pressure p from this backend's superancillary, or
+    /// return std::nullopt if it has none, in which case the caller falls back to the
+    /// classic ancillaries.  The base implementation uses the EOS-level superancillary
+    /// (when ENABLE_SUPERANCILLARIES is on); backends with their own superancillary
+    /// (e.g. the cubics, #3441) override it.  Throws ValueError if p is above the
+    /// superancillary's numerical critical pressure.  The cubic override also throws below the
+    /// table's minimum pressure, and maps p <= pc(1 + 4 eps) onto the end of the table (the
+    /// critical point) when psat there is within 1e-10 relative of p.
+    virtual std::optional<SuperancSatPoint> superanc_saturation_at_p(CoolPropDbl p);
+    /// The same at temperature T.  The base implementation uses the EOS-level superancillary
+    /// (when ENABLE_SUPERANCILLARIES is on) and throws ValueError above its numerical critical
+    /// temperature; the cubic override throws outside its table.
+    virtual std::optional<SuperancSatPoint> superanc_saturation_at_T(CoolPropDbl T);
+
     /// Lazily build saturation superancillaries for caloric properties (h_sat, s_sat,
     /// both liquid and vapor branches) using the existing rho_sat superancillary's
     /// piece structure. Each entry in the new ChebyshevApproximation1D is constructed
@@ -146,6 +168,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     }
     shared_ptr<ReducingFunction> Reducing;
     shared_ptr<ResidualHelmholtz> residual_helmholtz;
+    /// Chebyshev all-roots density solver for this model (configuration CHEBYSHEV_DENSITY_SOLVER), shared between
+    /// backends with the same model; null when unavailable.  Resolved lazily, again after the model changes.
+    shared_ptr<const ChebDensityEntry> cheb_density;
+    bool cheb_density_resolved = false;
+    /// The stable density root [mol/m^3] at (T, p) for the current composition from the Chebyshev solver, or -1 when
+    /// it cannot answer here (disabled, unsupported model, outside its tables, or a root it cannot certify).
+    CoolPropDbl solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p);
+
+   private:
+    CoolPropDbl solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p);
+    bool cheb_R_normalized = true;  ///< gas-constant configuration cheb_density was resolved for
+    double cheb_R_u = 0;
+
+   public:
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;
     SsatSimpleState ssat_max;
@@ -252,6 +288,12 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_unspecify_phase() override {
         imposed_phase_index = iphase_not_imposed;
     }
+    /// The phase currently imposed with specify_phase (iphase_not_imposed if none), so a routine that
+    /// imposes a phase temporarily can restore it: e.g. the SatL / SatV sub-backends are created with a
+    /// liquid / gas phase imposed, and clearing that silently changes every later density solve on them.
+    phases imposed_phase() const {
+        return imposed_phase_index;
+    }
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value) override;
     void calc_ssat_max();
     void calc_hsat_max();
@@ -259,6 +301,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_GWP500() override;
     CoolPropDbl calc_GWP100() override;
     CoolPropDbl calc_ODP() override;
+    CoolPropDbl calc_Hmolar_formation() override;
 
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1) override;
     CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend& SatL, HelmholtzEOSMixtureBackend& SatV);
@@ -419,8 +462,18 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     virtual void set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true);
 
     /** \brief Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
+     *
+     * VIRTUAL because a backend may be defined by a self-contained parameter
+     * set that must NOT be silently supplemented from CoolProp's global binary
+     * interaction parameter library.  The default implementation delegates to
+     * MixtureParameters::set_mixture_parameters, which looks every pair up in
+     * that library by CAS number; GERGMixtureBackend overrides it to read the
+     * published GERG tables instead (src/Backends/GERG/GERGBackend.cpp).
+     * See also GERGMixtureBackend::set_components, which is overridden so that
+     * the linked SatL/SatV states are GERG-typed and therefore reach this
+     * override too rather than the default.
      */
-    void set_mixture_parameters();
+    virtual void set_mixture_parameters();
 
     /** \brief Set the mole fractions
      *
@@ -585,6 +638,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_Tmin_sat(CoolPropDbl& Tmin_satL, CoolPropDbl& Tmin_satV);
     void calc_pmin_sat(CoolPropDbl& pmin_satL, CoolPropDbl& pmin_satV);
 
+    /// The unique stable critical point of a mixture; throws if there is not exactly one
+    CriticalState calc_unique_stable_critical_point();
     CoolPropDbl calc_T_critical() override;
     CoolPropDbl calc_p_critical() override;
     CoolPropDbl calc_rhomolar_critical() override;
@@ -892,8 +947,10 @@ class ResidualHelmholtz
     /// Delta-only (see BaseHelmholtzTerm::all_deltaonly): only alphar and the delta-derivatives
     /// (orders 1-4) plus the delta_x_/delta2_x_ convenience products are valid on the result;
     /// tau/mixed fields are left zero and must not be read.  Used by the density-root residuals.
-    /// The delta-fields are bit-for-bit identical to all(..., cache_values=false); this mirrors the
-    /// non-cached excess path (get_deriv_nocomp_notcached), which is the only one delta-only uses.
+    /// The delta-fields match all(..., cache_values=false) -- bit-for-bit on orders 0-2, and to
+    /// within a few ULP on orders 3-4 where compiler FMA contraction can differ between the two
+    /// functions (see ResidualHelmholtzNonAnalytic::all_deltaonly in src/Helmholtz.cpp).  This
+    /// mirrors the non-cached excess path (get_deriv_nocomp_notcached), the only one delta-only uses.
     virtual HelmholtzDerivatives all_deltaonly(HelmholtzEOSMixtureBackend& HEOS, const std::vector<CoolPropDbl>& mole_fractions, double tau,
                                                double delta) {
         HelmholtzDerivatives a = CS.all_deltaonly(HEOS, tau, delta, mole_fractions) + Excess.all_deltaonly(tau, delta, mole_fractions);

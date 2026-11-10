@@ -6,11 +6,20 @@
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
+#include "../Backends/Cubics/UNIFACLibrary.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
+#include "../Backends/Tabular/TabularBackends.h"
+#include "../Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "../Backends/PCSAFT/PCSAFTLibrary.h"
+#include "../Backends/Helmholtz/TransportRoutines.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
+#include "TestUtils.h"
 #include <atomic>
+#include <cstdlib>
+#include <chrono>
+#include <filesystem>
 #include <map>
 #include <set>
 #include <sstream>
@@ -45,6 +54,15 @@ struct vel
 };
 
 vel viscosity_validation_data[] = {
+  // R14 regression pins, not published values.  R14's ECS transport uses Nitrogen as its
+  // reference fluid, so it follows whatever model Nitrogen carries.  Moving Nitrogen to
+  // Huber et al. (2024) viscosity and Sotiriadou et al. (2025) conductivity raised R14's
+  // liquid viscosity here by 3.4 % and lowered its conductivity by 1.2 % (accepted
+  // 2026-09-26; REFPROP 10.1's R14.FLD instead names the reference fluid's VS1/TC1 models,
+  // i.e. Nitrogen's 2004 correlations).  These pins
+  // make any future change to Nitrogen's transport visible in R14.
+  vel("R14", "T", 150, "Dmass", 1500.0, "V", 183.50892653027e-6, 1e-6),
+  vel("R14", "T", 300, "Dmass", 10.0, "V", 17.43725259137e-6, 1e-6),
   // From Vogel, JPCRD, 1998
   vel("Propane", "T", 90, "Dmolar", 16.52e3, "V", 7388e-6, 1e-3),
   vel("Propane", "T", 150, "Dmolar", 15.14e3, "V", 656.9e-6, 5e-3),
@@ -65,12 +83,23 @@ vel viscosity_validation_data[] = {
   vel("R125", "T", 400, "Dmolar", 30.631, "V", 17.070e-6, 1e-3),
 
   // From REFPROP 9.1 since Huber I&ECR 2003 does not provide validation data
+  // R-134a viscosity is DELIBERATELY still Huber, Laesecke & Perkins (2003) here.
+  // Velliadou, Assael & Huber, IJT 43:105 (2022) supersedes it and is implemented and
+  // validated, but R-134a is the ECS reference fluid for R11, R1132a, R116, R12, R143a,
+  // R236EA and R236FA, so promoting it moves all seven by 1.1 % to 2.6 % with no data
+  // behind the move.  Deferred until that is decided; see the R143a/R236FA locks below.
   vel("R134a", "T", 185, "Q", 0, "V", 0.0012698376398294414, 1e-3),
   vel("R134a", "T", 185, "Q", 1, "V", 7.4290821400170869e-006, 1e-3),
   vel("R134a", "T", 360, "Q", 0, "V", 7.8146319978982133e-005, 1e-3),
   vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-3),
 
   // From REFPROP 9.1 since Kiselev, IECR, 2005 does not provide validation data
+  // Ethanol viscosity is DELIBERATELY still Kiselev et al. (2005) here.  Sotiriadou
+  // et al., IJT 44:40 (2023) supersedes it and is implemented and validated, but its
+  // residual has a pole at tau^2*(1 + delta^2) = 1 whose low-density end lies in
+  // REACHABLE superheated vapour (493.6 K to Tc), where the viscosity diverges and
+  // changes sign.  It is ~1e-7 wide in relative density so it is unlikely to be hit,
+  // but the chance is not zero.  Withdrawn pending bd CoolProp-z94e.
   vel("Ethanol", "T", 300, "Q", 0, "V", 0.0010439017679191723, 1e-3),
   vel("Ethanol", "T", 300, "Q", 1, "V", 8.8293820936046416e-006, 1e-3),
   vel("Ethanol", "T", 500, "Q", 0, "V", 6.0979347125450671e-005, 1e-3),
@@ -84,19 +113,36 @@ vel viscosity_validation_data[] = {
   vel("DimethylEther", "T", 253.146, "Dmass", 734.28, "V", 0.20444e-3, 3e-3),
   vel("DimethylEther", "T", 373.132, "Dmass", 613.78, "V", 0.09991e-3, 3e-3),
 
-  // From Fenghour, JPCRD, 1995
-  vel("Ammonia", "T", 200, "Dmolar", 3.9, "V", 6.95e-6, 1e-3),
-  vel("Ammonia", "T", 200, "Dmolar", 42754.4, "V", 507.28e-6, 1e-3),
-  vel("Ammonia", "T", 398, "Dmolar", 7044.7, "V", 17.67e-6, 1e-3),
-  vel("Ammonia", "T", 398, "Dmolar", 21066.7, "V", 43.95e-6, 1e-3),
+  // Ammonia viscosity is now Monogenidou, Assael & Huber, JPCRD 47:023102 (2018),
+  // superseding Fenghour et al. (1995).  These are the 2018 paper's OWN Section 3
+  // verification points, in the units it publishes them (kg/m^3, muPa.s).
+  //
+  // The four Fenghour points that used to sit here are gone because they describe a
+  // correlation CoolProp no longer has.  Worth recording what the supersession moved,
+  // since it is not uniform: at Fenghour's own states the two agree to +0.09 % at
+  // (200 K, 3.9 mol/m^3) and +1.12 % at (200 K, 42754.4), but differ by -2.42 % at
+  // (398 K, 7044.7) and -10.24 % at (398 K, 21066.7).  That last state is
+  // near-critical (T/Tc = 0.981, rho/rho_c = 1.54), which is where the two
+  // correlations' data coverage differs most; NEITHER model carries a viscosity
+  // critical enhancement, so the gap is between the correlations themselves.
+  vel("Ammonia", "T", 300, "Dmass", 1e-9, "V", 10.1812e-6, 1e-5),
+  vel("Ammonia", "T", 300, "Dmass", 8.0, "V", 9.9219e-6, 1e-5),
+  vel("Ammonia", "T", 300, "Dmass", 609.0, "V", 133.3937e-6, 1e-5),
+
+  // Huber, Perkins & Lemmon, IJT, 2024 - Table 7 (no critical enhancement, as in CoolProp)
+  vel("Nitrogen", "T", 90, "Dmass", 1e-9, "V", 6.07115583e-6, 1e-8),
+  vel("Nitrogen", "T", 90, "Dmass", 756, "V", 108.42550781e-6, 1e-8),
+  vel("Nitrogen", "T", 300, "Dmass", 1e-9, "V", 17.83446070e-6, 1e-8),
+  vel("Nitrogen", "T", 300, "Dmass", 28, "V", 18.23478803e-6, 1e-8),
+  vel("Nitrogen", "T", 300, "Dmass", 560, "V", 50.59605975e-6, 1e-8),
+  // Table 8, the background eta_0 + eta_res of each near-critical row.  CoolProp has no
+  // viscosity critical enhancement, so the paper's multiplicative factor (1.033, 1.091 and
+  // 1.026 at these states) is not applied; the background is what CoolProp computes.
+  vel("Nitrogen", "T", 126.192, "Dmass", 265, "V", (8.43716205 + 7.20032032) * 1e-6, 1e-8),
+  vel("Nitrogen", "T", 126.212, "Dmass", 333, "V", (8.43843818 + 11.03805357) * 1e-6, 1e-8),
+  vel("Nitrogen", "T", 126.952, "Dmass", 300, "V", (8.48562461 + 9.04720938) * 1e-6, 1e-8),
 
   // From Lemmon and Jacobsen, JPCRD, 2004
-  vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "V", 6.90349e-6, 1e-3),
-  vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "V", 17.8771e-6, 1e-3),
-  vel("Nitrogen", "T", 100, "Dmolar", 25000, "V", 79.7418e-6, 1e-3),
-  vel("Nitrogen", "T", 200, "Dmolar", 10000, "V", 21.0810e-6, 1e-3),
-  vel("Nitrogen", "T", 300, "Dmolar", 5000, "V", 20.7430e-6, 1e-3),
-  vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "V", 18.2978e-6, 1e-3),
   vel("Argon", "T", 100, "Dmolar", 1e-14, "V", 8.18940e-6, 1e-3),
   vel("Argon", "T", 300, "Dmolar", 1e-14, "V", 22.7241e-6, 1e-3),
   vel("Argon", "T", 100, "Dmolar", 33000, "V", 184.232e-6, 1e-3),
@@ -228,7 +274,16 @@ vel viscosity_validation_data[] = {
   vel("IsoButane", "T", 400, "Q", 1, "V", 1.4761041187617117e-005, 2e-4),
   vel("R134a", "T", 175, "Q", 0, "V", 0.0017558494524138289, 1e-4),
   vel("R134a", "T", 360, "Q", 1, "V", 1.7140264998576107e-005, 1e-4),
-
+  // R-134a is the ECS reference fluid for R11, R1132a, R116, R12, R143a, R236EA and
+  // R236FA: TransportRoutines::viscosity_ECS evaluates the reference's
+  // calc_viscosity_background(), so ANY change to R-134a's viscosity moves all seven.
+  // Swapping in Velliadou et al. (2022) moves them by +1.88, -2.58, +1.69, +1.14, -2.53,
+  // +1.58 and +1.92 per cent respectively, and not one of them had a transport
+  // regression point, so the move was silent.  These two are self-generated locks, NOT
+  // published data: they bracket the sign of that shift and exist so the next change to
+  // R-134a's viscosity has to announce itself here rather than slipping through.
+  vel("R143a", "T", 242.1, "Q", 0, "V", 187.5378e-6, 1e-4),
+  vel("R236FA", "T", 278.649, "Q", 0, "V", 367.8328e-6, 1e-4),
   // From Tariq, JPCRD, 2014
   vel("Cyclohexane", "T", 300, "Dmolar", 1e-10, "V", 7.058e-6, 1e-4),
   vel("Cyclohexane", "T", 300, "Dmolar", 0.0430e3, "V", 6.977e-6, 1e-4),
@@ -285,13 +340,128 @@ vel viscosity_validation_data[] = {
   vel("p-Xylene", "T", 600, "Dmolar", 1e-10, "V", 12.777e-6, 1e-4),
   vel("p-Xylene", "T", 600, "Dmolar", 7.0985 * 1e3, "V", 209.151e-6, 1e-4),
 
-  // From Mylona, JPCRD, 2014
-  vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-2),
+  // Ethylbenzene viscosity is now Meng, Cao, Wu & Vesovic, JPCRD 46:013101 (2017),
+  // replacing an ECS predictive model.  These are that paper's own Table 6 points.
+  //
+  // The Mylona (2014) point that used to sit here was at T = 617 K, essentially Tc
+  // (617.12 K), where the two correlations differ by 8.3 %.  That is by design rather
+  // than by error: Meng et al. set the viscosity critical enhancement to ZERO,
+  // stating the case explicitly -- no industrial applications near Tc and a single
+  // experimental datum there -- whereas the model being replaced did not.  The
+  // implementation is checked either side of it, reproducing Table 6 at 600 K to
+  // 2e-6 in the dense liquid and 3.4e-5 in the dilute limit.
+  vel("EthylBenzene", "T", 300, "Dmolar", 8.1093e3, "V", 616.814e-6, 1e-4),
+  vel("EthylBenzene", "T", 400, "Dmolar", 7.2481e3, "V", 250.283e-6, 1e-4),
+  vel("EthylBenzene", "T", 600, "Dmolar", 6.4831e3, "V", 155.940e-6, 1e-4),
 
-  // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 12.0604912273 * 55.2651e-6, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 1.6561616211 * 55.2651e-6, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 0.7651099154 * 55.2651e-6, 1e-5),
+  // ---- REFPROP 10.1 viscosity supersessions and gaps (CoolProp-rip4) -------------
+  // Each fluid's own paper publishes a small set of points for computer verification.
+  // Those points ARE the test: they are what the authors provide so an implementation
+  // can be checked, and they live here rather than as bespoke test cases.
+  // Densities are given in the unit each paper tabulates.
+
+  // Velliadou et al., IJT 42(5):74 (2021) -- Section 4
+  vel("Xenon", "T", 300, "Dmass", 1e-9, "V", 23.1561e-6, 1e-4),
+  vel("Xenon", "T", 300, "Dmass", 6.0, "V", 23.3186e-6, 1e-4),
+  vel("Xenon", "T", 300, "Dmass", 2500.0, "V", 206.449e-6, 1e-4),
+
+  // Tsolakidou et al., JPCRD 46(2):023103 (2017) -- Table 11
+  vel("R161", "T", 250, "Dmass", 1e-9, "V", 8.280e-6, 1e-4),
+  vel("R161", "T", 250, "Dmass", 1.0, "V", 8.255e-6, 1e-4),
+  vel("R161", "T", 250, "Dmass", 850.0, "V", 308.22e-6, 1e-4),
+  vel("R161", "T", 375, "Dmass", 1e-9, "V", 12.171e-6, 1e-4),
+  vel("R161", "T", 375, "Dmass", 229.0, "V", 20.859e-6, 1e-4),
+
+  // Wen et al., JCED 62(10):3603 (2017) -- Table 4.  The dilute rows print three
+  // significant figures, so half a unit in the last place is 5e-4 there.
+  vel("Novec649", "T", 250, "Dmass", 1e-9, "V", 8.09e-6, 6e-4),
+  vel("Novec649", "T", 250, "Dmass", 1809.77, "V", 2377.5e-6, 1e-4),
+  vel("Novec649", "T", 300, "Dmass", 3.89, "V", 10.85e-6, 6e-4),
+  vel("Novec649", "T", 300, "Dmass", 1701.48, "V", 1059.7e-6, 1e-4),
+  vel("Novec649", "T", 350, "Dmass", 1595.99, "V", 587.87e-6, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 61(9):3286 (2016) -- Table 8
+  vel("R245fa", "T", 250, "Dmass", 1e-9, "V", 8.6291e-6, 1e-4),
+  vel("R245fa", "T", 250, "Dmass", 1500.0, "V", 1085.562e-6, 1e-4),
+  vel("R245fa", "T", 430, "Dmass", 1e-9, "V", 14.630e-6, 1e-4),
+  vel("R245fa", "T", 430, "Dmass", 530.0, "V", 30.632e-6, 1e-4),
+
+  // Assael, Papalas & Huber, JPCRD 46(3):033103 (2017) -- Table 11
+  vel("n-Undecane", "T", 550, "Dmass", 1e-9, "V", 8.935e-6, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 10.0, "V", 10.702e-6, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 600.0, "V", 188.68e-6, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 325.0, "V", 49.077e-6, 1e-4),
+
+  // NOTE for anyone comparing these against the papers.  THREE of the printed equations
+  // behind the correlations shipped here do not reproduce their own verification points.
+  // ONE OF THE THREE THE AUTHORS HAVE ALREADY CORRECTED IN PRINT, and this code follows
+  // the correction:
+  //   Xenon   Eq. 6  -- Correction, IJT 44(4) (2023), doi:10.1007/s10765-023-03175-5:
+  //                     a power "12" should have been used instead of "7".  The original
+  //                     as printed is 8.06 % low at 300 K / 2500 kg/m^3.
+  // The other two have NO published correction recorded in Crossref as of September 2026:
+  //   R-161,  Eq. 8  -- denominator prints c5*Tr^2 + Tr^2*rho_r^2; needs a MINUS.
+  //                     As printed, 250 K / 850 kg/m^3 gives 84.205 against 308.22.
+  //   Krypton Eq. 13 -- prints the residual as a bare sum, omitting the exp its own Fig. 8
+  //                     implementation applies; as printed the viscosity is NEGATIVE at all
+  //                     five of the paper's points.  Recorded in dev/fluids/Krypton.json.
+  // A fourth, ethanol Eq. 12, was also defective and also already corrected in print
+  // (doi:10.1007/s10765-023-03160-y); that correlation is NOT shipped here -- see the
+  // ethanol entry above and bd CoolProp-z94e.
+  // Note the xenon case is an exponent in a NUMERATOR, not a denominator sign -- do not
+  // assume such errors only live in denominators.  Each fluid file's higher_order block
+  // carries the full citation.
+
+  // Velliadou et al., IJT 43(8):129 (2022) -- Section 3
+  vel("R32", "T", 300, "Dmass", 1e-9, "V", 12.6170e-6, 1e-5),
+  vel("R32", "T", 300, "Dmass", 10.0, "V", 12.6333e-6, 1e-5),
+  vel("R32", "T", 300, "Dmass", 1100.0, "V", 173.431e-6, 1e-5),
+
+  // Huber & Assael, Int. J. Refrig. 71:39 (2016) -- Section 2.4, both fluids
+  vel("R1234yf", "T", 300, "Dmolar", 1e-9, "V", 11.579e-6, 1e-4),
+  vel("R1234yf", "T", 300, "Dmolar", 44.0, "V", 11.549e-6, 1e-4),
+  vel("R1234yf", "T", 300, "Dmolar", 10522.0, "V", 217.97e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 1e-9, "V", 11.777e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 44.0, "V", 12.041e-6, 1e-4),
+  vel("R1234ze(E)", "T", 300, "Dmolar", 10522.0, "V", 217.89e-6, 1e-4),
+
+  // Sotiriadou et al., IJT 47(1):18 (2025) -- Computer-Program Verification
+  vel("Methane", "T", 300, "Dmass", 1e-9, "V", 11.1230e-6, 1e-5),
+  vel("Methane", "T", 300, "Dmass", 3.2, "V", 11.1891e-6, 1e-5),
+  vel("Methane", "T", 300, "Dmass", 75.0, "V", 13.7130e-6, 1e-5),
+
+  // Polychroniadou, Antoniadis, Assael & Bell, IJT 43(1):6 (2022) -- Table 3, quoted
+  // to 17 digits precisely so an implementation can be checked.
+  vel("Krypton", "T", 200, "Dmolar", 1e-6, "V", 17.33865170451214e-6, 1e-9),
+  vel("Krypton", "T", 200, "Dmolar", 13020.0, "V", 56.4476422453026e-6, 1e-9),
+  vel("Krypton", "T", 298.15, "Dmolar", 1e-6, "V", 25.306200000810886e-6, 1e-9),
+  vel("Krypton", "T", 400, "Dmolar", 1e-6, "V", 32.795558620965195e-6, 1e-9),
+  vel("Krypton", "T", 400, "Dmolar", 13020.0, "V", 64.8014771396677e-6, 1e-9),
+
+  // Sotiriadou et al., IJT 45(6):87 (2024) -- Table 8 background column, T = 283 K.
+  // The correlation here is the background; the paper's critical enhancement is not
+  // implemented, which is what the background column isolates.
+  vel("Ethylene", "T", 283, "Dmass", 1e-9, "V", 9.753447e-6, 1e-5),
+  vel("Ethylene", "T", 283, "Dmass", 300.0, "V", 30.934701e-6, 1e-5),
+  vel("Ethylene", "T", 283, "Dmass", 550.0, "V", 126.954762e-6, 1e-5),
+
+  // Velliadou et al., IJT 43(3):42 (2022) -- Section 4 verification points
+  vel("PropyleneGlycol", "T", 350, "Dmass", 1e-9, "V", 9.051368e-6, 1e-5),
+  vel("PropyleneGlycol", "T", 350, "Dmass", 0.02, "V", 9.058162e-6, 1e-5),
+  vel("PropyleneGlycol", "T", 350, "Dmass", 1000.0, "V", 5135.986461e-6, 1e-5),
+
+  // Sotiriadou et al., IJT 45(9):123 (2024) -- Section 4.2 verification points
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-10, "V", 8.3705e-6, 1e-5),
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "V", 589.3956e-6, 1e-5),
+
+  // Heavy Water, IAPWS R17-20 (2020), Table 4, near-critical points of the full formulation, Eq. (10),
+  // including mu2 (checked separately below, with the Table 3 points, which set mu2 = 1)
+  vel("HeavyWater", "T", 644.101, "Dmass", 145, "V", 26.640959e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 245, "V", 32.119967e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 295, "V", 36.828275e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 345, "V", 43.225017e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 395, "V", 47.193530e-6, 1e-6),
+  vel("HeavyWater", "T", 644.101, "Dmass", 445, "V", 50.241640e-6, 1e-6),
 
   // Toluene, Avgeri, JPCRD, 2015
   vel("Toluene", "T", 300, "Dmass", 1e-10, "V", 7.023e-6, 1e-4),
@@ -322,6 +492,16 @@ class TransportValidationFixture
         parameters iin2 = CoolProp::get_parameter_index(in2);
         CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
+        // Published check values are the correlation evaluated at (T, rho), and some
+        // sit inside the EOS's dome (metastable, or just inside it because the paper
+        // used a different EOS).  Transport properties refuse two-phase states (#3446),
+        // so impose the single phase the paper meant and re-flash, which puts the EOS
+        // pressure at (T, rho) rather than psat in p().  Only interior qualities: a
+        // saturated row (Q = 0 or 1) is left as flashed.
+        if (pState->phase() == CoolProp::iphase_twophase && pState->Q() > 0 && pState->Q() < 1) {
+            pState->specify_phase(pState->rhomolar() > pState->rhomolar_critical() ? CoolProp::iphase_liquid : CoolProp::iphase_gas);
+            pState->update(pair, o1, o2);
+        }
     }
     void get_value(parameters key) {
         actual = pState->keyed_output(key);
@@ -365,6 +545,14 @@ vel conductivity_validation_data[] = {
   // From Assael, JPCRD, 2013
   vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
   vel("Ethanol", "T", 400, "Dmass", 2, "L", 26.108e-3, 1e-4),
+  // 2e-4, not 1e-4: ethanol's conductivity critical enhancement is
+  // simplified_Olchowy_Sengers, which carries the viscosity in its denominator, so
+  // adopting the 2023 reference viscosity moves the conductivity here by 1.24e-4.
+  // The reference datum is published conductivity data and is left alone; only the
+  // tolerance acknowledges that CoolProp's conductivity is now computed with a
+  // different viscosity than the conductivity correlation was built against.
+  // Measured over 192 stable (p,T) states the whole-surface movement is <= 1.53 %,
+  // concentrated near the critical point where the enhancement dominates.
   vel("Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 1e-4),
   vel("Ethanol", "T", 500, "Dmass", 10, "L", 39.594e-3, 1e-4),
 
@@ -459,12 +647,6 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Ethane", "T", 310, "Dmolar", 4130, "L", 45.4e-3, 1e-2),
 
   // From Lemmon and Jacobsen, JPCRD, 2004
-  vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "L", 9.27749e-3, 1e-4),
-  vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "L", 25.9361e-3, 1e-4),
-  vel("Nitrogen", "T", 100, "Dmolar", 25000, "L", 103.834e-3, 1e-4),
-  vel("Nitrogen", "T", 200, "Dmolar", 10000, "L", 36.0099e-3, 1e-4),
-  vel("Nitrogen", "T", 300, "Dmolar", 5000, "L", 32.7694e-3, 1e-4),
-  vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "L", 675.800e-3, 1e-4),
   vel("Argon", "T", 100, "Dmolar", 1e-14, "L", 6.36587e-3, 1e-4),
   vel("Argon", "T", 300, "Dmolar", 1e-14, "L", 17.8042e-3, 1e-4),
   vel("Argon", "T", 100, "Dmolar", 33000, "L", 111.266e-3, 1e-4),
@@ -502,10 +684,6 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("R23", "T", 180, "Dmolar", 21097, "L", 143.19e-3, 1e-4),
   vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 2e-4),
   vel("R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4),
-
-  // From REFPROP 9.1 since no sample data provided in Tufeu
-  vel("Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4),
-  vel("Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 2e-3),
 
   // From Hands, Cryogenics, 1981
   vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-2),
@@ -546,7 +724,14 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("o-Xylene", "T", 635, "D", 270, "L", 0.10387803232507065, 5e-3),
   vel("m-Xylene", "T", 616, "D", 220, "L", 0.10330950977360005, 5e-3),
   vel("p-Xylene", "T", 620, "D", 287, "L", 0.09804128875928533, 5e-3),
-  vel("EthylBenzene", "T", 617, "D", 316, "L", 0.1479194493736235, 5e-2),
+  // This point is viscosity-coupled: conductivity_critical_simplified_Olchowy_Sengers
+  // divides by viscosity(), so the 2017 viscosity model shipped here moves it from
+  // 0.141062 to 0.148828 W/m/K, i.e. +5.5 %.  That is an IMPROVEMENT -- deviation from
+  // the expected value falls from 4.64 % to 0.61 % -- but the 5e-2 tolerance it was
+  // carrying is wide enough to absorb a 5 % move in either direction, so it could not
+  // have detected the change at all.  Tightened to 1e-2, which holds with margin and
+  // makes the coupling visible if either model moves again.
+  vel("EthylBenzene", "T", 617, "D", 316, "L", 0.1479194493736235, 1e-2),
   // dilute values
   vel("o-Xylene", "T", 300, "D", 1e-12, "L", 13.68e-3, 1e-3),
   vel("o-Xylene", "T", 600, "D", 1e-12, "L", 41.6e-3, 1e-3),
@@ -569,10 +754,182 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2),
   vel("Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2),
 
-  // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 259.605241187 * 0.742128e-3, 1e-5),
+  // Tsolakidou, JPCRD, 2017 - Table 11
+  vel("R161", "T", 250, "Dmass", 1e-9, "L", 9.892e-3, 1e-4),
+  vel("R161", "T", 250, "Dmass", 850.0, "L", 175.48e-3, 1e-4),
+  vel("R161", "T", 375, "Dmass", 1e-9, "L", 24.517e-3, 1e-4),
+  // The next two points are PINNED to CoolProp's own output, not the paper's values.
+  // The critical enhancement reads cp, cv and drho/dp from the EOS, and CoolProp's
+  // R161 is still Wu & Zhou (2012), whereas the correlation was fitted with Qi et al.
+  // (2016).  The paper's equations on REFPROP's Qi EOS give 9.8837 and 81.296, i.e.
+  // the Table 11 values 9.884 and 81.297; on the Wu EOS they give the values below.
+  // Restore both to Table 11 at 1e-4 once the EOS is updated (Linear COO-50).
+  vel("R161", "T", 250, "Dmass", 1.0, "L", 9.8828128609944e-3, 1e-6),
+  vel("R161", "T", 375, "Dmass", 229.0, "L", 98.81779057105196e-3, 1e-4),
+
+  // Koutian, Assael, Huber & Perkins, JPCRD 46:013102 (2017), Sec. 3.1.4 check point
+  vel("CycloHexane", "T", 554, "Dmass", 350, "L", 79.66e-3, 1e-4),
+  // Assael, Koutian, Huber & Perkins, JPCRD 45:033104 (2016), Secs. 3.1.4 and 3.2.4
+  // check points.  Both are PINNED to CoolProp's own output, not the paper's totals
+  // (69.62 and 81.47 mW/(m K)).  The critical enhancement divides by the viscosity, and
+  // the paper evaluated it with a different viscosity than CoolProp's: ethylene with
+  // Holland et al. (1983), 33.791 uPa s, where CoolProp uses Sotiriadou et al. (2024),
+  // 31.668 uPa s; propylene with the Huber et al. (2003) ECS model as implemented by
+  // NIST, 53.841 uPa s, where CoolProp's ECS implementation of the same model gives
+  // 53.346 uPa s.  The EOS agrees: the paper's equations on REFPROP 10.0 thermodynamics
+  // with CoolProp's viscosity give 69.898 and 81.516.  Dilute, residual and the
+  // viscosity-rescaled enhancement are checked against the paper below.
+  vel("Ethylene", "T", 300, "Dmass", 300, "L", 69.89832964124323e-3, 1e-6),
+  vel("Propylene", "T", 350, "Dmass", 385, "L", 81.51587879413222e-3, 1e-6),
+  // Zero-pressure rows of Tables 5 (ethylene) and 9 (propylene); printed to four
+  // significant figures, so the tolerance is the half-unit rounding of 8.75.
+  vel("Ethylene", "T", 200, "Dmass", 1e-9, "L", 10.39e-3, 6e-4),
+  vel("Ethylene", "T", 300, "Dmass", 1e-9, "L", 21.01e-3, 6e-4),
+  vel("Ethylene", "T", 400, "Dmass", 1e-9, "L", 36.36e-3, 6e-4),
+  vel("Ethylene", "T", 500, "Dmass", 1e-9, "L", 55.05e-3, 6e-4),
+  vel("Propylene", "T", 200, "Dmass", 1e-9, "L", 8.75e-3, 6e-4),
+  vel("Propylene", "T", 300, "Dmass", 1e-9, "L", 17.55e-3, 6e-4),
+  vel("Propylene", "T", 400, "Dmass", 1e-9, "L", 29.18e-3, 6e-4),
+  vel("Propylene", "T", 500, "Dmass", 1e-9, "L", 42.64e-3, 6e-4),
+
+  // Perkins, Huber & Assael, JCED 61:3286 (2016) - R245fa, Table 4
+  vel("R245fa", "T", 250, "Dmass", 1e-9, "L", 8.309e-3, 1e-4),
+  vel("R245fa", "T", 250, "Dmass", 1500.0, "L", 111.40e-3, 1e-4),
+  // Table 4 prints this one to four figures only: the equations give 24.6330, and half
+  // a unit in the last printed place is 2.0e-4 of the value.
+  vel("R245fa", "T", 430, "Dmass", 1e-9, "L", 24.63e-3, 2.1e-4),
+  vel("R245fa", "T", 430, "Dmass", 530.0, "L", 66.75e-3, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 63:2783 (2018) - Novec649, Table 3
+  vel("Novec649", "T", 300, "Dmass", 1e-9, "L", 0.011876, 1e-4),
+  vel("Novec649", "T", 300, "Dmass", 5.50, "L", 0.011813, 1e-4),
+  // PINNED to CoolProp's own output, not Table 3's 0.065259.  CoolProp uses the paper's
+  // EOS (McLinden et al. 2015) and viscosity (Wen et al. 2017), and the paper's
+  // Eqs. (3)-(9) evaluated independently on REFPROP 10.0 (same EOS) give 0.0652073, the
+  // value below.  0.065259 is REFPROP 10.0's own TCX output, which includes a
+  // dense-liquid adjustment the paper does not describe: in TK3 (TRNS_TCX.FOR),
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)
+  // i.e. xi ~= xi0*(0.01/Gamma)^(nu/gamma) = 0.40*xi0 here, against 5.2e-11 m from Eq. (9).
+  // CoolProp follows the published equations (decided 2026-09-26; Linear COO-49).
+  vel("Novec649", "T", 300, "Dmass", 1673.3, "L", 0.06520725656268984, 1e-6),
+  vel("Novec649", "T", 445, "Dmass", 1e-9, "L", 0.022632, 1e-4),
+  vel("Novec649", "T", 445, "Dmass", 685.0, "L", 0.036508, 1e-4),
+
+  // Perkins, Huber & Assael, JCED 62:2659 (2017) - R1233zd(E), Table 2
+  vel("R1233zd(E)", "T", 300, "Dmass", 1e-9, "L", 0.010659, 1e-4),
+  vel("R1233zd(E)", "T", 300, "Dmass", 5.4411, "L", 0.010766, 1e-4),
+  vel("R1233zd(E)", "T", 300, "Dmass", 1308.8, "L", 0.091399, 1e-4),
+  vel("R1233zd(E)", "T", 445, "Dmass", 1e-9, "L", 0.021758, 1e-4),
+  // PINNED to CoolProp's own output, not Table 2's 0.026141.  The critical enhancement
+  // reads cp, cv and drho/dp from the EOS (and Tc, pc, rhoc from its reducing state),
+  // and CoolProp's R1233zd(E) EOS is Akasaka & Lemmon (2022), whereas the correlation
+  // was fitted with Mondejar et al. (2015).  The paper's equations on REFPROP 10.0's
+  // Mondejar EOS with the paper's viscosity (19.053 uPa s) give 0.0261406, i.e. Table 2;
+  // on the Akasaka & Lemmon EOS (REFPROP 10.1 FLD) they give 0.026048, and CoolProp,
+  // with its own viscosity, gives the value below (-0.35 %).  The pin therefore also
+  // moves if CoolProp's R1233zd(E) viscosity changes.  The enhancement-free background
+  // at this state is checked against the paper in the background test case below.
+  vel("R1233zd(E)", "T", 445, "Dmass", 168.52, "L", 0.02604904492595249, 1e-6),
+
+  // Monogenidou, JPCRD, 2018 - Sec. 3 check value (see also the contributions test below)
+  vel("Ammonia", "T", 390, "Dmass", 415.0, "L", 264.129743e-3, 1e-4),
+
+  // Assael, JPCRD, 2017 - Table 11
+  vel("n-Undecane", "T", 550, "Dmass", 1e-9, "L", 31.153e-3, 1e-4),
+  vel("n-Undecane", "T", 550, "Dmass", 10, "L", 31.211e-3, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 1e-9, "L", 41.522e-3, 1e-4),
+  vel("n-Undecane", "T", 635, "Dmass", 325, "L", 78.669e-3, 1e-4),
+  // PINNED to CoolProp's own output, not Table 11's 104.28 mW/(m K).  The EOS is the
+  // paper's (Aleksandrov 2011), but Table 11 was generated with REFPROP, whose TK3
+  // enhancement keeps a small dense-liquid contribution that Eq. (19) of the paper does
+  // not have.  Here the paper's equations give an enhancement of 0.144 mW/(m K) (also
+  // evaluated independently on REFPROP's EOS: 104.2449 in total) where REFPROP gives
+  // 0.175 (104.276).  CoolProp follows the equations (Linear COO-49).  The REFPROP step is
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)   (TRNS_TCX.FOR, TK3)
+  vel("n-Undecane", "T", 550, "Dmass", 600, "L", 104.24492571630205e-3, 1e-6),
+
+  // Sotiriadou, IJT, 2024 - Sec. 4.2
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 1e-9, "L", 12.2206e-3, 1e-4),
+  // PINNED to CoolProp's own output, not the paper's 159.8654 mW/(m K).  The EOS is the
+  // paper's (Fiedler 2023), but the paper's value includes a 0.0408 mW/(m K) critical
+  // enhancement from REFPROP's TK3 routine; with the paper's Eq. (17) the susceptibility
+  // difference is negative here, so the enhancement is zero and the total is the
+  // background, 159.8246 (checked against the paper in the background test case below).
+  // Same REFPROP dense-liquid step as for n-undecane above; CoolProp follows the equations.
+  vel("Tetrahydrofuran", "T", 300, "Dmass", 900.0, "L", 159.82456074842671e-3, 1e-6),
+  // The paper gives no check value with a nonzero critical enhancement, so this near-critical
+  // state guards THF's critical block (qD, zeta0, GAMMA, R0).  The reference is REFPROP 10.1's
+  // THF.FLD (same Fiedler 2023 EOS and Sotiriadou 2024 viscosity), a cross-check rather than a
+  // paper value.  At 545 K < T_ref and 320 kg/m^3 < 1.5 rhoc neither of REFPROP's undocumented
+  // TK3 steps applies; CoolProp agrees to 6.5e-7.
+  vel("Tetrahydrofuran", "T", 545, "Dmass", 320.0, "L", 87.8958240666558e-3, 1e-5),
+
+  // Sotiriadou, Assael & Huber, IJT, 2025 - Table 8.  126.2 K / 320 kg/m^3 carries a
+  // critical enhancement of 353.3371 mW/(m K); see also the contributions test below.
+  vel("Nitrogen", "T", 126.2, "Dmass", 1e-9, "L", 11.7110e-3, 1e-4),
+  vel("Nitrogen", "T", 126.2, "Dmass", 320.0, "L", 385.931e-3, 1e-4),
+  vel("Nitrogen", "T", 500, "Dmass", 1e-9, "L", 38.9095e-3, 1e-4),
+  vel("Nitrogen", "T", 500, "Dmass", 320.0, "L", 59.6387e-3, 1e-4),
+  vel("Nitrogen", "T", 500, "Dmass", 500.0, "L", 84.9555e-3, 1e-4),
+  // Sotiriadou et al. (2025), Table 6, saturated liquid: the only dense-liquid coverage
+  // (the 2004 model's 100 K / 25000 mol/m^3 point was removed).  Printed to four figures,
+  // so tested to half a unit in the last digit (CoolProp: 100.113).  REFPROP's dense-liquid
+  // step does not apply here (delchi = 0.060 > 0.01), so this is a clean check of the paper.
+  vel("Nitrogen", "T", 100, "Dmass", 689.35, "L", 100.1e-3, 5e-4),
+  // PINNED to CoolProp's output, not Table 6's 157.7.  At 70 K / 838.51 kg/m^3 the printed
+  // equations give no critical enhancement (delchi < 0), but the table was evidently
+  // generated with REFPROP.  Its TK3 routine applies
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)
+  // which adds about 0.04 mW/(m K) here (157.634 + 0.04 rounds to 157.7); nitrogen's TK8
+  // source is unavailable, but that step reproduces the table.  CoolProp follows the
+  // equations (Linear COO-49).
+  vel("Nitrogen", "T", 70, "Dmass", 838.51, "L", 157.63432933198801e-3, 1e-6),
+  // R14 regression pins, not published values.  R14's ECS transport uses Nitrogen as its
+  // reference fluid, so it follows whatever model Nitrogen carries (see the matching
+  // viscosity pins in viscosity_validation_data).  Moving Nitrogen to Huber et al. (2024)
+  // viscosity and Sotiriadou et al. (2025) conductivity lowered R14's liquid conductivity
+  // here by 1.2 % (accepted 2026-09-26; REFPROP 10.1's R14.FLD instead names the reference
+  // fluid's VS1/TC1 models, i.e. Nitrogen's 2004 correlations).  These pins make any
+  // future change to Nitrogen's transport visible in R14.
+  vel("R14", "T", 150, "Dmass", 1500.0, "L", 80.28870657840523e-3, 1e-6),
+  vel("R14", "T", 300, "Dmass", 10.0, "L", 16.24624435074178e-3, 1e-6),
+
+  // Velliadou, Assael, Antoniadis & Huber, IJT, 2021 - Sec. 3 check value (see also the
+  // contributions test below); the critical enhancement there is 6.2061 mW/(m K)
+  vel("Xenon", "T", 300, "Dmass", 1200.0, "L", 22.7675e-3, 1e-4),
+  // Table 7, printed to 0.01 mW/(m K), so each point is checked to half a unit in that
+  // last digit (0.005 mW/(m K)).  300 K / 1744 kg/m^3 has a 0.94 mW/(m K) enhancement.
+  vel("Xenon", "T", 200, "Dmass", 8.032, "L", 3.76e-3, 0.005 / 3.76),
+  vel("Xenon", "T", 400, "Dmass", 3.956, "L", 7.24e-3, 0.005 / 7.24),
+  vel("Xenon", "T", 600, "Dmass", 2.633, "L", 10.33e-3, 0.005 / 10.33),
+  vel("Xenon", "T", 300, "Dmass", 1744.0, "L", 26.48e-3, 0.005 / 26.48),
+  vel("Xenon", "T", 350, "Dmass", 724.4, "L", 13.16e-3, 0.005 / 13.16),
+  vel("Xenon", "T", 400, "Dmass", 501.1, "L", 11.22e-3, 0.005 / 11.22),
+  // PINNED to CoolProp's own output, not Table 7's 63.70 mW/(m K).  The EOS and viscosity
+  // are the paper's (Lemmon & Span 2006, Velliadou 2021), but Table 7 was generated with
+  // REFPROP, whose TK3 enhancement keeps a small dense-liquid contribution that the paper's
+  // Eqs. (4)-(7) do not have.  At 2725 kg/m^3 (2.5 rhoc) the equations give an enhancement
+  // of 0.0236 mW/(m K) and 63.6732 in total (also evaluated independently on REFPROP's EOS);
+  // with REFPROP's step it is 0.0553 and 63.7049.  CoolProp follows the equations
+  // (Linear COO-49).  The REFPROP step is
+  //   if (delchi.le.1d-2.and.d.gt.Dc*1.5) delchi=1d-2*2d0**(delchi-1d-2)   (TRNS_TCX.FOR, TK3)
+  vel("Xenon", "T", 300, "Dmass", 2725.0, "L", 63.673176997097902e-3, 1e-6),
+
+  // Heavy Water, IAPWS R18-21 (2021), Table 3 (lambda2 = 0).  Tolerance: 1e-6 or half a unit in the
+  // last printed digit, whichever is looser.
+  vel("HeavyWater", "T", 298.15, "Dmass", 1e-10, "L", 17.7498e-3, 2.9e-6),
+  vel("HeavyWater", "T", 298.15, "Dmass", 1104.5, "L", 599.557e-3, 1e-6),
+  vel("HeavyWater", "T", 298.15, "Dmass", 1200, "L", 690.421e-3, 1e-6),
+  vel("HeavyWater", "T", 825.00, "Dmass", 1e-10, "L", 76.4492e-3, 1e-6),
+  // Heavy Water, IAPWS R18-21 (2021), Table 4, T = 644.10 K, including lambda2 (checked separately below)
+  vel("HeavyWater", "T", 644.10, "Dmass", 1, "L", 52.4527e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 106, "L", 103.342e-3, 4.9e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 256, "L", 394.612e-3, 1.3e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 306, "L", 801.382e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 356, "L", 1278.423e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 406, "L", 670.833e-3, 1e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 456, "L", 423.603e-3, 1.2e-6),
+  vel("HeavyWater", "T", 644.10, "Dmass", 750, "L", 454.846e-3, 1.1e-6),
 
   // Vassiliou, JPCRD, 2015
   vel("Cyclopentane", "T", 512, "Dmass", 1e-12, "L", 37.042e-3, 1e-5),
@@ -601,7 +958,601 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities aga
     }
 }
 
+// Several of the reference-correlation papers also give the conductivity at a check
+// point with the critical enhancement set to zero.  That background (dilute + residual)
+// reads no EOS property and no viscosity, so it is checked against the paper directly,
+// including where the total at the same state is pinned to CoolProp's own output above.
+// Each row also states what the critical contribution must be at that state: where it
+// is expected to be present, the totals above would otherwise be checking the
+// background alone.
+TEST_CASE("Conductivity backgrounds with the critical enhancement off match published values", "[conductivity],[transport]") {
+    enum class Enhancement
+    {
+        positive,
+        zero
+    };
+    struct BackgroundPoint
+    {
+        std::string fluid;
+        double T, rho, expected;  // K, kg/m^3, W/(m K)
+        Enhancement critical;
+    };
+    const std::vector<BackgroundPoint> points = {
+      // Tsolakidou et al., JPCRD 46:023103 (2017), Table 11, footnote a.  The total at
+      // this state is pinned above until the R161 EOS is updated (Linear COO-50); the
+      // enhancement is what that pinned total depends on.
+      {"R161", 375.0, 229.0, 32.433e-3, Enhancement::positive},
+      // Perkins, Huber & Assael, JCED 61:3286 (2016), Table 4, footnote b
+      {"R245fa", 430.0, 530.0, 36.73e-3, Enhancement::positive},
+      // Perkins, Huber & Assael, JCED 63:2783 (2018), Table 3, footnote **
+      {"Novec649", 445.0, 685.0, 0.024976, Enhancement::positive},
+      // Perkins, Huber & Assael, JCED 62:2659 (2017), Table 2, footnote **.  The total
+      // at this state is pinned above (CoolProp's R1233zd(E) EOS is not the paper's).
+      {"R1233zd(E)", 445.0, 168.52, 0.023992, Enhancement::positive},
+      // Assael, Papalas & Huber, JPCRD 46:033103 (2017), Table 11, footnote a
+      {"n-Undecane", 635.0, 325.0, 69.829e-3, Enhancement::positive},
+      // Sotiriadou et al., IJT 45:123 (2024), Sec. 4.2: 159.8654 mW/(m K), of which the
+      // paper attributes 0.0408 to the critical enhancement, so the background is
+      // 159.8246.  The paper's own Eq. (17) gives exactly zero enhancement in this liquid.
+      {"Tetrahydrofuran", 300.0, 900.0, 159.8246e-3, Enhancement::zero},
+    };
+    for (const auto& pt : points) {
+        CAPTURE(pt.fluid);
+        CAPTURE(pt.T);
+        CAPTURE(pt.rho);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", pt.fluid));
+        AS->update(CoolProp::DmassT_INPUTS, pt.rho, pt.T);
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(std::abs((dilute + initial_density + residual) / pt.expected - 1) < 1e-4);
+        if (pt.critical == Enhancement::positive) {
+            CHECK(critical > 0);
+        } else {
+            CHECK(critical == 0);
+        }
+    }
+}
+
+// Where a fluid's transport model is a list -- the new correlation first, older models
+// kept in the fluid file for reference only -- the loader must pick the first entry.
+TEST_CASE("The first entry of a transport model list is the one loaded", "[conductivity],[transport]") {
+    struct LoadedModel
+    {
+        std::string fluid, parameter, bibtex;
+    };
+    const std::vector<LoadedModel> models = {
+      // Propylene: Assael et al. (2016) first, the Huber et al. (2003) ECS model kept
+      {"Propylene", "BibTeX-CONDUCTIVITY", "Assael-JPCRD-2016-Ethylene-Propylene"},
+      // R245fa: Perkins et al. (2016) first, the Huber et al. (2003) ECS model kept
+      {"R245fa", "BibTeX-CONDUCTIVITY", "Perkins-JCED-2016-R245fa"},
+      // Ammonia: Monogenidou et al. (2018) first, Tufeu et al. (1984) kept
+      {"Ammonia", "BibTeX-CONDUCTIVITY", "Monogenidou-JPCRD-2018-ammonia-conductivity"},
+      // Nitrogen: Sotiriadou et al. (2025) conductivity and Huber et al. (2024) viscosity
+      // first, Lemmon & Jacobsen (2004) kept for both
+      {"Nitrogen", "BibTeX-CONDUCTIVITY", "Sotiriadou-IJT-2025-nitrogen"},
+      {"Nitrogen", "BibTeX-VISCOSITY", "Huber-IJT-2024-nitrogen"},
+      // HeavyWater: IAPWS R18-21 conductivity and IAPWS R17-20 viscosity first, the IAPWS 2007
+      // formulations kept for both
+      {"HeavyWater", "BibTeX-CONDUCTIVITY", "IAPWS-D2O-2021-ThermalConductivity"},
+      {"HeavyWater", "BibTeX-VISCOSITY", "IAPWS-D2O-2020-Viscosity"},
+    };
+    for (const auto& m : models) {
+        CAPTURE(m.fluid);
+        CAPTURE(m.parameter);
+        CHECK(CoolProp::get_fluid_param_string(m.fluid, m.parameter) == m.bibtex);
+    }
+}
+
+// IAPWS R17-20, Table 4 also tabulates the correlation length xi and the enhancement factor mu2;
+// IAPWS R18-21, Table 4 tabulates lambda1 and lambda2 (lambda0(644.10 K) = 52.14966).  These are the
+// points that exercise the critical enhancements, so check each contribution, and that it is not trivial.
+TEST_CASE("HeavyWater IAPWS R17-20 / R18-21 critical enhancements match the release check points", "[viscosity],[conductivity],[transport]") {
+    HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, "HeavyWater"));
+    SECTION("viscosity: Table 3, simplified formulation with mu2 = 1 (Eq. 22)") {
+        struct Pt
+        {
+            double T, rho, mu_uPas;
+        };
+        // At 775 K and 400 kg/m^3 the full formulation's mu2 is 1.000129, so these points are
+        // compared with mu/mu2, not with the default (full) viscosity
+        const std::vector<Pt> pts = {{298.15, 1e-10, 10.035938}, {298.15, 1105, 1092.6424}, {298.15, 1130, 1088.3626}, {373.15, 1064, 326.63791},
+                                     {775.00, 1, 29.639474},     {775.00, 100, 31.930085},  {775.00, 400, 53.324172}};
+        for (const auto& p : pts) {
+            CAPTURE(p.T);
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, p.T);
+            const double mu_background =
+              TransportRoutines::viscosity_heavywater_IAPWS2020_hardcoded(HEOS) / TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HEOS);
+            CAPTURE(mu_background * 1e6);
+            CHECK(std::abs(mu_background * 1e6 / p.mu_uPas - 1) < 1e-6);
+        }
+    }
+    SECTION("viscosity: xi and mu2") {
+        struct Pt
+        {
+            double rho, xi_nm, mu2;
+        };
+        // T = 644.101 K; xi to +/-1e-6 nm (release footnote), mu2 to 7 significant digits
+        const std::vector<Pt> pts = {{145, 0.358588, 1.000359},  {245, 1.612131, 1.014771}, {295, 5.034205, 1.050059},
+                                     {345, 15.100542, 1.106000}, {395, 9.678686, 1.080915}, {445, 2.903437, 1.030066}};
+        for (const auto& p : pts) {
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, 644.101);
+            const double xi_nm = TransportRoutines::correlation_length_heavywater_IAPWS2020(HEOS) * 1e9;
+            const double mu2 = TransportRoutines::viscosity_critical_heavywater_IAPWS2020(HEOS);
+            CAPTURE(xi_nm);
+            CAPTURE(mu2);
+            CHECK(std::abs(xi_nm - p.xi_nm) < 1.5e-6);
+            CHECK(std::abs(mu2 - p.mu2) < 0.5e-6);
+            CHECK(mu2 > 1.0003);
+        }
+    }
+    SECTION("thermal conductivity: lambda1 and lambda2") {
+        struct Pt
+        {
+            double rho, lambda1, lambda2;  // lambda2 in mW/(m K)
+        };
+        const std::vector<Pt> pts = {{1, 1.0058076, 0.0001332},    {106, 1.7915649, 9.9127567},  {256, 3.3907043, 217.787846},
+                                     {306, 3.9639587, 594.662792}, {356, 4.5186821, 1042.77541}, {406, 5.0414590, 407.922272},
+                                     {456, 5.5295123, 135.240705}, {750, 8.5982461, 6.4500781}};
+        const double lambda0 = 52.14966;  // mW/(m K), printed to 7 significant digits
+        for (const auto& p : pts) {
+            CAPTURE(p.rho);
+            HEOS.update(DmassT_INPUTS, p.rho, 644.10);
+            const double lambda2 = TransportRoutines::conductivity_critical_heavywater_IAPWS2021(HEOS) * 1e3;
+            const double lambda = TransportRoutines::conductivity_hardcoded_heavywater_IAPWS2021(HEOS) * 1e3;
+            const double lambda1 = (lambda - lambda2) / lambda0;
+            CAPTURE(lambda2);
+            CAPTURE(lambda1);
+            CHECK(lambda2 > 0);
+            // half a unit in the last printed digit, or 1e-6 relative, whichever is looser
+            CHECK(std::abs(lambda2 - p.lambda2) < std::max(1e-6 * p.lambda2, 0.5e-7));
+            CHECK(std::abs(lambda1 / p.lambda1 - 1) < 1e-6);
+        }
+    }
+}
+
+// The IAPWS 2007 heavy-water transport formulations (IAPWS R4-84(2007)) are no longer the default but
+// are kept as a backup model; evaluate the routines directly against their own check values
+// (reduced by T* = 643.847 K, rho* = 358 kg/m^3, mu* = 55.2651 uPa s, lambda* = 0.742128 mW/(m K)).
+TEST_CASE("HeavyWater IAPWS 2007 transport routines are kept", "[viscosity],[conductivity],[transport]") {
+    HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, "HeavyWater"));
+    struct Pt
+    {
+        double Tbar, rhobar, mubar, lambdabar;
+    };
+    const std::vector<Pt> pts = {
+      {0.5, 3.07, 12.0604912273, 835.786416818}, {0.9, 2.16, 1.6561616211, 627.777590127}, {1.2, 0.8, 0.7651099154, 259.605241187}};
+    for (const auto& p : pts) {
+        CAPTURE(p.Tbar);
+        HEOS.update(DmassT_INPUTS, p.rhobar * 358, p.Tbar * 643.847);
+        CHECK(std::abs(TransportRoutines::viscosity_heavywater_hardcoded(HEOS) / (p.mubar * 55.2651e-6) - 1) < 1e-5);
+        CHECK(std::abs(TransportRoutines::conductivity_hardcoded_heavywater(HEOS) / (p.lambdabar * 0.742128e-3) - 1) < 1e-5);
+    }
+}
+
+// The check points of Assael et al., JPCRD 45:033104 (2016) (ethylene, propylene) and
+// Koutian et al., JPCRD 46:013102 (2017) (cyclohexane) also tabulate each contribution
+// and the viscosity the enhancement was evaluated with.  The enhancement is inversely
+// proportional to that viscosity, so rescaling CoolProp's enhancement by
+// eta_CoolProp/eta_paper removes the viscosity difference that forces the ethylene and
+// propylene totals above to be pinned, and leaves the EOS-dependent part checked
+// against the paper.
+TEST_CASE("Ethylene, propylene and cyclohexane conductivity contributions match the published check points", "[conductivity],[transport]") {
+    struct Contrib
+    {
+        std::string fluid;
+        double T, rho, dilute, residual, critical;  // K, kg/m^3, mW/(m K)
+        double eta_paper;                           // Pa s
+    };
+    std::vector<Contrib> pts = {{"Ethylene", 300.0, 300.0, 21.01, 44.48, 4.12, 33.791e-6},
+                                {"Propylene", 350.0, 385.0, 23.07, 53.88, 4.52, 53.841e-6},
+                                {"CycloHexane", 554.0, 350.0, 43.09, 22.03, 14.54, 44.42e-6}};
+    for (const auto& p : pts) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", p.fluid));
+        AS->update(CoolProp::DmassT_INPUTS, p.rho, p.T);
+        CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(p.fluid);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        double eta = AS->viscosity();
+        CAPTURE(eta);
+        // The papers print two decimals, so the tolerance is half a unit in the last place
+        CHECK(std::abs(dilute * 1e3 - p.dilute) <= 0.005);
+        CHECK(initial_density == 0);
+        CHECK(std::abs(residual * 1e3 - p.residual) <= 0.005);
+        CHECK(std::abs(critical * eta / p.eta_paper * 1e3 - p.critical) <= 0.005);
+    }
+}
+
+// Monogenidou, Assael & Huber, JPCRD 47:043101 (2018), Sec. 3: at 390 K / 415 kg/m^3
+// the dilute, residual and critical contributions are 35.969501, 218.750277 and
+// 9.409965 mW/(m K).  Checking each term separately guards the units of the residual
+// coefficients (Table 2 labels them mW/(m K); they are W/(m K)) and the enhancement
+// parameters independently of one another.  That the loader picks the new correlation
+// from Ammonia's conductivity list is checked in the first-list-entry test above.
+TEST_CASE("Ammonia conductivity contributions match Monogenidou (2018)", "[conductivity],[transport]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Ammonia"));
+    AS->update(CoolProp::DmassT_INPUTS, 415.0, 390.0);
+    CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+    AS->conductivity_contributions(dilute, initial_density, residual, critical);
+    CAPTURE(dilute);
+    CAPTURE(initial_density);
+    CAPTURE(residual);
+    CAPTURE(critical);
+    CHECK(std::abs(dilute / 35.969501e-3 - 1) < 1e-6);
+    CHECK(initial_density == 0);
+    CHECK(std::abs(residual / 218.750277e-3 - 1) < 1e-6);
+    CHECK(std::abs(critical / 9.409965e-3 - 1) < 1e-6);
+}
+
+// Nitrogen: Sotiriadou, Assael & Huber, IJT 46:42 (2025), Sec. 5: at 126.2 K / 320 kg/m^3
+// the critical enhancement is 353.3371 mW/(m K) of Table 8's 385.931.  The paper quotes it
+// to 7 figures, so it is checked to 1e-5; checking it separately from the total guards the
+// enhancement parameters independently of the background.  Its viscosity input is the new
+// Huber et al. (2024) background, so this also exercises the two new correlations together.
+// Xenon: Velliadou, Assael, Antoniadis & Huber, IJT 42:51 (2021), Sec. 3: at 300 K /
+// 1200 kg/m^3 the dilute, residual and critical contributions are 5.4993, 11.0621 and
+// 6.2061 mW/(m K).  That the loader picks the new models from Nitrogen's lists is checked
+// in the first-list-entry test above.
+TEST_CASE("Nitrogen and xenon conductivity contributions match their papers", "[conductivity],[transport]") {
+    // Xenon has a single conductivity model; check that it is the new one
+    CHECK(CoolProp::get_fluid_param_string("Xenon", "BibTeX-CONDUCTIVITY") == "Velliadou-IJT-2021-xenon-conductivity");
+    CoolPropDbl dilute = 0, initial_density = 0, residual = 0, critical = 0;
+    SECTION("Nitrogen") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
+        AS->update(CoolProp::DmassT_INPUTS, 320.0, 126.2);
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(initial_density == 0);
+        CHECK(std::abs(critical / 353.3371e-3 - 1) < 1e-5);
+        CHECK(std::abs((dilute + residual + critical) / 385.931e-3 - 1) < 1e-4);
+    }
+    SECTION("Xenon") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Xenon"));
+        AS->update(CoolProp::DmassT_INPUTS, 1200.0, 300.0);
+        AS->conductivity_contributions(dilute, initial_density, residual, critical);
+        CAPTURE(dilute);
+        CAPTURE(residual);
+        CAPTURE(critical);
+        CHECK(initial_density == 0);
+        CHECK(std::abs(dilute / 5.4993e-3 - 1) < 1e-4);
+        CHECK(std::abs(residual / 11.0621e-3 - 1) < 1e-4);
+        CHECK(std::abs(critical / 6.2061e-3 - 1) < 1e-4);
+    }
+}
+
 }; /* namespace TransportValidation */
+
+// #2768 swapped R1233zd(E) to the Akasaka & Lemmon (JPCRD 2022) international
+// standard EOS and dropped the rho*s_r corresponding-states viscosity
+// correlation that had shipped since v6, so viscosity became unavailable
+// entirely (#3330).  The block is back, with the entropy-scaling constant C
+// refit -- the published C = 1.2474 came from a dataset that later measurements
+// superseded, and ran ~50-70% high in the liquid (#1826).  rhosr_critical is
+// now the value the current EOS gives at its own critical point, and C is
+// fitted on top of it to the primary data of Miyara, Alam & Kariya,
+// Int. J. Refrig. 92:86-93 (2018).
+//
+// These values therefore deliberately do NOT reproduce v7.2.0; they are roughly
+// 29-38% lower along the saturated liquid line, and agree with Miyara's
+// measurements to 2.6% AAD against a stated 3.0% experimental uncertainty.  They
+// are a regression lock on "the coefficients are the ones we intend and the EOS
+// feeding them has not moved".
+//
+// If an EOS or coefficient change moves these, that is a decision to make
+// consciously rather than absorb silently -- in particular rhosr_critical must
+// be recomputed from the new EOS and C refitted on top of it, since the two are
+// coupled through x = rho*s_r/rhosr_critical.
+TEST_CASE("Transport properties throw inside the two-phase region (#3446)", "[viscosity],[conductivity],[transport],[3446]") {
+    // A two-phase pure-fluid state has a liquid and a vapor phase in equilibrium with
+    // different transport properties; there is no single value to return.  These used
+    // to evaluate the single-phase correlation at the overall (T, rho) -- or, for
+    // methane's hardcoded conductivity, fail with "PropsSI failed ungracefully".
+    SECTION("interior quality throws; Q = 0 and Q = 1 give the saturated-phase values") {
+        const std::string fluid = GENERATE(as<std::string>{}, "Methane", "Nitrogen", "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        const double T = 0.8 * AS->T_critical();
+        AS->update(CoolProp::QT_INPUTS, 0.5, T);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        // The same state reached through (T, rho) rather than (Q, T)
+        AS->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        for (const double Q : {0.0, 1.0}) {
+            CAPTURE(Q);
+            AS->update(CoolProp::QT_INPUTS, Q, T);
+            const double lambda = AS->conductivity(), eta = AS->viscosity();
+            const double lambda_sat =
+              (Q == 0.0) ? AS->saturated_liquid_keyed_output(CoolProp::iconductivity) : AS->saturated_vapor_keyed_output(CoolProp::iconductivity);
+            const double eta_sat =
+              (Q == 0.0) ? AS->saturated_liquid_keyed_output(CoolProp::iviscosity) : AS->saturated_vapor_keyed_output(CoolProp::iviscosity);
+            CHECK(lambda == Catch::Approx(lambda_sat).epsilon(1e-12));
+            CHECK(eta == Catch::Approx(eta_sat).epsilon(1e-12));
+        }
+    }
+    SECTION("states on the saturation curve to within roundoff are not refused") {
+        // The pure-fluid flashes label |Q| <= 1e-9 (and |Q - 1| <= 1e-9) two-phase, keeping
+        // the slightly negative or slightly-above-one Q; those must not throw.
+        const std::string fluid = GENERATE(as<std::string>{}, "Water", "R134a");
+        CAPTURE(fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        AS->update(CoolProp::QT_INPUTS, 0, 0.9 * AS->T_critical());
+        const double p = AS->p(), hL = AS->saturated_liquid_keyed_output(CoolProp::iHmolar), hV = AS->saturated_vapor_keyed_output(CoolProp::iHmolar);
+        for (const double h : {hL - 1e-10 * std::abs(hL), hV + 1e-10 * std::abs(hV)}) {
+            AS->update(CoolProp::HmolarP_INPUTS, h, p);
+            CAPTURE(AS->Q());
+            REQUIRE(AS->phase() == CoolProp::iphase_twophase);  // premise: labelled two-phase, Q just outside [0, 1]
+            CHECK_NOTHROW(AS->viscosity());
+            CHECK_NOTHROW(AS->conductivity());
+        }
+    }
+    SECTION("imposing a phase still gives the metastable value at (T, rho)") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane"));
+        AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);  // the state from the bug report
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        AS->specify_phase(CoolProp::iphase_gas);
+        AS->update(CoolProp::DmolarT_INPUTS, 50 / AS->molar_mass(), 120);
+        CHECK(ValidNumber(AS->viscosity()));
+    }
+    SECTION("tabular backends refuse interior quality too") {
+        // TTSE/BICUBIC used to return a quality-weighted blend of the saturated values
+        const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+        CAPTURE(backend);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        const double p = 2e5;
+        AS->update(CoolProp::PQ_INPUTS, p, 0.5);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        // Through (h, p) and (T, rho) as well.  The (T, rho) state goes to a fresh object:
+        // that branch used to leave _phase unset, so only a stale label could trip a check.
+        const double h = AS->hmolar(), T = AS->T(), rho = AS->rhomolar();
+        AS->update(CoolProp::HmolarP_INPUTS, h, p);
+        REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory(backend, "Nitrogen"));
+        fresh->update(CoolProp::DmolarT_INPUTS, rho, T);
+        CHECK(fresh->phase() == CoolProp::iphase_twophase);
+        CHECK_THROWS_AS(fresh->viscosity(), CoolProp::ValueError);
+        CHECK_THROWS_AS(fresh->conductivity(), CoolProp::ValueError);
+        // A failed update the caller ignored leaves an out-of-range Q and invalid saturation
+        // indices; that must be a clean error, not an out-of-bounds table read
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, p, 1.5));
+        CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS_WITH(AS->conductivity(), Catch::Matchers::ContainsSubstring("no valid state"));
+        // The saturated phases still have values.  Not compared with HEOS: a locally cached
+        // table built before a transport-model change would carry the old values.
+        AS->update(CoolProp::PQ_INPUTS, p, 0);
+        const double etaL = AS->viscosity(), lambdaL = AS->conductivity();
+        AS->update(CoolProp::PQ_INPUTS, p, 1);
+        const double etaV = AS->viscosity(), lambdaV = AS->conductivity();
+        CAPTURE(etaL, etaV, lambdaL, lambdaV);
+        CHECK(ValidNumber(etaV));
+        CHECK(ValidNumber(lambdaV));
+        CHECK(etaL > 10 * etaV);
+        CHECK(lambdaL > 10 * lambdaV);
+    }
+    SECTION("mixtures") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+        AS->set_mole_fractions({0.5, 0.5});
+        SECTION("a single-phase mixture whose (T, rho) is inside a component's dome still has a value") {
+            // The approximate mixing rule evaluates each pure fluid at the mixture's (T, rho)
+            AS->update(CoolProp::PT_INPUTS, 2e6, 250.0);
+            REQUIRE(AS->phase() == CoolProp::iphase_gas);
+            shared_ptr<CoolProp::AbstractState> ethane(CoolProp::AbstractState::factory("HEOS", "Ethane"));
+            ethane->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), AS->T());
+            REQUIRE(ethane->phase() == CoolProp::iphase_twophase);  // premise of the test
+            CHECK(ValidNumber(AS->viscosity()));
+            CHECK(ValidNumber(AS->conductivity()));
+        }
+        SECTION("component states keep psat in p(), so friction-theory viscosity is unchanged") {
+            // H2S viscosity is friction theory, which reads p(); at these single-phase mixture
+            // states the H2S component evaluated at the mixture's (T, rho) is inside its dome.
+            // Re-flashing it with an imposed phase would swap psat for the EOS pressure and
+            // move these by up to 7%.  Values are master (3f16d5fbb) before #3446.
+            struct row
+            {
+                double T, p, eta;
+            };
+            const row rows[] = {{255, 2e6, 1.0158842386870101e-05}, {230, 10e6, 5.2617732506557792e-05}, {280, 2e6, 1.0882970508098438e-05}};
+            for (const auto& r : rows) {
+                CAPTURE(r.T, r.p);
+                CHECK(CoolProp::PropsSI("V", "T", r.T, "P", r.p, "Methane[0.9]&HydrogenSulfide[0.1]") == Catch::Approx(r.eta).epsilon(1e-9));
+            }
+        }
+        SECTION("interior quality throws") {
+            AS->update(CoolProp::PQ_INPUTS, 1e6, 0.5);
+            CHECK_THROWS_AS(AS->viscosity(), CoolProp::ValueError);
+            CHECK_THROWS_AS(AS->conductivity(), CoolProp::ValueError);
+        }
+    }
+    SECTION("the state from the bug report gives a clear error through PropsSI") {
+        const double lambda = CoolProp::PropsSI("conductivity", "T", 120, "D", 50, "CH4");
+        CHECK(!ValidNumber(lambda));
+        CHECK(CoolProp::get_global_param_string("errstring").find("two-phase") != std::string::npos);
+    }
+}
+
+TEST_CASE("R1233zd(E) has a viscosity model (#3330)", "[viscosity],[transport],[3330]") {
+    SECTION("the state from the bug report is finite") {
+        const double eta = CoolProp::PropsSI("V", "T", 273.15, "Q", 0, "R1233zd(E)");
+        CAPTURE(eta);
+        REQUIRE(ValidNumber(eta));
+        // Saturated liquid at 0 C.  v7.2.0 answered 6.3689e-4 Pa-s here; with the
+        // refit constants this is 3.99e-4, against 3.71e-4 from REFPROP 10 ECS.
+        CHECK(eta > 1e-4);
+        CHECK(eta < 1e-3);
+    }
+    SECTION("the correlation is the published one") {
+        CHECK(CoolProp::get_fluid_param_string("R1233zd(E)", "BibTeX-VISCOSITY") == "Bell-PURDUE-2016-ETA");
+    }
+    SECTION("pinned values") {
+        struct row
+        {
+            double T, rhomolar, eta;
+        };
+        // T [K], rhomolar [mol/m^3], eta [Pa-s]
+        // All four are single phase at the stated (T, rho): rhoL(300 K) = 9643.6 and
+        // rhoL(400 K) = 7219.8 mol/m^3, rhoV(350 K) = 246.0 mol/m^3.  The two
+        // compressed-liquid rows sit at 18.2 and 10.8 MPa, outside the 1.0-4.1 MPa
+        // range C was fitted over, so they lock extrapolation behaviour on purpose.
+        const row rows[] = {
+          {250.0, 1e-10, 9.2922657253765002e-06},  // dilute-gas limit; C drops out here
+          {350.0, 100.0, 1.314939784502e-05},      // vapor
+          {300.0, 10000.0, 3.6854833102371e-04},   // compressed liquid, liquid branch of the crossover
+          {400.0, 8000.0, 1.289196192878e-04},     // compressed liquid, rho = 2.2 rho_c
+        };
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1233zd(E)"));
+        for (const auto& r : rows) {
+            CAPTURE(r.T);
+            CAPTURE(r.rhomolar);
+            AS->update(CoolProp::DmolarT_INPUTS, r.rhomolar, r.T);
+            const double eta = AS->viscosity();
+            CAPTURE(eta);
+            CHECK(std::abs(eta / r.eta - 1) < 1e-6);
+        }
+    }
+}
+
+// The rho*s_r correlation blends a liquid and a vapor branch with a logistic
+// switch centred on x_crossover, which every rhosr-CS fluid file carries as
+// data.  TransportRoutines::viscosity_rhosr used to hardcode the centre as the
+// literal 2 and never read the parsed field, so editing x_crossover in a fluid
+// file silently did nothing.  All eight rhosr-CS fluids happen to set it to 2,
+// so nothing was numerically wrong -- the field was simply inert, which is the
+// worse kind of bug: it fails only for whoever next tries to use it.
+//
+// Clone R1233zd(E) twice, changing nothing but x_crossover, and evaluate at a
+// state whose x sits between the two values.  Before the fix both clones return
+// bit-identical viscosity; after it they must diverge, because the switch has
+// moved from "fully liquid branch" to "fully vapor branch" at that state.
+TEST_CASE("rhosr-CS viscosity honours x_crossover from the fluid file", "[viscosity],[transport],[rhosr]") {
+    using nlohmann::json;
+
+    json arr = json::parse(CoolProp::get_fluid_param_string("R1233zd(E)", "JSON"));
+    REQUIRE(arr.is_array());
+    REQUIRE(arr.size() == 1);
+
+    // Guard the premise: this test is meaningless if the block stops being
+    // rhosr-CS, or if the shipped switch location ever moves off 2.
+    REQUIRE(arr[0]["TRANSPORT"]["viscosity"].at("type").get<std::string>() == "rhosr-CS");
+    REQUIRE(arr[0]["TRANSPORT"]["viscosity"].at("x_crossover").get<double>() == 2);
+
+    auto register_clone = [&](const std::string& name, const std::string& CAS, double x_crossover) {
+        json fluid = arr[0];
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = CAS;
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+            fluid["INFO"].erase(key);
+        }
+        fluid["TRANSPORT"]["viscosity"]["x_crossover"] = x_crossover;
+        json doc = json::array();
+        doc.push_back(fluid);
+        // add_fluids_as_JSON returns a literal true on the HEOS branch and
+        // signals failure only by throwing, so assert on the throw.
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("HEOS", doc.dump()));
+    };
+
+    register_clone("R1233zdE_XC_SHIPPED", "999-99-80", 2.0);
+    register_clone("R1233zdE_XC_MOVED", "999-99-81", 12.0);
+
+    // x = rho*s_r/rhosr_critical is 9.00 here, i.e. between the two crossover
+    // values, and the state is single-phase (supercritical liquid).
+    const double T = 300.0, rhomolar = 10000.0;
+
+    const double shipped = CoolProp::PropsSI("V", "T", T, "Dmolar", rhomolar, "R1233zd(E)");
+    const double clone_same = CoolProp::PropsSI("V", "T", T, "Dmolar", rhomolar, "R1233zdE_XC_SHIPPED");
+    const double clone_moved = CoolProp::PropsSI("V", "T", T, "Dmolar", rhomolar, "R1233zdE_XC_MOVED");
+    CAPTURE(shipped, clone_same, clone_moved);
+
+    REQUIRE(ValidNumber(shipped));
+    REQUIRE(ValidNumber(clone_same));
+    REQUIRE(ValidNumber(clone_moved));
+
+    // Round-tripping the fluid through JSON must not perturb the answer.
+    CHECK(std::abs(clone_same / shipped - 1) < 1e-14);
+
+    // The point of the test: moving the switch must move the result.  This
+    // failed before the fix, when the two clones agreed exactly.
+    CHECK(std::abs(clone_moved / shipped - 1) > 0.01);
+}
+
+// x = rho*s_r/rhosr_critical goes to 0 in the dilute gas, and the logistic
+// switch equals 1/2 at x = x_crossover.  For x_crossover <= 0 the liquid
+// branch therefore carries at least half the weight at zero density; with the
+// shipped coefficients (c_vap[0] = 0, c_liq[0] = 0.61) eta/eta_dilute tends to
+// 1 + C*(exp(0.305) - 1) instead of 1.  Such a value can only arrive through a
+// fluid file, so the parser must reject it.
+TEST_CASE("rhosr-CS viscosity rejects a non-positive x_crossover", "[viscosity],[transport],[rhosr],[add_one]") {
+    using nlohmann::json;
+
+    json shipped = json::parse(CoolProp::get_fluid_param_string("R1233zd(E)", "JSON"))[0];
+    REQUIRE(shipped["TRANSPORT"]["viscosity"].at("type").get<std::string>() == "rhosr-CS");
+
+    SECTION("parse_rhosr_viscosity") {
+        // parse_rhosr_viscosity is protected on a non-final class; reach it directly.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_rhosr_viscosity;
+        };
+        Probe probe;
+        CoolProp::CoolPropFluid f;
+        f.name = "Probe";
+        for (double bad : {0.0, -2.0, std::nan(""), std::numeric_limits<double>::infinity()}) {
+            CAPTURE(bad);
+            json visc = shipped["TRANSPORT"]["viscosity"];
+            visc["x_crossover"] = bad;
+            CHECK_THROWS_AS(probe.parse_rhosr_viscosity(visc, f), CoolProp::ValueError);
+            CHECK_THROWS_WITH(probe.parse_rhosr_viscosity(visc, f),
+                              Catch::Matchers::ContainsSubstring("x_crossover must be positive") && Catch::Matchers::ContainsSubstring("Probe"));
+        }
+        // The shipped value, and any positive one, still loads.
+        for (double good : {2.0, 0.5}) {
+            CAPTURE(good);
+            json visc = shipped["TRANSPORT"]["viscosity"];
+            visc["x_crossover"] = good;
+            CoolProp::CoolPropFluid g;
+            g.name = "Probe";
+            CHECK_NOTHROW(probe.parse_rhosr_viscosity(visc, g));
+            CHECK(g.transport.viscosity_rhosr.x_crossover == good);
+            CHECK(g.transport.viscosity_using_rhosr);
+        }
+    }
+
+    SECTION("add_fluids_as_JSON with x_crossover = 0 fails cleanly") {
+        const std::string name = "R1233zdE_XC_ZERO";
+        json fluid = shipped;
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = "999-99-82";
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+            fluid["INFO"].erase(key);
+        }
+        fluid["TRANSPORT"]["viscosity"]["x_crossover"] = 0.0;
+
+        const std::string before = CoolProp::get_global_param_string("fluids_list");
+        // add_one wraps any std::exception as ValueError, so the type alone
+        // carries no signal; the message must come from the guard.
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()),
+                          Catch::Matchers::ContainsSubstring("x_crossover must be positive") && Catch::Matchers::ContainsSubstring(name));
+        CHECK(CoolProp::get_global_param_string("fluids_list") == before);
+    }
+}
 
 static CoolProp::input_pairs inputs[] = {
   CoolProp::DmolarT_INPUTS,
@@ -2312,6 +3263,48 @@ TEST_CASE("Test that reference states yield proper values using high-level inter
         }
     }
 }
+TEST_CASE("set_reference_stateS refuses backends it cannot apply to instead of silently doing nothing", "[reference_states]") {
+    // Before this was fixed, any backend prefix other than the literal
+    // "REFPROP", "HEOS" or none fell off the end of set_reference_stateS's
+    // dispatch chain and returned having done nothing -- not even validating
+    // the reference-state string.  GERG has its own NotImplementedError arm
+    // (see CoolProp-Tests-GERG.cpp); everything else gets a ValueError.
+    for (const char* fluid : {"SRK::Propane", "PR::Propane", "VTPR::Propane", "PCSAFT::Propane", "INCOMP::MEG-20%", "IF97::Water",
+                              "BICUBIC&HEOS::Methane", "TTSE&HEOS::Methane", "NOT_A_BACKEND::Methane"}) {
+        CAPTURE(fluid);
+        CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NBP"), CoolProp::ValueError);
+        // Refused regardless of whether the reference-state string is valid.
+        CHECK_THROWS_AS(CoolProp::set_reference_stateS(fluid, "NOT_A_REFERENCE_STATE"), CoolProp::ValueError);
+    }
+    // The message names the offending backend.
+    CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("[SRK]"));
+    // ...and says "reference state", which the Mathcad wrapper relies on to
+    // classify it as a bad-parameter error rather than UNKNOWN.
+    CHECK_THROWS_WITH(CoolProp::set_reference_stateS("SRK::Propane", "NBP"), Catch::Matchers::ContainsSubstring("reference state"));
+    // The supported spellings are unaffected.  RESET is the restore idiom
+    // used elsewhere in this suite (h and s bit-identical afterwards).
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("HEOS::Propane", "RESET"));
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("Propane", "RESET"));
+}
+TEST_CASE("set_reference_stateS resolves every factory spelling of HEOS", "[reference_states]") {
+    // The backend is matched by family, so "HelmholtzEOSBackend" and
+    // "HEOS?<options>" apply the reference state exactly like "HEOS" does.
+    // The reference state is process-global and other tests change it, so
+    // don't rely on Propane's default: set NBP then IIR through each spelling.
+    // Each step moves a value the other state pins, so a spelling that
+    // silently did nothing fails whichever state it started from.
+    auto h_at = [](const char* in, double val) { return CoolProp::PropsSI("Hmass", in, val, "Q", 0, "Propane"); };
+    for (const char* fluid : {"HEOS::Propane", "HelmholtzEOSBackend::Propane", "HEOS?::Propane"}) {
+        CAPTURE(fluid);
+        CoolProp::set_reference_stateS(fluid, "NBP");  // h = 0 for the saturated liquid at 1 atm
+        CHECK(std::abs(h_at("P", 101325)) < 1e-3);
+        CHECK(std::abs(h_at("T", 273.15) - 200000) > 1000);
+        CoolProp::set_reference_stateS(fluid, "IIR");  // h = 200 kJ/kg for the saturated liquid at 0 degC
+        CHECK(h_at("T", 273.15) == Catch::Approx(200000).margin(1e-3));
+        CHECK(std::abs(h_at("P", 101325)) > 1000);
+    }
+    CoolProp::set_reference_stateS("Propane", "RESET");
+}
 TEST_CASE("Test that reference states yield proper values using low-level interface", "[reference_states]") {
     struct ref_entry
     {
@@ -3180,8 +4173,248 @@ TEST_CASE("Check vapor pressures calculated using PC-SAFT", "[pcsaft_vapor_press
 TEST_CASE("Check PC-SAFT interaction parameter functions", "[pcsaft_binary_interaction]") {
     std::string CAS_water = get_fluid_param_string("WATER", "CAS");
     std::string CAS_aacid = "64-19-7";
+    // The binary-pair map is process-wide, and the bubble-pressure test sets this
+    // same pair, so under --order rand it may already be present; allow the
+    // overwrite for this call only and restore the flag even if it throws (COO-62).
+    struct RestoreOverwrite
+    {
+        bool before = get_config_bool(OVERWRITE_BINARY_INTERACTION);
+        ~RestoreOverwrite() {
+            set_config_bool(OVERWRITE_BINARY_INTERACTION, before);
+        }
+    } restore;
+    set_config_bool(OVERWRITE_BINARY_INTERACTION, true);
+    // Write a sentinel first: if the pair already exists, re-writing -0.127
+    // would pass even if the overwrite silently did nothing.
+    set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.2);
+    CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.2);
+    // ...then the value the other PC-SAFT water/acetic-acid tests rely on.
     set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.127);
     CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.127);
+}
+
+namespace PCSAFTLibraryTests {
+
+using nlohmann::json;
+
+// RAII toggle of the process-wide OVERWRITE_FLUIDS flag, restored on scope exit even if a check throws.
+struct OverwriteFluidsGuard
+{
+    bool saved;
+    explicit OverwriteFluidsGuard(bool on) : saved(get_config_bool(OVERWRITE_FLUIDS)) {
+        set_config_bool(OVERWRITE_FLUIDS, on);
+    }
+    ~OverwriteFluidsGuard() {
+        set_config_bool(OVERWRITE_FLUIDS, saved);
+    }
+    OverwriteFluidsGuard(const OverwriteFluidsGuard&) = delete;
+    OverwriteFluidsGuard& operator=(const OverwriteFluidsGuard&) = delete;
+    OverwriteFluidsGuard(OverwriteFluidsGuard&&) = delete;
+    OverwriteFluidsGuard& operator=(OverwriteFluidsGuard&&) = delete;
+};
+
+// A one-fluid JSON listing for add_fluids_as_JSON("PCSAFT", ...); sigma tells the records apart.
+// The aliases default to the name alone.  add_fluids_as_JSON("PCSAFT", ...) returns true and only
+// prints when loading fails, so the tests check every registration through a lookup, which throws
+// if the fluid is missing.
+std::string record(const std::string& name, const std::string& CAS, double sigma, const std::vector<std::string>& aliases = {}) {
+    json fluid = {{"name", name},
+                  {"CAS", CAS},
+                  {"aliases", aliases.empty() ? json::array({name}) : json(aliases)},
+                  {"m", 1.5255},
+                  {"sigma", sigma},
+                  {"sigma_units", "Angstrom"},
+                  {"u", 188.9},
+                  {"u_units", "K"},
+                  {"molemass", 0.032042},
+                  {"molemass_units", "kg/mol"}};
+    return json::array({fluid}).dump();
+}
+
+// (name, CAS) of every fluid in the library, keyed by index.  The library has no size accessor, so
+// keep probing until 1000 consecutive indices past the last fluid found are empty.
+std::map<std::size_t, std::pair<std::string, std::string>> snapshot() {
+    std::map<std::size_t, std::pair<std::string, std::string>> fluids;
+    for (std::size_t i = 0, last = 0; i <= last + 1000; ++i) {
+        try {
+            const PCSAFTFluid& fluid = PCSAFTLibrary::get_library().get(i);
+            fluids[i] = {fluid.getName(), fluid.getCAS()};
+            last = i;
+        } catch (const ValueError&) {  // NOLINT(bugprone-empty-catch)
+            // No fluid at this index.
+        }
+    }
+    return fluids;
+}
+
+std::size_t index_of(const std::map<std::size_t, std::pair<std::string, std::string>>& fluids, const std::string& name) {
+    for (const auto& [index, ids] : fluids) {
+        if (ids.first == name) {
+            return index;
+        }
+    }
+    throw ValueError(format("fluid [%s] not found in the PC-SAFT library", name.c_str()));
+}
+
+}  // namespace PCSAFTLibraryTests
+
+TEST_CASE("PC-SAFT library: a new name with an existing CAS number replaces only that fluid", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    // B stands for a fluid that is already in the library (in the reported case the built-in WATER),
+    // A for a user fluid registered after it, and C for a user fluid that reuses B's CAS number under
+    // a new name.  Registering C used to erase an unrelated fluid and then write C over A.
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestCasB", "9999-81-1", 3.0));
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestCasA", "9999-82-2", 3.1));
+    REQUIRE(library.get("PCSAFTLibTestCasB").getSigma() == 3.0);
+    REQUIRE(library.get("PCSAFTLibTestCasA").getSigma() == 3.1);
+    const auto before = snapshot();
+    const std::size_t index_B = index_of(before, "PCSAFTLibTestCasB");
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestCasC", "9999-81-1", 3.2));
+    const auto after = snapshot();
+
+    // C takes B's slot; no fluid is added, removed or changed anywhere else.
+    CHECK(after.size() == before.size());
+    for (const auto& [index, ids] : before) {
+        CAPTURE(index, ids.first);
+        REQUIRE(after.count(index) == 1);
+        if (index == index_B) {
+            CHECK(after.at(index) == std::make_pair(std::string("PCSAFTLibTestCasC"), std::string("9999-81-1")));
+        } else {
+            CHECK(after.at(index) == ids);
+        }
+    }
+    CHECK(library.get("PCSAFTLibTestCasA").getSigma() == 3.1);
+    CHECK(library.get("PCSAFTLibTestCasC").getSigma() == 3.2);
+    CHECK(library.get("9999-81-1").getName() == "PCSAFTLibTestCasC");
+    // As in the HEOS library, every identifier of the replaced fluid now resolves to the new one.
+    CHECK(library.get("PCSAFTLibTestCasB").getName() == "PCSAFTLibTestCasC");
+}
+
+TEST_CASE("PC-SAFT library: re-registering a fluid under the same name updates it in place", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestSame", "9999-83-3", 3.0));
+    REQUIRE(library.get("PCSAFTLibTestSame").getSigma() == 3.0);
+    const auto before = snapshot();
+    // The same-name path used to erase the fluid map entry twice, the second time at end().
+    for (double sigma : {3.1, 3.2, 3.3}) {
+        CAPTURE(sigma);
+        CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestSame", "9999-83-3", sigma));
+        CHECK(library.get("PCSAFTLibTestSame").getSigma() == sigma);
+        CHECK(snapshot() == before);
+    }
+    // ...and the updated record is usable.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PCSAFT", "PCSAFTLibTestSame"));
+    AS->update(DmolarT_INPUTS, 100, 300);
+    CHECK(std::isfinite(AS->p()));
+}
+
+TEST_CASE("PC-SAFT library: a duplicate is rejected without side effects when OVERWRITE_FLUIDS is off", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestDup", "9999-84-4", 3.0));
+    set_config_bool(OVERWRITE_FLUIDS, false);
+    const auto before = snapshot();
+    // Same CAS number under a new name, and the same name under a new CAS number.
+    CHECK_THROWS_WITH(library.add_many(json::parse(record("PCSAFTLibTestDupOther", "9999-84-4", 3.1))),
+                      Catch::Matchers::ContainsSubstring("already in library"));
+    CHECK_THROWS_WITH(library.add_many(json::parse(record("PCSAFTLibTestDup", "9999-85-5", 3.1))),
+                      Catch::Matchers::ContainsSubstring("already in library"));
+    CHECK(snapshot() == before);
+    CHECK(library.get("PCSAFTLibTestDup").getSigma() == 3.0);
+    CHECK_THROWS_AS(library.get("PCSAFTLibTestDupOther"), ValueError);
+}
+
+TEST_CASE("PC-SAFT library: a record matching two different fluids is rejected without side effects", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestConfA", "9999-86-6", 3.0));
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestConfB", "9999-87-7", 3.1));
+    REQUIRE(library.get("PCSAFTLibTestConfA").getSigma() == 3.0);
+    REQUIRE(library.get("PCSAFTLibTestConfB").getSigma() == 3.1);
+    const auto before = snapshot();
+
+    // Records that match both A and B, as a typo or a copy-paste would give, under either setting: the
+    // name of A with the CAS number of B, and the CAS number of B with an alias that matches A only once
+    // upper-cased.  Replacing B would leave A reachable through its own identifiers and the other way round.
+    for (bool overwrite : {true, false}) {
+        CAPTURE(overwrite);
+        set_config_bool(OVERWRITE_FLUIDS, overwrite);
+        for (const std::string& conflicting :
+             {record("PCSAFTLibTestConfA", "9999-87-7", 3.2), record("PCSAFTLibTestConfC", "9999-87-7", 3.2, {"pcsaftlibtestconfa"})}) {
+            CAPTURE(conflicting);
+            CHECK_THROWS_WITH(library.add_many(json::parse(conflicting)),
+                              Catch::Matchers::ContainsSubstring("match 2 different fluids")
+                                && Catch::Matchers::ContainsSubstring("(PCSAFTLibTestConfA, PCSAFTLibTestConfB)"));
+        }
+        CHECK(snapshot() == before);
+        CHECK_THROWS_AS(library.get("PCSAFTLibTestConfC"), ValueError);
+        for (const std::string& identifier : {"PCSAFTLibTestConfA", "PCSAFTLIBTESTCONFA", "9999-86-6"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == "PCSAFTLibTestConfA");
+            CHECK(library.get(identifier).getSigma() == 3.0);
+        }
+        for (const std::string& identifier : {"PCSAFTLibTestConfB", "PCSAFTLIBTESTCONFB", "9999-87-7"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == "PCSAFTLibTestConfB");
+            CHECK(library.get(identifier).getSigma() == 3.1);
+        }
+    }
+}
+
+TEST_CASE("PC-SAFT library: a record sharing only an alias with a fluid replaces only that fluid", "[pcsaft_library]") {
+    using namespace PCSAFTLibraryTests;
+    OverwriteFluidsGuard guard(true);
+    PCSAFTLibrary::PCSAFTLibraryClass& library = PCSAFTLibrary::get_library();
+
+    CoolProp::add_fluids_as_JSON("PCSAFT", record("PCSAFTLibTestAliasD", "9999-88-8", 3.0, {"PCSAFTLibTestAliasShared"}));
+    REQUIRE(library.get("PCSAFTLibTestAliasShared").getName() == "PCSAFTLibTestAliasD");
+    const auto before = snapshot();
+    const std::size_t index_D = index_of(before, "PCSAFTLibTestAliasD");
+
+    // Each new record has its own name and CAS number, so an alias is the only identifier it shares with
+    // the fluid in place: D's alias as written; the same alias in lower case, which matches only once
+    // upper-cased; and D's name, which is not stored upper-cased, so it matches only as written.
+    struct Replacement
+    {
+        std::string name, CAS, alias;
+        double sigma;
+    };
+    for (const Replacement& r : {Replacement{"PCSAFTLibTestAliasE", "9999-89-9", "PCSAFTLibTestAliasShared", 3.1},
+                                 Replacement{"PCSAFTLibTestAliasF", "9999-90-0", "pcsaftlibtestaliasshared", 3.2},
+                                 Replacement{"PCSAFTLibTestAliasG", "9999-91-1", "PCSAFTLibTestAliasD", 3.3}}) {
+        CAPTURE(r.name, r.alias);
+        CoolProp::add_fluids_as_JSON("PCSAFT", record(r.name, r.CAS, r.sigma, {r.alias}));
+        const auto after = snapshot();
+        CHECK(after.size() == before.size());
+        for (const auto& [index, ids] : before) {
+            CAPTURE(index, ids.first);
+            REQUIRE(after.count(index) == 1);
+            if (index == index_D) {
+                CHECK(after.at(index) == std::make_pair(r.name, r.CAS));
+            } else {
+                CHECK(after.at(index) == ids);
+            }
+        }
+        CHECK(library.get(r.name).getSigma() == r.sigma);
+        CHECK(library.get(r.alias).getName() == r.name);
+        // As in the first test, every identifier of the replaced fluid, its CAS number included, now
+        // resolves to the new one.
+        for (const std::string& identifier : {"PCSAFTLibTestAliasD", "9999-88-8", "PCSAFTLibTestAliasShared", "PCSAFTLIBTESTALIASSHARED"}) {
+            CAPTURE(identifier);
+            CHECK(library.get(identifier).getName() == r.name);
+        }
+    }
 }
 
 TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pressure]") {
@@ -3735,8 +4968,13 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
     // Known-stale fluids: EOS edited in master since the last fastchebpure
     // release, with no yet-released SA to match. Adding a fluid here makes
     // the test assert on the *mismatch* (so an accidental regen also forces
-    // an update here). Currently empty — fastchebpure 2026.04.23 covers
-    // every master fluid that has an SA.
+    // an update here).
+    //
+    // Empty again: the four fluids whose reducing density was corrected in
+    // #3326 (Nitrogen, Ethylene, OrthoHydrogen, n-Undecane) had their
+    // superancillaries refit against the corrected EOS, so their stored
+    // source_eos_hash matches once more and they are held to the strict
+    // branch below rather than allowlisted.
     static const std::set<std::string> known_stale_SA = {};
 
     // ---------------------------------------------------------------------
@@ -4149,7 +5387,8 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
     shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
 
-    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    // RP, not AS: dynamic_cast of the HEOS state yields nullptr
+    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(RP.get());
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
 
     AS->specify_phase(iphase_gas);
@@ -4342,7 +5581,7 @@ TEST_CASE("REFPROP melting_line honors iP_min/iT_min/iP_max/iT_max sentinels", "
 }
 
 // Tests for cubic EOS superancillaries (#2739)
-TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[cubic_superanc][2739]") {
+TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
@@ -4400,7 +5639,64 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
     }
 }
 
-TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739]") {
+TEST_CASE("Cubic Omega constants reproduce the critical point", "[cubic][cubic_omega][2745]") {
+    // The Omega_a/Omega_b constants (Backends/Cubics/CubicConstants.h) must make (Tc, pc) the EOS's own
+    // critical point.  #2745 transcribed them with doubled/dropped digits (SRK off by ~4e-10, PR Omega_b
+    // by 5e-14), which these checks catch; they test the defining property, not the digits.  The PR Zc
+    // here is an independent high-precision reference, not CubicConstants::PR_Zc().
+    for (const auto& [backend, Zc] : std::vector<std::pair<std::string, double>>{{"SRK", 1.0 / 3.0}, {"PR", 0.30740130869870384800938509665}}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        auto cubic = ACB->get_cubic();
+        const std::vector<double> x = {1.0};
+        const double Tc = AS->T_critical(), pc = AS->p_critical(), R = cubic->get_R_u();
+
+        // (1) The reduced critical temperature Ttilde_c = R Tc b / a(Tc) = Omega_b/Omega_a is where the
+        //     superancillary tables end (they were built from the exact constants).
+        const double Ttilde_c = R * Tc * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / Tc, x, 0);
+        CHECK(Ttilde_c == Catch::Approx(CubicSuperAncillary::get_Ttilde_max(ACB->get_superanc_eos_code())).epsilon(1e-14));
+
+        // (2) Independent of the tables: at (Tc, rho_c = pc/(Zc R Tc)) the EOS gives p = pc with
+        //     dp/drho = d2p/drho2 = 0.
+        const double rhoc = pc / (Zc * R * Tc);
+        AS->specify_phase(iphase_gas);  // evaluate the EOS directly, no phase determination
+        AS->update(CoolProp::DmolarT_INPUTS, rhoc, Tc);
+        // Tight enough to catch an error common to Omega_a and Omega_b, which (1) cannot see.
+        CHECK(AS->p() == Catch::Approx(pc).epsilon(1e-14));
+        CHECK(std::abs(AS->first_partial_deriv(iP, iDmolar, iT)) * rhoc / pc < 1e-10);
+        CHECK(std::abs(AS->second_partial_deriv(iP, iDmolar, iT, iDmolar, iT)) * rhoc * rhoc / pc < 1e-10);
+        AS->unspecify_phase();
+    }
+}
+
+TEST_CASE("Cubic superancillary evaluation at the edges of the table", "[cubic][cubic_superanc]") {
+    // All cubic table evaluations at a temperature go through one helper: up to Tc (the end of
+    // the table, to round-off) they succeed; below the table's low-T end they throw ValueError rather
+    // than std::invalid_argument from the Chebyshev evaluation; D,T just below Tc inside the dome is
+    // two-phase (it used to be forced single-phase above calc_superanc_Tmax()).
+    for (const auto& backend : std::vector<std::string>{"SRK", "PR"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double Tc = AS->T_critical();
+        CHECK(ACB->calc_saturation_ancillary(iP, 0, iT, Tc) == Catch::Approx(AS->p_critical()).epsilon(1e-10));
+        CHECK_NOTHROW(AS->update_QT_pure_superanc(0.5, Tc));
+        CHECK_THROWS_AS(ACB->calc_saturation_ancillary(iP, 0, iT, 0.1 * Tc), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->update(CoolProp::QT_INPUTS, 0.5, 0.1 * Tc), CoolProp::ValueError);
+
+        const double T = Tc * (1 - 1e-6);
+        const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+        const double rhoV = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+        AS->update(CoolProp::DmolarT_INPUTS, 0.5 * (rhoL + rhoV), T);
+        CHECK(AS->phase() == iphase_twophase);
+        CHECK(AS->p() == Catch::Approx(ACB->calc_saturation_ancillary(iP, 0, iT, T)).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic][cubic_superanc][2739]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
@@ -4415,6 +5711,26 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739
                 CHECK(std::abs(AS->T() - T) < 1e-10);
                 CHECK(AS->p() > 0);
             }
+        }
+
+        SECTION(backend + " caloric properties on a fresh state") {
+            // SatL/SatV are filled by update_TDmolarP_unchecked, which skips pre_update(); the
+            // cubic's cached reducing state must already be seeded or h is evaluated at tau = inf.
+            const double T = 0.8 * Tc_sa;
+            AS->update_QT_pure_superanc(0.5, T);
+            const double h_superanc = AS->hmolar();
+            // Independent reference: h_L and h_V from separate full D,T updates at the saturated
+            // densities (phase imposed, so the EOS is evaluated directly), combined by the lever rule.
+            auto h_at = [&](double rho, CoolProp::phases phase) {
+                std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+                ref->specify_phase(phase);
+                ref->update(CoolProp::DmolarT_INPUTS, rho, T);
+                return ref->hmolar();
+            };
+            const double hL = h_at(AS->saturated_liquid_keyed_output(CoolProp::iDmolar), CoolProp::iphase_liquid);
+            const double hV = h_at(AS->saturated_vapor_keyed_output(CoolProp::iDmolar), CoolProp::iphase_gas);
+            CHECK(std::isfinite(h_superanc));
+            CHECK(h_superanc == Catch::Approx(0.5 * hL + 0.5 * hV).epsilon(1e-9));
         }
 
         SECTION(backend + " update_QT_pure_superanc Q=0 and Q=1 densities bracket Q=0.5") {
@@ -4434,7 +5750,420 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739
     }
 }
 
-TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2673]") {
+TEST_CASE("Cubic QT and PQ updates use the superancillary", "[cubic][cubic_superanc][COO-136]") {
+    // Q,T and P,Q on a pure cubic used to run an iterative secant solve converged to only ~1e-7 in p
+    // near Tc, while the Chebyshev superancillary next to it is exact to round-off.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Propane", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double Tmax = ACB->calc_superanc_Tmax();
+            for (double frac : {0.5, 0.7, 0.9, 0.95, 0.99, 0.9999}) {
+                const double T = frac * Tmax;
+                CAPTURE(backend, fluid, T);
+                const double p_sa = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                const double rhoL_sa = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+                const double rhoV_sa = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+
+                AS->update(CoolProp::QT_INPUTS, 0.3, T);
+                CHECK(AS->p() == Catch::Approx(p_sa).epsilon(1e-13));
+                CHECK(AS->saturated_liquid_keyed_output(iDmolar) == Catch::Approx(rhoL_sa).epsilon(1e-13));
+                CHECK(AS->saturated_vapor_keyed_output(iDmolar) == Catch::Approx(rhoV_sa).epsilon(1e-13));
+
+                AS->update(CoolProp::PQ_INPUTS, p_sa, 0.3);
+                CHECK(AS->T() == Catch::Approx(T).epsilon(1e-12));
+                CHECK(AS->saturated_liquid_keyed_output(iDmolar) == Catch::Approx(rhoL_sa).epsilon(1e-10));
+                CHECK(AS->saturated_vapor_keyed_output(iDmolar) == Catch::Approx(rhoV_sa).epsilon(1e-10));
+                CHECK(AS->Q() == Catch::Approx(0.3).margin(1e-14));
+                // Both phases carry the saturation pressure exactly.
+                CHECK(AS->saturated_liquid_keyed_output(iP) == AS->p());
+                CHECK(AS->saturated_vapor_keyed_output(iP) == AS->p());
+
+                // Independent of the table: equal Gibbs energy of the two phases from the EOS.
+                if (frac < 0.99) {
+                    std::shared_ptr<CoolProp::AbstractState> L(CoolProp::AbstractState::factory(backend, fluid));
+                    std::shared_ptr<CoolProp::AbstractState> V(CoolProp::AbstractState::factory(backend, fluid));
+                    L->specify_phase(iphase_liquid);
+                    V->specify_phase(iphase_gas);
+                    L->update(CoolProp::DmolarT_INPUTS, rhoL_sa, T);
+                    V->update(CoolProp::DmolarT_INPUTS, rhoV_sa, T);
+                    CHECK(std::abs(L->gibbsmolar() - V->gibbsmolar()) / (AS->gas_constant() * T) < 1e-12);
+                    // A stiff liquid amplifies a 1e-15 density error ~1e5-fold in p at low pressure.
+                    CHECK(L->p() == Catch::Approx(p_sa).epsilon(1e-7));
+                    CHECK(V->p() == Catch::Approx(p_sa).epsilon(1e-12));
+                }
+            }
+
+            CAPTURE(backend, fluid);
+            // The table runs to the exact critical point (#3515): Q,T at Tc gives pc and P,Q at pc gives
+            // Tc, both to round-off-level accuracy, not merely without throwing.
+            REQUIRE_NOTHROW(AS->update(CoolProp::QT_INPUTS, 0.5, AS->T_critical()));
+            CHECK(AS->p() == Catch::Approx(AS->p_critical()).epsilon(1e-10));
+            REQUIRE_NOTHROW(AS->update(CoolProp::PQ_INPUTS, AS->p_critical(), 0.5));
+            CHECK(AS->T() == Catch::Approx(AS->T_critical()).epsilon(1e-10));
+            // P-input flashes at exactly pc go through the same end of the table (the critical point).
+            // States just off the critical point round-trip; the critical state itself is singular
+            // (infinite cp, flat isotherm) and is not asked for.
+            for (double Tr : {0.99, 1.01}) {
+                CAPTURE(Tr);
+                std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, fluid));
+                ref->update(CoolProp::PT_INPUTS, AS->p_critical(), Tr * AS->T_critical());
+                REQUIRE_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, ref->hmolar(), AS->p_critical()));
+                CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-8));
+                REQUIRE_NOTHROW(AS->update(CoolProp::PSmolar_INPUTS, AS->p_critical(), ref->smolar()));
+                CHECK(AS->T() == Catch::Approx(ref->T()).epsilon(1e-8));
+            }
+            // Just above pc is out of range for a saturation call, by more than the round-off allowance.
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, AS->p_critical() * (1 + 1e-6), 0.5));
+            // Out-of-range inputs throw rather than reaching the secant solve.
+            CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, 1.01 * AS->T_critical()));
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 1.01 * AS->p_critical(), 0.5));
+            CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, -1.0, 0.5));
+        }
+    }
+}
+
+TEST_CASE("Cubic QT and PQ below the superancillary range", "[cubic][cubic_superanc][COO-136]") {
+    // The old secant solves silently returned garbage here (the trivial rhoL = rhoV root for Q,T,
+    // the wrong saturation temperature for P,Q), so these inputs must throw instead.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        auto cubic = ACB->get_cubic();
+        const std::vector<double> x = {1.0};
+        const double T = 0.15 * AS->T_critical();
+        const double Ttilde = cubic->get_R_u() * T * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / T, x, 0);
+        CAPTURE(backend, T, Ttilde);
+        // Guard: the point must really be below the table, or this test checks nothing.
+        REQUIRE(Ttilde < CubicSuperAncillary::get_Ttilde_min(ACB->get_superanc_eos_code()));
+        CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, T));
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 1e-30, 0.5));
+    }
+}
+
+TEST_CASE("Cubic TP root choice at very low pressure", "[cubic][cubic_superanc][COO-136]") {
+    // The gas/liquid root choice used to invert p -> Tsat, which cannot reach pressures below the
+    // superancillary's minimum; it now compares p with psat(T).  1e-8 Pa at 300 K is an ideal gas.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        CAPTURE(backend);
+        // Inside the table: compared with psat(T).
+        REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e-8, 300.0));
+        CHECK(AS->rhomolar() == Catch::Approx(1e-8 / (AS->gas_constant() * 300.0)).epsilon(1e-6));
+        // Below the table (Tr = 0.15, psat ~ 1e-12 Pa by extrapolation): the lower-Gibbs root, which is
+        // the gas well below psat and the liquid well above it.
+        const double T = 0.15 * AS->T_critical();
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        {
+            auto cubic = ACB->get_cubic();
+            const std::vector<double> x = {1.0};
+            const double Ttilde = cubic->get_R_u() * T * cubic->bm_term(x) / cubic->am_term(cubic->get_Tr() / T, x, 0);
+            // Guard: T must really be below the table, or this exercises the psat branch instead.
+            REQUIRE(Ttilde < CubicSuperAncillary::get_Ttilde_min(ACB->get_superanc_eos_code()));
+        }
+        REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e-20, T));
+        CHECK(AS->rhomolar() == Catch::Approx(1e-20 / (AS->gas_constant() * T)).epsilon(1e-6));
+        REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e-8, T));
+        CHECK(AS->rhomolar() > 1000);
+        // And a compressed liquid well inside the table still picks the liquid root.
+        AS->update(CoolProp::QT_INPUTS, 0, 250.0);
+        const double rhoL = AS->rhomolar(), psat = AS->p();
+        AS->update(CoolProp::PT_INPUTS, 2 * psat, 250.0);
+        CHECK(AS->rhomolar() > rhoL);
+    }
+}
+
+TEST_CASE("Cubic TP root choice just below Tc and psat", "[cubic][cubic_superanc][COO-136]") {
+    // Within ~1e-6 of Tc the table's rho_V and the EOS vapour root differ by more than any fixed
+    // slack, so comparing the root with rho_V threw "Unable to find gaseous density" for 12 of 127 PR
+    // fluids (e.g. PR acetone at Tc(1 - 1e-6), p = psat(1 - 1e-10)).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"Acetone", "R134a", "Propane", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            for (double dT : {1e-6, 1e-8}) {
+                const double T = AS->T_critical() * (1 - dT);
+                const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                const double rhoV = ACB->calc_saturation_ancillary(iDmolar, 1, iT, T);
+                const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+                CAPTURE(dT);
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, psat * (1 - 1e-10), T));
+                CHECK(AS->rhomolar() < 0.5 * (rhoV + rhoL));  // the vapour-side root
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, psat * (1 + 1e-10), T));
+                CHECK(AS->rhomolar() > 0.5 * (rhoV + rhoL));  // the liquid-side root
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic TP at non-positive pressure is rejected", "[cubic][cubic_superanc][COO-136]") {
+    // p <= 0 has no vapour root (the tensile liquid is not supported): a clear error, not a root.
+    // Below Tc the cubic has three real roots there; above Tc one, which is negative (COO-138).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        for (const auto& [p, Tr] : std::vector<std::pair<double, double>>{{-1e5, 0.6}, {-1e5, 1.2}, {-1e6, 2.0}, {0.0, 1.2}}) {
+            CAPTURE(backend, p, Tr);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, p, Tr * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+            // ... and with a phase imposed
+            for (auto phase : {CoolProp::iphase_gas, CoolProp::iphase_liquid}) {
+                AS->specify_phase(phase);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, p, Tr * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+                AS->unspecify_phase();
+            }
+        }
+        // p of either sign below round-off: decided on p, not on the sign of a near-zero root
+        CHECK_THROWS_WITH(AS->update(CoolProp::PT_INPUTS, -1e-10, 1.2 * AS->T_critical()), Catch::Matchers::ContainsSubstring("p > 0"));
+    }
+}
+
+TEST_CASE("Cubic TP with an imposed liquid phase skips the root past the pole", "[cubic][cubic_superanc]") {
+    // Well above Tc at high p the densest of three real roots lies past rho = 1/(b - c).  An imposed
+    // (supercritical) liquid phase must take the densest physical root, which here is the only one.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double T = 3 * AS->T_critical(), p = 2 * AS->p_critical();
+        const double b = ACB->get_cubic()->bm_term(std::vector<double>{1.0});
+        AS->update(CoolProp::PT_INPUTS, p, T);
+        const double rho_free = AS->rhomolar();
+        for (auto phase :
+             {CoolProp::iphase_liquid, CoolProp::iphase_supercritical_liquid, CoolProp::iphase_supercritical_gas, CoolProp::iphase_supercritical}) {
+            CAPTURE(backend, phase);
+            AS->specify_phase(phase);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            CHECK(AS->rhomolar() * b < 1);
+            CHECK(AS->rhomolar() == Catch::Approx(rho_free).epsilon(1e-12));
+            AS->unspecify_phase();
+        }
+    }
+}
+
+TEST_CASE("Cubic TP root choice above Tc below pc", "[cubic][cubic_superanc][COO-136]") {
+    // Above Tc at p < pc the cubic can have three real roots, one beyond the repulsive pole (where the
+    // Gibbs energy is NaN).  Only one root is physical, and it must be returned.
+    int n_three_root = 0;
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"Hydrogen", "Helium", "Nitrogen"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            for (double T : {300.0, 600.0, 1000.0}) {
+                const double p = 1e5;
+                CAPTURE(backend, fluid, T);
+                REQUIRE(p < AS->p_critical());
+                REQUIRE(T > AS->T_critical());
+                int Nsoln = 0;
+                double r0 = 0, r1 = 0, r2 = 0;
+                ACB->rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+                n_three_root += (Nsoln == 3) ? 1 : 0;
+                REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, p, T));
+                // The returned root must be the physical one, not merely one that reproduces p.
+                const std::vector<double> x = {1.0};
+                const double b_minus_c = ACB->get_cubic()->bm_term(x) - ACB->get_cubic()->cm_term(x);
+                CHECK(AS->rhomolar() > 0);
+                CHECK(AS->rhomolar() * b_minus_c < 1);
+                std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                chk->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+                CHECK(chk->p() == Catch::Approx(p).epsilon(1e-10));
+            }
+        }
+    }
+    // Guard: the grid must actually reach the three-root regime.
+    CHECK(n_three_root >= 4);
+}
+
+TEST_CASE("Cubic TP phase label is right near Tc", "[cubic][cubic_pt_phase]") {
+    // Gas vs liquid is decided by rho vs rhomolar_critical(), which for a pure cubic was a real-fluid
+    // curve fit 15-25% above the cubic's own critical density: compressed liquids within ~0.5% of Tc
+    // were labelled gas (e.g. SRK 1-butene at 418.87 K, rho > rho_L,sat, phase 5).
+    for (const auto& [backend, Zc] : std::vector<std::pair<std::string, double>>{{"SRK", 1.0 / 3.0}, {"PR", 0.30740130869870384800938509665}}) {
+        for (const auto& fluid : std::vector<std::string>{"Propane", "1-Butene", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            CHECK(AS->rhomolar_critical() == Catch::Approx(AS->p_critical() / (Zc * ACB->gas_constant() * AS->T_critical())).epsilon(1e-14));
+            for (double Tr : {0.997, 0.9999}) {
+                const double T = Tr * AS->T_critical();
+                const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+                CAPTURE(Tr);
+                AS->update(CoolProp::PT_INPUTS, psat * (1 + 1e-6), T);
+                CHECK(AS->phase() == iphase_liquid);
+                AS->update(CoolProp::PT_INPUTS, psat * (1 - 1e-6), T);
+                CHECK(AS->phase() == iphase_gas);
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic TP phase label follows the new density", "[cubic][cubic_pt_phase]") {
+    // solver_rho_Tp labelled the phase before _rhomolar was assigned, so the label came from the
+    // previous state's density (a fresh state read as gas).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Propane", "Water"}) {
+            CAPTURE(backend, fluid);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double T = 0.6 * AS->T_critical();
+            const double psat = ACB->calc_saturation_ancillary(iP, 0, iT, T);
+            // Fresh state straight to a compressed liquid.
+            AS->update(CoolProp::PT_INPUTS, 2 * psat, T);
+            CHECK(AS->phase() == iphase_liquid);
+            // Liquid -> gas -> liquid on the same instance.
+            AS->update(CoolProp::PT_INPUTS, 0.5 * psat, T);
+            CHECK(AS->phase() == iphase_gas);
+            AS->update(CoolProp::PT_INPUTS, 2 * psat, T);
+            CHECK(AS->phase() == iphase_liquid);
+        }
+    }
+}
+
+TEST_CASE("Cubic QT and PQ with volume translation", "[cubic][cubic_superanc][COO-136]") {
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double b = ACB->get_cubic()->bm_term(std::vector<double>{1.0});
+        const double T = 0.8 * ACB->calc_superanc_Tmax();
+        AS->update(CoolProp::QT_INPUTS, 0, T);
+        const double rhoL_untranslated = AS->rhomolar();
+        AS->set_fluid_parameter_double(0, "cm", 0.1 * b);
+        CAPTURE(backend);
+        const double rhoL = ACB->calc_saturation_ancillary(iDmolar, 0, iT, T);
+        // Independent of the shared untranslate step: v_translated = v_untranslated - c.
+        CHECK(1 / rhoL == Catch::Approx(1 / rhoL_untranslated - 0.1 * b).epsilon(1e-12));
+        AS->update(CoolProp::QT_INPUTS, 0, T);
+        CHECK(AS->rhomolar() == Catch::Approx(rhoL).epsilon(1e-13));
+        const double p = AS->p();
+        AS->update(CoolProp::PQ_INPUTS, p, 0);
+        CHECK(AS->T() == Catch::Approx(T).epsilon(1e-12));
+        CHECK(AS->rhomolar() == Catch::Approx(rhoL).epsilon(1e-10));
+    }
+}
+
+TEST_CASE("solve_cubic returns NaN roots for non-finite coefficients", "[cubic][cubic_supercritical_roots]") {
+    // The clamps on the acos/acosh arguments must not turn a NaN into a finite root: with d = NaN the
+    // three-root branch would otherwise give the roots of x^3 - 3x + 2 (callers such as the bicubic
+    // inversion build d from a user input).
+    for (double d : {std::nan(""), std::numeric_limits<double>::infinity()}) {
+        int N = 0;
+        double x0 = 0, x1 = 0, x2 = 0;
+        solve_cubic(1, 0, -3, d, N, x0, x1, x2);
+        CAPTURE(d, N, x0, x1, x2);
+        CHECK(std::isnan(x0));
+        CHECK((N < 2 || std::isnan(x1)));
+        CHECK((N < 3 || std::isnan(x2)));
+    }
+}
+
+TEST_CASE("Cubic density roots stay finite at the critical point", "[cubic][cubic_supercritical_roots]") {
+    // Within ~1e-9 of the critical point the acos/acosh arguments in solve_cubic rounded outside
+    // their domains (and p rounded to 0), returning NaN roots: PR R134a T,P threw "rhomolar is not a
+    // valid number", as did every P-input flash within ~1e-6 of pc.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"R134a", "n-Pentane", "CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB != nullptr);
+            const double Tc = AS->T_critical(), pc = AS->p_critical();
+            for (double dT : {-1e-6, -1e-9, -1e-12, 0.0, 1e-12, 1e-9, 1e-6}) {
+                for (double dp : {-1e-6, -1e-9, -1e-12, 0.0, 1e-12, 1e-9, 1e-6}) {
+                    const double T = Tc * (1 + dT), p = pc * (1 + dp);
+                    CAPTURE(backend, fluid, dT, dp);
+                    int N = 0;
+                    double r0 = NAN, r1 = NAN, r2 = NAN;
+                    ACB->rho_Tp_cubic(T, p, N, r0, r1, r2);
+                    CHECK((N == 1 || N == 3));
+                    for (double r : {r0, r1, r2}) {
+                        CHECK(std::isfinite(r));
+                        // Each root reproduces p (the isotherm is flat here, so this is a loose test of rho).
+                        std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                        chk->specify_phase(iphase_gas);
+                        chk->update(CoolProp::DmolarT_INPUTS, r, T);
+                        CHECK(chk->p() == Catch::Approx(p).epsilon(1e-9));
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("Cubic gas root at very low pressure is positive", "[cubic][cubic_supercritical_roots]") {
+    // At p ~ 1e-20 Pa the gas root (~p/RT) is far below the closed form's round-off, which returns it
+    // with either sign; the polish must still bring it into the physical domain.
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        const double T = 0.15 * AS->T_critical(), p = 1e-20;
+        int N = 0;
+        double r0 = NAN, r1 = NAN, r2 = NAN;
+        ACB->rho_Tp_cubic(T, p, N, r0, r1, r2);
+        REQUIRE(N == 3);
+        CHECK(r0 == Catch::Approx(p / (ACB->gas_constant() * T)).epsilon(1e-9));
+    }
+}
+
+TEST_CASE("Cubic calc_pressure_nocache uses its arguments", "[cubic][cubic_supercritical_roots]") {
+    // It multiplied by the members _rhomolar and _T instead of its T and rho arguments, so it was
+    // right only when they happened to coincide (inf on a fresh state).
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        CAPTURE(backend);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Propane"));
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+        REQUIRE(ACB != nullptr);
+        std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory(backend, "Propane"));
+        ref->update(CoolProp::PT_INPUTS, 2e6, 450.0);
+        CHECK(ACB->calc_pressure_nocache(450.0, ref->rhomolar()) == Catch::Approx(2e6).epsilon(1e-12));
+        AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);  // members now differ from the arguments below
+        CHECK(ACB->calc_pressure_nocache(450.0, ref->rhomolar()) == Catch::Approx(2e6).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Cubic PT at supercritical pressure and high temperature", "[cubic][cubic_supercritical_roots]") {
+    // Well above Tc the cubic in rho can have three real roots even for p > pc, but only one is
+    // physical: the others are negative or lie beyond the 1/(b - c) pole.  The no-guess root
+    // selector used to count all three and throw.
+    int n_three_root_states = 0;
+    for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
+        for (const auto& fluid : std::vector<std::string>{"CO2", "Water"}) {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluid));
+            auto* ACB_ptr = dynamic_cast<AbstractCubicBackend*>(AS.get());
+            REQUIRE(ACB_ptr != nullptr);
+            auto& ACB = *ACB_ptr;
+            const double pc = AS->p_critical(), Tc = AS->T_critical();
+            for (double Tr : {1.5, 2.5, 4.0, 6.0}) {
+                for (double pr : {1.5, 3.0}) {
+                    CAPTURE(backend, fluid, Tr, pr);
+                    const double p = pr * pc, T = Tr * Tc;
+                    int Nsoln = 0;
+                    double r0 = 0, r1 = 0, r2 = 0;
+                    ACB.rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+                    n_three_root_states += (Nsoln == 3) ? 1 : 0;
+                    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, p, T));
+                    CHECK(AS->rhomolar() > 0);
+                    CHECK(AS->rhomolar() < AS->rhomolar_critical() * 4);
+                    // The returned root must reproduce the input pressure.
+                    std::shared_ptr<CoolProp::AbstractState> chk(CoolProp::AbstractState::factory(backend, fluid));
+                    chk->update(CoolProp::DmolarT_INPUTS, AS->rhomolar(), T);
+                    CHECK(chk->p() == Catch::Approx(p).epsilon(1e-10));
+                }
+            }
+        }
+    }
+    // Guard against the grid drifting out of the three-root regime, which would make this test vacuous.
+    CHECK(n_three_root_states >= 8);
+}
+
+TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic][cubic_DmolarT][2673]") {
     for (const auto& backend : std::vector<std::string>{"PR", "SRK"}) {
         CAPTURE(backend);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "nButane"));
@@ -4506,7 +6235,7 @@ TEST_CASE("Cubic pure-fluid DmolarT/DmassT round-trip vs PT", "[cubic_DmolarT][2
 // Tests for set_fluid_parameter_double("Tcrit"/"pcrit") on cubic backends
 // ============================================================================
 
-TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic_Tcpc]") {
+TEST_CASE("Cubic set/get Tc and pc via set_fluid_parameter_double", "[cubic][cubic_Tcpc]") {
     // Use PR backend with propane as a representative pure fluid
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("PR", "Propane"));
     AbstractCubicBackend* raw = dynamic_cast<AbstractCubicBackend*>(AS.get());
@@ -5202,6 +6931,205 @@ TEST_CASE("Qmass input: REFPROP R32+R125 native kq=2 fast path", "[Qmass][REFPRO
     CHECK(AS3->Q() == Catch::Approx(Q_ref).epsilon(1e-5));
 }
 
+TEST_CASE("Qmass input: REFPROP mixture update clears cached state", "[Qmass][REFPROP]") {
+    // REFPROPMixtureBackend::update_Qmass_pair populates the state directly rather
+    // than going through update()'s switch, so it has to do update()'s bookkeeping
+    // itself.  Without a clear() at the top, every lazily-cached derived property
+    // from the PREVIOUS update survives into the new state: a compressed-liquid
+    // viscosity was still being reported after a two-phase QmassT flash (~20x off
+    // here).  _tau/_delta were likewise left describing the old state.
+    std::shared_ptr<CoolProp::AbstractState> AS;
+    try {
+        AS.reset(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    } catch (...) {
+        WARN("REFPROP not available; skipping");
+        return;
+    }
+    const std::vector<double> z = {0.5, 0.5};
+    const double T = 278.15, Qmass = 0.5;
+
+    // Reference: a state whose ONLY update is the mass-quality flash, so nothing
+    // can be inherited from an earlier call.
+    auto ASref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    ASref->set_mole_fractions(z);
+    ASref->update(CoolProp::QmassT_INPUTS, Qmass, T);
+    const double eta_ref = ASref->viscosity();
+    const double rho_ref = ASref->rhomolar();
+
+    AS->set_mole_fractions(z);
+
+    SECTION("transport properties are recomputed, not inherited from the previous state") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 250.0);  // compressed liquid: eta ~ 20x the two-phase value
+        const double eta_liquid = AS->viscosity();
+        AS->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        CAPTURE(eta_liquid);
+        CAPTURE(eta_ref);
+        CAPTURE(AS->viscosity());
+        // Guard the premise: the two states really are far apart, so a stale value
+        // cannot pass by coincidence.
+        REQUIRE(eta_liquid > 5 * eta_ref);
+        // _rhomolar is a plain double the Qmass path overwrites unconditionally, so
+        // this passes with or without the fix — it is here to establish that the two
+        // states really are the same one, which is what makes the eta compare valid.
+        CHECK(AS->rhomolar() == Catch::Approx(rho_ref).epsilon(1e-12));
+        CHECK(AS->viscosity() == Catch::Approx(eta_ref).epsilon(1e-12));
+    }
+
+    SECTION("tau and delta describe the new state") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 250.0);
+        AS->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        CAPTURE(AS->tau());
+        CAPTURE(AS->delta());
+        CHECK(AS->tau() == Catch::Approx(AS->T_reducing() / AS->T()).epsilon(1e-12));
+        CHECK(AS->delta() == Catch::Approx(AS->rhomolar() / AS->rhomolar_reducing()).epsilon(1e-12));
+    }
+
+    SECTION("gibbsmolar is available and describes the new state") {
+        // REFPROP has no calc_gibbsmolar() override, so _gibbsmolar is only ever
+        // populated by whoever fills the state; update() does it at the end of its
+        // switch.  Without the same assignment here, clear() turns a stale G into a
+        // NotImplementedError instead of a correct one.
+        AS->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        CAPTURE(AS->gibbsmolar());
+        CHECK(AS->gibbsmolar() == Catch::Approx(AS->hmolar() - AS->T() * AS->smolar()).epsilon(1e-12));
+    }
+
+    SECTION("unset mole fractions are rejected before REFPROP is called") {
+        // update() guards its whole switch with check_status(); update_Qmass_pair
+        // bypasses update(), so without its own guard an unset composition reaches
+        // REFPROP as an all-zero mole-fraction array instead of raising here.
+        auto ASbare = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+        CHECK_THROWS_WITH(ASbare->update(CoolProp::QmassT_INPUTS, Qmass, T), Catch::Matchers::ContainsSubstring("Mole fractions not yet set"));
+    }
+
+    SECTION("PQmass clears the previous state too") {
+        auto ASp = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+        ASp->set_mole_fractions(z);
+        ASp->update(CoolProp::QmassT_INPUTS, Qmass, T);
+        const double p_sat = ASp->p();
+
+        auto ASpref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+        ASpref->set_mole_fractions(z);
+        ASpref->update(CoolProp::PQmass_INPUTS, p_sat, Qmass);
+        const double eta_pref = ASpref->viscosity();
+
+        AS->update(CoolProp::PT_INPUTS, 5e6, 250.0);
+        REQUIRE(AS->viscosity() > 5 * eta_pref);
+        AS->update(CoolProp::PQmass_INPUTS, p_sat, Qmass);
+        CAPTURE(eta_pref);
+        CAPTURE(AS->viscosity());
+        CHECK(AS->viscosity() == Catch::Approx(eta_pref).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Qmass input: REFPROP pure fluid takes the molar path", "[Qmass][REFPROP]") {
+    // For a pure or pseudo-pure fluid Qmass IS Qmolar -- no conversion is defined,
+    // so update() is supposed to rewrite the Qmass pair to its molar sibling via
+    // mass_to_molar_inputs() and run the ordinary switch.  The dispatch guard tested
+    // REFPROPMixtureBackend's own mole_fractions member, which every success branch
+    // of set_REFPROP_fluids resize(ncmax)'s to 20 -- so "size() > 1" was never false
+    // and pure fluids took AbstractState::update_Qmass_pair's TOMS748 solve on
+    // Qmolar instead, returning a Q one ULP off the value the caller passed in.
+    //
+    // The comparisons below are deliberately exact, not Approx: on this path nothing
+    // may touch the numbers at all, so any difference is a routing bug, not noise.
+    //
+    // Several fluids on purpose.  Qmass() is recomputed lazily from _Q through the
+    // lever rule, and whether that rounds back to the input depends on the molar
+    // mass -- Water happens to round favourably where CO2 and Nitrogen do not, so a
+    // single-fluid test would pass on luck rather than on the pure-fluid shortcut.
+    const std::vector<std::string> fluids = {"Water", "CO2", "Nitrogen"};
+    std::shared_ptr<CoolProp::AbstractState> probe;
+    try {
+        probe.reset(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    } catch (...) {
+        WARN("REFPROP not available; skipping");
+        return;
+    }
+
+    SECTION("Q and Qmass survive the pure-fluid Qmass flash untouched") {
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            const double T = 0.8 * AS->T_critical();
+            for (double q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                CAPTURE(fluid, q, T);
+                AS->update(CoolProp::QmassT_INPUTS, q, T);
+                CHECK(AS->Q() == q);
+                CHECK(AS->Qmass() == q);
+            }
+        }
+    }
+
+    SECTION("QmassT and QT reach the same state for a pure fluid") {
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            auto ASm = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            const double T = 0.8 * AS->T_critical();
+            for (double q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                CAPTURE(fluid, q, T);
+                AS->update(CoolProp::QT_INPUTS, q, T);
+                ASm->update(CoolProp::QmassT_INPUTS, q, T);
+                CHECK(ASm->p() == AS->p());
+                CHECK(ASm->rhomolar() == AS->rhomolar());
+                CHECK(ASm->hmolar() == AS->hmolar());
+                CHECK(ASm->smolar() == AS->smolar());
+                CHECK(ASm->Q() == AS->Q());
+                CHECK(ASm->phase() == AS->phase());
+            }
+        }
+    }
+
+    SECTION("PQmass and PQ reach the same state for a pure fluid") {
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            auto ASm = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            AS->update(CoolProp::QT_INPUTS, 0.0, 0.8 * AS->T_critical());
+            const double p_sat = AS->p();
+            for (double q : {0.0, 0.25, 1.0}) {
+                CAPTURE(fluid, q, p_sat);
+                AS->update(CoolProp::PQ_INPUTS, p_sat, q);
+                ASm->update(CoolProp::PQmass_INPUTS, p_sat, q);
+                CHECK(ASm->T() == AS->T());
+                CHECK(ASm->rhomolar() == AS->rhomolar());
+                CHECK(ASm->hmolar() == AS->hmolar());
+                CHECK(ASm->Q() == AS->Q());
+            }
+        }
+    }
+
+    SECTION("out-of-range Qmass is still rejected on the pure path") {
+        // AbstractState::update_Qmass_pair validates Qmass in [0,1] before it
+        // iterates.  The pure-fluid rewrite skips that function entirely, so the
+        // check has to survive independently -- REFPROP will not do it for us:
+        // DQFL2 happily extrapolates a quality above 1 and hands back a state whose
+        // Q() says 1.05 and phase() says gas, while Qmass() on that same state
+        // throws "requires a two-phase state".
+        //
+        // Match on this guard's own message, not merely on ValueError.  REFPROP
+        // rejects most of these by itself -- QmassT via TQFLSH error 19, and the
+        // density pairs at -0.05 and 1.5 via DQFL2 "2-phase iteration did not
+        // converge", a misleading diagnostic for what is really an invalid input.
+        // Only the +1.05 density cases actually die when the guard is deleted, so
+        // a bare CHECK_THROWS_AS would leave most of this section passing on
+        // REFPROP's behaviour rather than on ours, and would go silently vacuous
+        // if REFPROP ever tightened DQFL2's input validation.
+        const auto out_of_range = Catch::Matchers::ContainsSubstring("Qmass out of range");
+        for (const auto& fluid : fluids) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", fluid));
+            const double T = 0.8 * AS->T_critical();
+            AS->update(CoolProp::QT_INPUTS, 0.5, T);
+            const double rhomolar = AS->rhomolar(), rhomass = AS->rhomass();
+            // The guard runs before clear(), so the state survives each expected throw.
+            for (double q : {-0.05, 1.05, 1.5, std::numeric_limits<double>::quiet_NaN()}) {
+                CAPTURE(fluid, q);
+                CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQmass_INPUTS, rhomolar, q), out_of_range);
+                CHECK_THROWS_WITH(AS->update(CoolProp::DmassQmass_INPUTS, rhomass, q), out_of_range);
+                CHECK_THROWS_WITH(AS->update(CoolProp::QmassT_INPUTS, q, T), out_of_range);
+            }
+        }
+    }
+}
+
 TEST_CASE("Qmass edge cases: bubble/dew, out-of-range, single-phase", "[Qmass][edge]") {
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
     AS->set_mole_fractions({0.5, 0.5});
@@ -5300,6 +7228,685 @@ TEST_CASE("Qmass: SRK cubic mixture output works after Q-pair flash", "[Qmass][c
     CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
 }
 
+TEST_CASE("Qmass range check: cubic and PCSAFT pure fluids reject out-of-range quality", "[Qmass][cubic][PCSAFT]") {
+    // CubicBackend::update() and PCSAFTBackend::update() gate the Qmass dispatch on
+    // mole_fractions.size() > 1 and otherwise fall through to mass_to_molar_inputs,
+    // which rewrites the pair to its molar sibling without validating the quality.
+    // AbstractState::update_Qmass_pair's [0,1] check therefore never ran on the pure
+    // path, and nothing downstream caught it: SRK::Propane at Qmass = 1.05 returned
+    // a state reading Q() = 1.05 with phase = 6 instead of throwing.
+    //
+    // The same fail-open #3336 closed for REFPROP, using the helper added there.
+    // Match on the message rather than merely on ValueError: a bare CHECK_THROWS_AS
+    // would also be satisfied by an unrelated flash failure further downstream, and
+    // would leave the test passing if this guard were removed.
+    const auto out_of_range = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    struct BackendFluid
+    {
+        const char* backend;
+        const char* fluid;
+        double T;
+    };
+    const std::vector<BackendFluid> cases = {{"SRK", "Propane", 296.0}, {"PR", "Propane", 296.0}, {"PCSAFT", "METHANE", 150.0}};
+
+    for (const auto& c : cases) {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(c.backend, c.fluid));
+        AS->update(CoolProp::QT_INPUTS, 0.5, c.T);
+        const double p_sat = AS->p();
+        for (double q : {-0.05, 1.05, 1.5, std::numeric_limits<double>::quiet_NaN()}) {
+            CAPTURE(c.backend, c.fluid, q);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QmassT_INPUTS, q, c.T), out_of_range);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PQmass_INPUTS, p_sat, q), out_of_range);
+        }
+        // In-range quality still flashes, and Qmass round-trips exactly on the pure
+        // path via the base-class calc_Qmass short-circuit added in #3336.
+        //
+        // 0.0 and 1.0 are the point of this loop, not filler: they are the boundary
+        // values of the new >= 0 && <= 1 predicate, and the only thing that would
+        // catch a future > 0 && < 1 typo.
+        //
+        // A fresh instance, because a flash that throws after clear() leaves PCSAFT
+        // unusable -- the out-of-range calls above poison AS, and every later flash
+        // on it fails with "solution could not be found" regardless of input.  That
+        // is a pre-existing PCSAFT state-handling issue, not something this guard
+        // touches, but it does mean these assertions need their own object.
+        // QmassT only: PCSAFT's PQ flash cannot converge for METHANE at this p_sat
+        // at any quality, which is likewise separate from the range check.
+        auto ASin = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(c.backend, c.fluid));
+        for (double q : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+            CAPTURE(c.backend, c.fluid, q);
+            ASin->update(CoolProp::QmassT_INPUTS, q, c.T);
+            // Exact, not Approx: on the pure path the backend stores _Q verbatim and
+            // calc_Qmass short-circuits to it, so nothing rounds.  If a backend ever
+            // recomputes _Q through the lever rule this becomes a ULP flake, and that
+            // is the change we would want to hear about.
+            CHECK(ASin->Q() == q);
+            CHECK(ASin->Qmass() == q);
+        }
+    }
+}
+
+TEST_CASE("Non-finite vapor quality is rejected rather than flashed", "[quality][nonfinite]") {
+    // Every quality guard in the library was written (Q < 0) || (Q > 1).  That is
+    // false for NaN, so a NaN quality walked straight past all of them into the
+    // flash routines.  Infinities were caught only incidentally, because inf > 1.
+    //
+    // The consequences ranged from a misleading diagnostic to a hard crash:
+    // HEOS::Propane with HmolarQ_INPUTS at hmolar = 20000 and Q = NaN SEGFAULTED
+    // inside HQ_flash (exit 139).  The value of hmolar mattered -- at 10000 the
+    // same call merely threw "p is not a valid number" -- which is why this test
+    // pins the enthalpy that actually crashed.
+    //
+    // Mixtures were already covered for the Qmass pairs by check_Qmass_pair_range
+    // (#3336); this is the molar side and the pure-fluid side.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const double qinf = std::numeric_limits<double>::infinity();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("HEOS pure fluid, update()") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        for (double q : {qnan, qinf, -qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::QSmolar_INPUTS, q, 100.0), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+            // hmolar = 20000 is the value that crashed; 10000 did not.
+            CHECK_THROWS_WITH(AS->update(CoolProp::HmolarQ_INPUTS, 2e4, q), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update(CoolProp::HmolarQ_INPUTS, 1e4, q), between_0_and_1);
+        }
+    }
+
+    SECTION("HEOS pure fluid, update_with_guesses()") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 5e5;
+        for (double q : {qnan, qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, 1e3, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, 2e4, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QSmolar_INPUTS, q, 100.0, guesses), between_0_and_1);
+        }
+    }
+
+    SECTION("IF97 and PCSAFT carry the same guard") {
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+        for (double q : {qnan, qinf}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(IF->update(CoolProp::QT_INPUTS, q, 400.0), between_0_and_1);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+            CHECK_THROWS_WITH(PC->update(CoolProp::QT_INPUTS, q, 150.0), between_0_and_1);
+            CHECK_THROWS_WITH(PC->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+        }
+    }
+
+    SECTION("valid boundary qualities still flash") {
+        // Guard against a fix that over-rejects: 0 and 1 are legal.
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        for (double q : {0.0, 0.5, 1.0}) {
+            CAPTURE(q);
+            CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+            CHECK(AS->Q() == q);
+        }
+    }
+}
+
+TEST_CASE("Remaining backends reject an out-of-range or non-finite vapor quality (COO-7)", "[quality][nonfinite][cubic][PCSAFT][INCOMP][IF97]") {
+    // The HEOS/IF97/PCSAFT doors were closed earlier; these are the ones that
+    // were left: the cubic backends' own update switch (no check at all -- SRK
+    // Propane at Q = 5 returned rho = 102.18 without a word), the PQ/QT arms of
+    // HEOS update_with_guesses, the PCSAFT guard ordering, and the NaN-blind
+    // (x < 0 || x > 1) guards in INCOMP.  Match on the message: a bare
+    // CHECK_THROWS would also be satisfied by some unrelated failure further
+    // down a flash and keep passing if the guard were removed.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+
+    SECTION("cubic backends, update()") {
+        for (const char* backend : {"SRK", "PR"}) {
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            for (double q : {5.0, -0.5, 1.0 + 1e-9, qnan, std::numeric_limits<double>::infinity()}) {
+                CAPTURE(backend, q);
+                CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+                CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 1e6, q), between_0_and_1);
+            }
+            // The boundary qualities are still legal.
+            for (double q : {0.0, 0.5, 1.0}) {
+                CAPTURE(backend, q);
+                CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+                CHECK(AS->Q() == q);
+                CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 1e6, q));
+                CHECK(AS->Q() == q);
+            }
+        }
+    }
+
+    SECTION("HEOS update_with_guesses PQ/QT arms") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        CoolProp::GuessesStructure guesses;
+        guesses.T = 300.0;
+        guesses.p = 1e6;
+        for (double q : {qnan, 5.0, -0.5}) {
+            CAPTURE(q);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::PQ_INPUTS, 1e6, q, guesses), between_0_and_1);
+            CHECK_THROWS_WITH(AS->update_with_guesses(CoolProp::QT_INPUTS, q, 300.0, guesses), between_0_and_1);
+        }
+        // The DQ/HQ/QS arms used to write _Q (and rho/h/s) before the guard, so
+        // a rejected quality stayed readable through Q().  Start from a
+        // single-phase state and check the bad value never lands.
+        for (auto pair : {CoolProp::DmolarQ_INPUTS, CoolProp::HmolarQ_INPUTS, CoolProp::QSmolar_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                AS->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                REQUIRE(AS->phase() != CoolProp::iphase_twophase);
+                if (pair == CoolProp::QSmolar_INPUTS) {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, q, 100.0, guesses), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(AS->update_with_guesses(pair, 100.0, q, guesses), between_0_and_1);
+                }
+                CHECK(AS->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(AS->Q() == 5.0);
+                CHECK_FALSE(std::isnan(AS->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 rejects the quality before mutating the object") {
+        // Same ordering bug as PCSAFT: the PQ/QT arms wrote _p/_Q/_T before
+        // the guard, so Q() read back the rejected value.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(IF->update(pair, q, 400.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(IF->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(IF->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(IF->Q() == 5.0);
+                CHECK_FALSE(std::isnan(IF->Q()));
+            }
+        }
+    }
+
+    SECTION("PCSAFT rejects the quality before mutating the object") {
+        // The guard used to run after _Q, SatL/SatV and _phase = twophase were
+        // written, so a rejected QT/PQ left Q() reading the bad value and phase()
+        // reading two-phase on an object that never reached a two-phase state.
+        // (A fresh object rather than a prior PT update: PCSAFT METHANE PT flashes
+        // need a VLE-pressure estimate that is not the point here.)
+        for (auto pair : {CoolProp::QT_INPUTS, CoolProp::PQ_INPUTS}) {
+            auto PC = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+            REQUIRE(PC->phase() != CoolProp::iphase_twophase);
+            for (double q : {5.0, qnan}) {
+                CAPTURE(pair, q);
+                if (pair == CoolProp::QT_INPUTS) {
+                    CHECK_THROWS_WITH(PC->update(pair, q, 150.0), between_0_and_1);
+                } else {
+                    CHECK_THROWS_WITH(PC->update(pair, 1e6, q), between_0_and_1);
+                }
+                CHECK(PC->phase() != CoolProp::iphase_twophase);
+                CHECK_FALSE(PC->Q() == 5.0);
+                CHECK_FALSE(std::isnan(PC->Q()));
+            }
+        }
+    }
+
+    SECTION("IF97 rejects non-finite inputs instead of inventing a state (COO-7, COO-40)") {
+        // Two holes.  (1) std::min(1, std::max(0, NaN)) is 0, so HmassP with
+        // h = NaN (and PSmass with s = NaN) landed in the Region-4 branch and
+        // reported Q = 0, phase = twophase.  (2) IF97's region selectors do not
+        // propagate NaN at all: HmassP / PSmass with p = NaN and HmassSmass with
+        // h or s = NaN returned T = 273.15 K and a gas / two-phase state.  Both
+        // are now refused by one finiteness check at update() entry (the
+        // lever-rule guard stays as a backstop).  A non-finite QUALITY keeps the
+        // shared "[Q] must be between 0 and 1" message, tested above.
+        auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+        const auto not_valid = Catch::Matchers::ContainsSubstring("is not a valid number");
+        for (double bad : {qnan, std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()}) {
+            CAPTURE(bad);
+            CHECK_THROWS_AS(IF->update(CoolProp::HmassP_INPUTS, bad, 1e6), CoolProp::ValueError);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, bad, 1e6), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassP_INPUTS, 2e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, bad, 5000.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmass_INPUTS, 1e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassSmass_INPUTS, bad, 5000.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmassSmass_INPUTS, 2e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PT_INPUTS, bad, 300.0), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PT_INPUTS, 1e5, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmolarP_INPUTS, bad, 1e6), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::PSmolar_INPUTS, 1e6, bad), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::HmolarSmolar_INPUTS, bad, 100.0), not_valid);
+            // The non-quality half of a Q pair is covered too.
+            CHECK_THROWS_WITH(IF->update(CoolProp::PQ_INPUTS, bad, 0.5), not_valid);
+            CHECK_THROWS_WITH(IF->update(CoolProp::QT_INPUTS, 0.5, bad), not_valid);
+        }
+        // Normal single-phase states still work.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+        const double h1 = IF->hmass(), s1 = IF->smass();
+        CHECK_NOTHROW(IF->update(CoolProp::HmassP_INPUTS, h1, 1e5));
+        CHECK(IF->T() == Catch::Approx(300.0).margin(0.1));  // IF97 backward eqs are ~25 mK here
+        CHECK_NOTHROW(IF->update(CoolProp::HmassSmass_INPUTS, h1, s1));
+        CHECK(IF->p() == Catch::Approx(1e5).epsilon(1e-3));
+        // A genuine two-phase state is unaffected.
+        IF->update(CoolProp::PQ_INPUTS, 1e6, 0.4);
+        const double h = IF->hmass(), s = IF->smass();
+        CHECK_NOTHROW(IF->update(CoolProp::HmassP_INPUTS, h, 1e6));
+        CHECK(IF->Q() == Catch::Approx(0.4).epsilon(1e-6));
+        CHECK_NOTHROW(IF->update(CoolProp::PSmass_INPUTS, 1e6, s));
+        CHECK(IF->Q() == Catch::Approx(0.4).epsilon(1e-6));
+    }
+
+    SECTION("INCOMP solution rejects a NaN mass fraction") {
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        CHECK_THROWS_WITH(
+          [&] {
+              AS->set_mass_fractions(std::vector<CoolPropDbl>{qnan});
+              AS->update(CoolProp::PT_INPUTS, 1e5, 280.0);
+          }(),
+          Catch::Matchers::ContainsSubstring("Mass fractions must be set to a vector with one entry between 0 and 1"));
+        // IncompressibleFluid::checkX has its own NaN-safe composition guard.
+        CoolProp::IncompressibleFluid bounded;
+        bounded.setxmin(0.2);
+        bounded.setxmax(0.6);
+        CHECK(bounded.checkX(0.4));
+        CHECK_THROWS_WITH(bounded.checkX(qnan), Catch::Matchers::ContainsSubstring("is not between 0.2 and 0.6"));
+        // Inverted composition bounds are refused rather than read as the
+        // swapped range (is_in_closed_range orders its bounds).
+        CoolProp::IncompressibleFluid inverted;
+        inverted.setxmin(0.6);
+        inverted.setxmax(0.2);
+        CHECK_THROWS_WITH(inverted.checkX(0.4), Catch::Matchers::ContainsSubstring("exceeds the maximum concentration"));
+        // A legal fraction still works on a fresh object.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        AS2->set_mass_fractions(std::vector<CoolPropDbl>{0.3});
+        CHECK_NOTHROW(AS2->update(CoolProp::PT_INPUTS, 1e5, 280.0));
+        CHECK(std::isfinite(AS2->rhomass()));
+    }
+}
+
+TEST_CASE("REFPROP rejects an out-of-range or non-finite vapor quality (COO-7)", "[REFPROP][refprop][quality][nonfinite]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // REFPROP catches Q = 5 itself, but a NaN quality came back as a plausible
+    // saturated state with an EMPTY error string:
+    //     PropsSI("T","P",5e5,"Q",nan,"REFPROP::PROPANE") -> 274.87...
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto between_0_and_1 = Catch::Matchers::ContainsSubstring("must be between 0 and 1");
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    for (double q : {qnan, 5.0, -0.5}) {
+        CAPTURE(q);
+        CHECK_THROWS_WITH(AS->update(CoolProp::QT_INPUTS, q, 300.0), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::PQ_INPUTS, 5e5, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmolarQ_INPUTS, 1e3, q), between_0_and_1);
+        CHECK_THROWS_WITH(AS->update(CoolProp::DmassQ_INPUTS, 50.0, q), between_0_and_1);
+    }
+    // PropsSI surfaces it as a non-finite return rather than a plausible number.
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("T", "P", 5e5, "Q", qnan, "REFPROP::PROPANE")));
+    CHECK_FALSE(ValidNumber(CoolProp::PropsSI("P", "T", 300, "Q", qnan, "REFPROP::PROPANE")));
+    // Boundary qualities still flash.
+    for (double q : {0.0, 1.0}) {
+        CAPTURE(q);
+        CHECK_NOTHROW(AS->update(CoolProp::QT_INPUTS, q, 300.0));
+        CHECK_NOTHROW(AS->update(CoolProp::PQ_INPUTS, 5e5, q));
+    }
+}
+
+namespace {
+/// Unset an environment variable for one scope and restore it afterwards.
+/// (Setting it to an empty string is not enough: the REFPROP loader treats a
+/// present but empty COOLPROP_REFPROP_ROOT as set.)
+class UnsetEnvGuard
+{
+    std::string name_;
+    bool had_old_;
+    std::string old_;
+
+   public:
+    explicit UnsetEnvGuard(const char* name) : name_(name), had_old_(std::getenv(name) != nullptr) {
+        if (had_old_) old_ = std::getenv(name);
+#    if defined(_WIN32)
+        (void)_putenv_s(name, "");  // an empty value removes it on Windows
+#    else
+        (void)unsetenv(name);
+#    endif
+    }
+    ~UnsetEnvGuard() {
+        if (!had_old_) return;
+#    if defined(_WIN32)
+        (void)_putenv_s(name_.c_str(), old_.c_str());
+#    else
+        (void)setenv(name_.c_str(), old_.c_str(), 1);
+#    endif
+    }
+    UnsetEnvGuard(const UnsetEnvGuard&) = delete;
+    UnsetEnvGuard& operator=(const UnsetEnvGuard&) = delete;
+    UnsetEnvGuard(UnsetEnvGuard&&) = delete;
+    UnsetEnvGuard& operator=(UnsetEnvGuard&&) = delete;
+};
+
+/// Point REFPROP at a directory that has a fluids folder but no REFPROP
+/// library, with GERG enabled, for one scope; restore everything afterwards,
+/// also when an assertion throws. Restoring the path also clears the load
+/// failure cached meanwhile, so later [REFPROP] tests can load REFPROP again.
+class UnloadableREFPROPSetup
+{
+    std::filesystem::path dir_;
+    std::string saved_path_, saved_library_;
+    bool saved_gerg_;
+
+   public:
+    UnloadableREFPROPSetup()
+      : dir_(std::filesystem::temp_directory_path() / ("cp_refprop_gerg_test_" + std::to_string(CoolProp::tests::test_pid()))),
+        saved_path_(CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH)),
+        saved_library_(CoolProp::get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH)),
+        saved_gerg_(CoolProp::get_config_bool(REFPROP_USE_GERG)) {
+        std::filesystem::create_directories(dir_ / "fluids");
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH, "");
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, dir_.string());
+        CoolProp::set_config_bool(REFPROP_USE_GERG, true);
+    }
+    ~UnloadableREFPROPSetup() {
+        CoolProp::set_config_bool(REFPROP_USE_GERG, saved_gerg_);
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH, saved_library_);
+        CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, saved_path_);
+        std::error_code ec;
+        std::filesystem::remove_all(dir_, ec);
+    }
+    UnloadableREFPROPSetup(const UnloadableREFPROPSetup&) = delete;
+    UnloadableREFPROPSetup& operator=(const UnloadableREFPROPSetup&) = delete;
+    UnloadableREFPROPSetup(UnloadableREFPROPSetup&&) = delete;
+    UnloadableREFPROPSetup& operator=(UnloadableREFPROPSetup&&) = delete;
+};
+}  // namespace
+
+TEST_CASE("REFPROP with GERG and an unloadable library throws instead of crashing", "[REFPROP][configuration]") {
+    // With REFPROP_USE_GERG set, set_REFPROP_fluids used to call GERG04dll
+    // before checking that REFPROP could be loaded at all, i.e. through an
+    // unset function pointer, and the process crashed. It must throw
+    // NotImplementedError instead. COOLPROP_REFPROP_ROOT (set in CI, where
+    // REFPROP is built) is tried before ALTERNATIVE_REFPROP_PATH, so it is
+    // unset for this test; ALTERNATIVE_REFPROP_LIBRARY_PATH is cleared for the
+    // same reason. The setting of the path also unloads any REFPROP an
+    // earlier test loaded. The crash is only certain to show up in a process
+    // that never loaded REFPROP; after an unload the old order calls a stale
+    // pointer instead, which crashes only if the library was unmapped.
+    const UnsetEnvGuard no_root("COOLPROP_REFPROP_ROOT");
+    const UnloadableREFPROPSetup setup;
+    // The message is asserted, not only the type: the GERG04dll null check
+    // also throws NotImplementedError, so a type-only check would stay green
+    // if the support check were moved back after the GERG call.
+    CHECK_THROWS_MATCHES(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "METHANE")),
+                         CoolProp::NotImplementedError,
+                         Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring("You cannot use the REFPROPMixtureBackend")));
+}
+TEST_CASE("REFPROP reference state reloads REFPROP from the configured path after a path change", "[REFPROP][configuration]") {
+    // set_reference_stateS("REFPROP::...") calls REFPROP_SETREF, which used to
+    // load REFPROP through the system library search path and ignore
+    // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings. Once REFPROP
+    // had been unloaded, a REFPROP that exists only at the configured path (as
+    // in CI, where it is found through COOLPROP_REFPROP_ROOT) could then not be
+    // loaded for the reference state.
+    CoolProp::Skip_if_No_REFPROP();
+    {
+        // Use REFPROP once. Destroying the backend unloads it already; the path
+        // "change" below (set_config_string fires the hook even for an unchanged
+        // value) makes sure it is unloaded either way.
+        std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+        AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0);
+    }
+    CoolProp::set_config_string(ALTERNATIVE_REFPROP_PATH, CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH));
+    CHECK_NOTHROW(CoolProp::set_reference_stateS("REFPROP::PROPANE", "DEF"));
+    // A REFPROP state still works afterwards.
+    std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0));
+}
+
+TEST_CASE("Flash routines reject a non-finite quality themselves", "[quality][nonfinite]") {
+    // Guarding only at update()'s switch is the wrong altitude.  The quality
+    // reaches the flash routines by other doors, and HQ_flash's own gate,
+    //     if (std::abs(HEOS.Q() - 1) > 1e-10) throw ...
+    // is false for NaN -- so a NaN quality was accepted AS IF it were exactly 1,
+    // fell past the superancillary gate (also false for NaN) into
+    // saturation_PHSU_pure, and faulted.
+    //
+    // update_HmolarQ_with_guessT is such a door: a public HelmholtzEOSMixtureBackend
+    // entry point with no quality check at all.  It has no in-tree callers, which is
+    // exactly why it is the right regression test -- it reaches HQ_flash without
+    // passing through anything this commit's sibling touched.  Before the guard moved
+    // into the flash routines, this call SIGSEGVed (exit 139).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+    auto* HEOS = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(HEOS != nullptr);
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+
+    SECTION("update_HmolarQ_with_guessT does not crash on NaN quality") {
+        CHECK_THROWS_AS(HEOS->update_HmolarQ_with_guessT(2e4, qnan, 300.0), CoolProp::CoolPropBaseError);
+    }
+
+    SECTION("a valid unity quality still works through the same entry point") {
+        // Flash first so hmolar() is a real saturated-vapor enthalpy; the entry point
+        // is only meaningful for Q = 1, which is what its own gate enforces.
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Propane"));
+        auto* H2 = dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS2.get());
+        REQUIRE(H2 != nullptr);
+        H2->update(CoolProp::QT_INPUTS, 1.0, 300.0);
+        const double h_sat_vap = H2->hmolar();
+        // It may still fail for an unrelated, pre-existing reason -- propane's
+        // saturated-vapor enthalpy at 300 K has two T-roots (GitHub #2773) -- but it
+        // must not be turned away by the range check this commit adds.
+        try {
+            H2->update_HmolarQ_with_guessT(h_sat_vap, 1.0, 300.0);
+        } catch (const std::exception& e) {
+            CHECK_THAT(std::string(e.what()), !Catch::Matchers::ContainsSubstring("must be between 0 and 1"));
+        }
+        // And the ordinary route for a boundary quality is untouched.
+        CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 1.0, 300.0));
+        CHECK_NOTHROW(H2->update(CoolProp::QT_INPUTS, 0.0, 300.0));
+    }
+}
+
+namespace {
+// Never instantiated: exists only to expose the protected static helper.
+struct QualityCheckProbe : CoolProp::AbstractState
+{
+    using CoolProp::AbstractState::check_input_quality;
+};
+}  // namespace
+
+TEST_CASE("check_input_quality guards exactly the quality slot of every input pair", "[quality]") {
+    // The helper finds the Q slot with split_input_pair.  Derive the expected slot
+    // independently, from the human-readable description ("Pressure in Pa, Molar
+    // quality"), so a wrong entry in split_input_pair cannot vouch for itself.
+    const double qnan = std::numeric_limits<double>::quiet_NaN();
+    const auto q_msg = Catch::Matchers::ContainsSubstring("Input vapor quality [Q] must be between 0 and 1");
+    const auto qmass_msg = Catch::Matchers::ContainsSubstring("Qmass out of range");
+    const auto unknown_msg = Catch::Matchers::ContainsSubstring("Unknown input pair");
+    const double ok_other = 300.0;  // any finite value; the non-Q slot is never range-checked
+
+    // input_pairs has no sentinel, so rather than stop at a hard-coded last
+    // enumerator, probe well past it.  Every described value must form one
+    // contiguous run 1..last (INPUT_PAIR_INVALID = 0 is the only undescribed value
+    // below it), split_input_pair must know exactly the described values, and the
+    // exact counts below pin the size: appending a registered pair changes n_pairs
+    // and fails here.  A pair appended but NOT registered cannot be enumerated, but
+    // it cannot slip past the check either: check_input_quality fails closed on any
+    // value split_input_pair does not know (asserted for every such value below).
+    // UPDATE THESE COUNTS when an input pair is added or removed.
+    constexpr int expected_pairs = 43;
+    constexpr int expected_q_pairs = 16;  // 8 molar-Q + 8 Qmass
+    constexpr int probe_limit = 255;
+
+    auto is_described = [](CoolProp::input_pairs pair) {
+        try {
+            CoolProp::get_input_pair_long_desc(pair);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+    auto is_splittable = [](CoolProp::input_pairs pair) {
+        CoolProp::parameters p1, p2;
+        try {
+            CoolProp::split_input_pair(pair, p1, p2);
+            return true;
+        } catch (const CoolProp::ValueError&) {
+            return false;
+        }
+    };
+
+    int n_pairs = 0, n_q_pairs = 0, last_described = -1;
+    std::vector<int> skipped;
+    for (int i = 0; i <= probe_limit; ++i) {
+        const auto pair = static_cast<CoolProp::input_pairs>(i);
+        CAPTURE(i);
+        CHECK(is_splittable(pair) == is_described(pair));
+        if (!is_described(pair)) {
+            skipped.push_back(i);
+            // Fail closed: an unknown pair is refused, even with a harmless value.
+            CHECK_THROWS_WITH(QualityCheckProbe::check_input_quality(pair, 0.5, 0.5), unknown_msg);
+            continue;
+        }
+        last_described = i;
+        ++n_pairs;
+        const std::string desc = CoolProp::get_input_pair_long_desc(pair);
+        CAPTURE(desc);
+
+        const auto comma = desc.find(',');
+        REQUIRE(comma != std::string::npos);
+        const std::string part1 = desc.substr(0, comma), part2 = desc.substr(comma + 1);
+        const bool q1 = part1.find("quality") != std::string::npos;
+        const bool q2 = part2.find("quality") != std::string::npos;
+        REQUIRE_FALSE((q1 && q2));
+
+        auto check = [&](double v1, double v2) { QualityCheckProbe::check_input_quality(pair, v1, v2); };
+
+        if (!q1 && !q2) {
+            // No quality in this pair: nothing may throw, whatever the values.
+            CHECK_FALSE(CoolProp::is_Qmass_pair(pair));
+            for (double bad : {5.0, -0.5, qnan}) {
+                CHECK_NOTHROW(check(bad, bad));
+            }
+            continue;
+        }
+        ++n_q_pairs;
+        const bool mass_basis = (q1 ? part1 : part2).find("Mass-basis") != std::string::npos;
+        CHECK(mass_basis == CoolProp::is_Qmass_pair(pair));
+
+        for (double good : {0.0, 1.0}) {
+            CHECK_NOTHROW(q1 ? check(good, ok_other) : check(ok_other, good));
+        }
+        for (double bad : {5.0, -0.5, qnan}) {
+            CAPTURE(bad);
+            if (mass_basis) {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), qmass_msg);
+            } else {
+                CHECK_THROWS_WITH(q1 ? check(bad, ok_other) : check(ok_other, bad), q_msg);
+            }
+            // A bad value in the OTHER slot must not be mistaken for a quality.
+            CHECK_NOTHROW(q1 ? check(0.5, bad) : check(bad, 0.5));
+        }
+    }
+    CHECK(n_pairs == expected_pairs);
+    CHECK(n_q_pairs == expected_q_pairs);
+    // Contiguous: the described values are exactly 1..last_described, so the only
+    // value skipped at or below it is INPUT_PAIR_INVALID.
+    CHECK(last_described == expected_pairs);
+    CHECK(last_described == static_cast<int>(CoolProp::DmolarUmolar_INPUTS));
+    std::vector<int> skipped_below;
+    for (int v : skipped) {
+        if (v <= last_described) skipped_below.push_back(v);
+    }
+    CHECK(skipped_below == std::vector<int>{static_cast<int>(CoolProp::INPUT_PAIR_INVALID)});
+
+    // And through a real update path: HEOS calls check_input_quality first, so an
+    // unknown pair is refused there before any state is touched.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS_WITH(AS->update(CoolProp::INPUT_PAIR_INVALID, 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), unknown_msg);
+    CHECK_THROWS_WITH(AS->update(static_cast<CoolProp::input_pairs>(250), 0.5, 300.0), Catch::Matchers::ContainsSubstring("[250]"));
+}
+
+TEST_CASE("EquationOfState::pseudo_pure is initialized", "[cubic][uninitialized]") {
+    // EquationOfState had no user-declared constructor and declared its scalars
+    // (`bool pseudo_pure;`, R_u, molar_mass, acentric, Ttriple, ptriple) with no
+    // initializers.
+    //
+    // NOTE on the mechanism, because the obvious explanation is wrong: the bug was
+    // NOT in components built with EOSVector.emplace_back().  emplace_back() with no
+    // arguments performs VALUE-initialization, and since the class had no
+    // user-provided default constructor that zero-initialized the whole object
+    // first.  The sites that bit are the two DEFAULT-initializations in FluidLibrary
+    // -- `EquationOfState E;` in parse_EOS, and the same in the -SRK /
+    // -PengRobinson else branch -- both followed by push_back(E), which copies
+    // whatever the stack happened to hold.
+    //
+    // That distinction is why the defaults are 0 and not _HUGE: adding initializers
+    // makes the constructor non-trivial, so the value-initialized components now run
+    // it too.  Zero is what they used to get; _HUGE would have handed them an
+    // infinite Ttriple and broken every supercritical cubic flash.
+    //
+    // On this toolchain the indeterminate read of pseudo_pure happened to yield
+    // false, i.e. the right answer, so a black-box check through the backend cannot
+    // distinguish fixed from broken.  Constructing the object over deliberately
+    // poisoned storage can: without the initializer the member reads back as the
+    // poison.  For a case that WAS user-visible, see the molar-mass test below.
+    SECTION("default construction defines the member, whatever the storage held") {
+        alignas(CoolProp::EquationOfState) unsigned char buf[sizeof(CoolProp::EquationOfState)];
+        std::memset(buf, 0xFF, sizeof(buf));
+        // Default-initialization (no parentheses).  `EquationOfState()` would be
+        // VALUE-initialization, which zeroes the whole object and would mask the
+        // very thing under test.
+        auto* eos = new (static_cast<void*>(buf)) CoolProp::EquationOfState;
+        // Copy the object representation out rather than reading the member.
+        // Reading an indeterminate bool is itself UB, and an optimizing compiler
+        // may fold the comparison away -- an earlier version of this test read the
+        // member directly and passed against the unfixed code at -O1 for exactly
+        // that reason.  memcpy from the member's address reads bytes, which is
+        // well-defined, so this is deterministic at any optimization level.
+        unsigned char raw = 0;
+        std::memcpy(&raw, &eos->pseudo_pure, sizeof(raw));
+        eos->~EquationOfState();
+        CHECK(raw == 0u);
+    }
+
+    SECTION("cubic backends report themselves as pure") {
+        for (const char* backend : {"SRK", "PR"}) {
+            CAPTURE(backend);
+            auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, "Propane"));
+            CHECK(AS->fluid_param_string("pure") == "true");
+        }
+    }
+}
+
+TEST_CASE("Cubic-library-only fluids report a real molar mass", "[cubic][uninitialized]") {
+    // FluidLibrary's -SRK / -PengRobinson else branch builds its EquationOfState by
+    // default-initialization and then assigned only acentric, sat_min_liquid and
+    // reduce -- leaving R_u, molar_mass, Ttriple, ptriple, pseudo_pure and limits
+    // indeterminate, and copying them in via push_back.  (That branch now also
+    // assigns molar_mass, which is what this test pins.)
+    //
+    // R1233ZD(E) is the one cubic-library fluid with no multiparameter sibling, so
+    // it is the fluid that actually takes that branch.  PropsSI("M", ...) on it
+    // returned 1.5e-313 -- with an EMPTY error string, so nothing anywhere reported
+    // a problem.  molar_mass feeds every conversion in mass_to_molar_inputs, which
+    // makes every mass-basis query on that fluid silently wrong.
+    const double M = CoolProp::PropsSI("M", "T", 300.0, "P", 101325.0, "HEOS::R1233ZD(E)-SRK");
+    CAPTURE(M);
+    // Deliberately NOT asserting on get_global_param_string("errstring") here: it is a
+    // read-then-cleared process global that ANY earlier failing PropsSI in the binary
+    // can set, which makes such an assertion order-dependent (it fails under
+    // --order rand on some seeds).  The M check below is the real one -- the C++
+    // PropsSI returns _HUGE rather than throwing, so a regression shows up as inf.
+    // 0.1304944 kg/mol is the "molemass" this fluid carries in
+    // dev/cubics/all_cubic_fluids.json -- the value the branch should be reading.
+    CHECK(M == Catch::Approx(0.1304944).epsilon(1e-9));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
@@ -5358,6 +7965,522 @@ TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads"
         // molemass, molemass_units — all listed in the PCSAFT schema's "required" array.
         CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("PCSAFT", R"([{"name":"Bogus","CAS":"000-00-0"}])"), CoolProp::ValueError);
     }
+}
+
+// JSONFluidLibrary::add_one used to append the fluid name to name_vector -- the
+// vector behind get_global_param_string("fluids_list") -- before parsing
+// anything else.  Any failure after that point left the name advertised in
+// fluids_list with no entry in string_to_index_map or fluid_map, so
+// AbstractState::factory("HEOS", <name>) threw for a name the library itself
+// listed.  The library is process-wide with no unregister, so the orphan
+// persisted for the rest of the process: measured, 2 of 3 --order rand seeds
+// then broke the [formation] test, the only one that walks the whole list.
+//
+// This test is only safe to write BECAUSE of that fix.  It deliberately fails an
+// add, which under the old code would have poisoned every later test in the
+// binary -- which is why the guard tests for parse_rhosr_viscosity could not be
+// added at the time and had to be deferred to this fix.
+TEST_CASE("A failed HEOS add leaves no orphan in fluids_list", "[fluids_list],[add_one]") {
+    using nlohmann::json;
+
+    const std::string before = CoolProp::get_global_param_string("fluids_list");
+    const std::string probe_name = "CatchRuntimeOrphanProbe";
+    REQUIRE(before.find(probe_name) == std::string::npos);
+
+    SECTION("a fluid that throws mid-parse is not advertised") {
+        // Enough INFO for add_one to read the name, then nothing else: it throws
+        // on the missing CAS member, which is the first thing inside the try.
+        json bad = json::object();
+        bad["INFO"] = json::object();
+        bad["INFO"]["NAME"] = probe_name;
+
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", json::array({bad}).dump()), CoolProp::ValueError);
+
+        const std::string after = CoolProp::get_global_param_string("fluids_list");
+        CHECK(after.find(probe_name) == std::string::npos);
+        // Exact, not just "probe absent": a leak of any other name would also be
+        // a regression, and the list is otherwise immutable here.
+        CHECK(after == before);
+    }
+
+    SECTION("the whole list still constructs afterwards") {
+        // The orphan's real damage was downstream -- an unconstructible name in
+        // fluids_list. Walk the list the way the [formation] test does.
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            CAPTURE(fluid);
+            REQUIRE_NOTHROW(std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", fluid)));
+        }
+    }
+
+    SECTION("add_many is not transactional: a mid-list failure keeps what came before") {
+        // This is the mechanism that made the old load() come up truncated.
+        // add_many has no per-fluid try, so a bad entry aborts the loop and
+        // everything after it is never added.  load() used to swallow that into
+        // a stdout line, so the library came up partial with no error state.
+        // The semantics are pinned here through the public path, since the
+        // static load's copy cannot be reached from the test suite.
+        //
+        // R134a is the donor because it carries no INFO.STANDARD_STATE, so the
+        // exact ATcT count in the [formation] test is unperturbed by the clone
+        // that this section leaves permanently registered.
+        json donor = json::parse(CoolProp::get_fluid_param_string("R134a", "JSON"))[0];
+        auto clone = [&](const std::string& name, const std::string& CAS) {
+            json fluid = donor;
+            fluid["INFO"]["NAME"] = name;
+            fluid["INFO"]["CAS"] = CAS;
+            fluid["INFO"]["ALIASES"] = json::array();
+            fluid["INFO"]["REFPROP_NAME"] = "N/A";
+            return fluid;
+        };
+        const std::string before_name = "CatchRuntimeTruncBefore";
+        const std::string after_name = "CatchRuntimeTruncAfter";
+
+        json bad = json::object();
+        bad["INFO"] = json::object();
+        bad["INFO"]["NAME"] = "CatchRuntimeTruncBad";
+
+        json doc = json::array();
+        doc.push_back(clone(before_name, "999-99-70"));
+        doc.push_back(bad);
+        doc.push_back(clone(after_name, "999-99-71"));
+
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", doc.dump()), CoolProp::ValueError);
+
+        const std::string list = CoolProp::get_global_param_string("fluids_list");
+        // Entries before the failure are kept.  This assertion DOCUMENTS current
+        // behaviour rather than requiring it: making add_many transactional
+        // would be a defensible improvement and would flip this check.  The two
+        // == npos assertions below are the ones carrying regression signal.
+        CHECK(list.find(before_name) != std::string::npos);
+        CHECK_NOTHROW(CoolProp::PropsSI("T", "P", 101325, "Q", 0, before_name));
+        // ...everything after it is dropped, and — the point of the fix — the
+        // one that failed is not advertised either.
+        CHECK(list.find(after_name) == std::string::npos);
+        CHECK(list.find("CatchRuntimeTruncBad") == std::string::npos);
+    }
+
+    SECTION("a rejected duplicate does not disturb the list either") {
+        // The duplicate branch pops nothing now, but it throws AFTER the point
+        // where the old code had already popped -- so a naive "pop in the catch"
+        // fix would have removed a DIFFERENT fluid's name here.  This is the
+        // case that makes that fix wrong, and it is why the append moved to the
+        // end of the try instead.
+        REQUIRE(CoolProp::get_config_bool(OVERWRITE_FLUIDS) == false);
+        json water = json::parse(CoolProp::get_fluid_param_string("Water", "JSON"));
+
+        const std::string list_before = CoolProp::get_global_param_string("fluids_list");
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", water.dump()), CoolProp::ValueError);
+        CHECK(CoolProp::get_global_param_string("fluids_list") == list_before);
+        CHECK_NOTHROW(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "Water"));
+    }
+}
+
+// parse_viscosity takes the first entry of an array-valued TRANSPORT.viscosity
+// by calling .front(), which is undefined behaviour on an empty nlohmann::json
+// array.  An empty list must throw ValueError naming the fluid.
+TEST_CASE("An empty TRANSPORT.viscosity list throws rather than invoking UB", "[viscosity],[transport],[add_one]") {
+    using nlohmann::json;
+
+    SECTION("parse_viscosity on an empty array") {
+        // parse_viscosity is protected on a non-final class; reach it directly.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_viscosity;
+        };
+        Probe probe;
+        CoolProp::CoolPropFluid f;
+        f.name = "Probe";
+        CHECK_THROWS_WITH(probe.parse_viscosity(json::array(), f),
+                          Catch::Matchers::ContainsSubstring("viscosity list is empty") && Catch::Matchers::ContainsSubstring("Probe"));
+        CHECK_THROWS_AS(probe.parse_viscosity(json::array(), f), CoolProp::ValueError);
+    }
+
+    SECTION("add_fluids_as_JSON with viscosity [] fails cleanly") {
+        // End-to-end through add_one.  A failed add leaves nothing registered
+        // (see the [fluids_list] test above), so this does not perturb later tests.
+        const std::string name = "CatchRuntimeEmptyViscosity";
+        json fluid = json::parse(CoolProp::get_fluid_param_string("R134a", "JSON"))[0];
+        fluid["INFO"]["NAME"] = name;
+        fluid["INFO"]["CAS"] = "999-99-72";
+        fluid["INFO"]["ALIASES"] = json::array();
+        fluid["INFO"]["REFPROP_NAME"] = "N/A";
+        REQUIRE(fluid.contains("TRANSPORT"));
+        fluid["TRANSPORT"]["viscosity"] = json::array();
+
+        const std::string before = CoolProp::get_global_param_string("fluids_list");
+        // add_one wraps any std::exception as ValueError, so the type alone
+        // carries no signal; the message must come from the guard.
+        CHECK_THROWS_AS(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()), CoolProp::ValueError);
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("HEOS", json::array({fluid}).dump()),
+                          Catch::Matchers::ContainsSubstring("viscosity list is empty") && Catch::Matchers::ContainsSubstring(name));
+        CHECK(CoolProp::get_global_param_string("fluids_list") == before);
+    }
+}
+
+// The IdealGasHelmholtzCP0AlyLee branch of parse_alpha0 indexes c[0]..c[4]
+// directly, so a short "c" was an out-of-bounds read.  Anything other than
+// exactly five constants must throw ValueError (COO-58).
+TEST_CASE("Aly-Lee alpha0 term rejects a constant list that is not length 5", "[alpha0],[add_one]") {
+    using nlohmann::json;
+    auto alylee = [](const json& c) {
+        json term = {{"type", "IdealGasHelmholtzCP0AlyLee"}, {"c", c}, {"Tc", 500.0}, {"T0", 298.15}};
+        return json::array({term});
+    };
+
+    SECTION("wrong lengths throw") {
+        for (const json& c : {json::array(), json{1.0, 2.0, 3.0, 4.0}, json{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}}) {
+            CAPTURE(c.dump());
+            CHECK_THROWS_AS(CoolProp::JSONFluidLibrary::parse_alpha0(alylee(c)), CoolProp::ValueError);
+            CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(alylee(c)),
+                              Catch::Matchers::ContainsSubstring("requires exactly 5 constants"));
+        }
+    }
+
+    SECTION("five constants are accepted") {
+        CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(alylee(json{4.0, 10.0, 800.0, 5.0, 2000.0})));
+    }
+
+    SECTION("every shipped Aly-Lee term still parses") {
+        // Guards against the check being tighter than the shipped data.
+        int n_terms = 0;
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            json doc = json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            for (const auto& eos : doc.at("EOS")) {
+                for (const auto& term : eos.at("alpha0")) {
+                    if (term.at("type") == "IdealGasHelmholtzCP0AlyLee") {
+                        CAPTURE(fluid);
+                        ++n_terms;
+                        CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term})));
+                    }
+                }
+            }
+        }
+        // 12 in the shipped library; > 0 so the loop cannot pass vacuously.
+        CHECK(n_terms > 0);
+    }
+}
+
+// The ideal-gas terms index their coefficient vectors in lockstep up to the
+// first one's size, so mismatched lengths were out-of-bounds reads -- and, for
+// PlanckEinsteinFunctionT, an out-of-bounds write.  The length checks used to
+// be asserts (compiled out in Release) or absent (COO-60).
+TEST_CASE("alpha0 terms reject coefficient vectors of mismatched length", "[alpha0],[add_one]") {
+    using nlohmann::json;
+    auto parse = [](const json& terms) { return CoolProp::JSONFluidLibrary::parse_alpha0(terms); };
+    const json two = {1.0, 2.0}, one = {1.0}, three = {1.0, 2.0, 3.0};
+
+    SECTION("a single mismatched term throws") {
+        const std::vector<json> bad = {
+          {{"type", "IdealGasHelmholtzPower"}, {"n", two}, {"t", one}},
+          {{"type", "IdealGasHelmholtzPlanckEinsteinGeneralized"}, {"n", two}, {"t", two}, {"c", one}, {"d", two}},
+          {{"type", "IdealGasHelmholtzPlanckEinstein"}, {"n", two}, {"t", one}},
+          // v longer than n: the out-of-bounds write
+          {{"type", "IdealGasHelmholtzPlanckEinsteinFunctionT"}, {"n", one}, {"v", three}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzPlanckEinsteinFunctionT"}, {"n", three}, {"v", one}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzGERG2004Cosh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}},
+          {{"type", "IdealGasHelmholtzCP0PolyT"}, {"c", two}, {"t", one}, {"Tc", 500.0}, {"T0", 298.15}},
+        };
+        for (const auto& term : bad) {
+            CAPTURE(term.dump());
+            CHECK_THROWS_AS(parse(json::array({term})), CoolProp::ValueError);
+            CHECK_THROWS_WITH(parse(json::array({term})), Catch::Matchers::ContainsSubstring("must all have the same length"));
+        }
+    }
+
+    SECTION("a mismatched second term throws through extend()") {
+        const std::vector<std::pair<json, json>> pairs = {
+          {{{"type", "IdealGasHelmholtzPlanckEinsteinGeneralized"}, {"n", one}, {"t", one}, {"c", one}, {"d", one}},
+           {{"type", "IdealGasHelmholtzPlanckEinsteinGeneralized"}, {"n", two}, {"t", two}, {"c", two}, {"d", one}}},
+          {{{"type", "IdealGasHelmholtzGERG2004Cosh"}, {"n", one}, {"theta", one}, {"Tcrit", 500.0}},
+           {{"type", "IdealGasHelmholtzGERG2004Cosh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}}},
+          {{{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", one}, {"theta", one}, {"Tcrit", 500.0}},
+           {{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", two}, {"theta", one}, {"Tcrit", 500.0}}},
+        };
+        for (const auto& p : pairs) {
+            CAPTURE(p.second.dump());
+            CHECK_NOTHROW(parse(json::array({p.first})));
+            CHECK_THROWS_WITH(parse(json::array({p.first, p.second})), Catch::Matchers::ContainsSubstring("must all have the same length"));
+        }
+    }
+
+    SECTION("GERG2004Sinh::extend appends its arguments") {
+        // extend() used to name its parameters (c, t) while the body read the
+        // members n and theta, so it appended each member to itself and ignored
+        // the new term.  Two terms must now equal one term with both entries.
+        auto sinh = [](const json& n, const json& theta) {
+            return json{{"type", "IdealGasHelmholtzGERG2004Sinh"}, {"n", n}, {"theta", theta}, {"Tcrit", 500.0}};
+        };
+        CoolProp::IdealHelmholtzContainer split = parse(json::array({sinh({1.5}, {0.7}), sinh({-0.4}, {2.1})}));
+        CoolProp::IdealHelmholtzContainer joined = parse(json::array({sinh({1.5, -0.4}, {0.7, 2.1})}));
+        split.set_Tred(500.0);
+        joined.set_Tred(500.0);
+        const double tau = 1.3, delta = 0.9;
+        CoolProp::HelmholtzDerivatives a = split.all(tau, delta), b = joined.all(tau, delta);
+        CHECK(a.alphar == Catch::Approx(b.alphar).epsilon(1e-14));
+        CHECK(a.dalphar_dtau == Catch::Approx(b.dalphar_dtau).epsilon(1e-14));
+        CHECK(a.d2alphar_dtau2 == Catch::Approx(b.d2alphar_dtau2).epsilon(1e-14));
+    }
+
+    SECTION("every shipped fluid's alpha0 still parses") {
+        // Guards against a check tighter than the shipped data.
+        int n_fluids = 0;
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            json doc = json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            for (const auto& eos : doc.at("EOS")) {
+                CAPTURE(fluid);
+                CHECK_NOTHROW(parse(eos.at("alpha0")));
+            }
+            ++n_fluids;
+        }
+        CHECK(n_fluids > 100);
+    }
+}
+
+// Twu and Mathias-Copeman alpha functions read c[0..2] unchecked in
+// CubicBackend and in the HEOS "-SRK"/"-PengRobinson" path.  For the
+// cubic library the guard is the cubic fluid schema (minItems = maxItems = 3),
+// which every add is validated against; this pins it so relaxing the schema
+// fails here.  VTPR's UNIFAC components have no schema and are checked in
+// UNIFACParameterLibrary::populate instead -- see the next test (COO-60).
+TEST_CASE("Cubic alpha functions reject a coefficient list that is not length 3", "[cubic],[alpha0]") {
+    using nlohmann::json;
+    auto fluid = [](const std::string& name, const std::string& CAS, const std::string& type, const json& c) {
+        return json::array({{{"name", name},
+                             {"CAS", CAS},
+                             {"Tc", 400.0},
+                             {"Tc_units", "K"},
+                             {"pc", 4e6},
+                             {"pc_units", "Pa"},
+                             {"acentric", 0.2},
+                             {"molemass", 0.05},
+                             {"molemass_units", "kg/mol"},
+                             {"aliases", json::array()},
+                             {"alpha", {{"type", type}, {"c", c}}}}});
+    };
+    // Positive controls: the same fluid with three coefficients loads for each
+    // type, so the rejections below are due to "c" and not to some other schema
+    // violation.  No test walks the cubic fluid list, so leaving these
+    // registered is harmless.
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaTwuOK", "999-98-01", "Twu", json{0.1, 0.9, 1.5}).dump()));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaMCOK", "999-98-02", "Mathias-Copeman", json{0.5, -0.1, 0.2}).dump()));
+    for (const std::string type : {"Twu", "Mathias-Copeman"}) {
+        CAPTURE(type);
+        for (const json& c : {json::array(), json{0.1, 0.2}, json{0.1, 0.2, 0.3, 0.4}}) {
+            CAPTURE(c.dump());
+            CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("SRK", fluid("CatchCubicAlphaBad", "999-98-00", type, c).dump()),
+                              Catch::Matchers::ContainsSubstring("against schema"));
+        }
+    }
+}
+
+// VTPR's UNIFAC components carry an optional Twu/Mathias-Copeman alpha block
+// that VTPRBackend reads as c[0..2].  Unlike the cubic library, no schema is
+// applied on this path (the files come from VTPR_UNIFAC_PATH), so populate()
+// itself must reject any other count (COO-60).  A local library instance keeps
+// this out of the process-wide VTPR library.
+TEST_CASE("UNIFAC component alpha functions reject a coefficient list that is not length 3", "[VTPR],[alpha0]") {
+    using nlohmann::json;
+    auto populate = [](const std::string& type, const json& c) {
+        json comp = {
+          {"inchikey", "X"},  {"registry_number", "999-98-03"}, {"name", "CatchUNIFACAlpha"},         {"Tc", 400.0}, {"pc", 4e6}, {"acentric", 0.2},
+          {"molemass", 0.05}, {"groups", json::array()},        {"alpha", {{"type", type}, {"c", c}}}};
+        std::string groups = "[]", interactions = "[]", decomps = json::array({comp}).dump();
+        UNIFACLibrary::UNIFACParameterLibrary lib;
+        lib.populate(groups, interactions, decomps);
+    };
+    for (const std::string type : {"Twu", "MathiasCopeman", "Mathias-Copeman"}) {
+        CAPTURE(type);
+        CHECK_NOTHROW(populate(type, json{0.1, 0.9, 1.5}));
+        for (const json& c : {json::array(), json{0.1, 0.2}, json{0.1, 0.2, 0.3, 0.4}}) {
+            CAPTURE(c.dump());
+            CHECK_THROWS_AS(populate(type, c), CoolProp::ValueError);
+            CHECK_THROWS_WITH(populate(type, c), Catch::Matchers::ContainsSubstring("requires exactly 3 coefficients"));
+        }
+    }
+}
+
+// Residual terms index their coefficient vectors in lockstep, like the alpha0
+// terms (COO-60); the parser only had asserts, compiled out in Release (COO-61).
+TEST_CASE("alphar terms reject coefficient vectors of mismatched length", "[alphar]") {
+    using nlohmann::json;
+    auto parse = [](const json& terms) { return CoolProp::JSONFluidLibrary::parse_alphar(terms); };
+    const json two = {1.0, 2.0}, one = {1.0};
+
+    SECTION("each term type throws on a mismatch and accepts matching lengths") {
+        // For each type: every key at length 2, then each key in turn shortened to 1.
+        const std::vector<std::pair<std::string, std::vector<std::string>>> types = {
+          {"ResidualHelmholtzPower", {"n", "d", "t", "l"}},
+          {"ResidualHelmholtzExponential", {"n", "d", "t", "g", "l"}},
+          {"ResidualHelmholtzGaussian", {"n", "d", "t", "eta", "epsilon", "beta", "gamma"}},
+          {"ResidualHelmholtzLemmon2005", {"n", "d", "t", "l", "m"}},
+          {"ResidualHelmholtzDoubleExponential", {"n", "d", "t", "gd", "ld", "gt", "lt"}},
+          {"ResidualHelmholtzGaoB", {"n", "t", "d", "eta", "beta", "gamma", "epsilon", "b"}},
+          {"ResidualHelmholtzNonAnalytic", {"n", "a", "b", "beta", "A", "B", "C", "D"}},
+        };
+        for (const auto& [type, keys] : types) {
+            CAPTURE(type);
+            json term = {{"type", type}};
+            for (const auto& k : keys) {
+                term[k] = two;
+            }
+            CHECK_NOTHROW(parse(json::array({term})));
+            for (const auto& k : keys) {
+                CAPTURE(k);
+                json bad = term;
+                bad[k] = one;
+                CHECK_THROWS_AS(parse(json::array({bad})), CoolProp::ValueError);
+                CHECK_THROWS_WITH(parse(json::array({bad})), Catch::Matchers::ContainsSubstring("must all have the same length"));
+            }
+        }
+    }
+
+    SECTION("every shipped fluid's alphar still parses") {
+        int n_fluids = 0;
+        for (const auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+            json doc = json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            for (const auto& eos : doc.at("EOS")) {
+                CAPTURE(fluid);
+                CHECK_NOTHROW(parse(eos.at("alphar")));
+            }
+            ++n_fluids;
+        }
+        CHECK(n_fluids > 100);
+    }
+}
+
+// The GERG-2008 and Gaussian+Exponential departure functions slice every
+// vector at Npower before any term sees it, so a short vector or an Npower past
+// the end was undefined behaviour at construction (COO-61).
+TEST_CASE("Departure functions reject mismatched lengths and an out-of-range Npower", "[mixture],[departure]") {
+    const std::vector<double> v4 = {1, 2, 3, 4}, v3 = {1, 2, 3};
+    SECTION("GERG-2008") {
+        CHECK_NOTHROW(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 2));
+        CHECK_NOTHROW(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 4));
+        // Matched on the class name: the add_* checks inside would also catch a
+        // tail mismatch, but only this check runs before the Npower slicing.
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v3, v4, v4, v4, 2),
+                          Catch::Matchers::ContainsSubstring("GERG2008DepartureFunction: coefficient vectors must all have the same length"));
+        // A vector shorter than Npower: slicing it at Npower ran past its end
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v3, v4, v4, v4, v4, v4, 4),
+                          Catch::Matchers::ContainsSubstring("GERG2008DepartureFunction: coefficient vectors must all have the same length"));
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, 5), Catch::Matchers::ContainsSubstring("exceeds"));
+        // A negative Npower from JSON arrives as a huge size_t
+        CHECK_THROWS_WITH(CoolProp::GERG2008DepartureFunction(v4, v4, v4, v4, v4, v4, v4, static_cast<std::size_t>(-1)),
+                          Catch::Matchers::ContainsSubstring("exceeds"));
+    }
+    SECTION("Gaussian+Exponential") {
+        CHECK_NOTHROW(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v4, v4, v4, v4, v4, 2));
+        CHECK_THROWS_WITH(
+          CoolProp::GaussianExponentialDepartureFunction(v4, v4, v3, v4, v4, v4, v4, v4, 2),
+          Catch::Matchers::ContainsSubstring("GaussianExponentialDepartureFunction: coefficient vectors must all have the same length"));
+        CHECK_THROWS_WITH(
+          CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v3, v4, v4, v4, v4, 4),
+          Catch::Matchers::ContainsSubstring("GaussianExponentialDepartureFunction: coefficient vectors must all have the same length"));
+        CHECK_THROWS_WITH(CoolProp::GaussianExponentialDepartureFunction(v4, v4, v4, v4, v4, v4, v4, v4, 5),
+                          Catch::Matchers::ContainsSubstring("exceeds"));
+    }
+    SECTION("Exponential") {
+        CHECK_NOTHROW(CoolProp::ExponentialDepartureFunction(v4, v4, v4, v4));
+        CHECK_THROWS_WITH(CoolProp::ExponentialDepartureFunction(v4, v4, v4, v3),
+                          Catch::Matchers::ContainsSubstring("must all have the same length"));
+    }
+}
+
+// GERG2004Cosh/Sinh (and CP0PolyT) keep a single Tc, so joining a second term with a
+// different Tcrit used to evaluate it at the wrong reducing temperature (COO-61).
+TEST_CASE("alpha0 terms with a shared reducing temperature cannot join terms with a different one", "[alpha0]") {
+    using nlohmann::json;
+    for (const std::string kind : {"Cosh", "Sinh"}) {
+        CAPTURE(kind);
+        auto term = [&](double Tcrit) {
+            return json{{"type", "IdealGasHelmholtzGERG2004" + kind}, {"n", {1.0}}, {"theta", {0.5}}, {"Tcrit", Tcrit}};
+        };
+        CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term(500.0), term(500.0)})));
+        CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({term(500.0), term(510.0)})),
+                          Catch::Matchers::ContainsSubstring("different Tcrit"));
+    }
+    // CP0PolyT holds one tau0 = Tc/T0 likewise; a second Aly-Lee term (whose
+    // constant goes into CP0PolyT) with a different Tc or T0 must not join.
+    auto alylee = [](double Tc, double T0) {
+        return json{{"type", "IdealGasHelmholtzCP0AlyLee"}, {"c", {4.0, 0.0, 0.0, 0.0, 0.0}}, {"Tc", Tc}, {"T0", T0}};
+    };
+    CHECK_NOTHROW(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({alylee(500.0, 298.15), alylee(500.0, 298.15)})));
+    CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({alylee(500.0, 298.15), alylee(510.0, 298.15)})),
+                      Catch::Matchers::ContainsSubstring("different Tc/T0"));
+    CHECK_THROWS_WITH(CoolProp::JSONFluidLibrary::parse_alpha0(json::array({alylee(500.0, 298.15), alylee(500.0, 300.0)})),
+                      Catch::Matchers::ContainsSubstring("different Tc/T0"));
+}
+
+// The HEOS "<fluid>-SRK" path applied a cubic-library Twu alpha but silently
+// dropped Mathias-Copeman, falling back to the default alpha (COO-61).
+TEST_CASE("HEOS -SRK matches the cubic backend for a cubic-library fluid, incl. Mathias-Copeman alpha", "[cubic],[alpha0]") {
+    using nlohmann::json;
+    auto fluid = [](const std::string& name, const std::string& CAS, const json& alpha) {
+        json f = {{"name", name},
+                  {"CAS", CAS},
+                  {"Tc", 400.0},
+                  {"Tc_units", "K"},
+                  {"pc", 4e6},
+                  {"pc_units", "Pa"},
+                  {"acentric", 0.2},
+                  {"molemass", 0.05},
+                  {"molemass_units", "kg/mol"},
+                  {"aliases", json::array()}};
+        if (!alpha.is_null()) {
+            f["alpha"] = alpha;
+        }
+        return json::array({f}).dump();
+    };
+    // Names are unique to this test; re-adding on a repeated run is a silent no-op.
+    CoolProp::add_fluids_as_JSON("SRK", fluid("CatchSRKMCAlpha", "999-98-04", {{"type", "Mathias-Copeman"}, {"c", {0.9, -0.3, 0.4}}}));
+    CoolProp::add_fluids_as_JSON("SRK", fluid("CatchSRKDefaultAlpha", "999-98-05", json()));
+
+    const double T = 300.0, rho = 2000.0;  // mol/m^3; below Tc so the MC alpha differs from default
+    auto p = [&](const std::string& backend, const std::string& name) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, name));
+        // Impose the phase: a fluid built from the cubic library has no saturation
+        // ancillaries for the phase check, and p(T, rho) comes straight from the EOS.
+        AS->specify_phase(CoolProp::iphase_gas);
+        AS->update(CoolProp::DmolarT_INPUTS, rho, T);
+        return AS->p();
+    };
+    const double p_cubic = p("SRK", "CatchSRKMCAlpha");
+    const double p_heos = p("HEOS", "CatchSRKMCAlpha-SRK");
+    const double p_default = p("SRK", "CatchSRKDefaultAlpha");
+    // The MC alpha must actually matter here, or the next check proves nothing
+    REQUIRE(std::abs(p_cubic - p_default) > 1e-3 * std::abs(p_default));
+    CHECK(p_heos == Catch::Approx(p_cubic).epsilon(1e-10));
+    // This path also never set EquationOfState::R_u (default 0), so p was 0
+    // for any cubic-library-only fluid, whatever its alpha function.
+    CHECK(p("HEOS", "CatchSRKDefaultAlpha-SRK") == Catch::Approx(p_default).epsilon(1e-10));
+}
+
+// populate() used to leave partial entries behind when it threw part-way, so
+// a retry (m_populated still false) appended duplicates (COO-61).
+TEST_CASE("UNIFAC populate leaves the library unchanged when it throws", "[VTPR]") {
+    using nlohmann::json;
+    auto comp = [](const std::string& name, const json& c) {
+        return json{{"inchikey", "X"},
+                    {"registry_number", "999-98-06"},
+                    {"name", name},
+                    {"Tc", 400.0},
+                    {"pc", 4e6},
+                    {"acentric", 0.2},
+                    {"molemass", 0.05},
+                    {"groups", json::array()},
+                    {"alpha", {{"type", "Twu"}, {"c", c}}}};
+    };
+    UNIFACLibrary::UNIFACParameterLibrary lib;
+    std::string groups = "[]", interactions = "[]";
+    std::string first = json::array({comp("CatchUNIFACKept", {0.1, 0.9, 1.5})}).dump();
+    REQUIRE_NOTHROW(lib.populate(groups, interactions, first));
+    // Second load: a valid component, then an invalid one that throws.
+    std::string second = json::array({comp("CatchUNIFACRolledBack", {0.1, 0.9, 1.5}), comp("CatchUNIFACBad", {0.1})}).dump();
+    CHECK_THROWS_AS(lib.populate(groups, interactions, second), CoolProp::ValueError);
+    CHECK_NOTHROW(lib.get_component("name", "CatchUNIFACKept"));
+    // The valid entry from the failed load must not have been kept
+    CHECK_THROWS(lib.get_component("name", "CatchUNIFACRolledBack"));
 }
 
 TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
@@ -5764,6 +8887,385 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[2000.0]]}
         }])";
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
+    }
+}
+/// Set INCOMP_PREFER_CHEBYSHEV_CALORIC for one scope and restore the previous
+/// value on exit, also when an assertion throws, so no other test inherits it.
+struct ChebyshevCaloricSetting
+{
+    bool saved;
+    explicit ChebyshevCaloricSetting(bool value) : saved(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC)) {
+        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, value);
+    }
+    ~ChebyshevCaloricSetting() {
+        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, saved);
+    }
+    ChebyshevCaloricSetting(const ChebyshevCaloricSetting&) = delete;
+    ChebyshevCaloricSetting& operator=(const ChebyshevCaloricSetting&) = delete;
+    ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
+    ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
+};
+
+TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {
+    // Smoke test only: grid targets s(T) converge within 15 iterations even with the old absolute Brent tolerance, so it does not guard the 1e-12*Tmax fix.
+    const ChebyshevCaloricSetting classic(false);
+    const double p = 101325.0;
+    // Tlow keeps MEA at x = 0 above its freezing point (273.1 K); IcePG has no freezing fit.
+    struct Case
+    {
+        std::string name;
+        double x, Tlow;
+    };
+    for (const auto& [name, x, Tlow] : std::vector<Case>{{"MEA", 0.0, 274.0}, {"IcePG", 0.2, 230.5}}) {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
+        AS->set_mass_fractions(std::vector<double>{x});
+        const double Tmin = Tlow, Tmax = AS->Tmax() - 0.5;
+        for (int i = 0; i <= 400; ++i) {
+            const double T = Tmin + (Tmax - Tmin) * i / 400.0;
+            CAPTURE(name, x, T);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double s = AS->smass();
+            const double h = AS->hmass();
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-6);
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-6);
+        }
+    }
+}
+
+TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime", "[INCOMP]") {
+    const double p = 101325.0;
+    SECTION("Precomputed polynomial matrices match the per-call Polynomial2DFrac evaluation") {
+        // A classic-only solution with a 2D density and specific heat. The
+        // derivative and integrals are now evaluated from matrices built in
+        // validate(); the reference is the old per-call path through
+        // Polynomial2DFrac, on the very same coefficients. Run with a nonzero
+        // Tbase (the ln(T) term mixes every power of (T - Tbase)) and with
+        // Tbase == 0 (the case Polynomial2DFrac::integral special-cases).
+        const Eigen::MatrixXd C_rho = (Eigen::MatrixXd(3, 2) << 1050.0, -40.0, -0.6, 0.3, -2.5e-3, 1.0e-3).finished();
+        const Eigen::MatrixXd C_cp =
+          (Eigen::MatrixXd(4, 3) << 3600.0, 900.0, -150.0, 2.1, -1.5, 0.4, 4.0e-3, 2.0e-3, -1.0e-3, -3.0e-5, 1.0e-5, 2.0e-6).finished();
+        auto matrix_rows = [](const Eigen::MatrixXd& M) {
+            std::vector<std::vector<double>> rows(M.rows(), std::vector<double>(M.cols()));
+            for (Eigen::Index i = 0; i < M.rows(); ++i) {
+                for (Eigen::Index j = 0; j < M.cols(); ++j) {
+                    rows[i][j] = M(i, j);
+                }
+            }
+            return rows;
+        };
+        for (const double Tbase : {300.0, 0.0}) {
+            CAPTURE(Tbase);
+            const double xbase = 0.2;
+            const std::string name = std::string("CatchRuntimeClassicFluid") + (Tbase > 0 ? "A" : "B");
+            const nlohmann::json definition = {{"name", name},
+                                               {"description", "x"},
+                                               {"reference", "x"},
+                                               {"Tmin", 250.0},
+                                               {"Tmax", 350.0},
+                                               {"TminPsat", 350.0},
+                                               {"xid", "mass"},
+                                               {"xmin", 0.0},
+                                               {"xmax", 0.5},
+                                               {"Tbase", Tbase},
+                                               {"xbase", xbase},
+                                               {"density", {{"type", "polynomial"}, {"coeffs", matrix_rows(C_rho)}}},
+                                               {"specific_heat", {{"type", "polynomial"}, {"coeffs", matrix_rows(C_cp)}}}};
+            const std::string json = nlohmann::json::array({definition}).dump();
+            REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+            CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+            CoolProp::Polynomial2DFrac poly;
+            const double T_ref = 280.0;
+            for (const double T : {255.0, 300.0, 333.3, 349.0}) {
+                for (const double x : {0.0, 0.2, 0.45}) {
+                    CAPTURE(T);
+                    CAPTURE(x);
+                    const double drho = fluid.drhodTatPx(T, p, x, false);
+                    const double drho_reference = poly.derivative(C_rho, T, x, 0, 0, 0, Tbase, xbase);
+                    CHECK(std::abs(drho - drho_reference) <= 1e-12 * std::max(1.0, std::abs(drho_reference)));
+                    // The integrals are indefinite, and the two paths may use
+                    // different integration constants, so compare differences
+                    // from a common reference temperature, as the backend does.
+                    const double dh = fluid.dhdTatPxdT(T, p, x, false) - fluid.dhdTatPxdT(T_ref, p, x, false);
+                    const double dh_reference =
+                      poly.integral(C_cp, T, x, 0, 0, 0, Tbase, xbase) - poly.integral(C_cp, T_ref, x, 0, 0, 0, Tbase, xbase);
+                    CHECK(std::abs(dh - dh_reference) <= 1e-10 * std::max(1.0, std::abs(dh_reference)));
+                    const double ds = fluid.dsdTatPxdT(T, p, x, false) - fluid.dsdTatPxdT(T_ref, p, x, false);
+                    const double ds_reference =
+                      poly.integral(C_cp, T, x, 0, -1, 0, Tbase, xbase) - poly.integral(C_cp, T_ref, x, 0, -1, 0, Tbase, xbase);
+                    CAPTURE(ds);
+                    CAPTURE(ds_reference);
+                    CHECK(std::abs(ds - ds_reference) <= 1e-9 * std::max(1.0, std::abs(ds_reference)));
+                }
+            }
+        }
+    }
+    SECTION("The setting picks the fit; each state keeps the choice it was created with") {
+        // Constant fits that differ between the two kinds, so every value
+        // tells which fit produced it.
+        const std::string json = R"([{
+            "name": "CatchRuntimeSelectableFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "polynomial", "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+        const std::string fluid = "INCOMP::CatchRuntimeSelectableFluid";
+        {
+            const ChebyshevCaloricSetting setting(true);
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) == Catch::Approx(900.0).epsilon(1e-12));
+            CHECK(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) == Catch::Approx(4000.0).epsilon(1e-12));
+        }
+        {
+            const ChebyshevCaloricSetting setting(false);
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) == Catch::Approx(1000.0).epsilon(1e-12));
+            CHECK(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) == Catch::Approx(2000.0).epsilon(1e-12));
+        }
+
+        // A state reads the setting once, when it is created. With constant
+        // density the pressure terms of h cancel between two temperatures,
+        // so h(340) - h(300) is exactly cp * 40 K for the fit in use.
+        auto dh_over_40K = [&](CoolProp::AbstractState& state) {
+            state.update(CoolProp::PT_INPUTS, p, 300.0);
+            const double h1 = state.hmass();
+            state.update(CoolProp::PT_INPUTS, p, 340.0);
+            return state.hmass() - h1;
+        };
+        std::unique_ptr<CoolProp::AbstractState> chebyshev_state;
+        {
+            const ChebyshevCaloricSetting setting(true);
+            chebyshev_state.reset(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSelectableFluid"));
+        }
+        {
+            const ChebyshevCaloricSetting setting(false);
+            std::unique_ptr<CoolProp::AbstractState> classic_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSelectableFluid"));
+            // Created under true, so still Chebyshev after the switch
+            chebyshev_state->update(CoolProp::PT_INPUTS, p, 320.0);
+            CHECK(chebyshev_state->rhomass() == Catch::Approx(900.0).epsilon(1e-12));
+            CHECK(dh_over_40K(*chebyshev_state) == Catch::Approx(4000.0 * 40.0).epsilon(1e-12));
+            classic_state->update(CoolProp::PT_INPUTS, p, 320.0);
+            CHECK(classic_state->rhomass() == Catch::Approx(1000.0).epsilon(1e-12));
+            CHECK(dh_over_40K(*classic_state) == Catch::Approx(2000.0 * 40.0).epsilon(1e-12));
+            // s(340) - s(300) = cp ln(340/300) for constant cp and density
+            classic_state->update(CoolProp::PT_INPUTS, p, 300.0);
+            const double s1 = classic_state->smass();
+            classic_state->update(CoolProp::PT_INPUTS, p, 340.0);
+            CHECK(classic_state->smass() - s1 == Catch::Approx(2000.0 * std::log(340.0 / 300.0)).epsilon(1e-10));
+        }
+
+        // The JSON configuration route reaches the same setting
+        {
+            const ChebyshevCaloricSetting setting(true);
+            CoolProp::set_config_as_json_string(R"({"INCOMP_PREFER_CHEBYSHEV_CALORIC": false})");
+            CHECK_FALSE(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC));
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) == Catch::Approx(1000.0).epsilon(1e-12));
+        }
+    }
+    SECTION("A fluid with only one kind of fit uses it whatever the setting") {
+        const std::string json = R"([{
+            "name": "CatchRuntimeChebyshevOnlyFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }, {
+            "name": "CatchRuntimeClassicOnlyFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[1000.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+        for (const bool chebyshev : {true, false}) {
+            CAPTURE(chebyshev);
+            const ChebyshevCaloricSetting setting(chebyshev);
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, "INCOMP::CatchRuntimeChebyshevOnlyFluid") == Catch::Approx(900.0).epsilon(1e-12));
+            CHECK(CoolProp::PropsSI("D", "T", 320.0, "P", p, "INCOMP::CatchRuntimeClassicOnlyFluid") == Catch::Approx(1000.0).epsilon(1e-12));
+        }
+    }
+    SECTION("Load-time checks on the classic and Chebyshev fits") {
+        // The classification decides which name list the fluid is filed
+        // under, once; it must not depend on the setting. The message is
+        // asserted so the check cannot pass on an unrelated load error.
+        const std::string json = R"([{
+            "name": "CatchRuntimeMismatchedFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "mass", "xmin": 0.0, "xmax": 0.5,
+            "density":            {"type": "polynomial", "coeffs": [[1000.0, 1.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0, 1.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", json), Catch::Matchers::ContainsSubstring("disagree on whether the fluid is pure"));
+
+        // A classic entry with an unknown type must not be dropped silently
+        const std::string bad_type = R"([{
+            "name": "CatchRuntimeBadTypeFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "polynomal", "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", bad_type), Catch::Matchers::ContainsSubstring("[density] exists but its type"));
+
+        // A Chebyshev fit under the classic name next to a separate Chebyshev
+        // entry would make the setting at false evaluate a Chebyshev fit as
+        // the "classic" one, so it must be rejected.
+        const std::string chebyshev_twice = R"([{
+            "name": "CatchRuntimeChebyshevTwiceFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":            {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat":      {"type": "polynomial", "coeffs": [[2000.0]]},
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[900.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[4000.0]]}
+        }])";
+        CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", chebyshev_twice),
+                          Catch::Matchers::ContainsSubstring("in both the classic and the Chebyshev slot"));
+
+        // ...but a Chebyshev fit under the classic name alone still loads, and
+        // does not count as a classic fit.
+        const std::string chebyshev_as_classic = R"([{
+            "name": "CatchRuntimeChebyshevAsClassicFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", chebyshev_as_classic));
+        CHECK_FALSE(CoolProp::get_incompressible_fluid("CatchRuntimeChebyshevAsClassicFluid").hasClassicCaloric());
+
+        // The Chebyshev slot setters refuse other fits themselves, so a fluid
+        // built in C++ cannot get around the check by skipping validate().
+        CoolProp::IncompressibleData polynomial;
+        polynomial.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        polynomial.coeffs = Eigen::MatrixXd::Constant(1, 1, 1000.0);
+        CoolProp::IncompressibleFluid fluid;
+        CHECK_THROWS_WITH(fluid.setDensityChebyshev(polynomial), Catch::Matchers::ContainsSubstring("only takes a Chebyshev fit"));
+        CHECK_THROWS_WITH(fluid.setSpecificHeatChebyshev(polynomial), Catch::Matchers::ContainsSubstring("only takes a Chebyshev fit"));
+    }
+    SECTION("Changing Tbase after validate() makes s throw until validate() runs again") {
+        // The polynomial entropy integral has the value of Tbase built in; a
+        // stale matrix would give a wrong entropy without any error. The
+        // derivative and the enthalpy integral do not, and keep working.
+        CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MEG");
+        const double T = 300.0, x = 0.3;
+        const double h_before = fluid.dhdTatPxdT(T, p, x, false);
+        const double drho_before = fluid.drhodTatPx(T, p, x, false);
+        const double new_Tbase = fluid.getTbase() + 20.0;
+        fluid.setTbase(new_Tbase);
+        CHECK_THROWS_WITH(fluid.dsdTatPxdT(T, p, x, false), Catch::Matchers::ContainsSubstring("not loaded through validate()"));
+        // Still the same matrices, now evaluated at the new T - Tbase: a
+        // different value, but no error.
+        double h_after = 0.0, drho_after = 0.0;
+        CHECK_NOTHROW(h_after = fluid.dhdTatPxdT(T, p, x, false));
+        CHECK_NOTHROW(drho_after = fluid.drhodTatPx(T, p, x, false));
+        CHECK(h_after != h_before);
+        CHECK(drho_after != drho_before);
+        // The Chebyshev fits do not depend on Tbase and keep working
+        CHECK_NOTHROW(fluid.dsdTatPxdT(T, p, x, true));
+        // validate() rebuilds the entropy integral for the NEW Tbase: its
+        // derivative must be the specific heat (which uses the new Tbase)
+        // divided by T. A matrix built for the old Tbase fails this.
+        fluid.validate();
+        REQUIRE(fluid.getTbase() == new_Tbase);
+        const double dT = 0.01;
+        const double dsdT = (fluid.dsdTatPxdT(T + dT, p, x, false) - fluid.dsdTatPxdT(T - dT, p, x, false)) / (2 * dT);
+        CHECK(dsdT == Catch::Approx(fluid.c(T, p, x, false) / T).epsilon(1e-7));
+    }
+    SECTION("Shipped fluids: the classic fits give consistent h and s, and match where the Chebyshev fit is a conversion") {
+        // dh/dT == cp and ds/dT == cp/T on the classic fits, by central
+        // differences through the public interface, on a solution (MEG), a
+        // pure fluid with Tbase inside its range (Water), one with
+        // Tbase == 0 (DEB) and one probed far from a large Tbase (LiqNa,
+        // Tbase 1450 K, probed at 900 K where it does not boil at 1 atm),
+        // which stresses the ln(T) term of the entropy integral.
+        struct Probe
+        {
+            std::string fluid;
+            double T;
+        };
+        const ChebyshevCaloricSetting setting(false);
+        for (const Probe& probe :
+             {Probe{"INCOMP::MEG[0.35]", 300.0}, Probe{"INCOMP::Water", 350.0}, Probe{"INCOMP::DEB", 300.0}, Probe{"INCOMP::LiqNa", 900.0}}) {
+            CAPTURE(probe.fluid);
+            const double dT = 0.01;
+            const double cp = CoolProp::PropsSI("C", "T", probe.T, "P", p, probe.fluid);
+            const double dhdT = (CoolProp::PropsSI("Hmass", "T", probe.T + dT, "P", p, probe.fluid)
+                                 - CoolProp::PropsSI("Hmass", "T", probe.T - dT, "P", p, probe.fluid))
+                                / (2 * dT);
+            const double dsdT = (CoolProp::PropsSI("Smass", "T", probe.T + dT, "P", p, probe.fluid)
+                                 - CoolProp::PropsSI("Smass", "T", probe.T - dT, "P", p, probe.fluid))
+                                / (2 * dT);
+            CAPTURE(cp);
+            CAPTURE(dhdT);
+            CAPTURE(dsdT);
+            REQUIRE(ValidNumber(cp));
+            // Same tolerance and reasoning as the Chebyshev test above: dh/dT
+            // also carries the small pressure term p * d(dh/dp)/dT.
+            CHECK(std::abs(dhdT / cp - 1) < 1e-4);
+            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-4);
+        }
+
+        // MEG's Chebyshev entries are exact basis conversions of its classic
+        // polynomial (see the Chebyshev test case above), so the two paths
+        // must agree on h and s differences to near rounding, which checks
+        // the precomputed polynomial integrals on real coefficients.
+        const std::string meg = "MEG";
+        std::unique_ptr<CoolProp::AbstractState> classic_state(CoolProp::AbstractState::factory("INCOMP", meg));
+        std::unique_ptr<CoolProp::AbstractState> chebyshev_state;
+        {
+            const ChebyshevCaloricSetting chebyshev_setting(true);
+            chebyshev_state.reset(CoolProp::AbstractState::factory("INCOMP", meg));
+        }
+        for (CoolProp::AbstractState* state : {classic_state.get(), chebyshev_state.get()}) {
+            state->set_mass_fractions(std::vector<double>(1, 0.35));
+        }
+        auto h_and_s_rise = [&](CoolProp::AbstractState& state) {
+            state.update(CoolProp::PT_INPUTS, p, 260.0);
+            const double h1 = state.hmass(), s1 = state.smass();
+            state.update(CoolProp::PT_INPUTS, p, 360.0);
+            return std::make_pair(state.hmass() - h1, state.smass() - s1);
+        };
+        const auto classic_rise = h_and_s_rise(*classic_state);
+        const auto chebyshev_rise = h_and_s_rise(*chebyshev_state);
+        CAPTURE(classic_rise.first);
+        CAPTURE(chebyshev_rise.first);
+        CAPTURE(classic_rise.second);
+        CAPTURE(chebyshev_rise.second);
+        CHECK(std::abs(classic_rise.first / chebyshev_rise.first - 1) < 1e-9);
+        CHECK(std::abs(classic_rise.second / chebyshev_rise.second - 1) < 1e-9);
+    }
+    SECTION("Every shipped fluid evaluates h and s with either setting") {
+        // Both fits are now loaded for every fluid, so a classic fit that the
+        // Chebyshev default used to hide must still load and evaluate.
+        std::vector<std::string> names;
+        std::istringstream ss(CoolProp::get_global_param_string("incompressible_list_pure") + ","
+                              + CoolProp::get_global_param_string("incompressible_list_solution"));
+        for (std::string name; std::getline(ss, name, ',');) {
+            if (!name.empty() && name.compare(0, RUNTIME_TEST_FLUID_PREFIX.size(), RUNTIME_TEST_FLUID_PREFIX) != 0) names.push_back(name);
+        }
+        REQUIRE(names.size() == 127);
+        for (const bool chebyshev : {true, false}) {
+            const ChebyshevCaloricSetting setting(chebyshev);
+            for (const std::string& name : names) {
+                CAPTURE(chebyshev);
+                CAPTURE(name);
+                CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+                // Every shipped fluid carries both kinds. Without this, a
+                // classic fit lost at load would fall back to the Chebyshev
+                // one and every check below would still pass.
+                CHECK(fluid.hasClassicCaloric());
+                CHECK(fluid.hasChebyshevCaloric());
+                const double T = 0.5 * (fluid.getTmin() + fluid.getTmax());
+                const double x = fluid.is_pure() ? 0.0 : 0.5 * (fluid.getxmin() + fluid.getxmax());
+                // A throw inside CHECK is reported as a failure of that
+                // CHECK, and the sweep carries on with the next fluid.
+                CHECK(ValidNumber(fluid.rho(T, p, x, chebyshev)));
+                CHECK(ValidNumber(fluid.drhodTatPx(T, p, x, chebyshev)));
+                CHECK(ValidNumber(fluid.dhdTatPxdT(T, p, x, chebyshev)));
+                CHECK(ValidNumber(fluid.dsdTatPxdT(T, p, x, chebyshev)));
+            }
+        }
     }
 }
 TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", "[INCOMP][1374]") {
@@ -6559,6 +10061,73 @@ TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773
     CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
 }
 
+// The DQ/HQ/QS flashes (and their _with_guesses variants) used to call
+// specify_phase(iphase_twophase) and never undo it, so the next PT_INPUTS update
+// on the same AbstractState was forced two-phase: h = -2.2 MJ/kg for liquid water
+// at 20 MPa / 553.15 K, or "Bad phase to solver_rho_Tp_SRK" (GitHub #3468).
+TEST_CASE("Saturation flashes do not leave a phase imposed", "[3468]") {
+    const double p = 2e7, T = 553.15;
+    std::shared_ptr<CoolProp::AbstractState> fresh(CoolProp::AbstractState::factory("HEOS", "Water"));
+    fresh->update(CoolProp::PT_INPUTS, p, T);
+    const double h_fresh = fresh->hmolar();
+    REQUIRE(fresh->phase() == CoolProp::iphase_liquid);
+
+    // D and S targets from saturated vapor at 450 K.  h_g(T) peaks near 540 K, so
+    // the H target comes from 640 K, where h_g is below h_g(Ttriple) and has one T-root.
+    fresh->update(CoolProp::QT_INPUTS, 1.0, 450.0);
+    const double rhoV = fresh->rhomolar(), sV = fresh->smolar();
+    fresh->update(CoolProp::QT_INPUTS, 1.0, 640.0);
+    const double hV = fresh->hmolar();
+    fresh->update(CoolProp::QT_INPUTS, 0.1, 450.0);
+    const double rho_Q01 = fresh->rhomolar();
+    CoolProp::GuessesStructure g;
+    g.T = 450.0;
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    SECTION("DmolarQ, fractional Q") {
+        AS->update(CoolProp::DmolarQ_INPUTS, rho_Q01, 0.1);
+    }
+    SECTION("DmolarQ, Q=1") {
+        AS->update(CoolProp::DmolarQ_INPUTS, rhoV, 1.0);
+    }
+    SECTION("HmolarQ") {
+        AS->update(CoolProp::HmolarQ_INPUTS, hV, 1.0);
+    }
+    SECTION("QSmolar") {
+        AS->update(CoolProp::QSmolar_INPUTS, 1.0, sV);
+    }
+    SECTION("DmolarQ with guesses") {
+        AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rhoV, 1.0, g);
+    }
+    SECTION("HmolarQ with guesses") {
+        CoolProp::GuessesStructure gH;
+        gH.T = 640.0;
+        AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, hV, 1.0, gH);
+    }
+    SECTION("QSmolar with guesses") {
+        AS->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, sV, g);
+    }
+    CHECK(AS->phase() == CoolProp::iphase_twophase);
+
+    AS->update(CoolProp::PT_INPUTS, p, T);
+    CHECK(AS->phase() == CoolProp::iphase_liquid);
+    CHECK(AS->hmolar() == Catch::Approx(h_fresh).epsilon(1e-12));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101000, 373.15));
+}
+
+TEST_CASE("Saturation flashes keep a phase the caller imposed", "[3468]") {
+    // The fix must not clear a phase the user set themselves (#1027 semantics)
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS->update(CoolProp::QT_INPUTS, 1.0, 450.0);
+    const double rhoV = AS->rhomolar();
+    AS->specify_phase(CoolProp::iphase_gas);
+    AS->update(CoolProp::DmolarQ_INPUTS, rhoV, 1.0);
+    // Liquid-like (T, p) with gas imposed must still give the vapor-branch root
+    AS->update(CoolProp::PT_INPUTS, 1e5, 360.0);
+    CHECK(AS->phase() == CoolProp::iphase_gas);
+    CHECK(AS->rhomolar() < 100);  // vapor-like density, not ~53 kmol/m3 liquid
+}
+
 // Edge-case coverage gaps surfaced in PR #2835 review (S4):
 TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 
@@ -6868,7 +10437,15 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
 
-    // Build the phase envelope so SatL/SatV pick up some non-trivial state
+    // Build the phase envelope so SatL/SatV pick up some non-trivial state.
+    //
+    // NOTE: for this mixture build_phase_envelope() returns without throwing but leaves
+    // built == 0, so the PQ flash below runs on the BLIND branch.  That is fine here — this
+    // test is about the mole_fractions_liquid/vapor accessors, not about the envelope — but it
+    // means this cannot be counted as envelope-branch coverage, which is what it looks like at
+    // a glance.  Envelope-branch coverage lives in CoolProp-Tests-Michelsen.cpp, guarded by
+    // REQUIRE(get_phase_envelope_data().built) so it cannot silently degrade the same way
+    // (GH #3372).
     AS->build_phase_envelope("");
 
     // Single-phase point: T well above the dew curve at 1.5 bar
@@ -6917,6 +10494,111 @@ TEST_CASE("TABULAR_NX/NY config keys exist and default to 200", "[Configuration]
     // are present and the documented default is honored.
     CHECK(CoolProp::get_config_int(TABULAR_NX) == 200);
     CHECK(CoolProp::get_config_int(TABULAR_NY) == 200);
+}
+
+TEST_CASE("Configuration accessors are safe under concurrent calls (COO-13)", "[Configuration][threads]") {
+    // The global Configuration is lazily created behind std::call_once.  In
+    // this test binary it is usually already initialized by an earlier test,
+    // so the cold-start race itself is only reliably exercised under TSAN;
+    // what this checks deterministically is that concurrent readers all see
+    // one consistent instance (same values as the main thread).
+    const bool expected_bool = CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS);
+    const int expected_int = CoolProp::get_config_int(TABULAR_NX);
+    constexpr int N_THREADS = 8;
+    std::atomic<int> mismatches{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back([&]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            for (int i = 0; i < 1000; ++i) {
+                if (CoolProp::get_config_bool(NORMALIZE_GAS_CONSTANTS) != expected_bool || CoolProp::get_config_int(TABULAR_NX) != expected_int) {
+                    mismatches.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& t : threads) {
+        t.join();
+    }
+    CHECK(mismatches.load() == 0);
+}
+
+TEST_CASE("Concurrent first use of one tabular dataset builds it once (COO-39)", "[BICUBIC][threads]") {
+    // Several threads construct BICUBIC&HEOS for the same fluid and grid at
+    // once, against a fresh table directory, so every thread misses on disk
+    // and races to build.  The per-dataset build_mutex must let one thread
+    // build/pack/write while the rest wait and then reuse the result.  A small
+    // grid keeps the single real build to well under a second.
+    // Unique directory => unique in-memory cache key, so the dataset is cold
+    // even if another test already built Nitrogen tables in this process.
+    const std::string dir =
+      (std::filesystem::temp_directory_path() / ("CoolProp-COO39-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())))
+        .string()
+      + "/";
+    // Restore the table directory and remove the temp dir even if a CHECK or
+    // an exception unwinds the test early.
+    struct TableDirGuard
+    {
+        std::string prev, dir;
+        TableDirGuard(std::string p, std::string d) : prev(std::move(p)), dir(std::move(d)) {}
+        TableDirGuard(const TableDirGuard&) = delete;
+        TableDirGuard& operator=(const TableDirGuard&) = delete;
+        TableDirGuard(TableDirGuard&&) = delete;
+        TableDirGuard& operator=(TableDirGuard&&) = delete;
+        ~TableDirGuard() {
+            CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    } guard(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY), dir);
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+    // Threads rebuilding the same deterministic tables would give identical
+    // densities, so count the builds directly.
+    const int builds_before = CoolProp::TabularDataSet::build_count.load();
+    const std::string fluid = R"(Nitrogen?{"grid":{"Nx":30,"Ny":30}})";
+    const double p = 1e6, T = 300.0;
+
+    constexpr int N_THREADS = 6;
+    std::vector<double> rho(N_THREADS, -1.0);
+    std::atomic<int> errors{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back([&, t]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            try {
+                std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("BICUBIC&HEOS", fluid));
+                AS->update(CoolProp::PT_INPUTS, p, T);
+                rho[t] = AS->rhomolar();
+            } catch (...) {
+                errors.fetch_add(1, std::memory_order_relaxed);
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& th : threads) {
+        th.join();
+    }
+
+    // Reference from the (now warm) shared dataset
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("BICUBIC&HEOS", fluid));
+    ref->update(CoolProp::PT_INPUTS, p, T);
+    const double rho_ref = ref->rhomolar();
+
+    CHECK(errors.load() == 0);
+    CHECK(CoolProp::TabularDataSet::build_count.load() - builds_before == 1);
+    for (int t = 0; t < N_THREADS; ++t) {
+        CAPTURE(t);
+        CHECK(rho[t] == rho_ref);
+    }
 }
 
 TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][1950]") {
@@ -7294,6 +10976,426 @@ TEST_CASE("Surface tension of water is nonzero and matches IAPWS", "[surface_ten
     CHECK(st_350 < st_300);
     // A second fluid, looser bound, just to exercise another correlation.
     CHECK(CoolProp::PropsSI("I", "T", 300, "Q", 0, "R134a") > 0.0);
+}
+
+// [Helmholtz] as well as [formation]: preflight selects TAG_FILTER="[Helmholtz],[REFPROP]"
+// for a diff touching src/Backends/Helmholtz/, and the ingestion path this exercises
+// lives there -- without the tag, the local gate never runs these assertions.
+TEST_CASE("Standard molar enthalpy of formation from ATcT", "[formation][Helmholtz]") {
+    using Catch::Approx;
+    SECTION("known values, J/mol") {
+        // ATcT TN 1.220; see dev/atct/atct_report.csv for provenance.
+        struct
+        {
+            const char* fluid;
+            double value;
+        } cases[] = {{"Methane", -74513.0}, {"Water", -241808.0}, {"CarbonDioxide", -393477.0}, {"Nitrogen", 0.0}};
+        for (auto& c : cases) {
+            CAPTURE(c.fluid);
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", c.fluid));
+            CHECK(AS->keyed_output(CoolProp::iHmolar_formation) == Approx(c.value).margin(1e-6));
+        }
+    }
+    SECTION("string key resolves through PropsSI") {
+        CHECK(CoolProp::PropsSI("HFORMATION", "", 0, "", 0, "Methane") == Approx(-74513.0).margin(1e-6));
+    }
+    SECTION("a fluid with no ATcT value throws rather than returning 0 or NaN") {
+        // R134a (CAS 811-97-2) is genuinely absent from ATcT.
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a"));
+        CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("mixtures throw: pure and pseudo-pure fluids only") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+        std::vector<double> z{0.7, 0.3};
+        AS->set_mole_fractions(z);
+        CHECK_THROWS(AS->keyed_output(CoolProp::iHmolar_formation));
+    }
+    SECTION("a block in the wrong units is declined without killing the fluid") {
+        // parse_standard_state is protected on a non-final class, so a
+        // subclass reaches it directly -- no add_fluids_as_JSON and no failed
+        // add_one.  That mattered when a failed add poisoned fluids_list
+        // process-wide (bd CoolProp-dwuu); that is fixed now, but reaching the
+        // parser directly is still the tighter test.
+        struct Probe : public CoolProp::JSONFluidLibrary
+        {
+            using CoolProp::JSONFluidLibrary::parse_standard_state;
+        };
+        auto parse = [](const char* units) {
+            Probe probe;
+            CoolProp::CoolPropFluid f;
+            f.name = "Probe";
+            probe.parse_standard_state(nlohmann::json::parse(units), f);
+            return f.standard_state.hmolar;
+        };
+        // Right units: ingested.
+        CHECK(parse(R"({"hmolar_formation":{"value":-74513.0,"units":"J/mol","uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")
+              == Approx(-74513.0));
+        // Wrong units: declined, NOT silently read as J/mol.  This is the
+        // 1000x error the check exists to stop.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74.513,"units":"kJ/mol","uncertainty":0.043,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        // Missing units: declined too, and without throwing -- a units-less
+        // third-party block must not take the whole fluid down with it.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"value":-74513.0,"uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        // ...and the same for every other key, so the decline is coherent
+        // rather than tolerating one missing field and throwing on the next.
+        CHECK_NOTHROW(parse(R"({"hmolar_formation":{"units":"J/mol","uncertainty":43.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})"));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "source":"ATcT","version":"1.220","id":"74-82-8*0"}})")));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"version":"1.220","id":"74-82-8*0"}})")));
+        // A non-numeric value must not slip through to get_double either.
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":"-74513.0",
+                        "uncertainty":43.0,"source":"ATcT","version":"1.220","id":"x"}})")));
+        // ...nor a mistyped string key through get_string.  An unquoted
+        // "version": 1.220 is the likeliest hand-authoring slip, and it used
+        // to abort the whole fluid.
+        CHECK_NOTHROW(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":"ATcT","version":1.220,"id":"x"}})"));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":42,"version":"1.220","id":"x"}})")));
+        CHECK(!ValidNumber(parse(R"({"hmolar_formation":{"units":"J/mol","value":-74513.0,
+                        "uncertainty":43.0,"source":"ATcT","version":"1.220","id":null}})")));
+    }
+    SECTION("every stored value is physically plausible") {
+        // Guards against a kJ/J slip anywhere in the pipeline: no molecule in
+        // the library has |dHf| above 2000 kJ/mol.
+        std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
+        // Count distinct ATcT species, not fluids: tests elsewhere register clones
+        // of shipped fluids (e.g. the N2/Ar clones in the Expression tests) that
+        // carry the donor's STANDARD_STATE block, and under --order rand they may
+        // already be in fluids_list here.  A clone keeps the donor's ATcT id, so
+        // it adds nothing; the 76 shipped entries have 76 distinct ids (COO-62).
+        std::set<std::string> atct_ids;
+        for (auto& fluid : fluids) {
+            // Every name in fluids_list must construct.  This used to swallow a
+            // ValueError and continue, because add_one appended the name before
+            // its try block, so any failed HEOS add permanently left an orphan
+            // here and broke this loop under --order rand.  add_one now appends
+            // only on success, so an unconstructible name is a real defect
+            // again and is allowed to fail the test rather than be skipped.
+            shared_ptr<CoolProp::AbstractState> AS;
+            CAPTURE(fluid);
+            REQUIRE_NOTHROW(AS.reset(CoolProp::AbstractState::factory("HEOS", fluid)));
+            double value = 0;
+            try {
+                value = AS->keyed_output(CoolProp::iHmolar_formation);
+            } catch (const CoolProp::ValueError&) {
+                // The only exception that means "no ATcT value for this
+                // fluid".  A bare catch(...) would also swallow a genuine
+                // ingestion regression -- a NotImplementedError, a parse
+                // failure -- and silently recount it as expected coverage.
+                continue;
+            }
+            CAPTURE(fluid);
+            CHECK(std::abs(value) < 2e6);
+            const auto doc = nlohmann::json::parse(CoolProp::get_fluid_param_string(fluid, "JSON"))[0];
+            // Fluids registered by tests use synthetic 999-* CAS numbers; skip
+            // them so a fixture with a new id cannot offset a lost shipped one.
+            if (doc.at("INFO").at("CAS").get<std::string>().rfind("999-", 0) == 0) {
+                continue;
+            }
+            const auto& id = doc.at("INFO").at("STANDARD_STATE").at("hmolar_formation").at("id");
+            // Every ingested value has a string id; a missing one would let
+            // distinct species collapse onto one entry and hide a coverage loss.
+            REQUIRE(id.is_string());
+            atct_ids.insert(id.get<std::string>());
+        }
+        const std::size_t checked = atct_ids.size();
+        // Exact, not a floor.  dev/atct/expected_coverage.json pins 76 matched
+        // species, so a regression that drops some of them must fail here
+        // rather than pass under a loose lower bound.  If a future ATcT
+        // version legitimately changes coverage, this number moves with the
+        // ledger in the same commit.
+        INFO("expected count is pinned by dev/atct/expected_coverage.json (76 matched)");
+        CHECK(checked == 76);
+    }
+}
+
+TEST_CASE("Standard molar enthalpy of formation from REFPROP", "[formation][REFPROP]") {
+    CoolProp::Skip_if_No_REFPROP();
+    using Catch::Approx;
+
+    SECTION("pure-fluid value is available without a state update") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "Methane"));
+        const double hformation = AS->keyed_output(CoolProp::iHmolar_formation);
+        CHECK(ValidNumber(hformation));
+        // Broad enough for REFPROP data revisions, narrow enough to catch a
+        // J/mol-to-kJ/mol conversion error.
+        CHECK(hformation > -1e5);
+        CHECK(hformation < -5e4);
+
+        AS->update(CoolProp::PT_INPUTS, 101325.0, 300.0);
+        CHECK(AS->keyed_output(CoolProp::iHmolar_formation) == Approx(hformation).margin(1e-12));
+        CHECK(CoolProp::PropsSI("HFORMATION", "", 0, "", 0, "REFPROP::Methane") == Approx(hformation).margin(1e-12));
+    }
+
+    SECTION("mixture value uses the current mole fractions") {
+        shared_ptr<CoolProp::AbstractState> methane(CoolProp::AbstractState::factory("REFPROP", "Methane"));
+        shared_ptr<CoolProp::AbstractState> ethane(CoolProp::AbstractState::factory("REFPROP", "Ethane"));
+        const double h_methane = methane->keyed_output(CoolProp::iHmolar_formation);
+        const double h_ethane = ethane->keyed_output(CoolProp::iHmolar_formation);
+
+        shared_ptr<CoolProp::AbstractState> mixture(CoolProp::AbstractState::factory("REFPROP", "Methane&Ethane"));
+        const std::vector<double> z{0.7, 0.3};
+        mixture->set_mole_fractions(z);
+        CHECK(mixture->keyed_output(CoolProp::iHmolar_formation) == Approx(z[0] * h_methane + z[1] * h_ethane).epsilon(1e-12).margin(1e-6));
+    }
+
+    SECTION("unset mixture composition is rejected") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "Methane&Ethane"));
+        CHECK_THROWS_WITH(AS->keyed_output(CoolProp::iHmolar_formation), Catch::Matchers::ContainsSubstring("Mole fractions not yet set"));
+    }
+}
+
+// CoolProp's format() is fmt::sprintf, which is type-safe: a format string whose
+// printf specifiers outnumber its arguments throws fmt::format_error("argument not
+// found") *while the message is being built*, so the intended CoolProp::ValueError
+// is never constructed and the caller gets an untyped std::runtime_error instead.
+// Every wrapper that catches CoolProp errors by type (and every `except ValueError`
+// in the Python layer) then lets it escape.
+//
+// These (Smolar, T) pairs sit above Tc with an entropy no density can reproduce, so
+// they land in the T > Tc branch of DHSU_T_flash -- the site that carried a
+// 4-specifier / 3-argument message and killed both fluids outright in every docs
+// consistency-plot build (bd CoolProp-b7p8).  The entropies are held well clear of
+// the reachable range rather than at the historical grid points that first tripped
+// this (MethylOleate S = 502.386 against a 499.458 bound, 0.6% of margin;
+// MethylLinolenate S = 613.312 against 613.253, 0.01%), so an ancillary or EOS refit
+// cannot quietly pull them back in range and turn this into a spurious failure.
+TEST_CASE("Unreachable supercritical T+caloric inputs raise a CoolProp error, not a format error", "[Helmholtz],[flash_error_type]") {
+    struct Point
+    {
+        const char* fluid;
+        double smolar;  // J/mol/K
+        double T;       // K
+    };
+    // Tc(MethylOleate) = 782 K, Tc(MethylLinolenate) = 772 K.
+    const std::vector<Point> points{{"MethylOleate", 900.0, 789.7505128205128}, {"MethylLinolenate", 1100.0, 905.2692307692307}};
+    for (const Point& pt : points) {
+        CAPTURE(pt.fluid);
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", pt.fluid));
+        // Matches() is a WHOLE-string match, so it pins three things at once that
+        // CHECK_THROWS_AS plus a substring check cannot: that a CoolProp error type
+        // came out, that it came from THIS throw site (the sibling at the top of the
+        // same branch prefixes its message with "Even by increasing rhoc, ..."), and
+        // that all three values actually rendered.  A message that lost a value to a
+        // specifier/argument mismatch in either direction fails this -- checking only
+        // for an absent '%' would not, because fmt drops the value, not the specifier.
+        CHECK_THROWS_MATCHES(
+          AS->update(CoolProp::SmolarT_INPUTS, pt.smolar, pt.T), CoolProp::ValueError,
+          Catch::Matchers::MessageMatches(Catch::Matchers::Matches(R"(input [-+0-9.eE]+ is not in range [-+0-9.eE]+,[-+0-9.eE]+)")));
+    }
+}
+
+TEST_CASE("IF97 reverse (h,p) and (p,s) phase labels match the forward (T,p) labels", "[IF97][phase]") {
+    // The backward branch classified region 2 and 3 states above the critical
+    // pressure from Tsat97(p), which is not valid there, so a compressed liquid
+    // at 30 MPa could be labeled gas.  Every single-phase state must get the
+    // same phase from HmassP / PSmass as from the (T,p) state that made it.
+    auto fwd = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto rev = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int checked = 0;
+    for (double p : {1e6, 5e6, 16e6, 20e6, 22e6, 23e6, 30e6, 50e6, 90e6}) {
+        for (double T : {400.0, 550.0, 620.0, 630.0, 640.0, 646.0, 648.0, 660.0, 700.0, 800.0, 850.0}) {
+            CAPTURE(p, T);
+            try {
+                fwd->update(CoolProp::PT_INPUTS, p, T);
+            } catch (const CoolProp::CoolPropBaseError&) {
+                continue;  // on the saturation curve or outside IF97
+            }
+            const auto expected = fwd->phase();
+            const double h = fwd->hmass(), s = fwd->smass();
+            rev->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(rev->phase() == expected);
+            rev->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(rev->phase() == expected);
+            ++checked;
+        }
+    }
+    CHECK(checked > 60);
+    // The motivating states, stated explicitly
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 640.0);  // region 3, above Pcrit, below Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical_liquid);
+    fwd->update(CoolProp::PT_INPUTS, 30e6, 800.0);  // region 3, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 30e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+    fwd->update(CoolProp::PT_INPUTS, 50e6, 1000.0);  // region 2, above Pcrit and Tcrit
+    rev->update(CoolProp::HmassP_INPUTS, fwd->hmass(), 50e6);
+    CHECK(rev->phase() == CoolProp::iphase_supercritical);
+}
+
+TEST_CASE("IF97 update() that throws leaves no half-built state", "[IF97][update]") {
+    auto IF = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    struct Bad
+    {
+        CoolProp::input_pairs pair;
+        double v1, v2;
+    };
+    const std::vector<Bad> bad = {
+      {CoolProp::HmassP_INPUTS, 1e9, 1e6},      // h far above the IF97 range
+      {CoolProp::PSmass_INPUTS, 1e6, 1e6},      // s far above the IF97 range
+      {CoolProp::HmassSmass_INPUTS, 1e9, 1e6},  // h, s far outside
+      {CoolProp::QT_INPUTS, 0.5, 700.0},        // T above Tcrit: no saturation state
+      {CoolProp::PQ_INPUTS, 30e6, 0.5},         // p above Pcrit: no saturation state
+    };
+    for (const auto& b : bad) {
+        CAPTURE(b.pair, b.v1, b.v2);
+        IF->update(CoolProp::PT_INPUTS, 1e5, 300.0);
+        REQUIRE(IF->hmass() > 0);
+        CHECK_THROWS(IF->update(b.pair, b.v1, b.v2));
+        // The failed update must not leave the previous state, or a mix of the
+        // two, to be read back as if it were valid.
+        CHECK_THROWS(IF->hmass());
+        CHECK_THROWS(IF->smass());
+        CHECK_THROWS(IF->rhomass());
+        // The scalar getters must also agree with a never-updated object, not
+        // return the inputs of the failed update (QT left _Q = 0.5 and _T = 700).
+        for (auto get : {+[](CoolProp::AbstractState& a) { return a.T(); }, +[](CoolProp::AbstractState& a) { return a.p(); },
+                         +[](CoolProp::AbstractState& a) { return a.Q(); }}) {
+            auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+            bool fresh_throws = false, after_throws = false;
+            double fresh_v = 0, after_v = 0;
+            try {
+                fresh_v = get(*fresh);
+            } catch (...) {
+                fresh_throws = true;
+            }
+            try {
+                after_v = get(*IF);
+            } catch (...) {
+                after_throws = true;
+            }
+            CHECK(after_throws == fresh_throws);
+            if (!fresh_throws && !after_throws) CHECK(after_v == fresh_v);
+        }
+        // And the object is fully usable again afterward.
+        CHECK_NOTHROW(IF->update(CoolProp::PT_INPUTS, 1e5, 300.0));
+        CHECK(IF->rhomass() == Catch::Approx(996.5).margin(1.0));
+    }
+}
+
+TEST_CASE("IF97 HmassSmass resolves the vapor dome below s'' at T23min", "[IF97][HS]") {
+    // IAPWS has no backward T(h,s) for the part of the dome with s < SgT23 (5210.9
+    // J/kg/K).  IF97 v2.4.0 solves that part iteratively from the forward saturation
+    // equations; before it, p_hsmass threw "Entropy out of range" there.
+    auto a = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto b = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
+    int solved = 0;
+    for (double p : {1e3, 1e4, 1e5, 1e6, 5e6, 1e7, 1.5e7, 2e7, 2.2e7}) {
+        for (double Q : {0.0, 1e-9, 1e-6, 0.01, 0.1, 0.5, 0.9, 0.99, 1 - 1e-9, 1.0}) {
+            CAPTURE(p, Q);
+            a->update(CoolProp::PQ_INPUTS, p, Q);
+            const double h = a->hmass(), s = a->smass();
+            if (s >= 5210.887825) continue;  // library's own region; accuracy is IAPWS's, not ours
+            CHECK_NOTHROW(b->update(CoolProp::HmassSmass_INPUTS, h, s));
+            CHECK(b->phase() == CoolProp::iphase_twophase);
+            CHECK(b->p() == Catch::Approx(p).epsilon(1e-8));
+            CHECK(b->Q() == Catch::Approx(Q).margin(1e-8));
+            CHECK(b->hmass() == Catch::Approx(h).epsilon(1e-9));
+            CHECK(b->smass() == Catch::Approx(s).epsilon(1e-9));
+            ++solved;
+        }
+    }
+    CHECK(solved > 50);
+    // Single-phase states with s < SgT23 are not claimed by the dome solver.
+    a->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_liquid);
+    CHECK(b->p() == Catch::Approx(1e6).epsilon(5e-3));
+    a->update(CoolProp::PT_INPUTS, 3e7, 640.0);
+    b->update(CoolProp::HmassSmass_INPUTS, a->hmass(), a->smass());
+    CHECK(b->phase() == CoolProp::iphase_supercritical_liquid);
+    // A state that is neither in the dome nor in IF97's range still throws.
+    CHECK_THROWS(b->update(CoolProp::HmassSmass_INPUTS, 1e9, 1.0));
+}
+
+TEST_CASE("IF97 fast_evaluate rejects non-finite inputs and handles the dome like update()", "[IF97][fast_evaluate]") {
+    shared_ptr<CoolProp::AbstractState> b(CoolProp::AbstractState::factory("IF97", "Water"));
+    shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("IF97", "Water"));
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    const double M = ref->molar_mass();
+
+    // A non-finite h or p must flag out of range with an all-NaN row, not return a made-up state
+    // (T_phmass(p, NaN) used to return a Region 1 temperature with status ok).  The finite
+    // points on either side must be unaffected.
+    {
+        ref->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+        const double h_ok = ref->hmass();
+        const double h_in[5] = {h_ok, nan, h_ok, inf, -inf};
+        const double p_in[5] = {1e6, 1e6, nan, 1e6, 1e6};
+        const CoolProp::parameters outs[3] = {CoolProp::iT, CoolProp::iHmass, CoolProp::iDmass};
+        for (CoolProp::input_pairs ip : {CoolProp::HmassP_INPUTS, CoolProp::HmolarP_INPUTS}) {
+            double h_v[5];
+            for (int k = 0; k < 5; ++k)
+                h_v[k] = (ip == CoolProp::HmolarP_INPUTS) ? h_in[k] * M : h_in[k];
+            double out[15];
+            int st[5] = {-1, -1, -1, -1, -1};
+            b->fast_evaluate(ip, h_v, p_in, 5, outs, 3, out, 15, st, 5);
+            CHECK(st[0] == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(400.0).margin(0.05));
+            for (int k = 1; k < 5; ++k) {
+                CAPTURE(k, ip);
+                CHECK(st[k] == CoolProp::fast_evaluate_out_of_range);
+                for (int o = 0; o < 3; ++o)
+                    CHECK(std::isnan(out[k * 3 + o]));
+            }
+        }
+    }
+
+    // On a saturation line update() returns the saturated-phase cp, cv, speed of sound,
+    // viscosity, conductivity, and Prandtl number; fast_evaluate must agree.
+    const CoolProp::parameters props[8] = {CoolProp::iCpmass,       CoolProp::iCvmass,  CoolProp::ispeed_sound, CoolProp::iviscosity,
+                                           CoolProp::iconductivity, CoolProp::iPrandtl, CoolProp::iCpmolar,     CoolProp::iCvmolar};
+    for (double p : {1e5, 1e6, 5e6, 1.5e7}) {
+        for (double Qedge : {0.0, 1.0}) {
+            CAPTURE(p, Qedge);
+            ref->update(CoolProp::PQ_INPUTS, p, Qedge);
+            const double h = ref->hmass();
+            double out[8];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, props, 8, out, 8, &st, 1);
+            REQUIRE(st == CoolProp::fast_evaluate_ok);
+            for (int o = 0; o < 8; ++o) {
+                CAPTURE(o);
+                CHECK(out[o] == Catch::Approx(ref->keyed_output(props[o])).epsilon(1e-12));
+            }
+        }
+    }
+
+    // Strictly inside the dome cp, cv, speed of sound, viscosity, conductivity, and Prandtl number
+    // are not defined for a two-phase mixture (update() throws), so only those columns are NaN.
+    // The lever-rule properties keep their values in the same row and the status is ok.
+    {
+        const double p = 1e6;
+        ref->update(CoolProp::PQ_INPUTS, p, 0.5);
+        const double h = ref->hmass();
+        for (CoolProp::parameters bad : props) {
+            CAPTURE(bad);
+            const CoolProp::parameters outs[3] = {CoolProp::iT, bad, CoolProp::iQ};
+            double out[3];
+            int st = -1;
+            b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, outs, 3, out, 3, &st, 1);
+            CHECK(st == CoolProp::fast_evaluate_ok);
+            CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+            CHECK(std::isnan(out[1]));
+            CHECK(out[2] == Catch::Approx(0.5).epsilon(1e-9));
+        }
+        const CoolProp::parameters ok_outs[4] = {CoolProp::iT, CoolProp::iQ, CoolProp::iHmass, CoolProp::iDmass};
+        double out[4];
+        int st = -1;
+        b->fast_evaluate(CoolProp::HmassP_INPUTS, &h, &p, 1, ok_outs, 4, out, 4, &st, 1);
+        CHECK(st == CoolProp::fast_evaluate_ok);
+        CHECK(out[0] == Catch::Approx(ref->T()).epsilon(1e-12));
+        CHECK(out[1] == Catch::Approx(0.5).epsilon(1e-9));
+        CHECK(out[2] == Catch::Approx(h).epsilon(1e-12));
+        CHECK(out[3] == Catch::Approx(ref->rhomass()).epsilon(1e-9));
+    }
 }
 
 #endif

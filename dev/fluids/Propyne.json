@@ -3577,7 +3577,22 @@
     "INCHI_STRING": "InChI=1S/C3H4/c1-3-2/h1H,2H3",
     "NAME": "Propyne",
     "REFPROP_NAME": "PROPYNE",
-    "SMILES": "CC#C"
+    "SMILES": "CC#C",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "74-99-7*0",
+        "source": "ATcT",
+        "uncertainty": 200.0,
+        "units": "J/mol",
+        "value": 185560.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

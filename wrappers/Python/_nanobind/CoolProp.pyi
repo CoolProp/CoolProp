@@ -5,6 +5,8 @@ from typing import Annotated, TypeAlias, overload
 import numpy
 from numpy.typing import NDArray
 
+from . import Plot as Plot
+
 
 import numpy
 from numpy.typing import NDArray
@@ -341,6 +343,10 @@ class configuration_keys(enum.IntEnum):
 
     SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB = 39
 
+    CHEBYSHEV_DENSITY_SOLVER = 40
+
+    INCOMP_PREFER_CHEBYSHEV_CALORIC = 41
+
 NORMALIZE_GAS_CONSTANTS: configuration_keys = configuration_keys.NORMALIZE_GAS_CONSTANTS
 
 CRITICAL_WITHIN_1UK: configuration_keys = configuration_keys.CRITICAL_WITHIN_1UK
@@ -421,6 +427,10 @@ SVDSBTL_SURFACE_CACHE_MAX_ENTRIES: configuration_keys = ...
 
 SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB: configuration_keys = ...
 
+CHEBYSHEV_DENSITY_SOLVER: configuration_keys = configuration_keys.CHEBYSHEV_DENSITY_SOLVER
+
+INCOMP_PREFER_CHEBYSHEV_CALORIC: configuration_keys = ...
+
 class parameters(enum.IntEnum):
     igas_constant = 1
 
@@ -458,143 +468,145 @@ class parameters(enum.IntEnum):
 
     idipole_moment = 18
 
-    iT = 19
+    iHmolar_formation = 19
 
-    iP = 20
+    iT = 20
 
-    iQ = 21
+    iP = 21
 
-    iTau = 23
+    iQ = 22
 
-    iDelta = 24
+    iTau = 24
 
-    iDmolar = 25
+    iDelta = 25
 
-    iHmolar = 26
+    iDmolar = 26
 
-    iSmolar = 27
+    iHmolar = 27
 
-    iCpmolar = 28
+    iSmolar = 28
 
-    iCp0molar = 29
+    iCpmolar = 29
 
-    iCvmolar = 30
+    iCp0molar = 30
 
-    iUmolar = 31
+    iCvmolar = 31
 
-    iGmolar = 32
+    iUmolar = 32
 
-    iHelmholtzmolar = 33
+    iGmolar = 33
 
-    iSmolar_residual = 35
+    iHelmholtzmolar = 34
 
-    iHmolar_residual = 34
+    iSmolar_residual = 36
 
-    iGmolar_residual = 36
+    iHmolar_residual = 35
 
-    iDmass = 40
+    iGmolar_residual = 37
 
-    iHmass = 41
+    iDmass = 41
 
-    iSmass = 42
+    iHmass = 42
 
-    iCpmass = 43
+    iSmass = 43
 
-    iCp0mass = 44
+    iCpmass = 44
 
-    iCvmass = 45
+    iCp0mass = 45
 
-    iUmass = 46
+    iCvmass = 46
 
-    iGmass = 47
+    iUmass = 47
 
-    iHelmholtzmass = 48
+    iGmass = 48
 
-    iviscosity = 52
+    iHelmholtzmass = 49
 
-    iconductivity = 53
+    iviscosity = 53
 
-    isurface_tension = 54
+    iconductivity = 54
 
-    iPrandtl = 55
+    isurface_tension = 55
 
-    ispeed_sound = 56
+    iPrandtl = 56
 
-    iisothermal_compressibility = 57
+    ispeed_sound = 57
 
-    iisobaric_expansion_coefficient = 58
+    iisothermal_compressibility = 58
 
-    ifundamental_derivative_of_gas_dynamics = 60
+    iisobaric_expansion_coefficient = 59
 
-    ialphar = 61
+    ifundamental_derivative_of_gas_dynamics = 61
 
-    idalphar_ddelta_consttau = 63
+    ialphar = 62
 
-    idalpha0_dtau_constdelta = 65
+    idalphar_ddelta_consttau = 64
 
-    iBvirial = 69
+    idalpha0_dtau_constdelta = 66
 
-    iCvirial = 70
+    iBvirial = 70
 
-    idBvirial_dT = 71
+    iCvirial = 71
 
-    idCvirial_dT = 72
+    idBvirial_dT = 72
 
-    iZ = 73
+    idCvirial_dT = 73
 
-    iPIP = 74
+    iZ = 74
 
-    ifraction_min = 75
+    iPIP = 75
 
-    ifraction_max = 76
+    ifraction_min = 76
 
-    iT_freeze = 77
+    ifraction_max = 77
 
-    iGWP20 = 78
+    iT_freeze = 78
 
-    iGWP100 = 79
+    iGWP20 = 79
 
-    iGWP500 = 80
+    iGWP100 = 80
 
-    iFH = 81
+    iGWP500 = 81
 
-    iHH = 82
+    iFH = 82
 
-    iPH = 83
+    iHH = 83
 
-    iODP = 84
+    iPH = 84
 
-    iPhase = 85
+    iODP = 85
+
+    iPhase = 86
 
     INVALID_PARAMETER = 0
 
-    iQmass = 22
+    iQmass = 23
 
-    iHmolar_idealgas = 37
+    iHmolar_idealgas = 38
 
-    iSmolar_idealgas = 38
+    iSmolar_idealgas = 39
 
-    iUmolar_idealgas = 39
+    iUmolar_idealgas = 40
 
-    iHmass_idealgas = 49
+    iHmass_idealgas = 50
 
-    iSmass_idealgas = 50
+    iSmass_idealgas = 51
 
-    iUmass_idealgas = 51
+    iUmass_idealgas = 52
 
-    iisentropic_expansion_coefficient = 59
+    iisentropic_expansion_coefficient = 60
 
-    idalphar_dtau_constdelta = 62
+    idalphar_dtau_constdelta = 63
 
-    ialpha0 = 64
+    ialpha0 = 65
 
-    idalpha0_ddelta_consttau = 66
+    idalpha0_ddelta_consttau = 67
 
-    id2alpha0_ddelta2_consttau = 67
+    id2alpha0_ddelta2_consttau = 68
 
-    id3alpha0_ddelta3_consttau = 68
+    id3alpha0_ddelta3_consttau = 69
 
-    iundefined_parameter = 86
+    iundefined_parameter = 87
 
 igas_constant: parameters = parameters.igas_constant
 
@@ -631,6 +643,8 @@ iP_max: parameters = parameters.iP_max
 iP_min: parameters = parameters.iP_min
 
 idipole_moment: parameters = parameters.idipole_moment
+
+iHmolar_formation: parameters = parameters.iHmolar_formation
 
 iT: parameters = parameters.iT
 
@@ -1087,6 +1101,18 @@ class AbstractState:
 
     def update(self, arg0: input_pairs, arg1: float, arg2: float, /) -> None: ...
 
+    def update_nogil(self, input_pair: input_pairs, value1: float, value2: float) -> None:
+        """
+        update() with the GIL released, so that other Python threads run while CoolProp computes.
+
+        Use it only on a state that no other thread uses at the same time: CoolProp does not lock the
+        state, and two threads in one state corrupt it (garbage or a crash, not an exception). Distinct
+        HEOS, cubic and GERG states, also of the same fluid, can be updated in parallel; REFPROP states
+        are safe but run one at a time. Not safe while another thread changes the configuration
+        (set_config_*) or builds tabular tables (creates a TTSE or BICUBIC state, or sets its
+        fractions, when its tables are not on disk yet).
+        """
+
     def update_with_guesses(self, arg0: input_pairs, arg1: float, arg2: float, arg3: GuessesStructure, /) -> None: ...
 
     def available_in_high_level(self) -> bool: ...
@@ -1523,6 +1549,41 @@ def get_errstr() -> str: ...
 def set_reference_state(FluidName: str, reference_state: str, /) -> None: ...
 @overload
 def set_reference_state(FluidName: str, T0: float, rhomolar: float, hmolar0: float, smolar0: float, /) -> None: ...
+
+class Expression:
+    """
+    A compiled transport-property expression block.
+
+    Construct from the JSON text of a `"type": "expression"` block
+    ({"formula": ..., "state_variables": [...], "constants": {...},
+    "arrays": {...}}), then evaluate it at a state.
+
+    `state_variables` lists the thermodynamic quantities the formula reads,
+    in CoolProp's own spelling ("T", "P", "Dmolar", "Smolar_residual",
+    ...).  It is opt-in: a name not declared there is never state, so a
+    block that does not ask for pressure keeps `p` for its own coefficients.
+    Raises ValueError on a bad formula, on reading an undeclared quantity,
+    or on declaring one that cannot be honoured (a transport output, which
+    would re-enter the correlation; or the configuration-dependent critical
+    point and reducing state).
+    """
+
+    def __init__(self, json_block: str) -> None: ...
+
+    def required_inputs(self) -> list[str]:
+        """
+        The declared state variables the formula actually reads, in first-reference order
+        (the order the formula mentions them, NOT the order they were declared).
+        """
+
+    def evaluate(self, AS: AbstractState) -> float:
+        """
+        Evaluate at the state `AS` (an AbstractState) is currently sitting at.
+        Set the state the usual way -- AS.update(DmolarT_INPUTS, rhomolar, T) --
+        so any input pair, backend, or mixture composition works.
+        Raises ValueError if an input reads back non-finite (an AbstractState
+        that was never update()d).
+        """
 
 class MonotonicExpansionMatch:
     @property

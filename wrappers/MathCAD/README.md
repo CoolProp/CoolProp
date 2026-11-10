@@ -4,8 +4,14 @@ CoolProp Wrapper for PTC Mathcad Prime 7.0 or later (64-bit)
 | Copyright Scott Polak and Ian Bell, 2013  
 | Updated by Jeff Henning, 2016    
 
-There are two ways to get the CoolProp wrapper add-in for Mathcad Prime; download the pre-compiled binary from SourceForge or Compile your own. 
+Contents
+--------
+- [Precompiled Binaries](#precompiled-binaries)
+- [Build Your Own](#build-your-own)
+- [Usage](#usage)
 
+
+There are two ways to get the CoolProp wrapper add-in for Mathcad Prime; download the pre-compiled binary from SourceForge or Compile your own. 
 
 Precompiled Binaries
 ====================
@@ -84,11 +90,18 @@ To Build
 
     (*Alternatively, open the VS solution created in the build directory with Visual Studio, set the config to Release and x64, and compile the DLL under the Build menu.*)
 
-To Use
-------
+To Install
+----------
 
 * Copy CoolProp\\buildprime\\Release\\CoolPropMathcadWrapper.dll file to C:\\Program Files\\PTC\\Mathcad Prime ``x.0.0.0``\\Custom Functions (replace ``x.0.0.0`` with your current version)
 
 * Open the `CoolPropFluidProperties.mcdx` file in MathCAD and press `<Ctrl>-<F5>` to force recalculation of the entire workbook.  This file provides usage examples for the implemented CoolProp Functions.
 
 * (Optional) Install the Custom Functions Add-in, [CustFunc](https://github.com/henningjp/CustFunc) and copy the associated ``CoolProp_EN.xml`` file to the ``Custom Functions\docs`` folder, creating it if it doesn't exist (this file is optional and for features in development). The [CustFunc](https://github.com/henningjp/CustFunc) add-in provides a pop-up (when pressing ``<F3>``) that gives brief descriptions of each implemented function and its input parameters and facilitates inserting these functions into the worksheet.
+
+Usage
+=====
+
+For the full list of available Mathcad functions — both the high-level, stateless functions (``PropsSI``, ``PropsSImulti``, ``HAPropsSI``, etc.) and the Low-Level (AbstractState) API for building a persistent fluid/mixture state and reusing it across many calls — see [USAGE.md](USAGE.md).
+
+

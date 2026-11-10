@@ -42,7 +42,7 @@ Compilation of the Java wrapper requires a few :ref:`common wrapper pre-requisit
 Linux & OSX
 -----------
 
-1. Download a zip file of the Java Development Kit (JDK) for Java from `Oracle downloads <https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
+1. Download a zip file of the Java Development Kit (JDK) for Java from `Oracle downloads <https://www.oracle.com/java/technologies/downloads/#java8>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
 
 2. Expand the zip file you downloaded
 
@@ -55,7 +55,7 @@ Linux & OSX
 Windows
 -------
 
-Download and run the JDK installer from `Oracle downloads <https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
+Download and run the JDK installer from `Oracle downloads <https://www.oracle.com/java/technologies/downloads/#java8>`_. If you are in a 32-bit system, download the 32-bit system, else download the 64-bit version.
 
 Build
 -----

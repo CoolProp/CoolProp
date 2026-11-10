@@ -54,11 +54,11 @@ Old Method
 There are two ways to link CoolProp and SMathStudio :
 Remark: I used the first one, the second one isn't quite clear to me.
 
-1) The easiest way is to download and install the portable SMath Studio distribution with Maxima, CoolProp and many other plugins :
-https://smath.info/wiki/%28S%28p1gq0245uny440554qdivzik%29%29/SMath%20with%20Plugins.ashx
+1) The easiest way is to download and install SMath Studio, then add the CoolProp Wrapper plugin from the Plugins view of the Extensions Manager :
+https://smath.com/en-US/view/SMathStudio/download
 
 2) To link CoolProp to SMathStudio_Desktop follow the identical instructions as given below for MathCAD 15 :
-https://en.smath.info/forum/yaf_postst2568_CoolProp.aspx#post13310
+https://smath.com/en-US/forum/topic/EEvowF/CoolProp
 
 Notes :
 - In October 2014 SMath Studio with CoolProp worked on Windows only. 
@@ -66,4 +66,4 @@ Notes :
 
 More information on SMath Studio is given under :
 https://en.wikipedia.org/wiki/SMath_Studio
-https://en.smath.info/
+https://smath.com/en-US/

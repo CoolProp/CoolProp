@@ -84,6 +84,7 @@ enum parameters : int
     iP_max,              ///< Maximum pressure
     iP_min,              ///< Minimum pressure
     idipole_moment,      ///< Dipole moment
+    iHmolar_formation,   ///< Standard molar enthalpy of formation of the ideal gas at 298.15 K
 
     // Bulk properties
     iT,      ///< Temperature
@@ -504,7 +505,12 @@ enum backend_families : int
     PR_BACKEND_FAMILY,
     VTPR_BACKEND_FAMILY,
     PCSAFT_BACKEND_FAMILY,
-    SVDSBTL_BACKEND_FAMILY
+    SVDSBTL_BACKEND_FAMILY,
+    GERG2004_BACKEND_FAMILY,
+    GERG2008_BACKEND_FAMILY,
+    // Appended, not inserted: these enums are serialized by value in
+    // places, so renumbering existing entries would silently break them.
+    BOLLENGIER_BACKEND_FAMILY
 };
 enum backends : int
 {
@@ -522,7 +528,10 @@ enum backends : int
     PR_BACKEND,
     VTPR_BACKEND,
     PCSAFT_BACKEND,
-    SVDSBTL_BACKEND
+    SVDSBTL_BACKEND,
+    GERG2004_BACKEND,
+    GERG2008_BACKEND,
+    BOLLENGIER_BACKEND
 };
 
 /// Convert a string into the enum values

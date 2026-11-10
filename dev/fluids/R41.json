@@ -3934,7 +3934,22 @@
     "INCHI_STRING": "InChI=1S/CH3F/c1-2/h1H3",
     "NAME": "R41",
     "REFPROP_NAME": "R41",
-    "SMILES": "CF"
+    "SMILES": "CF",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "593-53-3*0",
+        "source": "ATcT",
+        "uncertainty": 240.0,
+        "units": "J/mol",
+        "value": -235470.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

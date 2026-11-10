@@ -1,8 +1,9 @@
 """HAProps consumer migration (bd CoolProp-r9sq.27).
 
-The non-SI ``HAProps`` was removed in v8; the live in-repo consumers
-(``Web/.../NelsonValidation.py`` and ``CoolProp/GUI/PsychScript.py``) now call
-``HAPropsSI`` directly in SI units.  (``CoolProp/Plots/psy.py`` is legacy
+The non-SI ``HAProps`` was removed in v8; the live in-repo consumer
+(``Web/.../NelsonValidation.py``) now calls ``HAPropsSI`` directly in SI units.
+(``CoolProp/GUI/PsychScript.py`` was also migrated, then removed with the
+wxPython GUI in #3472.)  (``CoolProp/Plots/psy.py`` is legacy
 Python-2 / PyQt4 code that does not import on Python 3 and is left untouched.)
 
 This runs the standalone Nelson validation script end-to-end (it needs only

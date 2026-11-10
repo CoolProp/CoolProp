@@ -4044,7 +4044,22 @@
     "INCHI_STRING": "InChI=1S/C9H20/c1-3-5-7-9-8-6-4-2/h3-9H2,1-2H3",
     "NAME": "n-Nonane",
     "REFPROP_NAME": "NONANE",
-    "SMILES": "CCCCCCCCC"
+    "SMILES": "CCCCCCCCC",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "111-84-2*0",
+        "source": "ATcT",
+        "uncertainty": 480.0,
+        "units": "J/mol",
+        "value": -228060.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

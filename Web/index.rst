@@ -21,13 +21,14 @@ CoolProp is a C++ library that implements:
 * :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
 * :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
 * :ref:`PC-SAFT equation of state <pcsaft_backend>`
+* :ref:`Strict GERG-2004 / GERG-2008 equations of state for natural gases <gerg_backend>`
 
 Environments Supported
 ----------------------
 
 Programming Languages:
 
-* Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>`, :ref:`C++ (as static library) <static_library>`, :ref:`C++ as shared library <shared_library>`, `Modelica <https://github.com/modelica/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`Android <Android>`, :ref:`MATLAB <MATLAB>`
+* Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>`, :ref:`C++ (as static library) <static_library>`, :ref:`C++ as shared library <shared_library>`, `Modelica <https://github.com/modelica-3rdparty/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`Android <Android>`, :ref:`MATLAB <MATLAB>`
 * High-level interface only: :ref:`Labview <Labview>`, :ref:`EES <EES>`, :ref:`Microsoft Excel <Excel>`, :ref:`LibreOffice <LibreOffice>`, :ref:`Javascript <Javascript>`, :ref:`PHP <PHP>`, :ref:`FORTRAN <FORTRAN>`, :ref:`Maple <Maple>`, :ref:`Mathematica <Mathematica>`, :ref:`Scilab <Scilab>`, :ref:`Delphi & Lazarus <Delphi>`, :ref:`Julia <Julia>`
 
 Architectures:
@@ -62,12 +63,15 @@ Projects Using CoolProp
 * `ACHP <https://achp.sourceforge.net/>`_ - modelling direct expansion and secondary loops for residential-scale systems
 * `DWSim <https://dwsim.org>`_ - chemical process simulator
 * `fProperties <https://fproperties.jfcoronel.org/>`_ - fluid properties calculator
-* `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_ -  web calculator using mathjs
+* `Web Thermodynamics Example using CoolProp <https://github.com/dvd101x/web-thermodynamics>`_ -  web calculator using mathjs
 * `pSolver <https://psolver.jfcoronel.org/>`_ - analyze, solve and edit problems on a graphical sheet
 * `HydDown <https://andr1976.github.io/HydDown/>`_ - calculating hydrogen pressure vessel filling and discharge
 * `HYRAM+ <https://energy.sandia.gov/programs/sustainable-transportation/hydrogen/hydrogen-safety-codes-and-standards/hyram/>`_ - hydrogen and other alternative fuels risk assessment models
 * `UH2SC <https://github.com/sandialabs/uh2sc>`_ - underground hydrogen salt cavern simulation tool
-* `Calcumber <https://calcumber.app/fluid-properties/>`_ – notebook-style unit-aware web calculator
+* `Calcumber <https://calcumber.app/fluid-properties/>`_ - notebook-style unit-aware web calculator
+* `FluidProps <https://fluidprops.com>`_ - free fluid property calculators and steam tables built on CoolProp
+* `Thermoprops <https://luisbedoia.github.io/thermoprops/>`_ - web calculator for fluid states and p-h, T-s and other thermodynamic diagrams
+* `TESPy <https://tespy.readthedocs.io/en/main/>`_ - thermodynamic process simulator for heat pumps, ORCs etc.
 
 Main Developers
 ---------------
@@ -77,7 +81,7 @@ Main Developers
 The primary developers are:
 
 - `Ian Bell <mailto:ian.h.bell@gmail.com>`_, Bell Thermal Consultants
-- `Jorrit Wronski <mailto:jowr@ipu.dk>`_, `IPU Refrigeration and Energy Technology <https://www.ipu.dk/expertise/thermodynamics-energy-technology/>`_, Kgs. Lyngby, Denmark
+- `Jorrit Wronski <mailto:jow@cleanheatpartners.com>`_, `Clean Heat Partners <https://www.cleanheatpartners.com>`_, Denmark
 - `Sylvain Quoilin <mailto:squoilin@ulg.ac.be>`_, `Vincent Lemort <mailto:vincent.lemort@ulg.ac.be>`_, Thermodynamics Laboratory, University of Liege, Liege, Belgium
 
 Please be so kind and cite our work in your publication: :ref:`Citation information <citation>`.
@@ -90,7 +94,7 @@ Supporters
 .. image:: _static/logo_labothap.png
    :height: 100px
    :alt: labothap
-   :target: http://www.labothap.ulg.ac.be/
+   :target: https://www.labothap.uliege.be/cms/c_6307260/en/thermodynamics-laboratory
 
 .. image:: _static/logo_ORCNext.jpg
    :height: 100px
@@ -101,24 +105,14 @@ Supporters
 .. image:: _static/logo_herrick.png
    :height: 100px
    :alt: Herrick
-   :target: https://engineering.purdue.edu/Herrick/index.html
-
-.. image:: _static/logo_maplesoft.png
-   :height: 100px
-   :alt: Maple
-   :target: https://www.maplesoft.com
+   :target: https://engineering.purdue.edu/Herrick
 
 \
 
 .. image:: _static/logo_dtu_mekanik.png
    :height: 50px
    :alt: DTU Mechanical Engineering - Section for Thermal Energy
-   :target: https://www.mek.dtu.dk/english/Sections/TES
-
-.. image:: _static/logo_ipu.png
-   :height: 50px
-   :alt: IPU Refrigeration and Energy Technology
-   :target: https://www.ipu.dk
+   :target: https://construct.dtu.dk/Sections/thermal-energy
 
 
 License Information

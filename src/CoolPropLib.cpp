@@ -446,6 +446,16 @@ EXPORT_CODE void CONVENTION set_departure_functions(const char* string_data, lon
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE void CONVENTION apply_simple_mixing_rule(const char* identifier1, const char* identifier2, const char* rule, long* errcode,
+                                                     char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    try {
+        CoolProp::apply_simple_mixing_rule(identifier1, identifier2, rule);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
 EXPORT_CODE double CONVENTION HAPropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Name3,
                                         double Prop3) {
     fpu_reset_guard guard;
@@ -564,6 +574,42 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
         } else if (AS->using_volu_fractions()) {
             AS->set_volu_fractions(_fractions);
         }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_set_mole_fractions(const long handle, const double* fractions, const long N, long* errcode,
+                                                             char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    try {
+        if (N < 0 || (N > 0 && fractions == nullptr)) {
+            throw CoolProp::ValueError(format("Invalid fractions array (N=%ld)", N));
+        }
+        std::vector<double> _fractions;
+        if (N > 0) {
+            _fractions.assign(fractions, fractions + N);
+        }
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        AS->set_mole_fractions(_fractions);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_set_mass_fractions(const long handle, const double* fractions, const long N, long* errcode,
+                                                             char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    fpu_reset_guard guard;
+    try {
+        if (N < 0 || (N > 0 && fractions == nullptr)) {
+            throw CoolProp::ValueError(format("Invalid fractions array (N=%ld)", N));
+        }
+        std::vector<double> _fractions;
+        if (N > 0) {
+            _fractions.assign(fractions, fractions + N);
+        }
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        AS->set_mass_fractions(_fractions);
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }

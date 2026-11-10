@@ -12,7 +12,7 @@ root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 fluids_path = os.path.join(web_dir, 'fluid_properties', 'fluids')
 plots_path = os.path.join(web_dir, 'fluid_properties', 'fluids', 'Superancillaryplots')
 
-outputversion = '2026.07.05'
+outputversion = '2026.08.29'
 if not Path(f'{outputversion}.zip').exists():
     print('Downloading the chebyshev output file to ', Path('.').absolute())
     urllib.request.urlretrieve(f'https://github.com/CoolProp/fastchebpure/archive/refs/tags/{outputversion}.zip', f'{outputversion}.zip')
@@ -39,8 +39,14 @@ CP.set_config_bool(CP.ENABLE_SUPERANCILLARIES, False)
 
 AS = CP.AbstractState('HEOS', "{fluid}")
 
-# Skip pseudo-pure fluids, pure fluids only; pseudo-pure do not have superancillaries
+# Pure fluids only; pseudo-pure do not have superancillaries.  The fluid page
+# links the plot files unconditionally, so write a placeholder rather than none.
 if AS.fluid_param_string("pure") != "true":
+    fig = plt.figure()
+    fig.text(0.5, 0.5, 'Superancillary not available (pseudo-pure fluid)', ha='center', va='center')
+    plt.savefig('{fluid:s}.png', dpi = 300)
+    plt.savefig('{fluid:s}.pdf')
+    plt.close()
     quit()
 
 jEOS = json.loads(CP.get_fluid_param_string("{fluid}", "JSON"))[0]['EOS'][0]

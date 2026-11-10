@@ -4088,7 +4088,22 @@
     "INCHI_STRING": "InChI=1S/CF3I/c2-1(3,4)5",
     "NAME": "R13I1",
     "REFPROP_NAME": "CF3I",
-    "SMILES": "C(F)(F)(F)I"
+    "SMILES": "C(F)(F)(F)I",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "2314-97-8*0",
+        "source": "ATcT",
+        "uncertainty": 450.0,
+        "units": "J/mol",
+        "value": -589090.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

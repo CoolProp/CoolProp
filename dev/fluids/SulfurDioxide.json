@@ -3951,7 +3951,22 @@
     "INCHI_STRING": "InChI=1S/O2S/c1-3-2",
     "NAME": "SulfurDioxide",
     "REFPROP_NAME": "SO2",
-    "SMILES": "O=S=O"
+    "SMILES": "O=S=O",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7446-09-5*0",
+        "source": "ATcT",
+        "uncertainty": 130.0,
+        "units": "J/mol",
+        "value": -296750.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

@@ -3,7 +3,9 @@
 
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/detail/msgpack.h"
+#include <atomic>
 #include <memory>
+#include <mutex>
 using std::shared_ptr;
 #include "CoolProp/Exceptions.h"
 #include "CoolProp/CoolProp.h"
@@ -830,8 +832,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            // Cached file was built at a different grid resolution than the current
-            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            // Cached file was built at a different grid resolution than requested
+            // (TABULAR_NX/TABULAR_NY config or per-instance factory-string options);
+            // force a rebuild via check_tables().
             throw UnableToLoadError(format("Cached LogPH grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
@@ -877,8 +880,9 @@ class LogPTTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            // Cached file was built at a different grid resolution than the current
-            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            // Cached file was built at a different grid resolution than requested
+            // (TABULAR_NX/TABULAR_NY config or per-instance factory-string options);
+            // force a rebuild via check_tables().
             throw UnableToLoadError(format("Cached LogPT grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
@@ -981,14 +985,36 @@ class CellCoeffs
 class TabularDataSet
 {
    public:
-    bool tables_loaded;
+    /// True once the tables are complete (loaded from disk, or built, packed
+    /// and written).  Atomic because the library reads it under its own mutex
+    /// while a builder publishes it under build_mutex.
+    std::atomic<bool> tables_loaded;
+    /// Serializes the build-pack-write of this dataset (TabularBackend::check_tables)
+    /// and build_coeffs(), so concurrent first users of the same dataset build it
+    /// exactly once.  Lock order: build_mutex, then TabularDataLibrary::data_mutex;
+    /// nothing holding data_mutex takes build_mutex.
+    std::mutex build_mutex;
     LogPHTable single_phase_logph;
     LogPTTable single_phase_logpT;
     PureFluidSaturationTableData pure_saturation;
     PackablePhaseEnvelopeData phase_envelope;
     std::vector<std::vector<CellCoeffs>> coeffs_ph, coeffs_pT;
+    /// Process-wide count of build_tables() calls, across all datasets.  A test
+    /// hook: lets tests assert that concurrent first use builds a dataset once.
+    static std::atomic<int> build_count;
 
     TabularDataSet() : tables_loaded(false) {}
+    /// Set the grid resolution of both single-phase tables.  Must be called
+    /// before load_tables()/build_tables(); used to apply a per-instance
+    /// resolution from factory-string options in place of the
+    /// TABULAR_NX/TABULAR_NY configuration globals the tables were
+    /// default-constructed from.
+    void set_grid(std::size_t Nx, std::size_t Ny) {
+        single_phase_logph.Nx = Nx;
+        single_phase_logph.Ny = Ny;
+        single_phase_logpT.Nx = Nx;
+        single_phase_logpT.Ny = Ny;
+    }
     /// Write the tables to files on the computer
     void write_tables(const std::string& path_to_tables);
     /// Load the tables from file
@@ -1003,6 +1029,10 @@ class TabularDataLibrary
 {
    private:
     std::map<std::string, TabularDataSet> data;
+    /// Serializes get_set_of_tables(): lookup, insert, and the disk load of a
+    /// freshly inserted entry.  Held only inside get_set_of_tables, which does
+    /// not re-enter the library.
+    std::mutex data_mutex;
 
    public:
     TabularDataLibrary() = default;
@@ -1021,8 +1051,10 @@ class TabularDataLibrary
         }
         return table_directory + AS->backend_name() + "(" + strjoin(components, "&") + ")";
     }
-    /// Return a pointer to the set of tabular datasets and whether tables were already loaded
-    std::pair<TabularDataSet*, bool> get_set_of_tables(shared_ptr<AbstractState>& AS);
+    /// Return a pointer to the set of tabular datasets and whether tables were already loaded.
+    /// Nx/Ny are the requested grid resolution; the in-memory cache is keyed by
+    /// (path, Nx, Ny) so instances at different resolutions coexist in one process.
+    std::pair<TabularDataSet*, bool> get_set_of_tables(shared_ptr<AbstractState>& AS, std::size_t Nx, std::size_t Ny);
 };
 
 /**
@@ -1052,10 +1084,24 @@ class TabularBackend : public AbstractState
     std::vector<std::vector<double>> const* d2zdxdy;
     std::vector<std::vector<double>> const* d2zdy2;
     std::vector<CoolPropDbl> mole_fractions;
+    /// Canonical form of the factory-string options this instance was built
+    /// with ("{}" when none were supplied); returned by build_options_json()
+    std::string options_canonical;
+    /// Per-instance grid resolution from factory-string options; 0 means
+    /// "not requested" and the TABULAR_NX/TABULAR_NY configuration globals apply
+    std::size_t Nx_requested, Ny_requested;
+
+    /// Validate + canonicalise the options blob and extract the per-instance
+    /// grid resolution; called from the constructor only (options are
+    /// immutable per instance).  Defined in TabularBackends.cpp
+    void parse_options(const std::string& options_json);
 
    public:
     shared_ptr<CoolProp::AbstractState> AS;
-    TabularBackend(shared_ptr<CoolProp::AbstractState> AS)
+    TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(std::move(AS), "") {}
+    /// Constructor accepting a factory-string options JSON blob; validated
+    /// against kTabularOptionsSchemaJson (unknown keys throw at construction)
+    TabularBackend(shared_ptr<CoolProp::AbstractState> AS, const std::string& options_json)
       : imposed_phase_index(iphase_not_imposed),
         tables_loaded(false),
         using_single_phase_table(false),
@@ -1071,8 +1117,34 @@ class TabularBackend : public AbstractState
         d2zdx2(nullptr),
         d2zdxdy(nullptr),
         d2zdy2(nullptr),
+        Nx_requested(0),
+        Ny_requested(0),
         AS(std::move(AS)),
-        dataset(nullptr) {};
+        dataset(nullptr) {
+        parse_options(options_json);
+    };
+
+    /// Grid resolution in effect for this instance: per-instance request if
+    /// options supplied one, otherwise the configuration globals (falling
+    /// back to the documented default of 200 for nonsense values <= 1, the
+    /// same guard the table constructors have always applied)
+    std::size_t effective_Nx() const {
+        if (Nx_requested > 0) {
+            return Nx_requested;
+        }
+        const int cfg = get_config_int(TABULAR_NX);
+        return (cfg > 1) ? static_cast<std::size_t>(cfg) : 200;
+    }
+    std::size_t effective_Ny() const {
+        if (Ny_requested > 0) {
+            return Ny_requested;
+        }
+        const int cfg = get_config_int(TABULAR_NY);
+        return (cfg > 1) ? static_cast<std::size_t>(cfg) : 200;
+    }
+    std::string build_options_json() const override {
+        return options_canonical;
+    }
 
     // None of the tabular methods are available from the high-level interface
     bool available_in_high_level() override {
@@ -1333,23 +1405,33 @@ class TabularBackend : public AbstractState
                 if (get_debug_level() > 0) {
                     std::cout << format("Table loading failed with error: %s\n", e.what());
                 }
-                /// Check directory size
-                std::string table_path = path_to_tables();
-                double directory_size_in_GB = CalculateDirSize(table_path) / POW3(1024.0);
-                double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
-                if (get_debug_level() > 0) {
-                    std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";
+                // load_tables() set `dataset` before throwing.  Only one thread
+                // may build a given dataset: the others wait here, then see
+                // tables_loaded and skip straight to the load below.
+                std::scoped_lock build_lock(dataset->build_mutex);
+                if (!dataset->tables_loaded) {
+                    /// Check directory size
+                    std::string table_path = path_to_tables();
+                    double directory_size_in_GB = CalculateDirSize(table_path) / POW3(1024.0);
+                    double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
+                    if (get_debug_level() > 0) {
+                        std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";
+                    }
+                    if (directory_size_in_GB > 1.5 * allowed_size_in_GB) {
+                        throw DirectorySizeError(
+                          format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
+                    } else if (directory_size_in_GB > allowed_size_in_GB) {
+                        set_warning_string(
+                          format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
+                    }
+                    /// If you cannot load the tables, build them and then write them to file
+                    dataset->build_tables(this->AS);
+                    pack_matrices();
+                    write_tables();
+                    // Publish only now that build, pack and write are all done, so a
+                    // thread taking the lock-free fast path never sees a half-built set.
+                    dataset->tables_loaded = true;
                 }
-                if (directory_size_in_GB > 1.5 * allowed_size_in_GB) {
-                    throw DirectorySizeError(
-                      format("Maximum allowed tabular directory size is %g GB, you have exceeded 1.5 times this limit", allowed_size_in_GB));
-                } else if (directory_size_in_GB > allowed_size_in_GB) {
-                    set_warning_string(format("Maximum allowed tabular directory size is %g GB, you have exceeded this limit", allowed_size_in_GB));
-                }
-                /// If you cannot load the tables, build them and then write them to file
-                dataset->build_tables(this->AS);
-                pack_matrices();
-                write_tables();
                 /// Load the tables back into memory as a consistency check
                 load_tables();
                 // Set the flag saying tables have been successfully loaded

@@ -21,7 +21,7 @@ tst_pkgs = dev_pkgs + ["nose"]
 
 if pypi:
     # Get the additional information from PyPI
-    r = requests.get('https://pypi.python.org/pypi/CoolProp/json')
+    r = requests.get('https://pypi.org/pypi/CoolProp/json')
     if(r.ok):
         item = json.loads(r.text or r.content)
         version = item['info']['version']
@@ -46,7 +46,7 @@ if local:
     generate_headers.generate()
     del generate_headers
     version = open(os.path.join(coolprop_dir, '.version'), 'r').read().strip()
-    home = "http://www.coolprop.org"
+    home = "https://www.coolprop.org"
     license = "MIT"
     summary = "Open-source thermodynamic and transport properties database"
     fil = None

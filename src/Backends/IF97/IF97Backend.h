@@ -7,6 +7,8 @@
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/Exceptions.h"
 #include <vector>
+#include <algorithm>
+#include <cmath>
 
 namespace CoolProp {
 
@@ -19,6 +21,14 @@ class IF97Backend : public AbstractState
     CachedElement _hmass, _rhomass, _smass,
       _reverse;  // Also need a way to flag using the IF97 reverse calcs for h(p,s) and s(p,h)
                  /// CachedElement  _hVmass, _hLmass, _sVmass, sLmass;
+
+    /// Clamp a lever-rule quality into [0,1] to absorb rounding at the dome
+    /// edges, but refuse a non-finite one: std::min(1, std::max(0, NaN)) is 0,
+    /// which silently reported a NaN quality as saturated liquid.
+    static double bounded_quality(double q) {
+        if (!std::isfinite(q)) throw ValueError("IF97: computed two-phase quality is not a finite number");
+        return std::min(1.0, std::max(0.0, q));
+    }
 
    public:
     /// The name of the backend being used
@@ -103,7 +113,7 @@ class IF97Backend : public AbstractState
                         _phase = iphase_liquid;
                     } else if (_p < psat * (1.0 - epsilon)) {  //         below the saturation curve
                         _phase = iphase_gas;
-                    } else  //         exactly on saturation curve (within 1e-4 %)
+                    } else  //         exactly on saturation curve (within 3.3e-3 %)
                         _phase = iphase_twophase;
                 }
             }
@@ -123,25 +133,24 @@ class IF97Backend : public AbstractState
                     };
                     break;
                 case 2:  // IF97::REGION2
+                    // Same labels as the forward (T,p) branch: above Pcrit and Tcrit is "supercritical"
                     if (_T <= IF97::Tcrit) {
                         _phase = iphase_gas;
                     } else {
-                        _phase = iphase_supercritical_gas;
+                        _phase = (_p > IF97::Pcrit) ? iphase_supercritical : iphase_supercritical_gas;
                     };
                     break;
                 case 3:  // IF97::REGION3
-                    if (_T < IF97::Tsat97(_p)) {
-                        if (_p <= IF97::Pcrit) {
-                            _phase = iphase_liquid;
-                        } else {
-                            _phase = iphase_supercritical_liquid;
-                        };
+                    // There is no saturation curve above Pcrit (Tsat97 is not valid there),
+                    // so split on pressure first, mirroring the forward (T,p) branch.
+                    if (_p > IF97::Pcrit) {
+                        _phase = (_T <= IF97::Tcrit) ? iphase_supercritical_liquid : iphase_supercritical;
+                    } else if (_T < IF97::Tsat97(_p)) {
+                        _phase = iphase_liquid;
+                    } else if (_T <= IF97::Tcrit) {
+                        _phase = iphase_gas;
                     } else {
-                        if (_T <= IF97::Tcrit) {
-                            _phase = iphase_gas;
-                        } else {
-                            _phase = iphase_supercritical_gas;
-                        }
+                        _phase = iphase_supercritical_gas;
                     };
                     break;
                 case 4:                        // IF97::REGION4 (Saturation
@@ -165,10 +174,38 @@ class IF97Backend : public AbstractState
     @param value2 Second input value
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2) override {
+        // Quality first, so a non-finite or out-of-range Q keeps the
+        // "[Q] must be between 0 and 1" diagnostic every backend uses.
+        check_input_quality(input_pair, value1, value2);
 
-        double H, S, hLmass, hVmass, sLmass, sVmass;
+        // Reject non-finite inputs up front, for every pair.  IF97's region
+        // selectors do not propagate NaN: HmassP / PSmass with p = NaN and
+        // HmassSmass with h or s = NaN previously returned T = 273.15 K and a
+        // gas / two-phase state without complaint.  Same exception type and
+        // "is not a valid number" wording as HEOS's post-update checks.  Any
+        // quality has already passed check_input_quality, so it is finite.
+        if (!std::isfinite(value1) || !std::isfinite(value2)) {
+            throw ValueError(format("IF97: input [%s] is not a valid number: value1 = %g, value2 = %g", get_input_pair_short_desc(input_pair).c_str(),
+                                    value1, value2));
+        }
 
         clear();  //clear the few cached values we are using
+
+        // A throw part-way through (T_phmass, Tsat97, psat97, p_hsmass, the
+        // region-5 check in set_phase()) must not leave a half-built state that
+        // later property calls would mix into a result.  Reset, then rethrow.
+        try {
+            update_state(input_pair, value1, value2);
+        } catch (...) {
+            clear();
+            throw;
+        }
+    };
+
+   protected:
+    /// Fill in the state for an already-validated, already-cleared update().  May throw.
+    void update_state(CoolProp::input_pairs input_pair, double value1, double value2) {
+        double H, S, hLmass, hVmass, sLmass, sVmass;
 
         switch (input_pair) {
             case PT_INPUTS:
@@ -191,7 +228,7 @@ class IF97Backend : public AbstractState
                         || imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) {
                         _phase = imposed_phase_index;
                     } else {
-                        throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%Lg Pa]",
+                        throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%g Pa]",
                                                 IF97::psat97(_T), _T, _p));
                     }
                 }
@@ -199,14 +236,12 @@ class IF97Backend : public AbstractState
             case PQ_INPUTS:
                 _p = value1;
                 _Q = value2;
-                if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _T = IF97::Tsat97(_p);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
             case QT_INPUTS:
                 _Q = value1;
                 _T = value2;
-                if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
@@ -214,7 +249,7 @@ class IF97Backend : public AbstractState
                 // IF97 is mass based so convert hmolar input to hmass
                 _hmass = value1 / molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
                 _p = value2;
-                // Fall thru to mass basis inputs
+                [[fallthrough]];  // fallthrough is explicit to mass basis inputs
             case HmassP_INPUTS:
                 if (!(_hmass)) _hmass = value1;  // don't set if already set above
                 _p = value2;
@@ -226,7 +261,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bound between 0 and 1
+                    _Q = bounded_quality((H - hLmass) / (hVmass - hLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     set_phase();
@@ -236,10 +271,10 @@ class IF97Backend : public AbstractState
                 // IF97 is mass based so convert smolar input to smass
                 _p = value1;
                 _smass = value2 / molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
-                // Fall thru to mass basis inputs
+                [[fallthrough]];                 // fallthrough is explicit to mass basis inputs
             case PSmass_INPUTS:
                 _p = value1;
-                if (!(_smass)) _smass = value2;
+                if (!(_smass)) _smass = value2;  // don't set if already set above
                 _reverse = 1.0;
                 _T = IF97::T_psmass(_p, _smass);
                 _Q = -1;
@@ -248,7 +283,7 @@ class IF97Backend : public AbstractState
                     S = _smass;
                     sVmass = IF97::svap_p(_p);
                     sLmass = IF97::sliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (S - sLmass) / (sVmass - sLmass)));  //bound between 0 and 1
+                    _Q = bounded_quality((S - sLmass) / (sVmass - sLmass));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     set_phase();
@@ -258,29 +293,34 @@ class IF97Backend : public AbstractState
                 // IF97 is mass based so convert smolar input to smass
                 _hmass = value1 / molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
                 _smass = value2 / molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
-                // Fall thru to mass basis inputs
-            case HmassSmass_INPUTS:
-                _hmass = value1;
-                _smass = value2;
-                _p = IF97::p_hsmass(_hmass, _smass);
-                _T = IF97::T_phmass(_p, _hmass);
-                // ...if in the vapor dome (Region 4), calculate Quality...
-                if (IF97::BackwardRegion(_p, _hmass, IF97_HMASS) == 4) {
-                    H = _hmass;
-                    hVmass = IF97::hvap_p(_p);
-                    hLmass = IF97::hliq_p(_p);
-                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bount between 0 and 1
+                [[fallthrough]];                 // fallthrough is explicit to mass basis inputs
+            case HmassSmass_INPUTS: {
+                if (!(_hmass)) _hmass = value1;  // don't set if already set above
+                if (!(_smass)) _smass = value2;  // don't set if already set above
+                // ...if in the vapor dome (Region 4), Region_hs also returns p, T, and Q from one solve...
+                // Region_hs is consistent with p_hsmass, including states on a saturation edge.
+                // Region_ph(p_hsmass(h,s), h) is not: round-off in p can put an edge state just
+                // outside Region 4, and near Pcrit the single-phase path is far off in h.
+                double p_dome = 0, T_dome = 0, Q_dome = 0;
+                if (IF97::Region_hs(_hmass, _smass, p_dome, T_dome, Q_dome) == 4) {
+                    _p = p_dome;
+                    _T = T_dome;
+                    _Q = bounded_quality(Q_dome);  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
+                    _p = IF97::p_hsmass(_hmass, _smass);
+                    _T = IF97::T_phmass(_p, _hmass);
                     _Q = -1;
                     set_phase();
                 };
                 break;
+            }
             default:
                 throw ValueError("This pair of inputs is not yet supported");
         }
     };
 
+   public:
     /*  We have to override some of the functions from the AbstractState.
      *  IF97 is only mass-based and does not support conversion
      *  from mass- to molar-specific quantities.
@@ -757,6 +797,15 @@ class IF97Backend : public AbstractState
             const double v1 = val1[k];
             const double v2 = val2[k];
 
+            // A non-finite input must not reach the backward solvers: T_phmass(p, NaN) does not
+            // throw, because every NaN comparison is false and the region tests fall through to
+            // Region 1, so it returns a plausible T and the row would come back with status ok.
+            if (!std::isfinite(v1) || !std::isfinite(v2)) {
+                status_flags[k] = CoolProp::fast_evaluate_out_of_range;
+                fill_nan_row(k);
+                continue;
+            }
+
             double T_k, p_k;
             const double hmass_k = is_HmassP ? v1 : (is_HmolarP ? (v1 / M) : 0.0);
             bool dome_hit = false;
@@ -830,6 +879,13 @@ class IF97Backend : public AbstractState
             }
 
             bool eval_failed = false;
+            // On the saturation lines (Q within 1e-10 of 0 or 1) update() returns the saturated
+            // liquid or vapor value for cp, cv, speed of sound, viscosity, conductivity, and
+            // Prandtl number, so do the same.  Strictly inside the dome (0 < Q < 1) those are not
+            // defined for a two-phase mixture, so only their columns are NaN; the properties that
+            // follow the lever rule (T, p, Q, h, rho, s, u) keep their values and the status is ok.
+            const bool at_sat_liq = dome_hit && std::abs(Q_k) < 1e-10;
+            const bool at_sat_vap = dome_hit && std::abs(Q_k - 1) < 1e-10;
             // Two-phase Q-blend cache (lazy fill — only touched if a
             // property that needs sat-line endpoints is requested while
             // dome_hit is true).
@@ -911,9 +967,38 @@ class IF97Backend : public AbstractState
                             case ispeed_sound:
                             case iviscosity:
                             case iconductivity:
-                            case iPrandtl:
-                                val = NaN;
+                            case iPrandtl: {
+                                if (!at_sat_liq && !at_sat_vap) {
+                                    val = NaN;
+                                    break;
+                                }
+                                double v;
+                                switch (out_key) {
+                                    case iCpmass:
+                                    case iCpmolar:
+                                        v = at_sat_liq ? IF97::cpliq_p(p_k) : IF97::cpvap_p(p_k);
+                                        break;
+                                    case iCvmass:
+                                    case iCvmolar:
+                                        v = at_sat_liq ? IF97::cvliq_p(p_k) : IF97::cvvap_p(p_k);
+                                        break;
+                                    case ispeed_sound:
+                                        v = at_sat_liq ? IF97::speed_soundliq_p(p_k) : IF97::speed_soundvap_p(p_k);
+                                        break;
+                                    case iviscosity:
+                                        v = at_sat_liq ? IF97::viscliq_p(p_k) : IF97::viscvap_p(p_k);
+                                        break;
+                                    case iconductivity:
+                                        v = at_sat_liq ? IF97::tcondliq_p(p_k) : IF97::tcondvap_p(p_k);
+                                        break;
+                                    default:  // iPrandtl
+                                        v = at_sat_liq ? IF97::prandtlliq_p(p_k) : IF97::prandtlvap_p(p_k);
+                                        break;
+                                }
+                                const bool molar = (out_key == iCpmolar || out_key == iCvmolar);
+                                val = molar ? v * M : v;
                                 break;
+                            }
                             default:
                                 val = NaN;
                                 eval_failed = true;

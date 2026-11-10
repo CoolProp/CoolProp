@@ -77,7 +77,7 @@ def test_cheb_entries_schema():
             assert entry["type"] == "chebyshev", name
             T0, T1 = entry["Trange"]
             assert 0.0 < T0 < T1, (name, prop, entry["Trange"])
-            assert entry["fit_source"] in ("tabular_data", "basis_conversion"), name
+            assert entry["fit_source"] in ChebyshevFits.FIT_SOURCES, name
             coeffs = np.asarray(entry["coeffs"], dtype=float)
             assert coeffs.ndim == 2 and coeffs.size, (name, prop)
             assert np.all(np.isfinite(coeffs)), (name, prop)
@@ -99,22 +99,42 @@ def test_density_and_cp_positive_across_domain():
 
 
 def test_conversions_reproduce_committed_polynomial_exactly():
+    """A basis conversion must reproduce the polynomial it was derived from.
+
+    It is an algebraic re-expression, not an independent fit, so the only
+    error allowed is arithmetic: EXACT_CONVERSION_TOLERANCE, not fit quality.
+    """
+    # Counted, not assumed. The filter below reads a constant that the WRITER
+    # also uses to decide how to round, so a typo in that one constant would
+    # otherwise skip every fluid and leave this green while checking nothing.
+    compared = 0
     for name, fluid in _fluids():
         Tbase = float(fluid.get("Tbase", 0.0) or 0.0)
         for prop in CALORIC:
             entry = fluid.get(prop + "_cheb")
             committed = fluid.get(prop, {})
-            if entry is None or entry["fit_source"] != "basis_conversion" or committed.get("type") != "polynomial":
+            if (entry is None
+                    or entry["fit_source"] not in ChebyshevFits.EXACT_FIT_SOURCES
+                    or committed.get("type") != "polynomial"):
                 continue
             Ts, xs = _domain_grid(fluid, entry)
             for x in xs:
                 cheb = ChebyshevFits.evaluate(entry["coeffs"], Ts, x, entry["Trange"], entry["xbase"])
                 poly = _poly_eval(committed, Tbase, entry["xbase"], Ts, x)
                 rel = np.max(np.abs(cheb - poly) / np.maximum(np.abs(poly), 1e-30))
-                assert rel < 1e-9, (name, prop, float(x), rel)
+                assert rel < ChebyshevFits.EXACT_CONVERSION_TOLERANCE, (name, prop, float(x), rel)
+                compared += 1
+    assert compared > 0, ("no committed entry declared fit_source in {0}, so "
+                          "this test checked nothing".format(
+                              sorted(ChebyshevFits.EXACT_FIT_SOURCES)))
 
 
 def test_tabular_fits_describe_their_data():
+    """A tabular refit must track its raw grid, and the committed fit on it.
+
+    Unlike a basis conversion this is an independent fit, so it is held to
+    fit-level agreement rather than to arithmetic exactness.
+    """
     # For refitted entries, compare against the actual data (and against the
     # committed polynomial AT the data points). Comparing the two fits away
     # from the data would only measure how differently they extrapolate into
@@ -122,12 +142,13 @@ def test_tabular_fits_describe_their_data():
     from add_chebyshev_entries import collect_fluid_objects, raw_grids
 
     objects = collect_fluid_objects()
+    compared = 0
     for name, fluid in _fluids():
         Tbase = float(fluid.get("Tbase", 0.0) or 0.0)
         for prop in CALORIC:
             entry = fluid.get(prop + "_cheb")
             committed = fluid.get(prop, {})
-            if entry is None or entry["fit_source"] != "tabular_data":
+            if entry is None or entry["fit_source"] != ChebyshevFits.FIT_SOURCE_TABULAR:
                 continue
             assert entry["NRMS"] is None or entry["NRMS"] < 0.06, (name, prop, entry["NRMS"])
             rawT, rawX, rawGrid = raw_grids(objects.get(name), prop)
@@ -151,6 +172,10 @@ def test_tabular_fits_describe_their_data():
                 if committed.get("type") == "polynomial" and not name.startswith("Example"):
                     poly = _poly_eval(committed, Tbase, entry["xbase"], rawT[mask], x)
                     assert np.max(np.abs(cheb - poly)) / spread < 0.20, (name, prop, float(x))
+                compared += 1
+    assert compared > 0, ("no committed entry declared fit_source "
+                          "{0!r} with raw data behind it, so this test checked "
+                          "nothing".format(ChebyshevFits.FIT_SOURCE_TABULAR))
 
 
 def test_refit_golden_master():

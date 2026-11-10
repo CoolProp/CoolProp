@@ -86,8 +86,6 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
     is_pure_or_pseudopure = (N == 1);
 
     // loading interaction parameters
-    std::string kij_string;
-    std::string kijT_string;
     if (is_pure_or_pseudopure) {
         this->mole_fractions = std::vector<CoolPropDbl>(1, 1);
     } else {
@@ -96,10 +94,11 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
         for (unsigned int i = 0; i < N; ++i) {
             for (unsigned int j = 0; j < N; ++j) {
                 if (i != j) {
-                    kij_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
-                    kijT_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
-                    k_ij[i * N + j] = atof(kij_string.c_str());
-                    k_ijT[i * N + j] = atof(kijT_string.c_str());
+                    // Read as doubles: the text form went through atof, which follows the C
+                    // locale, so a decimal-comma host read kij = 0.0123 as 0.
+                    auto& library = PCSAFTLibrary::get_library();
+                    k_ij[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kij");
+                    k_ijT[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kijT");
                 }
             }
         }
@@ -152,8 +151,6 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
     is_pure_or_pseudopure = (N == 1);
 
     // loading interaction parameters
-    std::string kij_string;
-    std::string kijT_string;
     if (is_pure_or_pseudopure) {
         this->mole_fractions = std::vector<CoolPropDbl>(1, 1);
     } else {
@@ -162,10 +159,11 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
         for (unsigned int i = 0; i < N; ++i) {
             for (unsigned int j = 0; j < N; ++j) {
                 if (i != j) {
-                    kij_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
-                    kijT_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
-                    k_ij[i * N + j] = atof(kij_string.c_str());
-                    k_ijT[i * N + j] = atof(kijT_string.c_str());
+                    // Read as doubles: the text form went through atof, which follows the C
+                    // locale, so a decimal-comma host read kij = 0.0123 as 0.
+                    auto& library = PCSAFTLibrary::get_library();
+                    k_ij[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kij");
+                    k_ijT[i * N + j] = library.get_binary_interaction_number(components[i].getCAS(), components[j].getCAS(), "kijT");
                 }
             }
         }
@@ -1731,6 +1729,12 @@ void PCSAFTBackend::post_update(bool optional_checks) {
 }
 
 void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Refuse a quality outside [0,1] (NaN included) before clear() or any
+    // SatL/SatV/_phase write, so a rejected input leaves the state intact
+    // (#2195).  Covers the pure-fluid Qmass pairs, which mass_to_molar_inputs
+    // would otherwise rewrite without looking at the quality.
+    check_input_quality(input_pair, value1, value2);
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
@@ -1804,7 +1808,6 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             SatL->_T = value2;
             SatV->_T = value2;
             _phase = iphase_twophase;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             if (water_present) {
                 components[water_idx].calc_water_sigma(_T);
                 SatL->components[water_idx].calc_water_sigma(_T);
@@ -1824,9 +1827,6 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             SatL->_Q = value2;
             SatV->_Q = value2;
             _phase = iphase_twophase;
-            if ((_Q < 0) || (_Q > 1)) {
-                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
-            }
             flash_PQ(*this);
             break;
         case DmolarT_INPUTS:

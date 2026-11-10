@@ -29,17 +29,19 @@ any `git push` succeeds.
 ## preflight.sh — local pre-push gate
 
 `dev/ci/preflight.sh` is a single script that runs the same checks CI
-runs against the diff between HEAD and the upstream branch.  Designed
-to be invoked from a pre-push git hook so a passing preflight strongly
-predicts a green CI.
+runs against the diff between the merge-base with `origin/master` (or
+`--base`) and the **working tree** — committed, staged and unstaged changes
+alike.  Designed to be invoked from a pre-push git hook so a passing
+preflight strongly predicts a green CI.  An unresolvable `--base` is an
+error (exit 2), not an empty diff.
 
 | Check | What it does | Skip flag |
 |---|---|---|
 | clang-format | uvx clang-format (version pinned from `.pre-commit-config.yaml`) dry-run on changed `.cpp` / `.h` files | `--skip=clang-format` |
-| build | cmake builds `CatchTestRunner` in `build_catch/` (auto-configures on first run) | `--skip=build` |
-| tests | Catch2 runner with auto-selected tag scope — `[SBTL]`, `[SVDSBTL]`, etc. picked from the changed paths | `--skip=tests` |
-| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers | `--skip=cppcheck` |
-| clang-tidy | diff-only via existing `run-clang-tidy-staged.sh`, requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
+| build | cmake builds `CatchTestRunner` in `build_catch/` (configures it when missing or unusable: Release, Ninja when available) | `--skip=build` |
+| tests | Catch2 runner over `~[slow]` **plus** the tags of every path rule the diff matches (`[SBTL]`, `[Helmholtz]`, `[melting]`, …).  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` bodies run once, with CI's one-sample flags; the verdict reports how many cases skipped | `--skip=tests` |
+| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers; findings **on changed lines** fail (analysis failures always fail) | `--skip=cppcheck` |
+| clang-tidy | changed `.cpp` files via `run-clang-tidy-staged.sh` with `-line-filter` = the changed lines, one process per file, `--jobs` at a time; each file's exit status must agree with its log; requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
 | semgrep | `p/security-audit` + local `.semgrep/` rules (uvx-resolved, Python 3.12 pinned) | `--skip=semgrep` |
 | incomp-sanity | `dev/incompressible_liquids/test_json_sanity.py` on the committed incompressible JSON — rejects optimizer starting guesses, all-zero fits, non-finite/boolean coefficients and cleared vital properties. Only runs when `dev/incompressible_liquids/` is in the diff; falls back to calling the `test_*` functions directly when pytest is unavailable | `--skip=incomp-sanity` |
 
@@ -49,7 +51,60 @@ Invocation:
 ./dev/ci/preflight.sh                          # check vs origin/master
 ./dev/ci/preflight.sh --base=HEAD~1            # check vs an earlier ref
 ./dev/ci/preflight.sh --skip=cppcheck,semgrep  # subset
+./dev/ci/preflight.sh --jobs=4                 # cap parallelism (default: all cores)
 ```
+
+Behaviour notes:
+
+- **Logs.**  Every run writes its logs to a fresh `mktemp -d` directory,
+  printed as `preflight logs: <dir>` at the start and named in every failure
+  message.  (They used to be fixed `/tmp/preflight-*.log` paths that
+  concurrent runs in different worktrees overwrote.)
+- **Changed lines only** for cppcheck and clang-tidy, as in CI's diff-only
+  lint jobs, so findings that predate the branch no longer make a file
+  impossible to touch.  A `.cpp` whose hunks are all deletions is named and
+  not analysed.  The flip side, shared with CI: a bug introduced purely by
+  DELETING code (a removed null check or initializer) lands on an unchanged
+  line and is not reported.  The changed-line list is cross-checked against
+  `git diff --numstat`; if a changed file cannot be mapped (a path git has to
+  quote, or a C/C++ file git treats as binary), preflight exits 2 rather than
+  silently skipping it.  Renames are diffed as delete + add, so a `git mv`d
+  file is linted as a whole file.
+- **What is checked is the working tree**, not the commits being pushed: a
+  defect committed on the branch but fixed only in uncommitted edits passes.
+  Untracked files are not included (`git add -N` them to include them).
+- **Test scope only widens.**  `~[slow]` always runs; a path rule adds its
+  tags on top (in practice, its `[slow]` cases), so touching more areas can
+  never shrink the sweep.  A `dev/fluids/` change pulls in the slow SVD
+  table tests and `[melting]`.
+- **REFPROP.**  If `COOLPROP_REFPROP_ROOT` is unset and `/opt/refprop` is
+  not a REFPROP install, preflight looks in `~/REFPROP10`, `~/REFPROP`,
+  `~/refprop` and `/Applications/REFPROP` and exports the first one that has
+  a REFPROP library and a `FLUIDS`/`fluids` directory.  The test stage prints
+  which REFPROP it used.  Set `COOLPROP_REFPROP_ROOT=` (empty) to opt out.
+- **Build dirs.**  `build_catch` / `build_shared` are reconfigured from
+  scratch when their `CMakeCache.txt` is missing, truncated, belongs to a
+  different source tree, or has no generator file (an interrupted configure).
+
+- **Tests are sharded.**  `run-catch-sharded.sh` cuts the selected cases
+  into ~4x more shards than jobs and feeds them through a work queue, since
+  Catch2's `--shard-count` splits the list into contiguous chunks and the
+  heavy cases sit next to each other.  It fails if any shard exits non-zero
+  (exit 4, "all skipped", is accepted per shard but not for the whole run),
+  if the per-shard case counts from Catch2's XML reporter don't add up to
+  the listed count, or if any shard's XML reports a failed case.
+- **Sharding changes test order context.**  Each shard is a fresh process,
+  so a case never sees `set_config_*` state leaked by an earlier case in
+  another shard.  CI runs the suite serially, so an order-dependent failure
+  can show up in CI and not in preflight (or the reverse).
+- **Dependency downloads are shared across worktrees.**  Build dirs in one
+  worktree already share `<worktree>/.cpm_cache` (`cmake/dependencies.cmake`),
+  but a new worktree re-clones every dependency on first configure.
+  preflight exports `CPM_SOURCE_CACHE=~/.cache/CPM` when it is unset so
+  new worktrees reuse one cache (set it to empty to opt out).  CPM stores
+  the setting per build dir, so existing build dirs are unaffected.
+- Under a heavily loaded machine (several worktrees building at once) pass
+  a smaller `--jobs`.
 
 Tools missing locally (`semgrep`, `clang-tidy`) are *gracefully skipped*
 rather than blocking — but the skip count is reported in the summary so
@@ -135,7 +190,7 @@ ls build/compile_commands.json          # 90+ entries covering src/
 
 ### macOS contributors
 
-The Homebrew `llvm@18` and `llvm` packages ship `clang-tidy`, but they don't
+The Homebrew `llvm` package ships `clang-tidy`, but it doesn't
 know about the Xcode SDK that Apple's `/usr/bin/c++` links against. If
 `clang-tidy` reports `'iterator' file not found` or `__builtin_clzg`-style
 errors against system headers, point it at the Xcode sysroot:
@@ -145,11 +200,15 @@ SDK=$(xcrun --show-sdk-path)
 clang-tidy -p build --extra-arg=--sysroot=$SDK src/CPstrings.cpp
 ```
 
-clang-tidy 19+ is recommended on macOS — earlier versions don't recognize new
-libc++ builtins (`__builtin_clzg`, `__builtin_ctzg`) that Apple's libc++
-headers use.
-
-CI runs on Ubuntu where this issue doesn't apply.
+clang-tidy 19+ is **required** on every platform: `.clang-tidy` uses
+`ExcludeHeaderFilterRegex`, which 19 introduced; clang-tidy 18 prints a parse
+error on that unknown key, discards the whole config and runs its default checks
+while still exiting 0.
+`dev/ci/run-clang-tidy-staged.sh` refuses anything older.  (On macOS, versions
+before 19 also don't recognize new libc++ builtins -- `__builtin_clzg`,
+`__builtin_ctzg` -- that Apple's libc++ headers use.)  CI installs
+`clang-tidy-21` on the `ubuntu-26.04` image, the same major version as
+Homebrew's `llvm`.
 
 ### Running clang-tidy locally
 

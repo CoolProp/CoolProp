@@ -19,6 +19,7 @@ dipole moment                   debye
 surface tension                 N/m
 */
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 
@@ -109,6 +110,18 @@ std::string get_casesensitive_fluids(const std::string& root) {
         }
     }
 }
+/// Find either MIXTURES or mixtures folder relative to the root path provided; return the path
+std::string get_casesensitive_mixtures(const std::string& root) {
+    std::string joined = join_path(root, "mixtures");
+    if (path_exists(joined)) {
+        return joined;
+    }
+    std::string ucase_joined = join_path(root, "MIXTURES");
+    if (path_exists(ucase_joined)) {
+        return ucase_joined;
+    }
+    throw CoolProp::ValueError(format(R"(mixture directories "MIXTURES" or "mixtures" could not be found in the directory [%s])", root));
+}
 std::string get_REFPROP_fluid_path_prefix() {
     if (get_envvar("COOLPROP_REFPROP_ROOT")) {
         return "";
@@ -150,12 +163,12 @@ std::string get_REFPROP_mixtures_path_prefix() {
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        return join_path(alt_refprop_path, "mixtures");
+        return get_casesensitive_mixtures(alt_refprop_path);
     }
 #if defined(__ISWINDOWS__)
     return rpPath;
 #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    return join_path(rpPath, "mixtures");
+    return get_casesensitive_mixtures(rpPath);
 #else
     throw CoolProp::NotImplementedError("This function should not be called.");
     return rpPath;
@@ -175,6 +188,15 @@ std::string get_REFPROP_HMX_BNC_path() {
 }
 
 namespace CoolProp {
+
+std::recursive_mutex& REFPROP_mutex() {
+    // Deliberately never destroyed: REFPROP instances owned by other static
+    // objects (e.g. a cached AbstractState) can be destroyed during static
+    // destruction, after a function-local static mutex would already be gone,
+    // and their destructors take this lock.
+    static auto* const mtx = new std::recursive_mutex();
+    return *mtx;
+}
 
 class REFPROPGenerator : public AbstractStateGenerator
 {
@@ -200,6 +222,7 @@ class REFPROPGenerator : public AbstractStateGenerator
 static GeneratorInitializer<REFPROPGenerator> refprop_gen(REFPROP_BACKEND_FAMILY);
 
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     // Do the REFPROP instantiation for this fluid
     _mole_fractions_set = false;
 
@@ -218,6 +241,10 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
 }
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
+    // Decrement and test under the REFPROP lock, so a concurrent construct()
+    // can never load the library and set up its fluids only for this
+    // destructor to unload them underneath it.
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     // Decrement the counter for the number of instances
     REFPROPMixtureBackend::instance_counter--;
     // Unload the shared library when the last instance is about to be destroyed
@@ -226,12 +253,36 @@ REFPROPMixtureBackend::~REFPROPMixtureBackend() {
     }
 }
 void REFPROPMixtureBackend::check_loaded_fluid() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->set_REFPROP_fluids(this->fluid_names);
 }
 
+// Both are only ever read or written with REFPROP_mutex() held.
 std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
 bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+
+/// ::load_REFPROP, but close the library again when the load fails.
+/** load_REFPROP can fail after the library itself was opened (when its
+ *  functions cannot be bound), and then leaves the library handle set. A
+ *  handle left behind makes the next load_REFPROP call, and the early return
+ *  in REFPROP_supported(), report REFPROP as loaded while its function
+ *  pointers are unset, so the first call into REFPROP crashes. Every load in
+ *  this file goes through here. Call with REFPROP_mutex() held.
+ */
+static bool load_REFPROP_or_close(std::string& err, const std::string& path, const std::string& name) {
+    if (::load_REFPROP(err, path, name)) return true;
+    std::string unload_err;
+    ::unload_REFPROP(unload_err);
+    return false;
+}
+void REFPROPMixtureBackend::forget_REFPROP_load_failure() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    // On a platform without REFPROP support the next check simply sets it
+    // back to false.
+    _REFPROP_supported = true;
+}
 bool REFPROPMixtureBackend::REFPROP_supported() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     /*
      * Here we build the bridge from macro definitions
      * into the actual code. This is also going to be
@@ -258,17 +309,24 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
 
             if (root) {
-                loaded_REFPROP = ::load_REFPROP(err, root.value().c_str(), "");
-                SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
+                loaded_REFPROP = load_REFPROP_or_close(err, root.value(), "");
+                if (loaded_REFPROP) {
+                    // SETPATHdll reads a fixed-length Fortran string of this
+                    // many characters, so hand it a zero-padded buffer of that
+                    // size rather than the shorter std::string storage.
+                    std::array<char, 400> root_path{};
+                    std::copy_n(root.value().begin(), std::min(root.value().size(), root_path.size()), root_path.begin());
+                    SETPATHdll(root_path.data(), root_path.size());
+                }
             }
             if (!loaded_REFPROP) {
                 if (!alt_rp_name.empty()) {
-                    loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+                    loaded_REFPROP = load_REFPROP_or_close(err, "", alt_rp_name);
                 } else {
                     if (alt_rp_path.empty()) {
-                        loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                        loaded_REFPROP = load_REFPROP_or_close(err, refpropPath, "");
                     } else {
-                        loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                        loaded_REFPROP = load_REFPROP_or_close(err, alt_rp_path, "");
                     }
                 }
             }
@@ -300,6 +358,7 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
     return false;
 }
 std::string REFPROPMixtureBackend::version() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     int N = -1;
     int ierr = 0;
     char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
@@ -325,6 +384,7 @@ std::string REFPROPMixtureBackend::version() {
 }
 
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& fluid_names) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     // If the name of the refrigerant doesn't match
     // that of the currently loaded refrigerant, fluids must be loaded
     if (!cached_component_string.empty() && LoadedREFPROPRef == cached_component_string) {
@@ -405,16 +465,24 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         }
         memcpy(hmx_bnc.data(), _HMX_path, strlen(_HMX_path) + 1);  // +1 for the NUL; length checked above
 
+        // Check platform support. This also (re)loads the library, so it must
+        // come before the first call into REFPROP: after a REFPROP path change
+        // the library has been unloaded, and GERG04dll below would otherwise
+        // call through a stale function pointer.
+        if (!REFPROP_supported()) {
+            throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
+        }
+
         if (get_config_bool(REFPROP_USE_GERG)) {
+            // The loader only insists on SETUPdll, so a REFPROP without GERG
+            // support loads with this pointer unset.
+            if (GERG04dll == nullptr) {
+                throw NotImplementedError("REFPROP_USE_GERG is set, but the loaded REFPROP library has no GERG04dll.");
+            }
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
               ierr_gerg = 0;
             std::array<char, 255> herr_gerg{};
             GERG04dll(&N, &iflag, &ierr_gerg, herr_gerg.data(), 255);
-        }
-
-        // Check platform support
-        if (!REFPROP_supported()) {
-            throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
         }
 
         if (N == 1 && upper(components_joined_raw).find(".MIX") != std::string::npos) {
@@ -544,6 +612,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
     }
 }
 std::string REFPROPMixtureBackend::fluid_param_string(const std::string& ParamName) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     if (ParamName == "CAS") {
         //        subroutine NAME (icomp,hnam,hn80,hcasn)
         //        c
@@ -592,6 +662,8 @@ std::string REFPROPMixtureBackend::fluid_param_string(const std::string& ParamNa
     }
 };
 int REFPROPMixtureBackend::match_CAS(const std::string& CAS) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     for (int icomp = 1L; icomp <= static_cast<int>(fluid_names.size()); ++icomp) {
         std::array<char, 13> hnam{};
         std::array<char, 81> hn80{};
@@ -609,16 +681,19 @@ int REFPROPMixtureBackend::match_CAS(const std::string& CAS) {
 /// Set binary mixture floating point parameter
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter,
                                                           const double value) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     std::size_t i = match_CAS(CAS1) - 1, j = match_CAS(CAS2) - 1;
     return set_binary_interaction_double(i, j, parameter, value);
 };
 /// Get binary mixture double value
 double REFPROPMixtureBackend::get_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     std::size_t i = match_CAS(CAS1) - 1, j = match_CAS(CAS2) - 1;
     return get_binary_interaction_double(i, j, parameter);
 }
 /// Get binary mixture string value
 std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
 
     int icomp = 0, jcomp = 0;
     std::array<char, 3> hmodij{};
@@ -656,6 +731,8 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
 /// Set binary mixture string value
 void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                           const std::string& value) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     // bound-check indices
     if (i >= Ncomp) {
         if (j >= Ncomp) {
@@ -699,6 +776,8 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                           const double value) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     // bound-check indices
     if (i >= Ncomp) {
         if (j >= Ncomp) {
@@ -747,6 +826,8 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
 
 /// Get binary mixture double value (EXPERT USE ONLY!!!)
 double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     // bound-check indices
     if (i >= Ncomp) {
         if (j >= Ncomp) {
@@ -792,6 +873,7 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     //}
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     if (mole_fractions.size() != this->Ncomp) {
         throw ValueError(
           format("Size of mole fraction vector [%d] does not equal that of component vector [%d]", mole_fractions.size(), this->Ncomp));
@@ -805,6 +887,8 @@ void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl>& m
     clear_comp_change();
 }
 void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     if (mass_fractions.size() != this->Ncomp) {
         throw ValueError(
           format("size of mass fraction vector [%d] does not equal that of component vector [%d]", mass_fractions.size(), this->Ncomp));
@@ -823,12 +907,14 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl>& m
     this->set_mole_fractions(moles);
 };
 void REFPROPMixtureBackend::check_status() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     if (!_mole_fractions_set) {
         throw ValueError("Mole fractions not yet set");
     }
 }
 
 void REFPROPMixtureBackend::limits(double& Tmin, double& Tmax, double& rhomolarmax, double& pmax) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     /*
      *
           subroutine LIMITS (htyp,x,tmin,tmax,Dmax,pmax)
@@ -860,21 +946,25 @@ void REFPROPMixtureBackend::limits(double& Tmin, double& Tmax, double& rhomolarm
     rhomolarmax = Dmax_mol_L * 1000;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_pmax() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(pmax);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Tmax() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmax);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Tmin() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmin);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_T_critical() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     int ierr = 0;
     std::array<char, 255> herr{};
@@ -886,6 +976,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_T_critical() {
     return static_cast<CoolPropDbl>(Tcrit);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_p_critical() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     int ierr = 0;
     std::array<char, 255> herr{};
@@ -897,6 +988,8 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_critical() {
     return static_cast<CoolPropDbl>(pcrit_kPa * 1000);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     int ierr = 0;
     std::array<char, 255> herr{};
     double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
@@ -907,6 +1000,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical() {
     return static_cast<CoolPropDbl>(dcrit_mol_L * 1000);
 };
 void REFPROPMixtureBackend::calc_reducing_state() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
@@ -914,18 +1008,21 @@ void REFPROPMixtureBackend::calc_reducing_state() {
     _reducing.rhomolar = rhored_mol_L * 1000;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_T_reducing() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<CoolPropDbl>(Tr);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<CoolPropDbl>(rhored_mol_L * 1000);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas) (see calc_Ttriple())
     this->check_loaded_fluid();
     double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
@@ -940,6 +1037,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor() {
     }
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
     //     c
     //     c  provides fluid constants for specified component
@@ -972,6 +1070,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple() {
     }
 };
 CoolPropDbl REFPROPMixtureBackend::calc_p_triple() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double p_kPa = _HUGE;
     double rho_mol_L = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE;
@@ -989,6 +1088,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_triple() {
     return p_kPa * 1000;
 };
 CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
     //     c
     //     c  provides fluid constants for specified component
@@ -1018,13 +1118,43 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment() {
         throw ValueError(format("dipole moment is only available for pure fluids"));
     }
 };
+CoolPropDbl REFPROPMixtureBackend::calc_Hmolar_formation() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
+    this->check_status();
+
+    if (HEATFRMdll == nullptr) {
+        throw ValueError("HEATFRMdll function is not available in your version of REFPROP. Please upgrade");
+    }
+
+    // HEATFRMdll defines the standard state as the ideal gas at 298.15 K.
+    // Density is part of the legacy signature but is not used by REFPROP.
+    double T = 298.15;
+    double D_mol_L = 0.0;
+    double hformation_J_mol = NAN;
+    int ierr = 0;
+    std::array<char, errormessagelength + 1> herr{};
+    HEATFRMdll(&T, &D_mol_L, mole_fractions.data(), &hformation_J_mol, &ierr, herr.data(), errormessagelength);
+
+    // HEATFRMdll documents only ierr == 0 as success. In particular, missing
+    // heating-value data must not be exposed as a plausible zero or NaN.
+    if (ierr != 0) {
+        throw ValueError(format("REFPROP HEATFRMdll failed with error code %d: %s", ierr, herr.data()));
+    }
+    if (!ValidNumber(hformation_J_mol)) {
+        throw ValueError("REFPROP HEATFRMdll returned an invalid standard molar enthalpy of formation");
+    }
+    return static_cast<CoolPropDbl>(hformation_J_mol);
+}
 CoolPropDbl REFPROPMixtureBackend::calc_gas_constant() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double Rmix = 0;
     RMIX2dll(&(mole_fractions[0]), &Rmix);
     return static_cast<CoolPropDbl>(Rmix);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_molar_mass() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double wmm_kg_kmol = NAN;
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol);  // returns mole mass in kg/kmol
@@ -1032,7 +1162,13 @@ CoolPropDbl REFPROPMixtureBackend::calc_molar_mass() {
     return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
 AbstractState::PhaseMolarMasses REFPROPMixtureBackend::calc_phase_molar_masses() {
-    if (mole_fractions.size() == 1) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    // get_mole_fractions() is sized Ncomp; the mole_fractions member is padded to
+    // ncmax and is never 1.  Same dead-guard bug that update()'s Qmass dispatch had.
+    // The shortcut matters: without it a pure fluid runs WMOLdll on the liquid and
+    // vapor composition arrays, which are all-zero until a two-phase flash fills
+    // them in -- a molar mass of zero waiting to divide.
+    if (get_mole_fractions().size() == 1) {
         const double mm = molar_mass();
         return {mm, mm};
     }
@@ -1044,6 +1180,7 @@ AbstractState::PhaseMolarMasses REFPROPMixtureBackend::calc_phase_molar_masses()
 }
 
 void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     if (pair == CoolProp::QmassT_INPUTS || pair == CoolProp::PQmass_INPUTS) {
         int kq = 2;  // mass-basis quality
@@ -1052,6 +1189,15 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         double T_K = 0, p_kPa = 0, q = 0;
         double rho_mol_L = 0, rhoLmol_L = 0, rhoVmol_L = 0;
         double emol = 0, hmol = 0, smol = 0, cvmol = 0, cpmol = 0, w = 0;
+
+        // This path populates the state directly instead of going through update()'s
+        // switch, so it has to do update()'s bookkeeping itself.  Without the clear()
+        // every lazily-cached derived property from the previous update (viscosity,
+        // conductivity, ...) would survive into the new state.
+        clear();
+
+        // Check that mole fractions have been set, etc.
+        check_status();
 
         if (pair == CoolProp::QmassT_INPUTS) {
             // QmassT: v1 is Qmass, v2 is T
@@ -1091,6 +1237,11 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         _Q = detail::Qmass_to_Qmolar(q, MM.liquid, MM.vapor);
         _Qmass = q;
         _phase = iphase_twophase;
+        // REFPROP has no calc_gibbsmolar() override, so nothing recomputes this
+        // lazily — update() assigns it at the end of its switch and so must we.
+        _gibbsmolar = hmol - _T * smol;
+        _tau = calc_T_reducing() / _T;
+        _delta = _rhomolar / calc_rhomolar_reducing();
         return;
     }
     // The 6 remaining Qmass pairs: REFPROP has no native kq flag for them.
@@ -1099,21 +1250,28 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_Bvirial() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     double b = NAN;
     VIRBdll(&_T, &(mole_fractions[0]), &b);
     return b * 0.001;  // 0.001 to convert from l/mol to m^3/mol
 }
 CoolPropDbl REFPROPMixtureBackend::calc_dBvirial_dT() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     double b = NAN;
     DBDTdll(&_T, &(mole_fractions[0]), &b);
     return b * 0.001;  // 0.001 to convert from l/mol to m^3/mol
 }
 CoolPropDbl REFPROPMixtureBackend::calc_Cvirial() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     double c = NAN;
     VIRCdll(&_T, &(mole_fractions[0]), &c);
     return c * 1e-6;  // 1e-6 to convert from (l/mol)^2 to (m^3/mol)^2
 }
 double REFPROPMixtureBackend::calc_melt_Tmax() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     int ierr = 0;
     std::array<char, 255> herr{};
@@ -1129,6 +1287,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax() {
     return Tmax_melt;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolPropDbl value) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     int ierr = 0;
     std::array<char, 255> herr{};
@@ -1182,6 +1341,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
     }
 }
 bool REFPROPMixtureBackend::has_melting_line() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
 
     int ierr = 0;
@@ -1196,6 +1356,8 @@ bool REFPROPMixtureBackend::has_melting_line() {
 }
 
 const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     // mass fraction is mass_i/total_mass;
     // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol;
     CoolPropDbl mm = molar_mass();
@@ -1211,6 +1373,8 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions() {
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_PIP() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using
     // partial derivatives of pressure, volume,and temperature without reference to saturation properties:
     // Applications in phase equilibria calculations"
@@ -1226,6 +1390,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_PIP() {
 };
 
 CoolPropDbl REFPROPMixtureBackend::calc_viscosity() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double eta = NAN, tcx = NAN, rhomol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1242,11 +1407,13 @@ CoolPropDbl REFPROPMixtureBackend::calc_viscosity() {
     return static_cast<double>(_viscosity);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_conductivity() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     // Calling viscosity also caches conductivity, use that to save calls
     calc_viscosity();
     return static_cast<double>(_conductivity);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_surface_tension() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double sigma = NAN, rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1262,6 +1429,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_surface_tension() {
     return static_cast<double>(_surface_tension);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(std::size_t i) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1278,6 +1446,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(std::size_t i) {
     return static_cast<CoolPropDbl>(fug_cof[i]);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1293,6 +1462,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i) {
     return static_cast<CoolPropDbl>(f[i] * 1000);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1309,6 +1479,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i) {
 }
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rhoymin = NAN, rhoymax = NAN, c = 0;
     int ierr = 0;
@@ -1404,6 +1575,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     }
 }
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rho_mol_L = 0.001 * _rhomolar;
     double p0 = NAN, e0 = NAN, h0 = NAN, s0 = NAN, cv0 = NAN, cp0 = NAN, w0 = NAN, A0 = NAN, G0 = NAN;
@@ -1412,6 +1584,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas() {
 }
 
 phases REFPROPMixtureBackend::GetRPphase() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     phases RPphase = iphase_unknown;
     if (ValidNumber(_Q)) {
         if ((_Q >= 0.00) && (_Q <= 1.00)) {  // CoolProp includes Q = 1 or 0 in the two phase region,
@@ -1444,14 +1617,41 @@ phases REFPROPMixtureBackend::GetRPphase() {
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
-    // Mass-quality input pair on a true mixture: handle via update_Qmass_pair.
-    // Pure / pseudo-pure (mole_fractions.size() == 1) goes through the existing
-    // mass_to_molar_inputs path.
-    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
-        update_Qmass_pair(input_pair, value1, value2);
-        return;
-    }
+    // REFPROP rejects Q = 5 itself but silently accepts NaN and returns a
+    // plausible saturated state, and DQFL2 extrapolates a quality above 1 rather
+    // than refuse it; so validate every quality, Qmass included, up front.
+    check_input_quality(input_pair, value1, value2);
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
+
+    // Mass-quality input pair.  On a true mixture Qmass != Qmolar, so it needs the
+    // dedicated update_Qmass_pair path.  For a pure or pseudo-pure fluid the two are
+    // the same number, so rewrite the pair to its molar sibling and fall through to
+    // the switch below.
+    //
+    // Test get_mole_fractions(), which is sized Ncomp -- NOT the mole_fractions
+    // member, which every success branch of set_REFPROP_fluids resize(ncmax)'s to 20
+    // and so is never 1.  An empty vector means the composition was never set; send
+    // that to update_Qmass_pair, whose check_status() reports it properly.
+    if (CoolProp::is_Qmass_pair(input_pair)) {
+        if (get_mole_fractions().size() == 1) {
+            // The rewrite skips AbstractState::update_Qmass_pair; its [0,1] range
+            // check was already applied by check_input_quality above.
+            // NOTE: mass_to_molar_inputs runs two switches.  The first rewrites the
+            // Qmass pair to its molar sibling; the second converts any remaining
+            // mass-basis value to molar (DmassQmass -> DmassQ -> DmolarQ, dividing by
+            // the molar mass once).  That lands on case DmolarQ_INPUTS below, NOT on
+            // this backend's own case DmassQ_INPUTS, so the density is not divided
+            // twice -- a fact worth rechecking if either switch changes.
+            CoolPropDbl v1 = value1, v2 = value2;
+            mass_to_molar_inputs(input_pair, v1, v2);
+            value1 = static_cast<double>(v1);
+            value2 = static_cast<double>(v2);
+        } else {
+            update_Qmass_pair(input_pair, value1, value2);
+            return;
+        }
+    }
     double rho_mol_L = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE,
            q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE;
     int ierr = 0;
@@ -1931,7 +2131,6 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             return;
         }
         case PQ_INPUTS: {
-
             // c  Estimate temperature, pressure, and compositions to be used
             // c  as initial guesses to SATTP
             // c
@@ -2146,6 +2345,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 }
 
 void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair, double value1, double value2, const GuessesStructure& guesses) {
+    check_input_quality(input_pair, value1, value2);
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double rho_mol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE, q = _HUGE, p_kPa = _HUGE,
            hjt = _HUGE;
@@ -2258,6 +2459,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
 }
 
 void REFPROPMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     clear();
     _T = T;
@@ -2281,6 +2483,7 @@ void REFPROPMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolProp
     _delta = _rhomolar / calc_rhomolar_reducing();
 }
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double val = 0, tau = _tau, delta = _delta;
     if (PHIXdll == nullptr) {
@@ -2290,6 +2493,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel) {
     return static_cast<CoolPropDbl>(val) / pow(static_cast<CoolPropDbl>(_delta), idel) / pow(static_cast<CoolPropDbl>(_tau), itau);
 }
 CoolPropDbl REFPROPMixtureBackend::call_phi0dll(int itau, int idel) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     double val = 0, tau = _tau, __T = T(), __rho = rhomolar() / 1000;
     if (PHI0dll == nullptr) {
@@ -2300,6 +2504,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(int itau, int idel) {
 }
 /// Calculate excess properties
 void REFPROPMixtureBackend::calc_excess_properties() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     int ierr = 0;
     std::array<char, 255> herr{};
@@ -2342,6 +2547,8 @@ void REFPROPMixtureBackend::calc_excess_properties() {
 }
 
 void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
 
     class wrapper : public FuncWrapperND
     {
@@ -2370,6 +2577,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
 }
 
 void REFPROPMixtureBackend::link_to_loaded_fluids(const REFPROPMixtureBackend& host) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     // Per-class access: we may read host's private cached_component_string.
     this->Ncomp = host.Ncomp;
     this->fluid_names = host.fluid_names;
@@ -2382,6 +2590,7 @@ void REFPROPMixtureBackend::link_to_loaded_fluids(const REFPROPMixtureBackend& h
 }
 
 shared_ptr<REFPROPMixtureBackend> REFPROPMixtureBackend::build_saturation_shim(int Q) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
     if (!(Q == 0 || Q == 1)) {
         throw ValueError(format("build_saturation_shim requires Q==0 or Q==1; got %d", Q));
@@ -2405,6 +2614,8 @@ shared_ptr<REFPROPMixtureBackend> REFPROPMixtureBackend::build_saturation_shim(i
 }
 
 double REFPROPMixtureBackend::dpdT_along_saturation_pure(int kph) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     if (Ncomp != 1) {  // precondition: DPTSATKdll is a single-component saturation routine
         throw ValueError("dpdT_along_saturation_pure is only valid for pure fluids");
     }
@@ -2421,6 +2632,8 @@ double REFPROPMixtureBackend::dpdT_along_saturation_pure(int kph) {
 }
 
 double REFPROPMixtureBackend::saturation_pressure_at_T(double T, int Q) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     // Q==0 -> bubble (kph=1), Q==1 -> dew (kph=2). Mirror update()'s QT_INPUTS SATTdll call.
     int kph = (Q == 0) ? 1 : 2;
     double T_K = T, p_kPa = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE;
@@ -2435,6 +2648,7 @@ double REFPROPMixtureBackend::saturation_pressure_at_T(double T, int Q) {
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     this->check_loaded_fluid();
 
     // The saturation slope comes from REFPROP's own DPTSATKdll/SATTdll at (T, composition),
@@ -2481,6 +2695,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, p
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     if (Ncomp > 1) {
         // The constant-overall-composition saturation slope a mixture two-phase derivative
         // needs is not available from the per-phase saturation shims; only pure fluids are
@@ -2593,6 +2808,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
 
 CoolPropDbl REFPROPMixtureBackend::calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2,
                                                                parameters Constant2) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     if (Ncomp > 1) {
         throw NotImplementedError("calc_second_two_phase_deriv is not implemented for mixtures in the REFPROP backend");
     }
@@ -2643,6 +2859,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_second_two_phase_deriv(parameters Of, pa
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     if (Ncomp > 1) {
         throw NotImplementedError("calc_first_two_phase_deriv_splined is not implemented for mixtures in the REFPROP backend");
     }
@@ -2761,6 +2978,8 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     if (!_rhoLmolar || !ValidNumber(static_cast<CoolPropDbl>(_rhoLmolar))) {
         throw ValueError("The saturated liquid state has not been set.");
     }
@@ -2781,6 +3000,8 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters
     }
 }
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     if (!_rhoVmolar || !ValidNumber(static_cast<CoolPropDbl>(_rhoVmolar))) {
         throw ValueError("The saturated vapor state has not been set.");
     }
@@ -2802,6 +3023,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters 
 }
 
 void REFPROPMixtureBackend::calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     if (type == "Joule-Thomson") {
         JouleThomsonCurveTracer JTCT(this, 1e5, 800);
         JTCT.trace(T, p);
@@ -2820,6 +3042,8 @@ void REFPROPMixtureBackend::calc_ideal_curve(const std::string& type, std::vecto
 };
 
 THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double>& mole_fractions) {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    this->check_loaded_fluid();
     /*
       subroutineTHERM0dll(T, D, z, P0, e0, h0, s0, Cv0, Cp00, w0, a0, g0)
     Compute ideal-gas thermal quantities as a function of temperature, density, and composition from core functions.
@@ -2852,8 +3076,9 @@ THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_
 }
 
 bool force_load_REFPROP() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     std::string err;
-    if (!load_REFPROP(err)) {
+    if (!load_REFPROP_or_close(err, "", "")) {
         if (CoolProp::get_debug_level() > 5) {
             std::cout << format("Error while loading REFPROP: %s", err) << '\n';
         }
@@ -2865,6 +3090,7 @@ bool force_load_REFPROP() {
     }
 }
 bool force_unload_REFPROP() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
     std::string err;
     if (!unload_REFPROP(err)) {
         if (CoolProp::get_debug_level() > 5) {
@@ -2879,10 +3105,14 @@ bool force_unload_REFPROP() {
 }
 
 void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, double& T0, double& p0, int& ierr, char* herr, int l1, int l2) {
-    std::string err;
-    bool loaded_REFPROP = ::load_REFPROP(err);
-    if (!loaded_REFPROP) {
-        throw ValueError(format("Not able to load REFPROP; err is: %s", err.c_str()));
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    // Load through REFPROP_supported(), like every REFPROP backend does, so that
+    // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings are honoured.
+    // Loading through the system library search path here instead used to fail
+    // once a REFPROP path change had unloaded a library that exists only at the
+    // configured path. REFPROP_supported() prints the reason when the load fails.
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
+        throw ValueError("Not able to load REFPROP; check COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings.");
     }
     SETREFdll(hrf, &ixflag, x0, &h0, &s0, &T0, &p0, &ierr, herr, l1, l2);
 }
@@ -2892,6 +3122,8 @@ void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, d
 #ifdef ENABLE_CATCH
 #    include "CoolProp/CoolProp.h"
 #    include <catch2/catch_all.hpp>
+#    include <atomic>
+#    include <thread>
 
 TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
     CoolProp::Skip_if_No_REFPROP();
@@ -3112,6 +3344,149 @@ TEST_CASE("Check PHI0 derivatives", "[REFPROP_PHI0]") {
             CHECK(err < 1e-12);
         }
     }
+}
+
+namespace {
+// One single-phase (T, p) sweep per fluid; the fluids differ enough that a
+// state computed with another thread's fluids loaded is off by far more than
+// the tolerance, or fails outright.
+struct REFPROPThreadCase
+{
+    std::string fluid;
+    double T0, p;
+};
+const std::vector<REFPROPThreadCase>& refprop_thread_cases() {
+    static const std::vector<REFPROPThreadCase> cases = {
+      {"PROPANE", 400.0, 1e6}, {"WATER", 600.0, 1e6}, {"NITROGEN", 300.0, 1e6}, {"CO2", 350.0, 1e6}};
+    return cases;
+}
+constexpr int REFPROP_THREAD_N_POINTS = 8;
+double refprop_thread_T(const REFPROPThreadCase& c, int k) {
+    return c.T0 + 5.0 * k;
+}
+bool refprop_thread_close(double a, double b) {
+    return std::abs(a - b) <= 1e-9 * std::abs(b);
+}
+}  // namespace
+
+TEST_CASE("REFPROP instances on different fluids are serialized across threads (COO-13)", "[REFPROP][refprop][threads]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // REFPROP holds one set of loaded fluids per process.  Each thread owns its
+    // own instance on a different fluid, so every update() has to reload its
+    // fluid and then flash; without the process-wide REFPROP lock another
+    // thread can swap the loaded fluid between the two, and the flash silently
+    // runs on the wrong fluid.
+    const auto& cases = refprop_thread_cases();
+    const std::size_t N = cases.size();
+    std::vector<shared_ptr<CoolProp::AbstractState>> AS(N);
+    std::vector<std::vector<double>> rho_ref(N), h_ref(N);
+    for (std::size_t c = 0; c < N; ++c) {
+        AS[c].reset(CoolProp::AbstractState::factory("REFPROP", cases[c].fluid));
+        for (int k = 0; k < REFPROP_THREAD_N_POINTS; ++k) {
+            AS[c]->update(CoolProp::PT_INPUTS, cases[c].p, refprop_thread_T(cases[c], k));
+            rho_ref[c].push_back(AS[c]->rhomolar());
+            h_ref[c].push_back(AS[c]->hmolar());
+        }
+    }
+
+    constexpr int N_ITER = 200;
+    std::atomic<int> mismatches{0}, errors{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N);
+    for (std::size_t c = 0; c < N; ++c) {
+        threads.emplace_back([&, c]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            for (int it = 0; it < N_ITER; ++it) {
+                for (int k = 0; k < REFPROP_THREAD_N_POINTS; ++k) {
+                    try {
+                        AS[c]->update(CoolProp::PT_INPUTS, cases[c].p, refprop_thread_T(cases[c], k));
+                        if (!refprop_thread_close(AS[c]->rhomolar(), rho_ref[c][k]) || !refprop_thread_close(AS[c]->hmolar(), h_ref[c][k])) {
+                            mismatches.fetch_add(1, std::memory_order_relaxed);
+                        }
+                    } catch (...) {
+                        errors.fetch_add(1, std::memory_order_relaxed);
+                    }
+                }
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& th : threads) {
+        th.join();
+    }
+    CAPTURE(N * N_ITER * REFPROP_THREAD_N_POINTS);
+    CHECK(errors.load() == 0);
+    CHECK(mismatches.load() == 0);
+}
+
+TEST_CASE("REFPROP instances can be created and destroyed concurrently (COO-13)", "[REFPROP][refprop][threads]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // Construction (library load + SETUP) and destruction (instance count
+    // decrement + possible unload) take the REFPROP lock for their whole
+    // duration, so they cannot interleave with each other or with a flash.
+    // Without the lock, concurrent SETUP calls abort the process in the
+    // Fortran runtime.  This does not reach the unload itself: a pure-fluid
+    // REFPROPBackend increments instance_counter twice (base default
+    // constructor and construct()) but decrements once, so the count never
+    // returns to zero once one has existed.
+    const auto& cases = refprop_thread_cases();
+    const std::size_t N = cases.size();
+    std::vector<double> rho_ref(N);
+    for (std::size_t c = 0; c < N; ++c) {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", cases[c].fluid));
+        AS->update(CoolProp::PT_INPUTS, cases[c].p, cases[c].T0);
+        rho_ref[c] = AS->rhomolar();
+    }
+    constexpr int N_ITER = 25;
+    std::atomic<int> mismatches{0}, errors{0};
+    std::atomic<bool> go{false};
+    std::vector<std::thread> threads;
+    threads.reserve(N);
+    for (std::size_t c = 0; c < N; ++c) {
+        threads.emplace_back([&, c]() {
+            while (!go.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+            for (int it = 0; it < N_ITER; ++it) {
+                try {
+                    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", cases[c].fluid));
+                    AS->update(CoolProp::PT_INPUTS, cases[c].p, cases[c].T0);
+                    if (!refprop_thread_close(AS->rhomolar(), rho_ref[c])) {
+                        mismatches.fetch_add(1, std::memory_order_relaxed);
+                    }
+                } catch (...) {
+                    errors.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    go.store(true, std::memory_order_release);
+    for (auto& th : threads) {
+        th.join();
+    }
+    CHECK(errors.load() == 0);
+    CHECK(mismatches.load() == 0);
+}
+
+TEST_CASE("REFPROP outputs use their own instance's fluid after another instance ran (COO-13)", "[REFPROP][refprop]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // Serialization only makes interleaved use from several threads as safe
+    // as interleaved use from one thread; each output must still reload its
+    // own fluid if another instance has loaded a different one since.
+    shared_ptr<CoolProp::AbstractState> A(CoolProp::AbstractState::factory("REFPROP", "PROPANE"));
+    shared_ptr<CoolProp::AbstractState> B(CoolProp::AbstractState::factory("REFPROP", "WATER"));
+    A->update(CoolProp::PT_INPUTS, 1e6, 400.0);
+    const double B_A = A->Bvirial(), rhoc_A = A->rhomolar_critical();
+    const std::string name_A = A->name();
+    B->update(CoolProp::PT_INPUTS, 1e6, 600.0);  // loads WATER
+    CHECK(A->Bvirial() == Catch::Approx(B_A).epsilon(1e-12));
+    B->update(CoolProp::PT_INPUTS, 1e6, 600.0);
+    CHECK(A->rhomolar_critical() == Catch::Approx(rhoc_A).epsilon(1e-12));
+    B->update(CoolProp::PT_INPUTS, 1e6, 600.0);
+    CHECK(A->name() == name_A);
 }
 
 #endif

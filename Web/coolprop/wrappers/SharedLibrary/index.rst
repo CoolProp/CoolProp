@@ -119,7 +119,6 @@ You can select the compiler in the call to cmake below.
 
    .. note::
       Alternatively, if using MSYS2 UCRT64, you can simply issue the comman: ``ninja``
-|
 
 Linux & OSX
 -----------
@@ -164,6 +163,26 @@ On Linux, installation could be done by::
     sudo ln -sf libCoolProp.so.32.:version: libCoolProp.so.5
     sudo ln -sf libCoolProp.so.5 libCoolProp.so
     popd
+
+CMake package usage
+-------------------
+
+The CMake install step also provides a relocatable package configuration. A
+consumer does not need to add CoolProp's include or library directories
+manually::
+
+    find_package(CoolProp 8 CONFIG REQUIRED COMPONENTS Shared)
+    add_executable(main main.c)
+    target_link_libraries(main PRIVATE CoolProp::Shared)
+
+Static and shared libraries can be produced together by enabling both
+``COOLPROP_STATIC_LIBRARY`` and ``COOLPROP_SHARED_LIBRARY``. In that case the
+producer-side ``COOLPROP_DEFAULT_LIBRARY`` cache setting chooses the variant
+exported through ``CoolProp::CoolProp`` (``SHARED`` by default). The choice is
+recorded in the installed package and cannot be changed by a package consumer;
+use ``CoolProp::Static`` or ``CoolProp::Shared`` when linkage must be explicit.
+Separate consumer targets may select different variants, but one final binary
+must not link both variants.
 
 
 Using

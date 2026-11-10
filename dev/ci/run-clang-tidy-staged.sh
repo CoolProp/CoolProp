@@ -23,8 +23,8 @@ COMPDB="$BUILD_DIR/compile_commands.json"
 
 # Locate clang-tidy.  Prefer PATH (Linux/CI), fall back to common
 # Homebrew install locations on macOS (per issue #2926 reproduction
-# notes).  Pin to llvm@18 by default for CI parity; allow override via
-# COOLPROP_CLANG_TIDY.
+# notes); allow override via COOLPROP_CLANG_TIDY.  Version 19+ is required
+# -- see the check after this block.
 if [ -n "${COOLPROP_CLANG_TIDY:-}" ]; then
   CLANG_TIDY="$COOLPROP_CLANG_TIDY"
 elif command -v clang-tidy >/dev/null 2>&1; then
@@ -34,13 +34,14 @@ elif [ "$(uname -s)" = "Darwin" ]; then
   # uses C++23 builtins (__builtin_clzg, __builtin_ctzg, __builtin_addcb,
   # ...) that clang-tidy 18 doesn't know about, so parsing <bitset> /
   # <charconv> emits a wave of bogus clang-diagnostic-error noise.
-  # clang-tidy 21+ handles them.  CI runs on Linux with matching headers,
-  # so the 18 pin there is fine.
+  # clang-tidy 21+ handles them.
   if [ -x "/opt/homebrew/opt/llvm@21/bin/clang-tidy" ]; then
     CLANG_TIDY="/opt/homebrew/opt/llvm@21/bin/clang-tidy"
   elif [ -x "/opt/homebrew/opt/llvm/bin/clang-tidy" ]; then
     CLANG_TIDY="/opt/homebrew/opt/llvm/bin/clang-tidy"
   elif [ -x "/opt/homebrew/opt/llvm@18/bin/clang-tidy" ]; then
+    # Found only so the version check below rejects it by name, rather
+    # than reporting "not found" and skipping.
     CLANG_TIDY="/opt/homebrew/opt/llvm@18/bin/clang-tidy"
   fi
 fi
@@ -49,6 +50,21 @@ if [ -z "${CLANG_TIDY:-}" ]; then
   echo "         install with: brew install llvm   (macOS)" >&2
   echo "         (or set COOLPROP_CLANG_TIDY=/path/to/clang-tidy to point at a specific binary)" >&2
   exit 0
+fi
+
+# .clang-tidy uses ExcludeHeaderFilterRegex, which clang-tidy 19 introduced.
+# clang-tidy 18 does not skip that unknown key -- it prints a parse error,
+# discards the whole config and runs its DEFAULT checks, still exiting 0, so
+# an old binary would "pass" against the wrong rule set.  Fail rather than skip: the message
+# starts with "error: " so preflight counts it as a finding.
+# `|| true` is deliberate: a binary that will not run leaves CT_MAJOR empty
+# and lands in the error branch below; without it, pipefail + set -e would
+# exit here with no message, which preflight's log grep would read as clean.
+CT_MAJOR="$("$CLANG_TIDY" --version 2>/dev/null | sed -nE 's/.*version ([0-9]+)\..*/\1/p' | head -1 || true)"
+if [ -z "$CT_MAJOR" ] || [ "$CT_MAJOR" -lt 19 ]; then
+  echo "error: $CLANG_TIDY is version '${CT_MAJOR:-unknown}'; clang-tidy >= 19 is required (.clang-tidy uses ExcludeHeaderFilterRegex)" >&2
+  echo "       install with: brew install llvm   (macOS), or set COOLPROP_CLANG_TIDY=/path/to/clang-tidy-19+" >&2
+  exit 1
 fi
 
 if [ ! -f "$COMPDB" ]; then
@@ -74,4 +90,21 @@ if [ "$(uname -s)" = "Darwin" ] && command -v xcrun >/dev/null 2>&1; then
   fi
 fi
 
-exec "$CLANG_TIDY" -p "$BUILD_DIR" "${EXTRA_ARGS[@]}" "$@"
+# Header scope.  .clang-tidy reports findings in project headers; that is
+# what a changed-lines run (-line-filter, as CI's clang-tidy-diff does) wants,
+# since the line filter confines them to lines the change touched.  A
+# whole-file run has no such bound: one src/*.cpp would drag in ~600
+# pre-existing findings from the headers it includes and fail every push.  So
+# without a line filter, keep the scope to the file itself (a regex that
+# matches no path), which is what the old, broken '*' filter did in effect.
+HAS_LINE_FILTER=0
+for arg in "$@"; do
+  case "$arg" in -line-filter | --line-filter | -line-filter=* | --line-filter=*) HAS_LINE_FILTER=1 ;; esac
+done
+if [ "$HAS_LINE_FILTER" = 0 ]; then
+  EXTRA_ARGS+=("--header-filter=^\$")
+fi
+
+# ${EXTRA_ARGS[@]+...}: macOS's /bin/bash 3.2 aborts on an empty array under
+# set -u ("unbound variable"), and that abort carries no "error: " line.
+exec "$CLANG_TIDY" -p "$BUILD_DIR" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} "$@"

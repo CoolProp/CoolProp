@@ -10,12 +10,19 @@
 //  input data                                                                                //
 //                                                                                            //
 //  The arguments are defined as follows :                                                    //
-//  - The string variable contains the the definition of the fluids and of their              //
-//    concentrations with the input strings concatenated to the fluid name joined by |        //
-//    (e.g. "R134a|T|P|D" or "REFPROP-R134a|O|T|P" or                                         //
-//    "REFPROP-MIX:R32[0.697615]&R125[0.302385]|V|P|H" (R410A))                               //
-//  - mode, which is -1 if to return a default form of the call as string, normal mode        //
-//    otherwise                                                                               //
+//  - The string variable carries five fields joined by ~, in the order fluid,                //
+//    output key, first input key, second input key and unit system, and the                  //
+//    fluid field holds the mixture composition when there is one                             //
+//    (e.g. "R134a~D~T~P~SI" or "REFPROP-R134a~O~T~P~SI" or                                   //
+//    "REFPROP-MIX:R32[0.697615]&R125[0.302385]~V~P~H~SI" (R410A))                            //
+//  - mode, which EES passes BY REFERENCE (see the F-Chart help, "External                    //
+//    Functions" and the Visual C++ skeleton).  EES asks for a description of                 //
+//    the call with mode = -1, for the units of the inputs with mode = -2 and                 //
+//    for the units of the output with mode = -3.  Any other value means a                    //
+//    normal call.  On the way back the mode says what happened: 0 and an                     //
+//    empty string for a normal result, a positive value and a message for an                 //
+//    error, which stops the calculation, and a negative value and a message                  //
+//    for a warning, which does not.                                                          //
 //  - The last value is a linked list of the input values                                     //
 //																							  //
 //  The file needs to be built in coolprop_ees.dlf, which is the standard extension           //
@@ -24,20 +31,23 @@
 //                                                                                            //
 //     link /DEBUG /DLL main.obj CoolPropStaticLibrary.lib /OUT:COOLPROP_EES.dlf              //
 //																							  //
-//  Only one unit system is used (modified SI - see help). Future versions might              //
-//  include a detection of EES current unit system and its definition in the dll              //
+//  Base SI units are the only ones this library accepts (K, Pa, J, mass).  The               //
+//  unit system is named in the last field of the string and CoolProp.LIB checks              //
+//  that the EES unit system matches before it calls in here.                                 //
 //																							  //
 //  Ian Bell                                                                                  //
 //  Thermodynamics Laboratory                                                                 //
-//  University of Liège                                                                       //
+//  University of Liege                                                                       //
 //                                                                                            //
 //  January 2013                                                                              //
 //============================================================================================//
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <algorithm>
+#include <fstream>
 #include <string>
 #include <stdio.h>
+#include <string.h>
 #include <vector>
 #include "CoolProp/CoolProp.h"
 #include "CoolProp/CoolPropLib.h"
@@ -64,40 +74,69 @@ static void set_fluid(char* fluid, const std::string& message) {
     fluid[n] = '\0';
 }
 
-// Append a line to the EES debug log, skipping silently if the file can't be
-// opened.  Debug logging must never crash or abort the EES call, so the fopen
-// result is always checked before use.
+// Append a line to the EES debug log, skipping silently if the file cannot be
+// opened: logging must never abort the EES call.  The path is relative, so the
+// file lands in the folder EES runs from.
 static void log_debug(const std::string& line) {
-    FILE* fp = fopen("log.txt", "a+");
-    if (fp != nullptr) {
-        fputs(line.c_str(), fp);
-        fclose(fp);
+    std::ofstream log_file("log.txt", std::ios::app);
+    if (!log_file) {
+        return;
     }
+    log_file << line;
+}
+
+// Report an error back to EES: the message goes into the string and the mode
+// has to be positive, which makes EES stop the calculation and show it.  An
+// empty message is replaced by a generic one, because CoolProp hands out an
+// empty error string now and then and stopping the calculation without saying
+// why would leave the user with nothing to go on.
+static void set_error(char* fluid, int& mode, const std::string& message) {
+    set_fluid(fluid, message.empty() ? std::string("CoolProp failed without reporting a reason") : message);
+    mode = 1;
 }
 
 // Tell C++ to use the "C" style calling conventions rather than the C++ mangled names
 extern "C"
 {
-    __declspec(dllexport) double COOLPROP_EES(char fluid[256], int mode, struct EesParamRec* input_rec) {
+    // EES passes the mode by reference, see the file header.  Taking it by
+    // value reads the low bits of the pointer instead of the mode.
+    __declspec(dllexport) double COOLPROP_EES(char fluid[256], int& mode, struct EesParamRec* input_rec) {
         double In1 = _HUGE, In2 = _HUGE, out = _HUGE;  // Two inputs, one output
         int NInputs = 0;                               // Ninputs is the number of inputs
-        std::string fluid_string = fluid;
 
         std::vector<double> z;
 
         std::string Outstr, In1str, In2str, Fluidstr, Units;
         std::vector<std::string> fluid_split;
 
+        // The three requests below answer in the string and leave the mode as
+        // EES set it.  The mode convention in the header applies to a normal
+        // call, where it reports what came of the calculation.
         if (mode == -1) {
+            // EES asks for an example of the call format
             set_fluid(fluid, "T = PropsSI('T','P',101325,'Q',0,'Water')");
             return 0;
         }
+
+        if (mode == -2 || mode == -3) {
+            // EES asks for the units of the inputs (-2) or of the output (-3).
+            // Both depend on the property keys that are encoded in the fluid
+            // string of the actual call, so there is no fixed answer here.  An
+            // empty string tells EES that no units are declared.
+            set_fluid(fluid, "");
+            return 0;
+        }
+
+        // Only a normal call fills the buffer, so read it here rather than
+        // above.  The length is bounded because EES does not promise a
+        // terminating NUL for the requests handled above.
+        const std::string fluid_string(fluid, ::strnlen(fluid, 255));
 
         // Split the string that is passed in at the '~' delimiter that was used to join it
         fluid_split = strsplit(fluid_string, '~');
         if (fluid_split.size() != 5) {
             const std::string msg = format("fluid[%s] length[%d] not 5 elements long", fluid_string.c_str(), static_cast<int>(fluid_split.size()));
-            set_fluid(fluid, msg);
+            set_error(fluid, mode, msg);
             if (EES_DEBUG) {
                 log_debug(format("%s %s %g %s %g %s\n%s\n", Outstr.c_str(), In1str.c_str(), In1, In2str.c_str(), In2, Fluidstr.c_str(), msg.c_str()));
             }
@@ -129,7 +168,7 @@ extern "C"
         };
 
         if (NInputs < 2) {
-            set_fluid(fluid, format("Number of inputs [%d] < 2", NInputs));
+            set_error(fluid, mode, format("Number of inputs [%d] < 2", NInputs));
             return 0;
         }
 
@@ -178,16 +217,17 @@ extern "C"
                     out = PropsSI(Outstr, In1str, In1, In2str, In2, Fluidstr);
                 }
             } else {
-                if (In1str.size() != 1) {
-                    set_fluid(fluid, format("Input #1 [%s] can only be 1 character long for coolprop()", In1str.c_str()));
-                    return 0;
-                }
-                if (In2str.size() != 1) {
-                    set_fluid(fluid, format("Input #2 [%s] can only be 1 character long for coolprop()", In2str.c_str()));
-                    return 0;
-                }
-                // Mole fractions are not given
-                out = Props(Outstr.c_str(), In1str[0], In1, In2str[0], In2, Fluidstr.c_str());
+                // CoolProp.LIB only ever sends SI, so another unit system means
+                // an old library file next to a new DLL.  Say so rather than
+                // guess which units the numbers are in.  The remedy comes first
+                // because a long unit string pushes the end of the message past
+                // the 255 characters the buffer holds.
+                set_error(fluid, mode,
+                          format("Use PropsSI, and install CoolProp.LIB and COOLPROP_EES from the same CoolProp release. "
+                                 "The deprecated coolprop() and coolpropsi() functions were removed, so unit system [%s] is no "
+                                 "longer supported.",
+                                 Units.c_str()));
+                return 0;
             }
         } catch (...) {
             std::string error_message = format("Uncaught error: \"%s\",\"%s\",%g,\"%s\",%g,\"%s\"\n", Outstr.c_str(), In1str.c_str(), In1,
@@ -196,7 +236,7 @@ extern "C"
             if (EES_DEBUG) {
                 log_debug(format("Error: %s \n", error_message.c_str()));
             }
-            set_fluid(fluid, error_message);
+            set_error(fluid, mode, error_message);
 
             return 0.0;
         }
@@ -207,17 +247,22 @@ extern "C"
             if (EES_DEBUG) {
                 log_debug(format("Error: %s \n", error_message.c_str()));
             }
-            set_fluid(fluid, error_message);
+            set_error(fluid, mode, error_message);
             return 0.0;
         } else {
+            // A normal call returns the null string and sets the mode to 0.
+            set_fluid(fluid, "");
+            mode = 0;
             // Check if there was a warning
             std::string warn_string = CoolProp::get_global_param_string("warnstring");
             if (!warn_string.empty()) {
                 if (EES_DEBUG) {
                     log_debug(format("Warning: %s \n", warn_string.c_str()));
                 }
-                // There was a warning, write it back
+                // There was a warning, write it back.  A negative mode makes
+                // EES show the message without stopping the calculation.
                 set_fluid(fluid, warn_string);
+                mode = -1;
             }
             if (EES_DEBUG) {
                 log_debug(format("Output: %g\n", out));

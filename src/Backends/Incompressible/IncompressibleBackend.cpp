@@ -27,7 +27,8 @@ IncompressibleBackend::IncompressibleBackend() {
     //this->fluid = NULL;
 }
 
-IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) : fluid(fluid) {
+IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid)
+  : fluid(fluid), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
     this->set_reference_state();
     if (this->fluid->is_pure()) {
@@ -42,7 +43,8 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) : fluid
     //}
 }
 
-IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name) : fluid(&get_incompressible_fluid(fluid_name)) {
+IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name)
+  : fluid(&get_incompressible_fluid(fluid_name)), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
     this->set_reference_state();
     if (this->fluid->is_pure()) {
@@ -85,7 +87,7 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
     } else {
         this->_fluid_type = FLUID_TYPE_INCOMPRESSIBLE_SOLUTION;
         if (get_debug_level() >= 50) std::cout << format("Incompressible backend: Fluid type is  %d ", this->_fluid_type) << '\n';
-        if ((_fractions[0] < 0.0) || (_fractions[0] > 1.0)) {
+        if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_fractions[0]))) {  // rejects NaN too
             throw ValueError(
               format("%s is a solution or brine. Mass fractions must be set to a vector with one entry between 0 and 1. %s is not valid.",
                      this->name().c_str(), vec_to_string(_fractions).c_str()));
@@ -394,7 +396,7 @@ double IncompressibleBackend::smass_ref() {
 }
 
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
-    return fluid->T_rho(rhomass, p, _fractions[0]);
+    return fluid->T_rho(rhomass, p, _fractions[0], chebyshev_caloric);
 }
 /// Calculate T given pressure and enthalpy
 /**
@@ -423,7 +425,7 @@ CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p
 
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
-    int maxiter = 10;
+    int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
     return result;
@@ -453,8 +455,9 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
     PSmass_residual res = PSmass_residual(this, p, _fractions[0], smass - s_ref() + smass_ref());
 
     double macheps = DBL_EPSILON;
-    double tol = DBL_EPSILON * 1e3;
-    int maxiter = 10;
+    // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve and Brent bisects.
+    double tol = 1e-12 * fluid->getTmax();
+    int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
     return result;
@@ -492,7 +495,7 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
 //	std::string errstring;
 //	double macheps = DBL_EPSILON;
 //	double tol     = DBL_EPSILON*1e3;
-//	int    maxiter = 10;
+//	int    maxiter = 15;
 //	double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter, errstring);
 //	//if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
 //	return result;
@@ -520,10 +523,10 @@ CoolPropDbl IncompressibleBackend::calc_smass() {
 
 /// Functions that can be used with the solver, they miss the reference values!
 CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x) {
-    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, fluid->rho(T, p, x), calc_drhodTatPx(T, p, x));
+    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
 };
 CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) {
-    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(fluid->rho(T, p, x), calc_drhodTatPx(T, p, x));
+    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
 };
 
 /// Calculate the first partial derivative for the desired derivative

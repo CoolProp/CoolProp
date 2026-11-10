@@ -3572,7 +3572,22 @@
     "INCHI_STRING": "InChI=1S/C2HF3/c3-1-2(4)5/h1H",
     "NAME": "R1123",
     "REFPROP_NAME": "R1123",
-    "SMILES": "C(=C(F)F)F"
+    "SMILES": "C(=C(F)F)F",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "359-11-5*0",
+        "source": "ATcT",
+        "uncertainty": 1400.0,
+        "units": "J/mol",
+        "value": -498500.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

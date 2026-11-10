@@ -8,12 +8,28 @@ void UNIFACParameterLibrary::jsonize(std::string& s, nlohmann::json& d) {
     d = cpjson::parse(s);
 }
 void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& comp_data) {
+    // All-or-nothing: a throw part-way through must not leave partial entries
+    // behind, or the next load (m_populated is still false) appends duplicates.
+    std::vector<Group> groups_before = groups;
+    std::vector<InteractionParameters> interaction_parameters_before = interaction_parameters;
+    std::vector<Component> components_before = components;
+    try {
+        populate_unchecked(group_data, interaction_data, comp_data);
+    } catch (...) {
+        groups.swap(groups_before);
+        interaction_parameters.swap(interaction_parameters_before);
+        components.swap(components_before);
+        throw;
+    }
+}
+void UNIFACParameterLibrary::populate_unchecked(const nlohmann::json& group_data, const nlohmann::json& interaction_data,
+                                                const nlohmann::json& comp_data) {
     if (CoolProp::get_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY)) {
         groups.clear();
         interaction_parameters.clear();
         components.clear();
     }
-    // Callers are expected to validate against the UNIFAC schema before calling populate; the cpjson::get_* helpers below still throw CoolProp::ValueError on missing/mistyped fields as a safety net.
+    // No schema is applied to UNIFAC data (VTPRBackend::LoadLibrary reads it unvalidated), so the cpjson::get_* helpers and the checks below are the only guard; they throw CoolProp::ValueError on missing/mistyped fields.
     for (const auto& el : group_data) {
         Group g;
         g.sgi = cpjson::get_integer(el, "sgi");
@@ -52,6 +68,13 @@ void UNIFACParameterLibrary::populate(const nlohmann::json& group_data, const nl
             const nlohmann::json& alpha = el.at("alpha");
             c.alpha_type = cpjson::get_string(alpha, "type");
             c.alpha_coeffs = cpjson::get_double_array(alpha, "c");
+            // Twu (L, M, N) and Mathias-Copeman (c1, c2, c3) are read as c[0..2] by
+            // VTPRBackend, and no schema is applied on this path
+            const std::string& type = c.alpha_type;
+            if ((type == "Twu" || type == "MathiasCopeman" || type == "Mathias-Copeman") && c.alpha_coeffs.size() != 3) {
+                throw CoolProp::ValueError(format("%s alpha function for component [%s] requires exactly 3 coefficients in \"c\"; got %d",
+                                                  type.c_str(), c.name.c_str(), static_cast<int>(c.alpha_coeffs.size())));
+            }
         } else {
             c.alpha_type = "default";
         }

@@ -4249,7 +4249,22 @@
     "INCHI_STRING": "InChI=1S/C2H3Cl/c1-2-3/h2H,1H2",
     "NAME": "VinylChloride",
     "REFPROP_NAME": "VINYLCHLORIDE",
-    "SMILES": "C=CCl"
+    "SMILES": "C=CCl",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-01-4*0",
+        "source": "ATcT",
+        "uncertainty": 270.0,
+        "units": "J/mol",
+        "value": 21810.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

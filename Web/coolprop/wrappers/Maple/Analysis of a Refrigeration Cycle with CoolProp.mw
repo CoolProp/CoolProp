@@ -122,7 +122,7 @@
 <Text-field style="Text" bold="true" layout="Normal" bullet="dot"><Font bold="false" encoding="UTF-8">\316\224h is the change in specific enthalpy</Font></Text-field>
 <Text-field style="Text" layout="Normal" bullet="dot">q is the heat transferred to the system</Text-field>
 <Text-field style="Text" layout="Normal"></Text-field>
-<Text-field style="Text" layout="Normal">Thermophysical properties are provided by the open source C++ CoolProp library (<Hyperlink linktarget="http://coolprop.org" hyperlink="true"><Font style="Hyperlink">coolprop.org</Font></Hyperlink>). Once compiled and linked to Maple, CoolProp lets you access the properties of pure fluids, pseudo-pure fluids, and humid air with a function call. </Text-field>
+<Text-field style="Text" layout="Normal">Thermophysical properties are provided by the open source C++ CoolProp library (<Hyperlink linktarget="https://coolprop.org" hyperlink="true"><Font style="Hyperlink">coolprop.org</Font></Hyperlink>). Once compiled and linked to Maple, CoolProp lets you access the properties of pure fluids, pseudo-pure fluids, and humid air with a function call. </Text-field>
 <Text-field style="Text" layout="Normal"></Text-field>
 <Text-field style="Text" layout="Normal">This application comes with a CoolProp DLL for 64-bit Windows. You may need to compile CoolProp on your own computing environment for a compatible library. </Text-field>
 <Text-field style="Text" layout="Normal"></Text-field>
@@ -149,7 +149,7 @@ Ensure the path to the DLL is correctly referenced by define_external()</Text-fi
 <Group labelreference="L10331" drawlabel="true">
 <Input>
 <Text-field style="Text" layout="Normal">
-Valid calling sequences for Props() are documented at <Hyperlink linktarget="http://coolprop.org" hyperlink="true"><Font style="Hyperlink">coolprop.org</Font></Hyperlink></Text-field>
+Valid calling sequences for Props() are documented at <Hyperlink linktarget="https://coolprop.org" hyperlink="true"><Font style="Hyperlink">coolprop.org</Font></Hyperlink></Text-field>
 </Input>
 </Group>
 </Section>

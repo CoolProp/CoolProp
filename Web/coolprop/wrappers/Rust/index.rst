@@ -12,7 +12,7 @@ rfluids (3-party wrapper)
 ``rfluids`` provides a safe, idiomatic Rust interface to CoolProp.
 
 The crate is published on `crates.io <https://crates.io/crates/rfluids>`_ and
-the API documentation is available on `docs.rs <https://docs.rs/rfluids>`_.
+the API documentation is available on `docs.rs <https://docs.rs/rfluids/latest/rfluids/>`_.
 
 Installation
 ------------

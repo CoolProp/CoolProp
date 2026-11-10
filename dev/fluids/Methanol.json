@@ -5792,7 +5792,22 @@
     "INCHI_STRING": "InChI=1S/CH4O/c1-2/h2H,1H3",
     "NAME": "Methanol",
     "REFPROP_NAME": "METHANOL",
-    "SMILES": "CO"
+    "SMILES": "CO",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "67-56-1*0",
+        "source": "ATcT",
+        "uncertainty": 140.0,
+        "units": "J/mol",
+        "value": -200850.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

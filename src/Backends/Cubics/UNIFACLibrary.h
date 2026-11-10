@@ -92,6 +92,8 @@ struct UNIFACParameterLibrary
 
     /// Populate internal data structures based on nlohmann::json arrays
     void populate(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& decomp_data);
+    /// The body of populate(), without the restore-on-throw
+    void populate_unchecked(const nlohmann::json& group_data, const nlohmann::json& interaction_data, const nlohmann::json& decomp_data);
 
    public:
     UNIFACParameterLibrary() : m_populated(false) {};

@@ -1,0 +1,387 @@
+# Agent notes
+
+Durable, hard-won knowledge about working on CoolProp: gotchas, design
+decisions and verification techniques that are not obvious from the code.
+Read the section for the area you are about to touch.  Add to this file (in
+the PR that taught you the lesson) rather than keeping private notes; open
+work belongs in Linear, not here.
+
+Migrated from the Beads memory store on 2026-09-26; entries that only
+recorded history of finished or abandoned work were dropped (they remain in
+`.beads/issues.jsonl`).
+
+## Build, CI and tooling
+
+- **clang-format CI diffs against the live PR base.** `dev/ci/clang-format.sh`
+  formats every file differing between `pull_request.base.sha` and HEAD, so a
+  branch cut from a stale master inherits failures from misformatted files
+  that landed on master since.  Fix by rebasing onto the current master tip.
+  Check locally: `CLANG_FORMAT='uvx clang-format@18.1.8' bash dev/ci/clang-format.sh HEAD origin/master`.
+- **clang-tidy in CI is line-anchored; preflight is whole-file.** CI runs
+  `clang-tidy-diff.py` on `git diff -U0`, so touching one line of a legacy
+  file does not surface its backlog.  `preflight.sh` passes whole files to
+  `run-clang-tidy-staged.sh`, so it does surface the untouched backlog of any
+  file you edit — despite its step being labelled "diff-only" (Linear
+  COO-14).  `.clang-tidy` is in whitelist mode (PR #2802) because the broad
+  set was ~60% style noise; clang-tidy CI is informational by design.
+- **clang-tidy in Docker:** delete `dev/.fluiddepcache` and
+  `dev/.incompdepcache` first; the host's pickle is incompatible with the
+  container's Python.
+- **clang-tidy `-fix` sweeps can corrupt code.** Anchor `--header-filter` to
+  the repo root (`^<repo>/(include|src)/`) or it rewrites vendored headers
+  under `build_catch/_deps`.  `run-clang-tidy`'s export+apply double-applies
+  shared-header fixes (`: a(a) : a(a) {`), even at `-j1`; run `clang-tidy -fix`
+  one TU at a time instead.  `cppcoreguidelines-prefer-member-initializer`
+  can hoist a read of a member that is only filled later in the constructor
+  body, silently zeroing results; always review a member-initializer sweep
+  adversarially.  `modernize-use-auto` / `modernize-use-using` are low-risk
+  and welcome as standalone sweeps.
+- **Catch2 v3 in this repo:** use `Catch::Approx`, and `~[slow]` (not
+  `[!slow]`) to exclude slow tests.
+- **CMake per-target properties must follow every target-creation path.**
+  `Main` is created under both `COOLPROP_MY_MAIN` (CodeQL/Coverity/IWYU CI)
+  and `COOLPROP_MAIN_MODULE`.  A `set_property(TARGET ...)` nested in one of
+  them silently no-ops on the other; put instrumentation blocks at the bottom
+  of `CMakeLists.txt` with `if(TARGET ...)`.  Symptom: "Manually-specified
+  variables were not used by the project".
+- **Moving headers: forwarding shims don't cover tooling that reads headers
+  by path.** `wrappers/Python/generate_constants_module.py` scrapes enums from
+  `include/*.h` by file I/O; after a move it reads a shim, matches nothing and
+  the wheel build dies.  Grep `wrappers/ dev/ setup.py CMakeLists` for
+  `open()` / `os.path.join('include', ...)` and `DEPENDS` on header paths, and
+  repoint them in the same PR.
+- **CodeQL vendored-code noise:** `paths-ignore` is ignored for C/C++ in a
+  build-based analysis.  `build-mode: none` would honour it but was rejected
+  (PR #3013 closed): the buildless extractor is less accurate on a
+  macro/template-heavy codebase.  Dismiss vendored alerts in the Security UI
+  instead.
+- **Docs build installs only the Python wheel.** `docs_docker-run.yml`
+  executes notebooks with `jupyter nbconvert --execute` after `pip wheel .`;
+  it does not build the C++ test runner.  Figures in doc notebooks must come
+  from the Python API alone, never from Catch2 test output.
+- **nanobind stub drift gate is reproducible locally**, but only
+  with the pinned pair, not the ambient interpreter:
+
+  ```bash
+  uv venv --python 3.12 /tmp/stubvenv
+  VIRTUAL_ENV=/tmp/stubvenv uv pip install 'nanobind==2.12.0' cython scikit-build-core ninja
+  COOLPROP_NANOBIND=ON VIRTUAL_ENV=/tmp/stubvenv uv build --wheel --no-build-isolation \
+    --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
+    --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON --out-dir /tmp/stubdist .
+  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp/*.pyi' -d /tmp/stubcheck
+  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp/__init__.pyi
+  diff -u wrappers/Python/_nanobind/Plot.pyi /tmp/stubcheck/CoolProp/CoolProp/Plot.pyi
+  ```
+
+  Take the generated stubs verbatim; never hand-edit them.  A default value
+  that stubgen writes with a name the stub does not define (an enum of the
+  core in `Plot.pyi`) is fixed in the binding with `nb::arg(...).sig("...")`.
+- **TestPyPI pruning is manual** (since 2025-11-14, PyPI's new-device email
+  verification blocks unattended TOTP logins).  Stay logged into TestPyPI in
+  a browser, then `python3 dev/testpypi_delete.py --keep 10` (dry run) and
+  `--do-it`.  See PR #3202.
+- **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
+  `cmake/dependencies.cmake`) and do not reintroduce it.
+
+- **Catch2 test names must not contain commas.**  A comma in a test spec
+  is OR, so "Cubic T,P root choice" cannot be selected by name.  Write
+  "TP", "P-input", etc.
+- **Rewriting a stack of PR branches:** commit the fix on the owning
+  branch, then from the top branch `git rebase --update-refs --onto
+  <owner-new> <owner-old>`; it moves every intermediate branch ref in one
+  pass.  Use the old SHA the upper branch actually sits on (after an
+  amend it differs from the branch's own old tip).  Enable `rerere`.
+
+## REFPROP
+
+- **Running `[refprop]` Catch2 tests locally:** without configuration they
+  SKIP silently (and `preflight.sh` reports green).  Point CoolProp at a
+  REFPROP install via the `COOLPROP_REFPROP_ROOT` environment variable, or
+  via the config keys `ALTERNATIVE_REFPROP_PATH` and
+  `ALTERNATIVE_REFPROP_LIBRARY_PATH` set as `COOLPROP_ALTERNATIVE_REFPROP_PATH`
+  etc. (config keys are read from `COOLPROP_<KEY>` environment variables).
+- **Fork PRs never run REFPROP tests.** `test_catch2.yml` builds REFPROP only
+  when the PR head is in CoolProp/CoolProp (it needs
+  `secrets.REFPROP_GPG_PASSPHRASE`).  A green fork PR is not evidence that
+  REFPROP tests pass.
+- **The REFPROP backend is not thread-safe**, and never was: REFPROP itself
+  is not reentrant.  Callers must serialize REFPROP calls.
+- **Composition is a per-call argument** to every REFPROP routine; the only
+  global state is which fluids are loaded.  Saturated-phase states can be
+  modelled as lightweight backend instances that reuse the host's loaded
+  component string and carry their own composition — use
+  `mole_fractions_liq` / `mole_fractions_vap`, not the bulk composition.
+- **REFPROP 10.1 beta** ships Windows DLLs only, and its FLD files carry
+  materially newer transport models than 10.0 (argon, nitrogen, methane,
+  ethanol, R134a, R32, D2O viscosity all differ).  Audit fluid content
+  against the 10.1 FLD set, not 10.0.  FLD files also carry corrected
+  coefficients without citing the erratum.
+
+## Thermodynamics and flash routines
+
+- **HS single-phase non-uniqueness is spurious.** A second (h,s)-matching
+  root can be mechanically and adiabatically stable yet thermally unstable
+  (cv < 0) — seen on dense supercritical hydrogen.  Accept a root only if it
+  reproduces (h,s), lies in [Tmin, Tmax], and has dp/drho|_T > 0 AND cv > 0.
+- **Generate flash test points in (p,T), not density bands.** A (T,rho) grid
+  lands states inside the spinodal (cv < 0), producing false failures and
+  meaningless comparisons; (p,T) always lands on the stable root.
+- **The backend's `get_superanc()` throws for mixtures and pseudo-pure
+  fluids** (it returns nullptr only for a pure fluid that has none); guard it
+  with `is_pure()`.  H,S flashes without a superancillary (pseudo-pure, or
+  pure without one) use the dome-free legs of `hs_cascade` (PR #3182).
+- **Cubic backends have no classic ancillaries.** `components[0].ancillaries`
+  (pL, pV, hL, ...) is empty on SRK/PR, so any path that reaches it throws
+  "type not set" (#3441).  `get_superanc()` is null there too.  Reach the
+  cubic Chebyshev superancillary through the virtuals
+  `superanc_saturation_at_p` / `superanc_saturation_at_T` (or
+  `calc_saturation_ancillary`); inside the cubic backend everything goes
+  through the private `cubic_superanc_eval`.  Q,T, P,Q and the T,P root
+  choice use it too (COO-136); the old secant saturation solve is no
+  fallback (~1e-7 in p near Tc, and silently the trivial or wrong root
+  outside the table).  When adding a superancillary, check that every input
+  pair needing saturation reaches it: the cubic one (#2739) sat unused for
+  Q,T and P,Q because `AbstractCubicBackend::update` intercepts both.
+  Direct `get_superanc()` callers that remain are listed in COO-146.
+- **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
+  (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
+  `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
+  real-fluid fit, because it decides gas vs liquid; the Soave alpha passes
+  through zero at T* = Tc(1+1/m)^2, where T,U is degenerate, Ttilde turns
+  over and the closed-form cubic loses ~10 digits (COO-145).  Within ~1e-9
+  of the critical point the expanded cubic's coefficients cancel: polish
+  roots against p(rho) in EOS form, never the polynomial.
+- **Flash non-uniqueness is physical, not a bug.**  H,T is non-unique below
+  the max Joule-Thomson inversion temperature (~5 Tc): a cold compressed
+  liquid's (T, h) is also a two-phase state.  Pure cubics refuse H,T; HEOS
+  and cubic mixtures still return the two-phase root (COO-158).  T,S is
+  unique for pure cubics but not for cold liquid water (alpha_p < 0 below
+  the density maximum): HEOS and REFPROP both return the two-phase state.
+  A round-trip test across such a region must not demand the reference
+  state back; exempt it only with an independent check that the input is
+  inside the saturated [L, V] interval at that T.
+- **Compute long constants, never transcribe them.**  #2745's "exact"
+  SRK/PR Omegas had doubled and dropped digits (fixed in #3515), which put
+  SRK's own critical point ~1e-9 below the input Tc/pc and surfaced as a
+  phantom "end gap" in the superancillary.  Evaluate the closed form in
+  high precision in a committed script and store the correctly rounded
+  double as a hex literal (`dev/scripts/cubic_constants.py` writes
+  `src/Backends/Cubics/CubicConstants.h`; evaluating in double at run time
+  is 1-2 ulp off and platform-dependent; the C++ build has no
+  multiprecision).  Test the defining property (critical conditions), not
+  digits.
+- **`recalculate_singlephase_phase()` reads `_rhomolar`.**  Assign the new
+  density before calling it (cubic `solver_rho_Tp` did not; fixed with #3441).
+- **HS cascade rules:** every cascade leg must be exception-guarded (a leg
+  leaving the EOS domain otherwise aborts the cascade), and phase
+  determination for two-phase (h,s) inputs is the dispatcher's job, done
+  before the single-phase cascade — the cascade only finds metastable
+  in-dome roots there.
+- **`solver_rho_Tp` is fragile on its own.** Called standalone with no
+  guess it fails on 25–65% of mixture (T,p) cells where the full PT flash
+  succeeds, clustered near phase boundaries; the flash succeeds only because
+  `update_TP` falls through to the bracketed `solver_rho_Tp_global`.  Don't
+  call it directly without a bracket/fallback.
+- **P+{H,S,U} is a 1-D problem.** A 2-D homotopy/continuation flash (good for
+  HS) regressed P+X in the bulk and was reverted; speed P+X by improving the
+  1-D solver (TOMS748, warm starts).  Validate flash speed on a whole
+  consistency-plot grid, never on hand-picked points — a cherry-picked bench
+  hid that regression.
+- **HS flash scope:** the shipped Helmholtz HS happy path (PR #2999) is the
+  intended end state for the EOS backend.  Fast 2-D (h,s) inversion and
+  call-to-call caching belong to SVDSBTL, not the Helmholtz path.
+- **Domain clamps need slack sized between two scales.** Water's (h,s)
+  homotopy folds ~0.03% below Tmin near the density anomaly, while a
+  spurious ortho-hydrogen basin sits ~30% below; a 2% relative slack admits
+  the first and blocks the second.
+- **XN_DEPENDENT const-(T,rho) composition derivatives are derivable from the
+  XN_INDEPENDENT (mole-number) branch.** `ndln_fugacity_i_dnj__constT_V_xi` is
+  valid for both flags; build composition Jacobians from it plus an explicit
+  rho-coupling term rather than via simplex projection.
+- **Thread-safety contract is one AbstractState per thread.** TSan reports on
+  `IdealHelmholtzContainer` caches (#2844) are false positives: the ideal
+  cache path is dead (`cache_values` defaults to false everywhere) and the
+  residual cache is per-instance.  Sharing one backend across threads would
+  genuinely race.
+- **Windows is where NaN/_HUGE FP flags hurt** (#3012): Delphi unmasks FP
+  exceptions and Excel/VBA poll the status word.  `CoolProp::fpu_guard`
+  (`include/CoolProp/FPUGuard.h`) keys on `_WIN32` (any compiler, incl.
+  MinGW), not `_MSC_VER`.
+- **Mixture critical points: filter on `stable`, nothing else** (#3528).
+  `calc_all_critical_points()` also returns spurious points; most sit at
+  liquid-like density and negative pressure, which `calc_critical_point`
+  already marks unstable (negative pressure is physical, so don't filter on
+  p).  The TPD verdict on the ~100 K / 100s-of-MPa points is *marginal*: it
+  flips between builds (R470A), so don't assert per-blend stable counts there
+  (COO-155).  The N×N L*/M* formulation is general-N, but Air (ternary) yields
+  four stable points (COO-154), and natural gases take minutes.
+
+## Fluid data, superancillaries and transport
+
+- **Superancillary provenance.** fastchebpure fits superancillaries from the
+  CoolProp EOS via its submodule pin, and the docs deviation plots download a
+  pinned fastchebpure release.  Changing a fluid's EOS in `dev/fluids` trips the
+  `superanc-pin` gate (`dev/scripts/check_superanc_release_pin.py`) until
+  fastchebpure regenerates, is re-tagged, and the docs pin is bumped — or the
+  fluid is added to `PENDING_UPSTREAM`.  Two independent freshness axes:
+  EOS vs embedded superancillary (`source_eos_hash` + check points) and EOS vs
+  docs reference.  Suspect provenance lag before the superancillary math.
+- **Don't differentiate a fitted Chebyshev expansion** when the derivative
+  has a closed form: sample the derivative directly at the nodes.
+  Differentiation truncates the top coefficient (a 180x accuracy loss was
+  measured at loose build tolerance).
+- **Regenerating a superancillary:** never hand-edit `source_eos_hash`.  Use
+  fastchebpure's `fitcheb` CLI: `fitcheb -f FLUID -d <coolprop checkout>` to
+  fit and check, then `fitcheb inject -f FLUID -d <coolprop checkout>` to
+  replace the SUPERANCILLARY block, add check points and stamp the hash.
+- **Incompressible caloric fits come in two kinds, both loaded.**  A fluid
+  may ship `density`/`specific_heat` (classic polynomial) and
+  `density_cheb`/`specific_heat_cheb`; `IncompressibleFluid` keeps both and
+  every caloric function takes a `chebyshev` flag (`useChebyshevFit` picks, with
+  fallback to whichever exists).  `IncompressibleBackend` snapshots
+  `INCOMP_PREFER_CHEBYSHEV_CALORIC` in its constructor and must pass it to
+  every caloric call, including residuals inside `T_rho`/`T_c`: a call that
+  falls back to the default argument reads the live config and can mix fits
+  with the cached `_hmass_ref`/`_smass_ref`.  Derived matrices (`ddT`,
+  `int_dT`, `int_dTdivT`, `int_dTdivT_log`) exist only after `validate()`;
+  evaluation throws on an empty one rather than returning 0.  `setTbase()`
+  drops the polynomial entropy matrices (they embed the value of Tbase), so
+  call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
+  only when the fluid has no separate `_cheb` entry for that property.
+- **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
+  which every setter calls (the JSON setter only for changed values).  A side
+  effect wired into one setter is skipped when the key is set another way.
+- **Changing one fluid's viscosity can move other fluids.** Two couplings:
+  (1) ECS — `viscosity_ECS` evaluates the reference fluid's
+  `calc_viscosity_background()` (R134a moves seven refrigerants by 1–2.6%);
+  (2) conductivity — `conductivity_dilute` type `eta0_and_poly`,
+  `conductivity_critical_simplified_Olchowy_Sengers` (divides by viscosity)
+  and `conductivity_dilute_hardcoded_ethane`.  Before changing a viscosity
+  model, grep `dev/fluids` for `reference_fluid` pointing at it and for those
+  three conductivity types; measure by swapping only that fluid's JSON.
+- **rhosr-CS viscosity:** `rhosr_critical` is not a fitted parameter — it is
+  `rho_c*R*(tau*dalphar_dtau - alphar)` at the EOS critical point and must be
+  recomputed whenever the EOS changes.  `C` and `rhosr_critical` are coupled
+  and must be refit together (see `dev/scripts/fit_R1233zdE_viscosity.py`).
+- **Validate a transport correlation against its paper's own verification
+  points.** That is what catches typeset-equation defects (missing exp, sign
+  in a denominator, wrong exponent — including in a numerator).  Do not
+  prioritise by "signs hide in denominators".
+
+## Working with papers
+
+- **Never diagnose an equation from PDF text extraction.** Display equations
+  are images; extraction loses fraction bars and superscripts.  Read the
+  rendered page.
+- **Recovering an equation from a .docx** (NIST `get_pdf.cfm` sometimes serves
+  one): it is a ZIP; `word/document.xml` maps the paragraph with the equation
+  number to `word/media/imageN.wmf`.  In the WMF, `ExtTextOut` (0x0A32)
+  records carry glyph + x/y and `CreateFontIndirect` (0x02FB) the font
+  height; sort by x and read y against the baseline to separate sub- and
+  superscripts.
+- **Before reporting an error in a published paper, check for a correction:**
+  `curl -s https://api.crossref.org/works/<doi> | jq '.message."updated-by"'`.
+- **Bollengier, Brown & Shaw 2019 water EOS** (J. Chem. Phys. 151:054501):
+  a B-spline Gibbs surface for liquid water to 2300 MPa, covering the
+  high-pressure domain IAPWS-95 in CoolProp refuses.  Its reference code
+  (SeaFreeze) is GPL-3 and cannot be vendored into MIT CoolProp; the
+  coefficients are in the paper's supplementary material, so a clean-room
+  implementation is the path.  Its reference state differs from IAPWS
+  (constant h0, s0 shift needed).
+
+## Tabular backends and verification
+
+- **Adversarial mid-cell probe for tabular accuracy claims:** evaluate at the
+  centres of training-grid cells and compare with the at-node error.  Same
+  order of magnitude means the interpolation is real; orders of magnitude
+  worse means the benchmark was accidentally near-node.  (The original
+  probe, used on SVDSBTL Water in May 2026, never reached master.)
+- **BICUBIC inversion failures on (P,T) tables** (#1301): the fix is the
+  SVDSBTL DT-indexed surface, not patching `invert_single_phase_y`.  The
+  `find_nearest_neighbor` bisection improvement from PR #2892 is worth
+  reviving on its own (in-table p99 error 33% → 8.8% on a CO2 grid).
+- **Phase-envelope tracer baseline** (`PhaseEnvelopeRoutines::build`, Sep
+  2026): fast but unreliable — natural-gas mixtures never set `built=true`
+  (bubble curve hits T_min before p drops below the 100 Pa start), some
+  mixtures follow the trivial solution past the critical point to GPa
+  pressures, and heavy traces underflow to NaN.  Use these cases when
+  judging a replacement tracer.
+
+## Property plots (CoolProp::Plot)
+
+- **`src/CoolPropPlot.cpp` is a port of CoolPlot's numerics** (the Python
+  package: `thermo/isolines.py`, `tracer.py`, `stepping.py`, `fluid.py` of
+  CoolPlot 0.7+).  Names and the order of steps follow the Python files on
+  purpose; fix a numerics bug in both.  CoolPlot uses the port through
+  `CoolProp.CoolProp.Plot` when it is present and falls back to its Python
+  copy, which its tests treat as the reference.
+- **The nanobind submodule lives at `CoolProp.CoolProp.Plot`**, not
+  `CoolProp.Plot`: the package `__init__` is kept identical to the legacy
+  one (import-tree parity gate), and `CoolProp.Plots` is the old Python
+  plotting package.  Its stubs are a stub package,
+  `CoolProp/CoolProp/__init__.pyi` and `CoolProp/CoolProp/Plot.pyi`: a stub
+  module `CoolProp/CoolProp.pyi` cannot have submodules, and a `Plot.pyi`
+  next to it types the non-existent `CoolProp.Plot`.  The regeneration
+  imports the built module as `CoolProp.CoolProp` from a staging package;
+  imported as a top-level `CoolProp`, stubgen names the types in `Plot.pyi`
+  `CoolProp.<type>`, which do not resolve.
+- **Releasing the GIL** in `PropertyPlot.calc_isolines`, `isoline_range`
+  and `value_at` is safe for Python objects: the arguments are converted
+  to C++ before the call (the settings are copied, see the binding) and
+  the results after it.  `AbstractState.update` keeps the GIL: existing
+  code that shares one state between Python threads relies on the GIL to
+  serialise the calls.  `AbstractState.update_nogil` is the opt-in that
+  releases it, for code that gives each thread its own state.  CoolProp's
+  lazily built shared data (the fluid and mixture libraries, the caloric
+  superancillaries) is built under `std::call_once` or a mutex, so distinct
+  HEOS, cubic and GERG states are safe in parallel.  Not safe: a thread
+  that changes the configuration (`set_config_*` writes a global without a
+  lock), and a thread that builds tabular tables (creating a TTSE or
+  BICUBIC state, or setting its fractions, when its tables are not on
+  disk yet): the build toggles `DONT_CHECK_PROPERTY_LIMITS` globally
+  (`TabularBackends.cpp`, COO-144).
+  REFPROP states are serialised by `REFPROP_mutex()`.  Every other binding keeps the GIL; add
+  `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
+  re-enter Python.  A REFPROP plot is safe without the GIL too: the
+  backend serialises its calls through `REFPROP_mutex()`.  But another
+  thread's REFPROP state can now run between two calls of a plot, and
+  REFPROP keeps one set of loaded fluids: interaction parameters set
+  with `set_binary_interaction_*`, a reference state or a custom `.MIX`
+  composition are lost when that other state loads different fluids
+  (see `REFPROPMixtureBackend.h`).
+- **Every isoline tracer builds its own phase envelope**, about a quarter
+  of the time of a traced line for a blend.  Do not share or cache that
+  saturation state between tracers: the mixture saturation flashes take
+  their guesses from it, so a line would depend on the lines computed
+  before it, and lines are cached and computed one by one in any order
+  (tried in COO-142 and reverted; CoolPlot's `tracer.py` has the same note).
+- **No `==` or `!=` between doubles in the plot numerics**, and no
+  tolerance in their place where an exact answer is meant.  The envelope's
+  Q flags (exactly 0 or 1) and the markers of `generate_update_pair` are
+  compared by side (`Q > 0.5`); an exact root or a vanished denominator is
+  `is_zero` (a classification); sign tests use `sign_of` (integers); a
+  cache key or a copied sample is `same_bits`; the start and end of a
+  stepped range are passed as flags, not found by comparing `u`; tests
+  that mean "the same double" use `WithinULP(x, 0)`.  `-Wfloat-equal` on
+  `src/CoolPropPlot.cpp` is clean (the warnings left come from the bundled
+  fmt).  The rewrite was checked bit-identical on about 1100 isolines of
+  pure fluids, blends and an incompressible.  CoolPlot has the same
+  helpers in `coolplot/thermo/floats.py`; its `is_zero` classifies the
+  bits too, since `abs(v) < math.ulp(0.0)` is false for 0.0 when an
+  extension built with fast-math sets denormals-are-zero.
+- **A `PropertyPlot` serialises its own calls**: every line of a plot is
+  computed with the plot's one `AbstractState`, updated in place, so
+  `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they
+  release the GIL, and two Python threads really do call them at once).
+  Parallel work needs one plot per thread (CoolPlot's adapter keeps one
+  per thread, after a review of its thread workers found a shared plot).
+- **The mixture H-p flash on master refuses two-phase states 8.0.0 solved**
+  (R32/R125 70/30 at h = 4e5 J/kg, p = 9.65 bar: the residual gate after the
+  temperature search throws "the (T,p) flash is misclassifying the phase").
+  Tests of the tracer against the flash compare only where the flash
+  converges; the isoline tracer itself never needs that flash.
+- **Building the Python wheel offline:** the catch build fills
+  `.cpm_cache/` in the repo; `pip wheel .` configures a fresh tree, so pass
+  `CMAKE_ARGS="-DCPM_SOURCE_CACHE=$PWD/.cpm_cache"` (plus the valijson
+  source if downloads are blocked) or Eigen is fetched again (gitlab
+  returns 429 quickly).

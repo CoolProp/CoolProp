@@ -1,5 +1,6 @@
 
 #include "CoolProp/CoolProp.h"
+#include "CoolProp/Configuration.h"
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "IncompressibleLibrary.h"
@@ -37,6 +38,90 @@ double evaluateAwayFromPole(double x_den, Func fnc) {
     const double f_lo = fnc(x_lo);
     const double f_hi = fnc(x_hi);
     return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
+}
+
+// ---- Polynomial caloric fits (type == INCOMPRESSIBLE_POLYNOMIAL) -----------
+//
+// Rows multiply powers of (T - Tbase), columns multiply powers of
+// (x - xbase), as in Polynomial2DFrac::evaluate. The derivative and the two
+// integrals that h and s need are built once at load time (validate) as
+// coefficient matrices in this same basis, so evaluating them costs no more
+// than evaluating the fit itself.
+
+/// Evaluate a coefficient matrix in the polynomial basis with Horner's
+/// scheme: first along each row in (x - xbase), then down the rows in
+/// (T - Tbase). The highest coefficient is the starting value rather than
+/// 0 * dx, so a single-column (pure fluid) matrix never touches xbase.
+double polyEvalMatrix(const Eigen::MatrixXd& M, double T, double x, double Tbase, double xbase) {
+    if (M.rows() < 1 || M.cols() < 1) {
+        // An empty fit must be loud, not a silent 0.0.
+        throw CoolProp::ValueError(
+          "Polynomial coefficient matrix is empty: the fit has no coefficients, or the fluid was not loaded through validate().");
+    }
+    const double dT = T - Tbase;
+    const double dx = x - xbase;
+    auto row_value = [&](Eigen::Index i) {
+        double value = M(i, M.cols() - 1);
+        for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
+            value = value * dx + M(i, j);
+        }
+        return value;
+    };
+    double result = row_value(M.rows() - 1);
+    for (Eigen::Index i = M.rows() - 2; i >= 0; --i) {
+        result = result * dT + row_value(i);
+    }
+    return result;
+}
+
+/// Coefficients of d/dT: the term a_i (T - Tbase)^i becomes
+/// i a_i (T - Tbase)^(i-1), so row i moves to row i-1 times i.
+Eigen::MatrixXd polyDerivativeMatrix(const Eigen::MatrixXd& C) {
+    const Eigen::Index n = C.rows();
+    if (n <= 1) return Eigen::MatrixXd::Zero(1, C.cols());
+    Eigen::MatrixXd D(n - 1, C.cols());
+    for (Eigen::Index i = 1; i < n; ++i) {
+        D.row(i - 1) = static_cast<double>(i) * C.row(i);
+    }
+    return D;
+}
+
+/// Coefficients of the indefinite integral over T: a_i (T - Tbase)^i
+/// becomes a_i / (i+1) (T - Tbase)^(i+1). Row 0, the integration constant,
+/// is left at zero.
+Eigen::MatrixXd polyAntiderivativeMatrix(const Eigen::MatrixXd& C) {
+    const Eigen::Index n = C.rows();
+    Eigen::MatrixXd B = Eigen::MatrixXd::Zero(n + 1, C.cols());
+    for (Eigen::Index i = 0; i < n; ++i) {
+        B.row(i + 1) = C.row(i) / static_cast<double>(i + 1);
+    }
+    return B;
+}
+
+/// Coefficients of the indefinite integral Int f/T dT for a polynomial f.
+/// With y = T - Tbase, each term y^i / T = y^i / (y + Tbase) splits by
+/// polynomial division into
+///     y^i / (y + Tbase) = sum_{m=0}^{i-1} (-Tbase)^m y^(i-1-m) + (-Tbase)^i / T
+/// and so integrates to
+///     sum_{m=0}^{i-1} (-Tbase)^m y^(i-m) / (i-m)  +  (-Tbase)^i ln(T).
+/// The first part goes into P (same basis as C), the factor of ln(T) into
+/// the single row L. This holds for Tbase == 0 as well, where it reduces to
+/// a_0 ln(T) + sum_{i>0} a_i T^i / i. Unlike the per-call evaluation in
+/// Polynomial2DFrac::integral, which expands in powers of T itself, the
+/// polynomial part stays in powers of (T - Tbase) and has no pole anywhere.
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> polyDivideByTAntiderivative(const Eigen::MatrixXd& C, double Tbase) {
+    const Eigen::Index n = C.rows();
+    Eigen::MatrixXd P = Eigen::MatrixXd::Zero(std::max<Eigen::Index>(n, 1), C.cols());
+    Eigen::MatrixXd L = Eigen::MatrixXd::Zero(1, C.cols());
+    for (Eigen::Index i = 0; i < n; ++i) {
+        double minus_Tbase_power = 1.0;  // (-Tbase)^m, built up step by step
+        for (Eigen::Index m = 0; m < i; ++m) {
+            P.row(i - m) += C.row(i) * (minus_Tbase_power / static_cast<double>(i - m));
+            minus_Tbase_power *= -Tbase;
+        }
+        L.row(0) += C.row(i) * minus_Tbase_power;  // now (-Tbase)^i
+    }
+    return {P, L};
 }
 
 // ---- Chebyshev caloric fits (type == INCOMPRESSIBLE_CHEBYSHEV) -------------
@@ -160,6 +245,17 @@ Eigen::MatrixXd chebDivideByTMatrix(const Eigen::MatrixXd& C, double Tmin, doubl
         degree += 16;
     }
 }
+
+// ---- Vector-shaped coefficients (exponential, logexponential, polyoffset) --
+
+/// Coefficients of a row- or column-vector matrix as a contiguous array, without
+/// copying; nullptr if the matrix is not vector-shaped.
+const double* vectorCoeffs(const Eigen::MatrixXd& m) {
+    if (m.rows() < 1 || m.cols() < 1 || (m.rows() != 1 && m.cols() != 1)) {
+        return nullptr;
+    }
+    return m.data();
+}
 }  // namespace
 
 namespace CoolProp {
@@ -173,17 +269,56 @@ and transport properties.
 //IncompressibleFluid::IncompressibleFluid();
 
 void IncompressibleFluid::validate() {
-    // Chebyshev caloric fits: check the domain and build the derived
-    // coefficient matrices exactly once, at load time. Everything h/s need
-    // afterwards is a plain Clenshaw evaluation (see dhdTatPxdT/dsdTatPxdT).
-    for (IncompressibleData* data : {&density, &specific_heat}) {
+    // Caloric fits: check them and build the derived coefficient matrices
+    // exactly once, at load time. Everything h and s need afterwards is a
+    // plain evaluation of a stored matrix (see drhodTatPx, dhdTatPxdT and
+    // dsdTatPxdT). Both the classic and the Chebyshev fits are prepared, so
+    // that either can be selected per state without reloading anything.
+    struct CaloricFit
+    {
+        IncompressibleData* data;
+        const char* what;
+        bool is_specific_heat;
+    };
+    // Each kind of fit must sit in its own slot. The setters of the Chebyshev
+    // slots already refuse other fits; the classic slots take any type, since
+    // a fluid may ship a Chebyshev fit under the classic name only. When it
+    // also ships a separate Chebyshev entry, though, the setting at false
+    // would evaluate the Chebyshev fit in the classic slot as the "classic"
+    // choice, and switching to the classic fits would silently do nothing.
+    requireChebyshevOrUnset(density_cheb, "density");
+    requireChebyshevOrUnset(specific_heat_cheb, "specific heat");
+    auto require_distinct_kinds = [this](const IncompressibleData& classic_fit, const IncompressibleData& chebyshev_fit, const char* what) {
+        if (classic_fit.type == IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV && chebyshev_fit.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+            throw ValueError(
+              format("%s (%d): %s has a Chebyshev %s fit in both the classic and the Chebyshev slot.", __FILE__, __LINE__, name.c_str(), what));
+        }
+    };
+    require_distinct_kinds(density, density_cheb, "density");
+    require_distinct_kinds(specific_heat, specific_heat_cheb, "specific heat");
+    for (const CaloricFit& fit : {CaloricFit{&density, "density", false}, CaloricFit{&density_cheb, "density", false},
+                                  CaloricFit{&specific_heat, "specific heat", true}, CaloricFit{&specific_heat_cheb, "specific heat", true}}) {
+        IncompressibleData* data = fit.data;
+        if (data->type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
+            if (data->coeffs.rows() < 1 || data->coeffs.cols() < 1) {
+                throw ValueError(
+                  format("%s (%d): Polynomial %s fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, fit.what, name.c_str()));
+            }
+            if (fit.is_specific_heat) {
+                data->int_dT = polyAntiderivativeMatrix(data->coeffs);
+                std::tie(data->int_dTdivT, data->int_dTdivT_log) = polyDivideByTAntiderivative(data->coeffs, Tbase);
+            } else {
+                data->ddT = polyDerivativeMatrix(data->coeffs);
+            }
+            continue;
+        }
         if (data->type != IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) continue;
         if (!(data->cheb_Tmin > 0.0) || !(data->cheb_Tmax > data->cheb_Tmin)) {
-            throw ValueError(format("%s (%d): Chebyshev fit for %s needs 0 < Tmin < Tmax, got [%g, %g].", __FILE__, __LINE__, name.c_str(),
-                                    data->cheb_Tmin, data->cheb_Tmax));
+            throw ValueError(format("%s (%d): Chebyshev %s fit for %s needs 0 < Tmin < Tmax, got [%g, %g].", __FILE__, __LINE__, fit.what,
+                                    name.c_str(), data->cheb_Tmin, data->cheb_Tmax));
         }
         if (data->coeffs.rows() < 1 || data->coeffs.cols() < 1) {
-            throw ValueError(format("%s (%d): Chebyshev fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, name.c_str()));
+            throw ValueError(format("%s (%d): Chebyshev %s fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, fit.what, name.c_str()));
         }
         // The fit domain must cover the fluid's advertised range. The scaled
         // variable u = (2T - (cheb_Tmax + cheb_Tmin)) / (cheb_Tmax - cheb_Tmin)
@@ -206,27 +341,46 @@ void IncompressibleFluid::validate() {
             throw ValueError(format("%s (%d): Chebyshev fit domain [%g, %g] for %s does not cover the fluid range [%g, %g].", __FILE__, __LINE__,
                                     data->cheb_Tmin, data->cheb_Tmax, name.c_str(), Tmin, Tmax));
         }
-        data->cheb_ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+        if (fit.is_specific_heat) {
+            data->int_dT = chebAntiderivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+            data->int_dTdivT =
+              chebAntiderivativeMatrix(chebDivideByTMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax), data->cheb_Tmin, data->cheb_Tmax);
+        } else {
+            data->ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+        }
     }
-    if (specific_heat.type == IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
-        specific_heat.cheb_int_dT = chebAntiderivativeMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
-        specific_heat.cheb_int_dTdivT =
-          chebAntiderivativeMatrix(chebDivideByTMatrix(specific_heat.coeffs, specific_heat.cheb_Tmin, specific_heat.cheb_Tmax),
-                                   specific_heat.cheb_Tmin, specific_heat.cheb_Tmax);
+    // The pure/solution classification comes from the number of density
+    // columns (is_pure). If the classic and the Chebyshev density disagreed,
+    // the fluid would change classification with the configuration, while
+    // the library files it under one name list for good.
+    if (density.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && density_cheb.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET
+        && (density.coeffs.cols() == 1) != (density_cheb.coeffs.cols() == 1)) {
+        throw ValueError(format("%s (%d): The classic and Chebyshev density fits for %s disagree on whether the fluid is pure (%d vs %d columns).",
+                                __FILE__, __LINE__, name.c_str(), static_cast<int>(density.coeffs.cols()),
+                                static_cast<int>(density_cheb.coeffs.cols())));
     }
 }
 
 bool IncompressibleFluid::is_pure() {
-    if (density.coeffs.cols() == 1) return true;
+    // validate() ensures both density fits agree, so either one will do
+    if (densityFit(true).coeffs.cols() == 1) return true;
     return false;
+}
+
+bool IncompressibleFluid::chebyshevCaloricPreferred() {
+    return get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC);
 }
 
 /// Base exponential function: exp(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2])
 double IncompressibleFluid::baseExponential(const IncompressibleData& data, double y, double ybase) {
-    Eigen::VectorXd coeffs = makeVector(data.coeffs);
-    size_t r = coeffs.rows(), c = coeffs.cols();
-    if (strict && (r != 3 || c != 1)) {
-        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
+    const double* coeffs = vectorCoeffs(data.coeffs);
+    if (coeffs == nullptr) {
+        throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).", static_cast<int>(data.coeffs.rows()),
+                                static_cast<int>(data.coeffs.cols())));
+    }
+    if (strict && data.coeffs.size() != 3) {
+        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__,
+                                static_cast<int>(data.coeffs.size()), 1));
     }
     const double x_den = (y - ybase) + coeffs[1];
     return evaluateAwayFromPole(x_den, [&](double x) { return exp(coeffs[0] / x - coeffs[2]); });
@@ -235,72 +389,99 @@ double IncompressibleFluid::baseExponential(const IncompressibleData& data, doub
 /// Base exponential function with logarithmic term:
 /// exp(log(1/x + 1/x^2) * coeffs[1] + coeffs[2]) with x = (y - ybase) + coeffs[0]
 double IncompressibleFluid::baseLogexponential(const IncompressibleData& data, double y, double ybase) {
-    Eigen::VectorXd coeffs = makeVector(data.coeffs);
-    size_t r = coeffs.rows(), c = coeffs.cols();
-    if (strict && (r != 3 || c != 1)) {
-        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
+    const double* coeffs = vectorCoeffs(data.coeffs);
+    if (coeffs == nullptr) {
+        throw ValueError(format("Your matrix (%d,%d) cannot be converted into a vector (x,1).", static_cast<int>(data.coeffs.rows()),
+                                static_cast<int>(data.coeffs.cols())));
+    }
+    if (strict && data.coeffs.size() != 3) {
+        throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__,
+                                static_cast<int>(data.coeffs.size()), 1));
     }
     const double x_den = (y - ybase) + coeffs[0];
     return evaluateAwayFromPole(x_den, [&](double x) { return exp(log(1.0 / x + 1.0 / x / x) * coeffs[1] + coeffs[2]); });
 }
 
-double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z) {
-    size_t r = data.coeffs.rows(), c = data.coeffs.cols();
-    double offset = 0.0;
-    double in = 0.0;
-    Eigen::MatrixXd coeffs;
-    if (r > 0 && c > 0) {
-        offset = data.coeffs(0, 0);
-        if (r == 1 && c > 1) {  // row vector -> function of z
-            coeffs = Eigen::MatrixXd(data.coeffs.block(0, 1, r, c - 1));
-            in = z;
-        } else if (r > 1 && c == 1) {  // column vector -> function of y
-            coeffs = Eigen::MatrixXd(data.coeffs.block(1, 0, r - 1, c));
-            in = y;
-        } else {
-            throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
-        }
-        return poly.evaluate(coeffs, in, 0, offset);
+/// First coefficient is the offset, the rest is a polynomial in (input - offset).
+double IncompressibleFluid::basePolyOffset(const IncompressibleData& data, double y, double z) {
+    const Eigen::Index r = data.coeffs.rows(), c = data.coeffs.cols();
+    const bool row_vector = (r == 1 && c > 1);  // function of z
+    const bool col_vector = (r > 1 && c == 1);  // function of y
+    if (!row_vector && !col_vector) {
+        throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__,
+                                static_cast<int>(r), static_cast<int>(c)));
     }
-    throw ValueError(format("%s (%d): You have to provide a vector (1D matrix) of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
+    const double* a = data.coeffs.data();
+    const double dx = (row_vector ? z : y) - a[0];
+    double result = 0.0;
+    for (Eigen::Index k = r * c - 1; k >= 1; --k) {
+        result = result * dx + a[k];
+    }
+    return result;
+}
+
+/// Build the error for a property this fluid carries no fit for.
+/** The message this replaces named neither the fluid nor the property.  It
+ *  read "IncompressibleFluid.cpp (388): The function type is not specified
+ *  ("[0]"), are you sure the coefficients have been set?", which gave a user
+ *  asking for something the reference data simply does not cover no way to
+ *  tell that from a bug in CoolProp, and no way to see which fluid or which
+ *  property was at fault when several were in play.  See issue #2567, where
+ *  T_freeze on the ice slurries surfaced exactly this way.
+ *
+ *  A missing fit is a gap in the data, not a bad input, so the message says
+ *  so plainly and leaves out the file and line: those point into CoolProp's
+ *  own source, which is not where the answer is.
+ *
+ *  Returned rather than thrown so that every call site keeps its own throw
+ *  statement.  The compiler then still sees each switch case as terminating;
+ *  a helper that threw internally would need [[noreturn]] for that, and would
+ *  produce "control reaches end of non-void function" warnings on any
+ *  compiler that ignored the attribute.
+ */
+ValueError IncompressibleFluid::notDefinedError(const std::string& property) const {
+    return ValueError(format("INCOMP::%s does not define %s: no fit for this property is shipped in its fluid "
+                             "data, so there is nothing to evaluate. This is a gap in the reference data for "
+                             "this fluid, not a problem with your inputs.",
+                             this->name.c_str(), property.c_str()));
 }
 
 /// Density as a function of temperature, pressure and composition.
-double IncompressibleFluid::rho(double T, double p, double x) {
-    switch (density.type) {
+double IncompressibleFluid::rho(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(fit.coeffs, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(density.coeffs, density, T, x);
+            return chebEvalMatrix(fit.coeffs, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
-            return baseExponential(density, T, 0.0);
+            return baseExponential(fit, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
-            return baseLogexponential(density, T, 0.0);
+            return baseLogexponential(fit, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(density.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(fit.coeffs, T, x, Tbase, xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
-            return basePolyOffset(density, T, x);
+            return basePolyOffset(fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, density.type));
+            throw notDefinedError("density");
         default:
-            throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, density.type));
+            throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, fit.type));
     }
 }
 
 /// Heat capacities as a function of temperature, pressure and composition.
-double IncompressibleFluid::c(double T, double p, double x) {
-    switch (specific_heat.type) {
+double IncompressibleFluid::c(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(specific_heat.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(fit.coeffs, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(specific_heat.coeffs, specific_heat, T, x);
+            return chebEvalMatrix(fit.coeffs, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.", __FILE__, __LINE__,
-                                    specific_heat.type));
+            throw ValueError(
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for specific heat.", __FILE__, __LINE__, fit.type));
     }
 }
 
@@ -308,18 +489,17 @@ double IncompressibleFluid::c(double T, double p, double x) {
 double IncompressibleFluid::visc(double T, double p, double x) {
     switch (viscosity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(viscosity.coeffs, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(viscosity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(viscosity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(viscosity.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(viscosity.coeffs, T, x, Tbase, xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(viscosity, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, viscosity.type));
+            throw notDefinedError("a viscosity");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, viscosity.type));
     }
@@ -328,18 +508,17 @@ double IncompressibleFluid::visc(double T, double p, double x) {
 double IncompressibleFluid::cond(double T, double p, double x) {
     switch (conductivity.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(conductivity.coeffs, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(conductivity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(conductivity, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(conductivity.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(conductivity.coeffs, T, x, Tbase, xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(conductivity, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, conductivity.type));
+            throw notDefinedError("a thermal conductivity");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, conductivity.type));
     }
@@ -357,18 +536,17 @@ double IncompressibleFluid::psat(double T, double x) {
     }
     switch (p_sat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);
+            return polyEvalMatrix(p_sat.coeffs, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(p_sat, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(p_sat, T, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase));
+            return exp(polyEvalMatrix(p_sat.coeffs, T, x, Tbase, xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(p_sat, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, p_sat.type));
+            throw notDefinedError("a saturation pressure");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, p_sat.type));
     }
@@ -377,18 +555,17 @@ double IncompressibleFluid::psat(double T, double x) {
 double IncompressibleFluid::Tfreeze(double p, double x) {
     switch (T_freeze.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase);
+            return polyEvalMatrix(T_freeze.coeffs, p, x, 0.0, xbase);
         case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
             return baseExponential(T_freeze, x, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
             return baseLogexponential(T_freeze, x, 0.0);
         case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
-            return exp(poly.evaluate(T_freeze.coeffs, p, x, 0, 0, 0.0, xbase));
+            return exp(polyEvalMatrix(T_freeze.coeffs, p, x, 0.0, xbase));
         case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
             return basePolyOffset(T_freeze, p, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, T_freeze.type));
+            throw notDefinedError("a freezing temperature");
         default:
             throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.", __FILE__, __LINE__, T_freeze.type));
     }
@@ -399,54 +576,58 @@ double IncompressibleFluid::Tfreeze(double p, double x) {
  * derive the different functions with respect to temperature.
  */
 /// Partial derivative of density with respect to temperature at constant pressure and composition
-double IncompressibleFluid::drhodTatPx(double T, double p, double x) {
-    switch (density.type) {
+double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.derivative(density.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            // d/dT, derived once at load time in validate()
+            return polyEvalMatrix(fit.ddT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(density.cheb_ddT, density, T, x);
+            return chebEvalMatrix(fit.ddT, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, density.type));
+            throw notDefinedError("density");
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, density.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, fit.type));
     }
 }
 /// Partial derivative of entropy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
-double IncompressibleFluid::dsdTatPxdT(double T, double p, double x) {
-    switch (specific_heat.type) {
+double IncompressibleFluid::dsdTatPxdT(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.integral(specific_heat.coeffs, T, x, 0, -1, 0, Tbase, xbase);
+            // Indefinite Int c/T dT, derived once at load time in validate():
+            // a polynomial part plus a ln(T) term, see polyDivideByTAntiderivative
+            return polyEvalMatrix(fit.int_dTdivT, T, x, Tbase, xbase) + std::log(T) * polyEvalMatrix(fit.int_dTdivT_log, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             // Indefinite Int c/T dT, derived once at load time in validate()
-            return chebEvalMatrix(specific_heat.cheb_int_dTdivT, specific_heat, T, x);
+            return chebEvalMatrix(fit.int_dTdivT, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, specific_heat.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
     }
 }
 /// Partial derivative of enthalpy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
-double IncompressibleFluid::dhdTatPxdT(double T, double p, double x) {
-    switch (specific_heat.type) {
+double IncompressibleFluid::dhdTatPxdT(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.integral(specific_heat.coeffs, T, x, 0, 0, 0, Tbase, xbase);
+            // Indefinite Int c dT, derived once at load time in validate()
+            return polyEvalMatrix(fit.int_dT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             // Indefinite Int c dT, derived once at load time in validate()
-            return chebEvalMatrix(specific_heat.cheb_int_dT, specific_heat, T, x);
+            return chebEvalMatrix(fit.int_dT, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, specific_heat.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
     }
 }
 
@@ -552,8 +733,7 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
                 return basePolyOffset(mole2input, T, x);
                 break;
             case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-                throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?",__FILE__,__LINE__,mole2input.type));
-                break;
+                throw notDefinedError("a mole fraction conversion");
             default:
                 throw ValueError(format("%s (%d): Your function type \"[%d]\" is unknown.",__FILE__,__LINE__,mole2input.type));
                 break;
@@ -569,11 +749,12 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
  * done here, but in the backend, T(h,p) for example.
  */
 /// Temperature as a function of density, pressure and composition.
-double IncompressibleFluid::T_rho(double Dmass, double p, double x) {
+double IncompressibleFluid::T_rho(double Dmass, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
     double d_raw = Dmass;  // No changes needed, no reference values...
-    switch (density.type) {
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limits(density.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+            return poly.solve_limits(fit.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
             // Brent on the forward evaluation over the fluid's range,
             // mirroring the backend's HmassP/PSmass flashes; the Chebyshev
@@ -583,27 +764,32 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x) {
                public:
                 IncompressibleFluid* fluid;
                 double p, x, target;
-                Residual(IncompressibleFluid* fluid, double p, double x, double target) : fluid(fluid), p(p), x(x), target(target) {}
+                bool chebyshev;
+                Residual(IncompressibleFluid* fluid, double p, double x, double target, bool chebyshev)
+                  : fluid(fluid), p(p), x(x), target(target), chebyshev(chebyshev) {}
                 double call(double T) override {
-                    return fluid->rho(T, p, x) - target;
+                    return fluid->rho(T, p, x, chebyshev) - target;
                 }
-            } res(this, p, x, d_raw);
+            } res(this, p, x, d_raw, chebyshev);
             return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
         }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("density");
         default:
-            throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.", __FILE__, __LINE__,
-                                    specific_heat.type));
+            // The density fit's type, not the specific heat's: T_rho
+            // switches on the density fit, so reporting the heat capacity's
+            // type code here named the wrong property.
+            throw ValueError(
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse density.", __FILE__, __LINE__, fit.type));
     }
 }
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
-double IncompressibleFluid::T_c(double Cmass, double p, double x) {
+double IncompressibleFluid::T_c(double Cmass, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = specificHeatFit(chebyshev);
     double c_raw = Cmass;  // No changes needed, no reference values...
-    switch (specific_heat.type) {
+    switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limits(specific_heat.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
+            return poly.solve_limits(fit.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
             // See the matching comment in T_rho above.
             class Residual : public FuncWrapper1D
@@ -611,19 +797,20 @@ double IncompressibleFluid::T_c(double Cmass, double p, double x) {
                public:
                 IncompressibleFluid* fluid;
                 double p, x, target;
-                Residual(IncompressibleFluid* fluid, double p, double x, double target) : fluid(fluid), p(p), x(x), target(target) {}
+                bool chebyshev;
+                Residual(IncompressibleFluid* fluid, double p, double x, double target, bool chebyshev)
+                  : fluid(fluid), p(p), x(x), target(target), chebyshev(chebyshev) {}
                 double call(double T) override {
-                    return fluid->c(T, p, x) - target;
+                    return fluid->c(T, p, x, chebyshev) - target;
                 }
-            } res(this, p, x, c_raw);
+            } res(this, p, x, c_raw, chebyshev);
             return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
         }
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw ValueError(format("%s (%d): The function type is not specified (\"[%d]\"), are you sure the coefficients have been set?", __FILE__,
-                                    __LINE__, specific_heat.type));
+            throw notDefinedError("a specific heat");
         default:
             throw ValueError(format("%s (%d): There is no predefined way to use this function type \"[%d]\" for inverse specific heat.", __FILE__,
-                                    __LINE__, specific_heat.type));
+                                    __LINE__, fit.type));
     }
 }
 
@@ -680,9 +867,13 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
  *  maximum value. Enforces the redefinition of xmin and
  *  xmax since the default values cause an error. */
 bool IncompressibleFluid::checkX(double x) {
-    if (xmin < 0.0 || xmin > 1.0) throw ValueError("Please specify the minimum concentration between 0 and 1.");
-    if (xmax < 0.0 || xmax > 1.0) throw ValueError("Please specify the maximum concentration between 0 and 1.");
-    if ((x < xmin * (1 - INCOMP_EPSILON)) || (x > xmax * (1 + INCOMP_EPSILON))) {
+    // is_in_closed_range, not (x < lo || x > hi): the latter is false for NaN.
+    if (!is_in_closed_range(0.0, 1.0, xmin)) throw ValueError("Please specify the minimum concentration between 0 and 1.");
+    if (!is_in_closed_range(0.0, 1.0, xmax)) throw ValueError("Please specify the maximum concentration between 0 and 1.");
+    // is_in_closed_range swaps its bounds, so inverted data would otherwise be
+    // accepted as the swapped range.
+    if (!(xmin <= xmax)) throw ValueError(format("The minimum concentration %g exceeds the maximum concentration %g.", xmin, xmax));
+    if (!is_in_closed_range(xmin * (1 - INCOMP_EPSILON), xmax * (1 + INCOMP_EPSILON), x)) {
         throw ValueError(format("Your composition %g is not between %g and %g.", x, xmin, xmax));
     }
     return true;
@@ -952,6 +1143,180 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
             CHECK(check_abs(expected, actual, acc));
         }
     }
+}
+
+// The derived h/s/ddT matrices are compared with Polynomial2DFrac in CoolProp-Tests.cpp.
+TEST_CASE("Polynomial density and specific heat match the Polynomial2DFrac path", "[IncompressibleFluids]") {
+    Eigen::MatrixXd cp_coeffs(3, 3);
+    cp_coeffs << 3800.0, 20.0, -5.0, 4.0, 0.5, 0.1, 0.01, -0.002, 0.0005;
+    Eigen::MatrixXd rho_coeffs(3, 3);
+    rho_coeffs << 1000.0, -30.0, 4.0, -0.5, 0.02, -0.003, -0.002, 0.0001, 0.00002;
+
+    const double xbase = 0.25;
+    CoolProp::Polynomial2DFrac poly;
+    // Tbase = 0 takes the plain-power branch, 300 the centred one.
+    for (const double Tbase : {0.0, 300.0}) {
+        CoolProp::IncompressibleData density, specific_heat;
+        density.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        density.coeffs = rho_coeffs;
+        specific_heat.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        specific_heat.coeffs = cp_coeffs;
+
+        CoolProp::IncompressibleFluid fluid;
+        fluid.setName("PolyReference");
+        fluid.setTbase(Tbase);
+        fluid.setxbase(xbase);
+        fluid.setDensity(density);
+        fluid.setSpecificHeat(specific_heat);
+        fluid.validate();
+
+        for (const double x : {0.0, 0.2, 0.4}) {
+            for (const double T : {285.0, 340.0, 365.0}) {
+                CAPTURE(Tbase, T, x);
+                CHECK(fluid.rho(T, 1e5, x, false) == Catch::Approx(poly.evaluate(rho_coeffs, T, x, 0, 0, Tbase, xbase)).epsilon(1e-10));
+                CHECK(fluid.c(T, 1e5, x, false) == Catch::Approx(poly.evaluate(cp_coeffs, T, x, 0, 0, Tbase, xbase)).epsilon(1e-10));
+            }
+        }
+    }
+}
+
+TEST_CASE("Transport, saturation and freezing fits match a direct evaluation of their formulas", "[IncompressibleFluids]") {
+    using Data = CoolProp::IncompressibleData;
+    const double Tbase = 300.0, xbase = 0.25;
+    const auto direct = [](const Eigen::MatrixXd& M, double dT, double dx) {
+        double sum = 0.0;
+        for (Eigen::Index i = 0; i < M.rows(); ++i) {
+            for (Eigen::Index j = 0; j < M.cols(); ++j) {
+                sum += M(i, j) * std::pow(dT, static_cast<int>(i)) * std::pow(dx, static_cast<int>(j));
+            }
+        }
+        return sum;
+    };
+    const auto make = [](Data::IncompressibleTypeEnum type, const Eigen::MatrixXd& coeffs) {
+        Data data;
+        data.type = type;
+        data.coeffs = coeffs;
+        return data;
+    };
+
+    Eigen::MatrixXd poly2d(3, 3);
+    poly2d << 0.7, 0.02, -0.001, 0.003, -0.0004, 0.00002, 1e-5, 2e-6, -3e-7;
+    Eigen::MatrixXd visc_exp(3, 1), cond_logexp(3, 1), psat_offset(4, 1), tfreeze_exp(3, 1);
+    visc_exp << 500.0, -140.0, 10.0;
+    cond_logexp << -100.0, -1.2, 1.5;
+    psat_offset << 290.0, 1.5, 0.02, 1e-4;
+    tfreeze_exp << 2.0, 1.0, 0.5;
+
+    CoolProp::IncompressibleFluid polynomials, others;
+    for (CoolProp::IncompressibleFluid* fluid : {&polynomials, &others}) {
+        fluid->setTbase(Tbase);
+        fluid->setxbase(xbase);
+        fluid->setTminPsat(0.0);
+    }
+    polynomials.setViscosity(make(Data::INCOMPRESSIBLE_POLYNOMIAL, poly2d));
+    polynomials.setConductivity(make(Data::INCOMPRESSIBLE_EXPPOLYNOMIAL, poly2d));
+    polynomials.setPsat(make(Data::INCOMPRESSIBLE_POLYNOMIAL, poly2d));
+    polynomials.setTfreeze(make(Data::INCOMPRESSIBLE_POLYNOMIAL, poly2d));
+    others.setViscosity(make(Data::INCOMPRESSIBLE_EXPONENTIAL, visc_exp));
+    others.setConductivity(make(Data::INCOMPRESSIBLE_LOGEXPONENTIAL, cond_logexp));
+    others.setPsat(make(Data::INCOMPRESSIBLE_POLYOFFSET, psat_offset));
+    others.setTfreeze(make(Data::INCOMPRESSIBLE_EXPONENTIAL, tfreeze_exp));
+
+    const double p_freeze = 2.0;  // Tfreeze takes pressure as its first polynomial variable
+    for (const double T : {285.0, 310.0, 340.0}) {
+        for (const double x : {0.0, 0.2, 0.4}) {
+            CAPTURE(T, x);
+            const double dT = T - Tbase, dx = x - xbase;
+            CHECK(polynomials.visc(T, 1e5, x) == Catch::Approx(direct(poly2d, dT, dx)).epsilon(1e-10));
+            CHECK(polynomials.cond(T, 1e5, x) == Catch::Approx(std::exp(direct(poly2d, dT, dx))).epsilon(1e-10));
+            CHECK(polynomials.psat(T, x) == Catch::Approx(direct(poly2d, dT, dx)).epsilon(1e-10));
+            CHECK(polynomials.Tfreeze(p_freeze, x) == Catch::Approx(direct(poly2d, p_freeze, dx)).epsilon(1e-10));
+
+            const double xl = T - 100.0, dp = T - 290.0;
+            CHECK(others.visc(T, 1e5, x) == Catch::Approx(std::exp(500.0 / (T - 140.0) - 10.0)).epsilon(1e-10));
+            CHECK(others.cond(T, 1e5, x) == Catch::Approx(std::exp(std::log(1.0 / xl + 1.0 / (xl * xl)) * -1.2 + 1.5)).epsilon(1e-10));
+            CHECK(others.psat(T, x) == Catch::Approx(1.5 + 0.02 * dp + 1e-4 * dp * dp).epsilon(1e-10));
+            CHECK(others.Tfreeze(p_freeze, x) == Catch::Approx(std::exp(2.0 / (x + 1.0) - 0.5)).epsilon(1e-10));
+        }
+    }
+}
+
+TEST_CASE("Row-vector and single-column fits are functions of x and T only", "[IncompressibleFluids]") {
+    using Data = CoolProp::IncompressibleData;
+    const double Tbase = 300.0, xbase = 0.25;
+    const auto make = [](Data::IncompressibleTypeEnum type, const Eigen::MatrixXd& coeffs) {
+        Data data;
+        data.type = type;
+        data.coeffs = coeffs;
+        return data;
+    };
+    const auto fluid_with_Tfreeze = [&](const Data& data) {
+        CoolProp::IncompressibleFluid fluid;
+        fluid.setTbase(Tbase);
+        fluid.setxbase(xbase);
+        fluid.setTfreeze(data);
+        return fluid;
+    };
+
+    // Every shipped T_freeze fit is a 1 x n row, i.e. a function of x alone.
+    Eigen::MatrixXd row_poly(1, 3), row_exp(1, 3), row_offset(1, 4);
+    row_poly << 270.0, -40.0, 12.0;
+    row_exp << 2.0, 1.0, 0.5;
+    row_offset << 0.1, 255.0, -30.0, 8.0;
+
+    for (const double p : {1.0, 5.0e5}) {
+        for (const double x : {0.0, 0.2, 0.4}) {
+            CAPTURE(p, x);
+            const double dx = x - xbase;
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_POLYNOMIAL, row_poly)).Tfreeze(p, x)
+                  == Catch::Approx(270.0 - 40.0 * dx + 12.0 * dx * dx).epsilon(1e-12));
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_EXPPOLYNOMIAL, row_poly)).Tfreeze(p, x)
+                  == Catch::Approx(std::exp(270.0 - 40.0 * dx + 12.0 * dx * dx)).epsilon(1e-12));
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_EXPONENTIAL, row_exp)).Tfreeze(p, x)
+                  == Catch::Approx(std::exp(2.0 / (x + 1.0) - 0.5)).epsilon(1e-12));
+            const double dz = x - 0.1;
+            CHECK(fluid_with_Tfreeze(make(Data::INCOMPRESSIBLE_POLYOFFSET, row_offset)).Tfreeze(p, x)
+                  == Catch::Approx(255.0 - 30.0 * dz + 8.0 * dz * dz).epsilon(1e-12));
+        }
+    }
+
+    // A pure single-column fit with the default (unset) xbase must not touch x - xbase.
+    Eigen::MatrixXd column(3, 1);
+    column << 1000.0, -0.5, 0.002;
+    CoolProp::IncompressibleFluid pure;
+    pure.setTbase(Tbase);
+    pure.setDensity(make(Data::INCOMPRESSIBLE_POLYNOMIAL, column));
+    for (const double T : {285.0, 340.0}) {
+        const double dT = T - Tbase;
+        CHECK(pure.rho(T, 1e5, 0.3, false) == Catch::Approx(1000.0 - 0.5 * dT + 0.002 * dT * dT).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Malformed incompressible fits keep their error messages", "[IncompressibleFluids]") {
+    using Catch::Matchers::ContainsSubstring;
+    using Data = CoolProp::IncompressibleData;
+    const auto fluid_with_viscosity = [](Data::IncompressibleTypeEnum type, const Eigen::MatrixXd& coeffs) {
+        Data data;
+        data.type = type;
+        data.coeffs = coeffs;
+        CoolProp::IncompressibleFluid fluid;
+        fluid.setTbase(300.0);
+        fluid.setxbase(0.25);
+        fluid.setViscosity(data);
+        return fluid;
+    };
+
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_EXPONENTIAL, Eigen::MatrixXd::Ones(2, 2)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("Your matrix (2,2) cannot be converted into a vector (x,1)."));
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_EXPONENTIAL, Eigen::MatrixXd::Ones(4, 1)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("You have to provide a 3,1 matrix of coefficients, not  (4,1)."));
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYOFFSET, Eigen::MatrixXd::Ones(1, 1)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("You have to provide a vector (1D matrix) of coefficients, not  (1,1)."));
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYOFFSET, Eigen::MatrixXd::Ones(2, 2)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("You have to provide a vector (1D matrix) of coefficients, not  (2,2)."));
+    // validate() never looks at viscosity, so the message must not blame it alone.
+    CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYNOMIAL, Eigen::MatrixXd(0, 0)).visc(300.0, 1e5, 0.2),
+                      ContainsSubstring("the fit has no coefficients"));
 }
 
 #endif /* ENABLE_CATCH */

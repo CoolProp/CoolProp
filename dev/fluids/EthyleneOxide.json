@@ -4023,7 +4023,22 @@
     "INCHI_STRING": "InChI=1S/C2H4O/c1-2-3-1/h1-2H2",
     "NAME": "EthyleneOxide",
     "REFPROP_NAME": "ETHYLENEOXIDE",
-    "SMILES": "C1CO1"
+    "SMILES": "C1CO1",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "75-21-8*0",
+        "source": "ATcT",
+        "uncertainty": 330.0,
+        "units": "J/mol",
+        "value": -52280.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

@@ -3576,7 +3576,22 @@
     "INCHI_STRING": "InChI=1S/H2/h1H/i1+1D",
     "NAME": "Deuterium",
     "REFPROP_NAME": "D2",
-    "SMILES": "[2H][2H]"
+    "SMILES": "[2H][2H]",
+    "STANDARD_STATE": {
+      "T": 298.15,
+      "T_units": "K",
+      "hmolar_formation": {
+        "id": "7782-39-0*0",
+        "source": "ATcT",
+        "uncertainty": 0.0,
+        "units": "J/mol",
+        "value": 0.0,
+        "version": "1.220"
+      },
+      "p": 100000.0,
+      "p_units": "Pa",
+      "phase": "ideal_gas"
+    }
   },
   "STATES": {
     "critical": {

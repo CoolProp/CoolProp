@@ -4305,13 +4305,25 @@
     }
   },
   "TRANSPORT": {
-    "conductivity": {
-      "BibTeX": "IAPWS-D2O-2007-Transport",
-      "hardcoded": "HeavyWater"
-    },
-    "viscosity": {
-      "BibTeX": "IAPWS-D2O-2007-Transport",
-      "hardcoded": "HeavyWater"
-    }
+    "conductivity": [
+      {
+        "BibTeX": "IAPWS-D2O-2021-ThermalConductivity",
+        "hardcoded": "HeavyWater-IAPWS-2021"
+      },
+      {
+        "BibTeX": "IAPWS-D2O-2007-Transport",
+        "hardcoded": "HeavyWater"
+      }
+    ],
+    "viscosity": [
+      {
+        "BibTeX": "IAPWS-D2O-2020-Viscosity",
+        "hardcoded": "HeavyWater-IAPWS-2020"
+      },
+      {
+        "BibTeX": "IAPWS-D2O-2007-Transport",
+        "hardcoded": "HeavyWater"
+      }
+    ]
   }
 }

@@ -10,7 +10,7 @@ PyFluids (3-party wrapper)
 ==========================
 
 It is a simple, full-featured, lightweight CoolProp wrapper for Python.
-PyFluids gets published on `PyPI <https://pypi.org/project/pyfluids/>`_,  so you can easily install it using: ::
+PyFluids gets published on `PyPI <https://pypi.org/project/pyfluids/>`__,  so you can easily install it using: ::
 
     pip install pyfluids
 
@@ -74,7 +74,7 @@ Using the ``pip`` installation program, you can install the official release fro
 
     pip install CoolProp
 
-There are also unofficial `Conda <https://conda.io>`__ packages available from the ``conda-forge`` channel. To
+There are also unofficial `Conda <https://docs.conda.io/en/latest/>`__ packages available from the ``conda-forge`` channel. To
 install, use::
 
     conda install conda-forge::coolprop
@@ -144,7 +144,7 @@ To build and install from source::
     pip install .
 
 Development with Editable Install
-++++++++++++++++++++++++++++++++++
+---------------------------------
 
 An editable install (also known as "development mode") allows you to make changes to the C++
 source code and have them take effect after a simple rebuild, without reinstalling the package.
@@ -299,6 +299,78 @@ given message only once and then ignore further instances.
 
 See `Python >>> Module Warnings <https://docs.python.org/3/library/warnings.html#module-warnings>`_ for more information on using `filterwarnings()`
 
+.. _python_wasm_demo:
+
+Running CoolProp in the Browser Using Pyodide
+=============================================
+
+The `Pyodide project <https://pyodide.org/en/stable/>`_  
+is a Python interpreter compiled to WebAssembly that includes many
+of the scientific Python packages, including NumPy, SciPy, and CoolProp.
+WebAssembly makes these packages available in the web browser environment, enabling the 
+deployment of static websites that can perform Python calculations.
+
+Minimal CoolProp Pyodide example
+--------------------------------
+
+The following example shows a minimal web page that calls a CoolProp function using 
+Pyodide. See the `Pyodide documentation page <https://pyodide.org/en/stable/usage/index.html>`_ 
+for further details on the usage of Pyodide.
+
+.. code-block:: html
+
+    <!doctype html>
+    <html>
+      <head>
+          <!-- Load Pyodide from Pyodide's official CDN-->
+          <script src="https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.js"></script>
+      </head>
+      <body>
+        <script type="text/javascript">
+          async function main() {
+            // Load Pyodide (the loadPyodide function is provided by the script tag above)
+            let pyodide = await loadPyodide();
+            
+            // Load micropip so that PyPI wheels can be installed
+            await pyodide.loadPackage("micropip");
+            const micropip = pyodide.pyimport("micropip");
+
+            // Use micropip to install the latest CoolProp
+            await micropip.install("CoolProp>=8.1.0");
+            
+            // Run the Python code, the expression on the last line is returned to javascript
+            results = pyodide.runPython(`
+                import CoolProp
+                import CoolProp.CoolProp as CP
+
+                version = CoolProp.__version__
+                temp = CP.PropsSI('T', 'P', 101325, 'Q', 0, 'Water')
+
+                (version, temp)
+            `);
+
+            // Popup an alert with the results
+            alert(`CoolProp.__version__=${results[0]}\nThe boiling point of water at 1 atm = ${results[1]} K`);
+          }
+          main();
+        </script>
+      </body>
+    </html>
+
+Getting the latest CoolProp version in Pyodide
+----------------------------------------------
+
+Historically, the Pyodide project has bundled CoolProp as part of the Pyodide distribution 
+(beginning with Pyodide 0.24.0). This locked the CoolProp version to the version
+bundled with Pyodide. Versions of Pyodide 0.28.x and later are able to load compiled Python 
+packages from `PyPI <https://pypi.org/>`__ as part of the implementation of 
+`PEP 783 <https://peps.python.org/pep-0783/>`_. Starting with 
+CoolProp 8.1.0, CoolProp WebAssembly wheels are provided on PyPI. However, for versions 
+of Pyodide that bundle CoolProp, the version of CoolProp needs to be specified as 
+``>=8.1.0`` in the ``micropip`` call to get the latest CoolProp version since Pyodide 
+will use its bundled version first, if available (CoolProp 7.2.0 with Pyodide 314.0.2, 
+for example). Future versions of Pyodide will stop including CoolProp as part of the PEP 783 
+rollout making it no longer necessary to specify the CoolProp version to get the latest version.
 
 Module Documentation
 ====================
