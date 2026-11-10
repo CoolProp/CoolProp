@@ -248,6 +248,16 @@ recorded history of finished or abandoned work were dropped (they remain in
   drops the polynomial entropy matrices (they embed the value of Tbase), so
   call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
   only when the fluid has no separate `_cheb` entry for that property.
+- **Adding an incompressible fluid moves three exact counts** in
+  `src/Tests/CoolProp-Tests.cpp`: two `REQUIRE(names.size() == N)` and
+  `CHECK(testedCount == M)` in the Tbase-continuity sweep.  The last one is
+  invisible until the first is fixed, because the failing `REQUIRE` aborts
+  the test case before it runs.  `grep -n "names.size() ==\|testedCount ==\|of the [0-9]* shipped"`
+  and bump all of them, plus the comments that quote the totals.  Write the
+  fluid's JSON only with `all_incompressibles.py`; the writer emits
+  `indent=2, sort_keys=True` with no trailing newline and rounds to 7
+  significant digits, and any other formatter makes the next regeneration
+  rewrite the file.
 - **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
   which every setter calls (the JSON setter only for changed values).  A side
   effect wired into one setter is skipped when the key is set another way.

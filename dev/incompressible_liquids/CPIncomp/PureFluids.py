@@ -649,10 +649,15 @@ class MultiThermPG1(PureData):
         self.conductivity.data = np.array([1.366000E-1, 1.359000E-1, 1.352000E-1, 1.344000E-1, 1.337000E-1, 1.330000E-1, 1.323000E-1, 1.315000E-1, 1.308000E-1, 1.301000E-1, 1.294000E-1, 1.287000E-1, 1.279000E-1, 1.272000E-1, 1.265000E-1, 1.258000E-1, 1.250000E-1, 1.243000E-1, 1.236000E-1, 1.229000E-1, 1.222000E-1, 1.214000E-1, 1.207000E-1, 1.200000E-1, 1.193000E-1, 1.185000E-1, 1.178000E-1, 1.171000E-1, 1.164000E-1, 1.156000E-1, 1.149000E-1, 1.142000E-1, 1.135000E-1, 1.128000E-1, 1.120000E-1, 1.113000E-1, 1.106000E-1, 1.099000E-1])         # W/m-K
         # Source table gives dynamic viscosity in cP (mPa-s); convert to Pa-s
         self.viscosity.data = np.array([4.113000E+3, 1.113000E+3, 3.900000E+2, 1.630000E+2, 7.900000E+1, 4.300000E+1, 2.500000E+1, 1.600000E+1, 1.120000E+1, 8.100000E+0, 6.000000E+0, 4.600000E+0, 3.670000E+0, 2.980000E+0, 2.490000E+0, 2.090000E+0, 1.790000E+0, 1.550000E+0, 1.370000E+0, 1.210000E+0, 1.080000E+0, 9.750000E-1, 8.740000E-1, 7.980000E-1, 7.340000E-1, 6.670000E-1, 6.180000E-1, 5.720000E-1, 5.280000E-1, 4.940000E-1, 4.560000E-1, 4.290000E-1, 4.010000E-1, 3.750000E-1, 3.530000E-1, 3.320000E-1, 3.140000E-1, 2.970000E-1]) * 1.E-3        # Pa-s
-        # Vapor pressure only published for T >= 110 C; NaN elsewhere (matches
-        # the pattern CoolProp uses for partially-populated data columns, e.g.
-        # LiquidSodium's specific_heat/viscosity arrays in this same file).
-        # Source values given in hPa, converted to Pa (x100).
+        # Vapor pressure is only published from 110 C upward, so the 14 rows
+        # below that (-30 C ... 100 C) are NaN and TminPsat is set to 110 C.
+        # Within the populated range the rows at 130, 170, 190, 210, 230, 270,
+        # 290, 310 and 330 C are also NaN: they follow no grid and are presumed
+        # missing from this transcription of the source table (not yet checked
+        # against the source).  The fitter masks NaNs, so psat is
+        # fitted to the 15 populated points (110 ... 340 C).  Fill the missing
+        # rows from the source table if they become available.
+        # Source values are in hPa (mbar); the array below is already in Pa.
         self.saturation_pressure.data = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, 1.100000E+1, 1.900000E+1, np.nan, 5.600000E+1, 9.300000E+1, 1.500000E+2, np.nan, 3.700000E+2, np.nan, 8.500000E+2, np.nan, 1.800000E+3, np.nan, 3.570000E+3, 4.900000E+3, 6.400000E+3, np.nan, 1.230000E+4, np.nan, 2.130000E+4, np.nan, 3.680000E+4, np.nan, 6.130000E+4]) # Pa
         self.Tmin = np.min(self.temperature.data)
         self.Tmax = np.max(self.temperature.data)
@@ -661,8 +666,8 @@ class MultiThermPG1(PureData):
         self.description = "MultiTherm PG-1"
         self.reference = "MultiTherm2004"
         self.reshapeAll()
-        
-        
+
+
 class Water(PureData):
     """
     This is just a fit of the full EOS from Wagner and Pruss

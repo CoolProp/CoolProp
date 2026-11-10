@@ -8642,7 +8642,7 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
     // truncated load shrinks it in lockstep, so any relative floor still
     // passes. This is what detects a truncating add_many abort. `==` rather
     // than `>=` so the literal cannot go stale silently.
-    REQUIRE(names.size() == 127);
+    REQUIRE(names.size() == 128);
 
     int testedCount = 0;
     for (const std::string& name : names) {
@@ -8687,7 +8687,7 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
                 CHECK(ValidNumber(psat));
             }
         } catch (const std::exception& e) {
-            // psat is undefined for 100 of the 127 shipped fluids; there the
+            // psat is undefined for 100 of the 128 shipped fluids; there the
             // 1 atm default stands. Narrowed from `catch (...)`: every CoolProp
             // error derives from std::exception, so the intended errors are
             // still caught while anything unexpected propagates.
@@ -8736,11 +8736,11 @@ TEST_CASE("INCOMP enthalpy and entropy are finite at Tbase for every shipped flu
         CHECK(std::abs(s_mid - 0.5 * (s_lo + s_hi)) < s_tol);
     }
     CAPTURE(testedCount);
-    // 118 of 127 qualify; the 9 skipped are the eight with Tbase == 0.0 (DEB,
+    // 119 of 128 qualify; the 9 skipped are the eight with Tbase == 0.0 (DEB,
     // HCB, HCM, HFE, PMS1, PMS2, SAB, TCO) plus NaK (Tbase below Tmin).
     // Truncation is caught above, so this catches a broken Tbase filter.
     // Absolute for the same reason: a margin let fluids go dark unnoticed.
-    CHECK(testedCount == 118);
+    CHECK(testedCount == 119);
 }
 TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[INCOMP]") {
     const double p = 101325.0;
@@ -9244,7 +9244,7 @@ TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime",
         for (std::string name; std::getline(ss, name, ',');) {
             if (!name.empty() && name.compare(0, RUNTIME_TEST_FLUID_PREFIX.size(), RUNTIME_TEST_FLUID_PREFIX) != 0) names.push_back(name);
         }
-        REQUIRE(names.size() == 127);
+        REQUIRE(names.size() == 128);
         for (const bool chebyshev : {true, false}) {
             const ChebyshevCaloricSetting setting(chebyshev);
             for (const std::string& name : names) {
@@ -9306,6 +9306,40 @@ TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", 
     const double Pr = CoolProp::PropsSI("PRANDTL", "T", 283.15, "P", p, "INCOMP::MPG2[0.5]");
     CAPTURE(Pr);
     CHECK(Pr > 80.0);
+}
+TEST_CASE("INCOMP::PG1 (MultiTherm PG-1) reproduces the published property table", "[INCOMP]") {
+    // Anchors against the vendor table (MultiTherm2004) that PG1 is fitted
+    // to, so a change to the raw arrays in PureFluids.py, the fitter's model
+    // selection or the Chebyshev caloric path cannot silently ship different
+    // numbers. Tolerances sit just above the committed fit's deviation at
+    // each point (density/cp/conductivity < 0.06 %, viscosity <= 3.7 %, psat
+    // <= 2.5 %); a unit slip or a refit to the wrong form blows through them.
+    const double p = 101325.0;
+    const std::string fluid = "INCOMP::PG1";
+    struct Pt
+    {
+        double T, rho, cp, k, mu;
+    };
+    const std::vector<Pt> pts = {
+      {273.15, 882.0, 1805.0, 0.1344, 163.0e-3},  //   0 C
+      {373.15, 840.0, 2169.0, 0.1272, 2.98e-3},   // 100 C
+      {473.15, 798.0, 2532.0, 0.1200, 0.798e-3},  // 200 C
+      {573.15, 756.0, 2895.0, 0.1128, 0.375e-3},  // 300 C
+    };
+    for (const Pt& pt : pts) {
+        CAPTURE(pt.T);
+        CHECK(CoolProp::PropsSI("D", "T", pt.T, "P", p, fluid) == Catch::Approx(pt.rho).epsilon(1e-3));
+        CHECK(CoolProp::PropsSI("C", "T", pt.T, "P", p, fluid) == Catch::Approx(pt.cp).epsilon(1e-3));
+        CHECK(CoolProp::PropsSI("L", "T", pt.T, "P", p, fluid) == Catch::Approx(pt.k).epsilon(1e-3));
+        CHECK(CoolProp::PropsSI("V", "T", pt.T, "P", p, fluid) == Catch::Approx(pt.mu).epsilon(0.05));
+    }
+    // Vapour pressure is only published from 110 C (TminPsat = 383.15 K). The
+    // backend rejects T <= TminPsat, so 110 C itself throws and 120 C is the
+    // first evaluable row; the pair pins TminPsat to within one 10 K step.
+    CHECK(!ValidNumber(CoolProp::PropsSI("P", "Q", 0, "T", 383.15, fluid)));
+    CHECK(CoolProp::PropsSI("P", "Q", 0, "T", 393.15, fluid) == Catch::Approx(19.0).epsilon(0.03));
+    CHECK(CoolProp::PropsSI("P", "Q", 0, "T", 473.15, fluid) == Catch::Approx(850.0).epsilon(0.03));
+    CHECK(CoolProp::PropsSI("P", "Q", 0, "T", 573.15, fluid) == Catch::Approx(21300.0).epsilon(0.03));
 }
 TEST_CASE("PropsSImulti with empty input vectors returns empty result instead of segfaulting", "[PropsSImulti][2417]") {
     // Issue #2417: PropsSI('T','P',[],'Q',[],'Ammonia') segfaulted because

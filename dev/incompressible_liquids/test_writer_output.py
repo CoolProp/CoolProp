@@ -125,7 +125,7 @@ def test_published_composition_range_is_a_valid_range(path):
     with open(path) as fh:
         fluid = json.load(fh)
     # skip, not return: a bare return reports these as passes, so if the "xid"
-    # key were ever renamed all 127 cases would go vacuous with no signal.
+    # key were ever renamed every case would go vacuous with no signal.
     if fluid.get("xid") not in ("mass", "volume"):
         pytest.skip("pure fluid, no composition axis")
     xmin, xmax = fluid["xmin"], fluid["xmax"]
