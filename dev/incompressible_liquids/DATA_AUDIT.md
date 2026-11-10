@@ -23,7 +23,7 @@ convention the loader already handles (see the don't-touch list).
 | 4 | Empty `*_Vol2Mass.txt` grids for mass-based fluids. | Expected — mass-based fluids carry no volume→mass table. |
 | 5 | **23 of the 32** `xTables/*.csv` files were **latin-1 encoded** (`·` in unit headers) and failed a default UTF-8 read — the nine orphaned ones (`Freezium_{Cond,Cp,Mu}`, `Ice{EA,NA,PG}_{Cond,Mu}`) plus `AS{10,20,30,40,55}`, `HY{20,30,40,45,50}` and four `ASHRAE`/`CO2_*` tables. | The six `Ice{EA,NA,PG}_{Cond,Mu}` files are **now plain ASCII** (`W/(m K)`, `Pa s`) and back in the production pipeline: `SecCoolSolutionData.__init__` read them inside a bare `try/except`, so the `UnicodeDecodeError` silently dropped ice-slurry conductivity and viscosity from every refit (issue #3303). The refit now reproduces the committed coefficients to ~3e-7 relative. `test_data_sanity.py::test_loaded_data_files_are_ascii` pins the encoding for every file the loaders read, and `SecCoolIceData.getRequiredArray` refuses to construct the fluid when a grid is missing or unreadable (moving the reads out of the bare `try/except` alone was not enough: `getArray` returns `(None, None, None)` for a file it cannot find, rather than raising). The remaining 17 are still latin-1 and still orphaned; anyone reviving those must re-encode them the same way. |
 
-## Addendum: MultiTherm PG-1 (`PG1`, added 2026-11)
+## Addendum: MultiTherm PG-1 (`MTPG1`, added 2026-11)
 
 `PureFluids.py` → `MultiThermPG1`, 38 rows from −30 °C to 340 °C in 10 K
 steps, source `MultiTherm2004` (vendor SI table, form PG-1C EXP 5/04).
@@ -50,7 +50,7 @@ steps, source `MultiTherm2004` (vendor SI table, form PG-1C EXP 5/04).
   worse, not better: a cubic `exppolynomial` (its cap for a pure fluid) is
   off by up to 49 % and the `logexponential` by 35 %; only a degree-6
   polynomial in ln μ beats the exponential (2.3 %). The exponential stays.
-- `src/Tests/CoolProp-Tests.cpp` ("INCOMP::PG1 … reproduces the published
+- `src/Tests/CoolProp-Tests.cpp` ("INCOMP::MTPG1 … reproduces the published
   property table") anchors density, cp, conductivity, viscosity and psat
   against table rows at 0/100/200/300 °C.
 

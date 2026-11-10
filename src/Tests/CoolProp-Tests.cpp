@@ -9307,15 +9307,15 @@ TEST_CASE("Incompressible MPG2 viscosity matches Melinder source data (#1374)", 
     CAPTURE(Pr);
     CHECK(Pr > 80.0);
 }
-TEST_CASE("INCOMP::PG1 (MultiTherm PG-1) reproduces the published property table", "[INCOMP]") {
-    // Anchors against the vendor table (MultiTherm2004) that PG1 is fitted
+TEST_CASE("INCOMP::MTPG1 (MultiTherm PG-1) reproduces the published property table", "[INCOMP]") {
+    // Anchors against the vendor table (MultiTherm2004) that MTPG1 is fitted
     // to, so a change to the raw arrays in PureFluids.py, the fitter's model
     // selection or the Chebyshev caloric path cannot silently ship different
     // numbers. Tolerances sit just above the committed fit's deviation at
     // each point (density/cp/conductivity < 0.06 %, viscosity <= 3.7 %, psat
     // <= 2.5 %); a unit slip or a refit to the wrong form blows through them.
     const double p = 101325.0;
-    const std::string fluid = "INCOMP::PG1";
+    const std::string fluid = "INCOMP::MTPG1";
     struct Pt
     {
         double T, rho, cp, k, mu;

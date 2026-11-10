@@ -73,7 +73,7 @@
     "coeffs": "null",
     "type": "notdefined"
   },
-  "name": "PG1",
+  "name": "MTPG1",
   "reference": "MultiTherm2004",
   "saturation_pressure": {
     "NRMS": 0.002311512,

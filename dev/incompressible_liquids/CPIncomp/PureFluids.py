@@ -662,7 +662,7 @@ class MultiThermPG1(PureData):
         self.Tmin = np.min(self.temperature.data)
         self.Tmax = np.max(self.temperature.data)
         self.TminPsat = np.min(self.temperature.data[~np.isnan(self.saturation_pressure.data)])
-        self.name = "PG1"
+        self.name = "MTPG1"
         self.description = "MultiTherm PG-1"
         self.reference = "MultiTherm2004"
         self.reshapeAll()
