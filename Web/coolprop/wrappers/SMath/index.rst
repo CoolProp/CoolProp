@@ -23,7 +23,8 @@ Pre-compiled binaries are loaded through the SMath Plugin Manager in SMath Studi
 
 A list of the CoolProp function implementation is available on the official `SMath > CoolProp Wrapper > Features <https://smath.info/en-US/view/ca92ef03-c7da-4888-98ad-528482733e2f/features>`__ page.  All functions mirror the high-level interface calls prefixed with *CoolProp_*.
 
-**Caveat:** Prefixing the high-level names does not always produce a valid SMath function. For example,
+**Caveat:** Prefixing the high-level names does not always produce a valid SMath function. For example:
+
 - Use `CoolProp_Props` for `PropsSI`
 - Use `CoolProp_Props1` for `Props1SI`
 - Use `CoolProp_HAProps` for `HAPropsSI`
