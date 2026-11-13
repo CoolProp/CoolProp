@@ -1202,11 +1202,10 @@ class TabularBackend : public AbstractState
                 d2zdy2 = &table.d2umolardy2;
                 break;
             case iviscosity:
-                z = &table.visc;
-                break;
             case iconductivity:
-                z = &table.cond;
-                break;
+                // The tables hold no derivatives of the transport properties, so the
+                // Taylor-series evaluators that use these pointers cannot serve them
+                throw ValueError(format("The tabular backends have no derivative tables for %s", get_parameter_information(output, "short").c_str()));
             default:
                 throw ValueError();
         }
@@ -1312,11 +1311,22 @@ class TabularBackend : public AbstractState
     void update(CoolProp::input_pairs input_pair, double Value1, double Value2) override;
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
         this->AS->set_mole_fractions(mole_fractions);
+        is_mixture = (this->AS->get_mole_fractions().size() > 1);
+        // Check the tables and build if necessary
+        check_tables();
+        // For mixtures, the construction of the coefficients is delayed until this
+        // function so that the set_mole_fractions function can be called; this is
+        // done here for every tabular backend (BICUBIC and TTSE) since update()
+        // indexes coeffs_pT/coeffs_ph regardless of the derived class
+        SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
+        SinglePhaseGriddedTableData& single_phase_logpT = dataset->single_phase_logpT;
+        dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
+        dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
     };
     void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         // Let the inner backend do the mass→mole conversion, then forward the
-        // resulting mole fractions through set_mole_fractions so that derived
-        // classes (e.g. BicubicBackend) can trigger table construction.
+        // resulting mole fractions through set_mole_fractions so that the
+        // tables and coefficients get built.
         this->AS->set_mass_fractions(mass_fractions);
         this->set_mole_fractions(this->AS->get_mole_fractions());
     };

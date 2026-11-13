@@ -10627,6 +10627,132 @@ TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][
     CHECK(rho == Catch::Approx(HEOS->rhomass()).epsilon(1e-2));  // 1% bicubic tolerance
 }
 
+TEST_CASE("BICUBIC PS input at the hot end of a column does not index past the last cell", "[BICUBIC][tabular]") {
+    // find_nearest_neighbor's closest-node fallback can return the last node Nx-1,
+    // which the bicubic override used as a cell index into the (Nx-1)-row coeffs.
+    // R32 at 1 atm with a low entropy lands there on the default grid.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("BICUBIC&HEOS", "R32"));
+    try {
+        AS->update(CoolProp::PSmolar_INPUTS, 101325, 200);
+        CHECK(ValidNumber(AS->T()));
+    } catch (CoolProp::CoolPropBaseError&) {
+        SUCCEED("clean error instead of an out-of-bounds read");
+    }
+}
+
+TEST_CASE("TTSE PT input with an imposed phase at the hot edge of the table", "[TTSE][tabular]") {
+    // TTSE's nearest-node lookup can return the last node; the imposed-phase walk
+    // then read node i+1 and indexed the (Nx-1) x (Ny-1) coeffs_pT out of bounds.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("TTSE&HEOS", "Water"));
+    for (auto phase : {CoolProp::iphase_gas, CoolProp::iphase_liquid}) {
+        CAPTURE(phase);
+        AS->specify_phase(phase);
+        for (double T : {2991.5, 2995.0, 2997.9}) {
+            CAPTURE(T);
+            try {
+                AS->update(CoolProp::PT_INPUTS, 101325, T);
+                CHECK(ValidNumber(AS->rhomolar()));
+            } catch (CoolProp::CoolPropBaseError&) {
+                SUCCEED("clean error instead of an out-of-bounds read");
+            }
+        }
+    }
+    AS->unspecify_phase();
+}
+
+TEST_CASE("Tabular state does not keep the previous table after a failed update", "[BICUBIC][TTSE][tabular]") {
+    // After a successful single-phase update, a (T, rho) or (p, s) update on a mixture whose
+    // T or p lies outside the phase envelope throws from the phase test, before a cell has
+    // been located.  update() had flushed the cell indices but kept the previous update's
+    // selected_table, so the next property read indexed the table with SIZE_MAX (heap
+    // out-of-bounds read, a segfault in a release build).  It must be a clean error, as on
+    // a state that was never updated.
+    // Small grid in a private table directory: a mixture build at the default resolution
+    // takes minutes, and the on-disk directory name does not encode the grid.
+    const std::string dir =
+      (std::filesystem::temp_directory_path() / ("CoolProp-stale-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())))
+        .string()
+      + "/";
+    struct TableDirGuard
+    {
+        std::string prev, dir;
+        TableDirGuard(std::string p, std::string d) : prev(std::move(p)), dir(std::move(d)) {}
+        TableDirGuard(const TableDirGuard&) = delete;
+        TableDirGuard& operator=(const TableDirGuard&) = delete;
+        TableDirGuard(TableDirGuard&&) = delete;
+        TableDirGuard& operator=(TableDirGuard&&) = delete;
+        ~TableDirGuard() {
+            CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    } guard(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY), dir);
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+
+    // A predefined mixture, so that both backends treat the state as a mixture
+    const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+    CAPTURE(backend);
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend + R"(?{"grid":{"Nx":6,"Ny":6}})", "R410A.mix"));
+
+    // Single-phase gas, selects the p-T table
+    const double rho = 10, T = 300;
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-6));
+    // 50 K is below the phase envelope: the phase test throws before a cell is located
+    REQUIRE_THROWS_AS(AS->update(CoolProp::DmolarT_INPUTS, rho, 50), CoolProp::ValueError);
+    CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    CHECK_THROWS_WITH(AS->hmolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    CHECK_THROWS_WITH(AS->cpmolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("table not selected"));
+
+    // Same through the (p, s) branch, and the state recovers with the next good update
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    const double s = AS->smolar();
+    REQUIRE_THROWS_AS(AS->update(CoolProp::PSmolar_INPUTS, 10, s), CoolProp::ValueError);
+    CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-6));
+}
+
+TEST_CASE("Tabular backends refuse outputs before a successful update", "[BICUBIC][TTSE][Tabular]") {
+    // The saturation-path accessors read the tables at the cached saturation indices,
+    // which only a normally returning update() sets.  Before that they used to read
+    // out of bounds; a mixture created without fractions does not even have tables
+    // (dataset is null until set_mole_fractions() / the first update() loads them)
+    // and dereferenced that null pointer.  Both must be a clean ValueError.
+    const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+    CAPTURE(backend);
+    SECTION("a mixture created without fractions has no tables yet") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Methane&Ethane"));
+        CHECK_THROWS_AS(AS->T(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->rhomolar(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->hmolar(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->saturated_liquid_keyed_output(CoolProp::iHmolar), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iHmolar, CoolProp::iP), CoolProp::ValueError);
+        // A rejected composition leaves it that way, and update() then refuses as before
+        CHECK_THROWS(AS->set_mole_fractions({1.0}));
+        CHECK_THROWS_AS(AS->update(CoolProp::PT_INPUTS, 101325, 300), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->T(), CoolProp::ValueError);
+    }
+    SECTION("a pure fluid with tables but no update has no valid saturation state") {
+        // Small grid: the tables are built on first use
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend + R"(?{"grid":{"Nx":5,"Ny":5}})", "Water"));
+        CHECK_THROWS_WITH(AS->T(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS_AS(AS->rhomolar(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->speed_sound(), CoolProp::ValueError);
+        // A saturation update that fails after taking Q from its inputs (p above the
+        // table's saturation range) must not leave that Q behind with unset indices
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 3e7, 0.5));
+        CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, 700));
+        CHECK_THROWS_WITH(AS->hmolar(), Catch::Matchers::ContainsSubstring("no valid state"));
+        // A successful saturation update still gives values
+        AS->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK(AS->T() == Catch::Approx(373.12).epsilon(1e-2));
+        CHECK(ValidNumber(AS->rhomolar()));
+    }
+}
+
 TEST_CASE("REFPROP update_DmolarT_direct matches update(DmolarT)", "[REFPROPsat]") {
     Skip_if_No_REFPROP();
     std::shared_ptr<AbstractState> direct(AbstractState::factory("REFPROP", "Propane"));
