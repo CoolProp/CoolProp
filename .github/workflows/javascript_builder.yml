@@ -48,7 +48,12 @@ jobs:
     - name: Configure CMake
       shell: bash
       run: |
-        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        # Extract version from tag (v8.1.0 -> 8.1.0) for release builds
+        VERSION_OVERRIDE=""
+        if [[ "${{ github.ref }}" =~ ^refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+          VERSION_OVERRIDE="-DCOOLPROP_VERSION_REVISION="
+        fi
+        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE $VERSION_OVERRIDE
       # cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=OFF -DCMAKE_BUILD_TYPE=$BUILD_TYPE
       # cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=ON  -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
