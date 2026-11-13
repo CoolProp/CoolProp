@@ -1554,8 +1554,11 @@ void HelmholtzEOSMixtureBackend::update_TP_guessrho(CoolPropDbl T, CoolPropDbl p
     // Do the flash call to find rho = f(T,p)
     CoolPropDbl rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
 
-    // Update the class with the new calculated density
-    update_DmolarT_direct(rhomolar, T);
+    // Update the class with the new calculated density, unless solver_rho_Tp already left the state there through
+    // update_DmolarT_direct (its Householder path does), which would only repeat the full alphar evaluation
+    if (!(_rhomolar == rhomolar && _T == T)) {  // exact by design: the same doubles, not a tolerance
+        update_DmolarT_direct(rhomolar, T);
+    }
 
     // Skip the cleanup, already done in update_DmolarT_direct
 }
@@ -2978,6 +2981,48 @@ class SolverTPResid : public FuncWrapper1DWithThreeDerivs
                / p;
     };
 };
+// The residual of SolverTPResid, evaluated without writing the state (COO-126).  A density solve needs p and its first
+// three density derivatives, i.e. the five pure-delta alphar fields; update_DmolarT_direct evaluates all fifteen, and
+// for a multi-fluid mixture the tau-derivatives are most of that cost.  call() evaluates once and the derivative
+// methods reuse it -- Householder4 calls them at the same rho right after call().  The delta-only evaluation agrees
+// with the full one bit for bit on orders 0-2 and to a few ULP on orders 3-4 (see calc_alphar_deriv_nocache).
+class SolverTPResidDeltaOnly : public FuncWrapper1DWithThreeDerivs
+{
+   public:
+    HelmholtzEOSMixtureBackend* HEOS;
+    CoolPropDbl T, p, delta, rhor, tau, R_u;
+    HelmholtzDerivatives d;
+
+    SolverTPResidDeltaOnly(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl p)
+      : HEOS(HEOS),
+        T(T),
+        p(p),
+        delta(_HUGE),
+        rhor(HEOS->get_reducing_state().rhomolar),
+        tau(HEOS->get_reducing_state().T / T),
+        R_u(HEOS->gas_constant()) {}
+    // SolverTPResid rejects a negative density through update_DmolarT_direct; without the state write that has to be
+    // explicit (Householder4 checks it before every evaluation)
+    bool input_not_in_range(double rhomolar) override {
+        return rhomolar < 0;
+    }
+    double call(double rhomolar) override {
+        delta = rhomolar / rhor;
+        d = HEOS->calc_alphar_delta_derivs_nocache(tau, delta);
+        // as calc_pressure()
+        CoolPropDbl peos = rhomolar * R_u * T * (1 + delta * d.dalphar_ddelta);
+        return (peos - p) / p;
+    };
+    double deriv(double rhomolar) override {
+        return R_u * T * (1 + 2 * delta * d.dalphar_ddelta + POW2(delta) * d.d2alphar_ddelta2) / p;
+    };
+    double second_deriv(double rhomolar) override {
+        return R_u * T / rhor * (2 * d.dalphar_ddelta + 4 * delta * d.d2alphar_ddelta2 + POW2(delta) * d.d3alphar_ddelta3) / p;
+    };
+    double third_deriv(double rhomolar) override {
+        return R_u * T / POW2(rhor) * (6 * d.d2alphar_ddelta2 + 6 * delta * d.d3alphar_ddelta3 + POW2(delta) * d.d4alphar_ddelta4) / p;
+    };
+};
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
     return 0.9 / SRK_covolume();
 }
@@ -3410,17 +3455,27 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         }
     }
 
-    try {
-        double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
-        if (!ValidNumber(rhomolar) || rhomolar < 0) {
+    // The Householder solves below iterate on the delta-only residual and then put the state on the density they return,
+    // which the callers rely on: PT_flash_with_guesses reads the density off the state, and the phase checks below read
+    // derivatives from it.  (Iterating on SolverTPResid left the state one Householder step short of the root; the
+    // Brent fallbacks in the catch still do.)  An invalid result throws into that catch rather than being returned.
+    SolverTPResidDeltaOnly dresid(this, T, p);
+    auto householder_onto_state = [&](double rho0, int maxiter) {
+        double rho = Householder4(dresid, rho0, 1e-8, maxiter);
+        if (!ValidNumber(rho) || rho < 0) {
             throw ValueError();
         }
+        update_DmolarT_direct(rho, T);
+        return rho;
+    };
+    try {
+        double rhomolar = householder_onto_state(rhomolar_guess, 20);
         if (phase == iphase_liquid) {
             double dpdrho = first_partial_deriv(iP, iDmolar, iT);
             double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
             if (dpdrho < 0 || d2pdrho2 < 0) {
                 // Try again with a larger density in order to end up at the right solution
-                rhomolar = Householder4(resid, 3 * rhomolar_reducing(), 1e-8, 100);
+                rhomolar = householder_onto_state(3 * rhomolar_reducing(), 100);
                 return rhomolar;
             }
         } else if (phase == iphase_gas) {
@@ -3428,7 +3483,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
             if (dpdrho < 0 || d2pdrho2 > 0) {
                 // Try again with a tiny density in order to end up at the right solution
-                rhomolar = Householder4(resid, 1e-6, 1e-8, 100);
+                rhomolar = householder_onto_state(1e-6, 100);
                 return rhomolar;
             }
         }
