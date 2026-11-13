@@ -4005,7 +4005,7 @@
     },
     "FORMULA": "C5F12",
     "INCHI_KEY": "NJCBUSHGCBERSK-UHFFFAOYSA-N",
-    "INCHI_STRING": "InChI=1S/C5F12/c6-1(7,3(10,11)5(14,15)16)2(8,9)4(12,13)17",
+    "INCHI_STRING": "InChI=1S/C5F12/c6-1(7,2(8,9)4(12,13)14)3(10,11)5(15,16)17",
     "NAME": "n-Perfluoropentane",
     "REFPROP_NAME": "C5F12",
     "SMILES": "FC(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F"
