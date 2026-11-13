@@ -45,7 +45,7 @@ for fname in glob.glob('../fluids/*.json'):
             print('%s: ChemSpider hit %s has InChIKey %s, stored is %s; not updating'
                   % (fluid, result.csid, hit_key, stored_key))
             return False
-        jj['INFO']['INCHI_STRING'] = result.inchi
+        jj['INFO']['INCHI_STRING'] = getattr(result, 'stdinchi', None) or result.inchi
         jj['INFO']['INCHI_KEY'] = hit_key
         jj['INFO']['CHEMSPIDER_ID'] = result.csid
         jj['INFO']['2DPNG_URL'] = result.image_url
