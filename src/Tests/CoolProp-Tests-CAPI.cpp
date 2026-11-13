@@ -4,16 +4,18 @@
 // (or a read that gets echoed back) beyond the declared length is detected even
 // without a sanitizer.
 
-#include <catch2/catch_all.hpp>
+#if defined(ENABLE_CATCH)
 
-#include "CoolProp/CoolPropLib.h"
-#include "CoolProp/CoolProp.h"
-#include "CoolProp/numerics/numerics.h"
+#    include <catch2/catch_all.hpp>
 
-#include <cmath>
-#include <cstring>
-#include <string>
-#include <vector>
+#    include "CoolProp/CoolPropLib.h"
+#    include "CoolProp/CoolProp.h"
+#    include "CoolProp/numerics/numerics.h"
+
+#    include <cmath>
+#    include <cstring>
+#    include <string>
+#    include <vector>
 
 namespace {
 
@@ -187,3 +189,5 @@ TEST_CASE("C_extract_backend refuses non-positive lengths", "[CAPI]") {
     CHECK(C_extract_backend("HEOS::Water", backend, sizeof(backend), fluid, 0) == -1);
     CHECK(fluid[0] == 'x');
 }
+
+#endif  // ENABLE_CATCH
