@@ -40,8 +40,13 @@
 #include "CoolProp/fluids/IdealCurves.h"
 #include "MixtureParameters.h"
 #include "CoolProp/expression/ExpressionCorrelation.h"
+#include "ChebDensitySolver.h"
 #include <atomic>
 #include <cstdlib>
+#include <map>
+#include <mutex>
+#include <random>
+#include <sstream>
 
 // Instrumentation only: counts the number of EOS derivative-cache evaluations
 // across all HEOS instances. Atomic so concurrent calls do not race (#2844).
@@ -104,6 +109,8 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPro
     _phase = iphase_unknown;
 }
 void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
+    cheb_density.reset();  // a new model: resolve the Chebyshev solver again
+    cheb_density_resolved = false;
 
     // Drop the cached ECS transport reference fluids: they are tied to the
     // OLD component's reference-fluid name, so a post-construction component
@@ -319,6 +326,39 @@ std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::g
     return components[0].EOS().get_superanc();
 }
 
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_p(CoolPropDbl p) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl pmax_num = superanc.get_pmax();
+    if (p > pmax_num) {
+        throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", p, pmax_num));
+    }
+    const double Tsat = superanc.get_T_from_p(p);
+    return SuperancSatPoint{Tsat, superanc.eval_sat(Tsat, 'D', 0), superanc.eval_sat(Tsat, 'D', 1), p};
+}
+
+std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> HelmholtzEOSMixtureBackend::superanc_saturation_at_T(CoolPropDbl T) {
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES) || !is_pure()) {
+        return std::nullopt;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return std::nullopt;
+    }
+    auto& superanc = *superanc_ptr;
+    CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+    if (T > Tcrit_num) {
+        throw ValueError(format("Temperature [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+    }
+    return SuperancSatPoint{T, superanc.eval_sat(T, 'D', 0), superanc.eval_sat(T, 'D', 1), superanc.eval_sat(T, 'P', 1)};
+}
+
 void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     if (!is_pure()) {
         return;
@@ -382,6 +422,7 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
 }
 
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -413,6 +454,7 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const double value) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -459,6 +501,7 @@ double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                const std::string& value) {
+    cheb_density_resolved = false;  // the mixture model changes: resolve the Chebyshev solver again
     // bound-check indices
     if (i >= N) {
         if (j >= N) {
@@ -482,6 +525,7 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t
 };
 
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string& EOS_name) {
+    cheb_density_resolved = false;  // a different EOS: resolve the Chebyshev solver again
 
     if (i < components.size()) {
         CoolPropFluid& fluid = components[i];
@@ -1279,15 +1323,25 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_GWP500() {
         return v;
     }
 }
+CriticalState HelmholtzEOSMixtureBackend::calc_unique_stable_critical_point() {
+    // The tracer also returns unstable points (e.g. negative-pressure ones at liquid-like
+    // densities, see #3528); only the stable ones are candidates for "the" critical point
+    std::vector<CriticalState> critpts = calc_all_critical_points();
+    std::vector<CriticalState> stable;
+    for (const auto& pt : critpts) {
+        if (pt.stable) {
+            stable.push_back(pt);
+        }
+    }
+    if (stable.size() != 1) {
+        throw ValueError(format("critical point finding routine found %d stable critical points (%d in total)", static_cast<int>(stable.size()),
+                                static_cast<int>(critpts.size())));
+    }
+    return stable[0];
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].T;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().T;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1300,13 +1354,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].p;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().p;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1319,13 +1367,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical() {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical() {
     if (components.size() != 1) {
-        std::vector<CriticalState> critpts = calc_all_critical_points();
-        if (critpts.size() == 1) {
-            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
-            return critpts[0].rhomolar;
-        } else {
-            throw ValueError(format("critical point finding routine found %d critical points", static_cast<int>(critpts.size())));
-        }
+        return calc_unique_stable_critical_point().rhomolar;
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
             auto superanc_ptr = get_superanc();
@@ -1861,19 +1903,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
     else if (_p >= components[0].EOS().ptriple * 0.9999 && _p <= psat_max) {
 
         // First try the superancillaries, use them to determine the state if you can
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                CoolPropDbl pmax_num = superanc.get_pmax();
-                if (_p > pmax_num) {
-                    throw ValueError(
-                      format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
-                }
-                auto Tsat = superanc.get_T_from_p(_p);
-                auto rhoL = superanc.eval_sat(Tsat, 'D', 0);
-                auto rhoV = superanc.eval_sat(Tsat, 'D', 1);
+        {
+            const auto sat = superanc_saturation_at_p(_p);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto Tsat = sat->T;
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
                 auto psat = _p;
 
                 if (other == iT) {
@@ -1913,6 +1949,40 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         break;
                     default:
                         throw ValueError(format("bad input for other"));
+                }
+                // At the critical point itself (p == pc, which a superancillary maps onto the end of its
+                // table) the saturated states coincide, and Q is 0/0, +-inf, or a huge number whose sign is
+                // rounding noise in y_V - y_L.  It used to fall through as two-phase with rho = NaN (SRK CO2,
+                // P,H at exactly pc, on x86-64 where rhoL == rhoV to the bit), or could misclassify a liquid
+                // as gas elsewhere.  Decide on the state, not the bits: where the saturated densities coincide
+                // to 1e-10 (the tables agree to ~1e-12 at their critical end, and the sign of y_V - y_L is
+                // reliable well inside 1e-10; for a cubic the band is ~1e-20 in 1 - T/Tc, i.e. p within a few
+                // ulp of pc), classify as the p > psat_max branch above does, against the critical value.  A
+                // non-finite tabulated density is an error, not a critical point.
+                if (!ValidNumber(rhoL) || !ValidNumber(rhoV)) {
+                    throw ValueError(format("superancillary saturated densities are not finite at p = %g Pa", static_cast<double>(_p)));
+                }
+                if (!std::isfinite(Q) || !(std::abs(rhoV - rhoL) > 1e-10 * std::abs(rhoL))) {
+                    bool gas_like = false;
+                    switch (other) {
+                        case iDmolar:
+                            gas_like = value < rhomolar_crit_;
+                            break;
+                        case iSmolar:
+                            gas_like = value > smolar_critical();
+                            break;
+                        case iHmolar:
+                            gas_like = value > hmolar_critical();
+                            break;
+                        default:  // iUmolar; any other key already threw above
+                            gas_like = value > umolar_critical();
+                            break;
+                    }
+                    this->_phase = gas_like ? iphase_supercritical_gas : iphase_supercritical_liquid;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = 1e9;
+                    return;
                 }
                 // Start off by setting variables based on assumption that the state is two-phase
                 if (Q < -1e-9) {
@@ -2307,14 +2377,13 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         }
     } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc();
-            // Superancillaries are enabled and available, they will be used to determine the phase
-            if (superanc_ptr) {
-                auto& superanc = *superanc_ptr;
-                auto rhoL = superanc.eval_sat(_T, 'D', 0);
-                auto rhoV = superanc.eval_sat(_T, 'D', 1);
-                auto psat = superanc.eval_sat(_T, 'P', 1);
+        {
+            const auto sat = superanc_saturation_at_T(_T);
+            // A superancillary is available, it will be used to determine the phase
+            if (sat) {
+                auto rhoL = sat->rhomolarL;
+                auto rhoV = sat->rhomolarV;
+                auto psat = sat->p;
                 _rhoLanc = rhoL;
                 _rhoVanc = rhoV;
                 _rhoLmolar = rhoL;
@@ -2913,6 +2982,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_max_bound() {
     return 0.9 / SRK_covolume();
 }
 
+// SRK_covolume() and solver_rho_Tp_SRK() are approximate seeds for the HEOS mixture solvers, not an
+// SRK EOS.  Their Omega_a/Omega_b literals carry #2745's transcription error (~4e-10 relative); the
+// exact values are in Backends/Cubics/CubicConstants.h.  They are deliberately left as they are: the
+// mixture PT flash's stability test is knife-edge sensitive to them and the exact values flip a
+// subcooled-liquid case to a spurious two-phase result (Linear COO-150).  Switch them once that is fixed.
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     double b = 0;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
@@ -2923,7 +2997,152 @@ CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
     }
     return b;
 }
+// ---------------------------------------------------------------- Chebyshev all-roots density solver
+
+struct ChebDensityEntry
+{
+    std::shared_ptr<const ChebDensity::Tables> tab;
+    double Tmin = 0;  ///< the tables cover T >= Tmin
+};
+namespace {
+std::mutex cheb_cache_mtx;
+std::map<std::string, std::shared_ptr<const ChebDensityEntry>> cheb_cache;  // by model key, see cheb_model_key
+
+// Key of the model the tables are built from: backend, components, gas-constant configuration, and a fingerprint of
+// the mixture parameters -- the reducing temperature and density and alphar at fixed points, as exact hex floats, at
+// every pure component, the equimolar mixture and three asymmetric compositions (at x_i = x_j the GERG reducing
+// function is symmetric under beta -> 1/beta, so the equimolar point alone cannot tell those parameters apart) -- so a
+// backend whose interaction parameters were changed does not pick up tables built for other parameters.
+std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
+    std::string key = HEOS.backend_name();
+    const auto& comps = HEOS.get_components();
+    for (const auto& c : comps)
+        key += "|" + c.name;
+    std::ostringstream os;
+    os << std::hexfloat;
+    auto add = [&](double v) { os << '|' << v; };
+    add(get_config_bool(NORMALIZE_GAS_CONSTANTS) ? 1.0 : 0.0);
+    add(get_config_double(R_U_CODATA));
+    const std::size_t N = comps.size();
+    std::vector<std::vector<CoolPropDbl>> xs;
+    for (std::size_t i = 0; i < N; ++i) {
+        std::vector<CoolPropDbl> x(N, 0.0);
+        x[i] = 1;
+        xs.push_back(x);
+    }
+    if (N > 1) {
+        xs.emplace_back(N, 1.0 / static_cast<double>(N));
+        for (int form = 0; form < 3; ++form) {  // weights i+1, N-i, 1/(i+1)^2
+            std::vector<CoolPropDbl> x(N);
+            double sum = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                const double w = form == 0 ? static_cast<double>(i + 1) : form == 1 ? static_cast<double>(N - i) : 1.0 / ((i + 1.0) * (i + 1.0));
+                sum += (x[i] = w);
+            }
+            for (auto& v : x)
+                v /= sum;
+            xs.push_back(x);
+        }
+    }
+    for (const auto& x : xs) {
+        add(HEOS.Reducing->Tr(x));
+        add(HEOS.Reducing->rhormolar(x));
+        add(HEOS.calc_alphar_deriv_nocache(0, 0, x, 0.8, 0.7));
+        add(HEOS.calc_alphar_deriv_nocache(0, 1, x, 1.3, 1.6));
+    }
+    return key + os.str();
+}
+}  // namespace
+
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
+    if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
+    try {
+        return solver_rho_Tp_cheb_impl(T, p);
+    } catch (...) {
+        return -1;  // never fail the flash from here: the existing solvers answer instead
+    }
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p) {
+    // the gas-constant configuration is part of the model the tables were built for
+    const bool R_norm = get_config_bool(NORMALIZE_GAS_CONSTANTS);
+    const double R_u = get_config_double(R_U_CODATA);
+    if (cheb_density_resolved && (R_norm != cheb_R_normalized || R_u != cheb_R_u)) cheb_density_resolved = false;
+    if (!cheb_density_resolved) {
+        cheb_density_resolved = true;
+        cheb_R_normalized = R_norm;
+        cheb_R_u = R_u;
+        cheb_density.reset();
+        // Multiparameter Helmholtz models only: the cubic backends derive from this class, but their components carry
+        // no multiparameter EOS
+        const std::string be = backend_name();
+        const bool supported = be == get_backend_string(HEOS_BACKEND_MIX) || be == get_backend_string(HEOS_BACKEND_PURE)
+                               || be == get_backend_string(GERG2008_BACKEND) || be == get_backend_string(GERG2004_BACKEND);
+        if (supported && mole_fractions.size() == components.size()) {
+            try {
+                const std::string key = cheb_model_key(*this);
+                std::scoped_lock lk(cheb_cache_mtx);
+                const auto it = cheb_cache.find(key);
+                if (it != cheb_cache.end()) {
+                    cheb_density = it->second;
+                } else {
+                    auto e = std::make_shared<ChebDensityEntry>();
+                    double Tcmax = 0;
+                    for (const auto& c : components)
+                        Tcmax = std::max(Tcmax, static_cast<double>(c.EOS().reduce.T));
+                    e->Tmin = std::max(60.0, 0.3 * Tcmax);
+                    // the tau range: Tr(x) over the pure components and random compositions (a composition beyond
+                    // the sampled maximum is declined by assemble() and solved by the existing solvers)
+                    const std::size_t Nc = components.size();
+                    double Trmax = 0;
+                    std::vector<CoolPropDbl> xx(Nc);
+                    for (std::size_t i = 0; i < Nc; ++i) {
+                        std::fill(xx.begin(), xx.end(), 0.0);
+                        xx[i] = 1;
+                        Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                    }
+                    std::mt19937_64 g(12345);
+                    for (int s = 0; s < 500; ++s) {
+                        double sum = 0;
+                        for (auto& v : xx) {
+                            const double u = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53;
+                            sum += (v = -std::log(u));
+                        }
+                        for (auto& v : xx)
+                            v /= sum;
+                        Trmax = std::max(Trmax, static_cast<double>(Reducing->Tr(xx)));
+                    }
+                    ChebDensity::BuildOptions o;
+                    o.delta_max = 4.0;
+                    o.tau_max = 1.02 * Trmax / e->Tmin;
+                    try {
+                        e->tab = ChebDensity::Tables::build(*this, o);
+                    } catch (...) {
+                        e->tab.reset();  // cached as declined below, so later backends do not retry
+                    }
+                    if (e->tab) cheb_density = e;
+                    cheb_cache[key] = cheb_density;  // null too: the model is declined, do not try again
+                }
+            } catch (...) {
+                cheb_density.reset();  // e.g. a component without a multiparameter EOS: the existing solvers
+            }
+        }
+    }
+    if (!cheb_density || !(T >= cheb_density->Tmin) || !(p > 0) || !std::isfinite(p)) return -1;
+    const std::vector<CoolPropDbl>& mf = get_mole_fractions_ref();
+    for (const CoolPropDbl v : mf)
+        if (!std::isfinite(v)) return -1;  // e.g. a non-finite trial composition: leave it to the existing solver
+    thread_local ChebDensity::Tables::State S;
+    thread_local std::vector<double> x;
+    x.assign(mf.begin(), mf.end());
+    if (!cheb_density->tab->assemble(T, x, S)) return -1;
+    return cheb_density->tab->stable_root(S, p);
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
+    {  // the Chebyshev all-roots solver, when enabled and able to answer
+        const CoolPropDbl rc = solver_rho_Tp_cheb(T, p);
+        if (rc > 0) return rc;
+    }
     // Find the densities along the isotherm where dpdrho|T = 0 (if you can)
     CoolPropDbl light = -1, heavy = -1;
     StationaryPointReturnFlag retval = solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);
@@ -3232,6 +3451,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                                 rhomolar_guess, e.what()));
     }
 }
+// Seed constants: see the note above SRK_covolume() (Linear COO-150).
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
     CoolPropDbl rhomolar = NAN, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 

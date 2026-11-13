@@ -81,7 +81,8 @@ jobs:
           ./Web/fluid_properties/Incompressibles_mole-based-fluids.csv
           ./Web/fluid_properties/Incompressibles_volume-based-fluids.csv
           ./Web/fluid_properties/Incompressibles_pure-fluids.csv
-          ./Web/scripts/incompressibles_consistency
+          ./Web/_static/fluid_properties/incompressibles_consistency.jpg
+          ./Web/_static/fluid_properties/incompressibles_consistency.pdf
         # Key depends on the fluid list so adding/removing a fluid invalidates
         # the cache and triggers a consistency-plot refresh for the new fluid.
         # The restore-keys fallback still seeds the directory with prior plots
@@ -158,9 +159,13 @@ jobs:
         source activate docs
         # Ensure the gitrevision.txt is used for the build
         python dev/generate_headers.py
-        # Build and install the wheel
-        pip -vv wheel .
-        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
+        # Build and install the wheel.  --no-deps keeps pip from also saving and
+        # installing CoolProp's dependencies (the newest numpy from PyPI), which would
+        # replace the numpy that conda solved for this image with one scipy rejects.
+        pip -vv wheel --no-deps .
+        # The install below takes every *.whl, so fail unless exactly one was built
+        test "$(ls *.whl | wc -l)" = 1
+        pip install -vvv --no-deps --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
         # sphinx-design, plotly and joblib are in conda_environment.yml, but that
         # env is baked into the prebuilt docs container; the image isn't rebuilt
         # for PRs, so install them at runtime here (same escape hatch as the
@@ -197,8 +202,10 @@ jobs:
       shell: bash
       run: |
         source activate docs
+        mkdir -p "$GITHUB_WORKSPACE/ci-logs"
         echo "Calling: python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}"
-        python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}
+        # tee keeps a copy for the warning counts in the link-check summary
+        python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }} 2>&1 | tee "$GITHUB_WORKSPACE/ci-logs/homepage.log"
 
     # Save the ccache populated by the wrapper-example builds above — but only
     # on a trusted event and only if the build SUCCEEDED.  An explicit `if:`
@@ -228,10 +235,10 @@ jobs:
       shell: bash
       run: |
         source activate docs
-        # CoolProp/GUI is a wxPython app that has not imported since 2015
-        # (Ph and Ts were removed from CoolProp.Plots.Plots), so leave it out.
-        sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp ../wrappers/Python/CoolProp/GUI
-        make html
+        mkdir -p "$GITHUB_WORKSPACE/ci-logs"
+        sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
+        # tee keeps a copy for the warning counts in the link-check summary
+        make html 2>&1 | tee "$GITHUB_WORKSPACE/ci-logs/sphinx.log"
 
     - name: Check documentation links (non-blocking)
       working-directory: ./Web
@@ -240,7 +247,8 @@ jobs:
       # and a hard gate would cause spurious CI failures, so this never fails the
       # build.  Sphinx runs with -q so the log holds only warnings; the broken
       # and timed-out links are then listed from _build/linkcheck/output.txt,
-      # which is also uploaded as an artifact.  See linkcheck_ignore and
+      # which is also uploaded as an artifact.  linkcheck_summary.py then prints
+      # the counts and sorts output.txt by type.  See linkcheck_ignore and
       # linkcheck_request_headers in conf.py.
       continue-on-error: true
       run: |
@@ -255,6 +263,8 @@ jobs:
           echo "linkcheck produced no output.txt (the build itself failed)"
         fi
         echo "::endgroup::"
+        python "$GITHUB_WORKSPACE/dev/ci/linkcheck_summary.py" _build/linkcheck/output.txt \
+          "$GITHUB_WORKSPACE/ci-logs/homepage.log" "$GITHUB_WORKSPACE/ci-logs/sphinx.log" || true
         exit $rc
 
     - name: Upload linkcheck results

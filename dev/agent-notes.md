@@ -59,7 +59,7 @@ recorded history of finished or abandoned work were dropped (they remain in
   executes notebooks with `jupyter nbconvert --execute` after `pip wheel .`;
   it does not build the C++ test runner.  Figures in doc notebooks must come
   from the Python API alone, never from Catch2 test output.
-- **nanobind `CoolProp.pyi` drift gate is reproducible locally**, but only
+- **nanobind stub drift gate is reproducible locally**, but only
   with the pinned pair, not the ambient interpreter:
 
   ```bash
@@ -68,17 +68,29 @@ recorded history of finished or abandoned work were dropped (they remain in
   COOLPROP_NANOBIND=ON VIRTUAL_ENV=/tmp/stubvenv uv build --wheel --no-build-isolation \
     --config-setting=cmake.define.CMAKE_BUILD_TYPE=Release \
     --config-setting=cmake.define.COOLPROP_NANOBIND_REGEN_STUB=ON --out-dir /tmp/stubdist .
-  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp.pyi' -d /tmp/stubcheck
-  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp.pyi
+  unzip -o /tmp/stubdist/*.whl 'CoolProp/CoolProp/*.pyi' -d /tmp/stubcheck
+  diff -u wrappers/Python/_nanobind/CoolProp.pyi /tmp/stubcheck/CoolProp/CoolProp/__init__.pyi
+  diff -u wrappers/Python/_nanobind/Plot.pyi /tmp/stubcheck/CoolProp/CoolProp/Plot.pyi
   ```
 
-  Take the generated stub verbatim; never hand-edit it.
+  Take the generated stubs verbatim; never hand-edit them.  A default value
+  that stubgen writes with a name the stub does not define (an enum of the
+  core in `Plot.pyi`) is fixed in the binding with `nb::arg(...).sig("...")`.
 - **TestPyPI pruning is manual** (since 2025-11-14, PyPI's new-device email
   verification blocks unattended TOTP logins).  Stay logged into TestPyPI in
   a browser, then `python3 dev/testpypi_delete.py --keep 10` (dry run) and
   `--do-it`.  See PR #3202.
 - **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
   `cmake/dependencies.cmake`) and do not reintroduce it.
+
+- **Catch2 test names must not contain commas.**  A comma in a test spec
+  is OR, so "Cubic T,P root choice" cannot be selected by name.  Write
+  "TP", "P-input", etc.
+- **Rewriting a stack of PR branches:** commit the fix on the owning
+  branch, then from the top branch `git rebase --update-refs --onto
+  <owner-new> <owner-old>`; it moves every intermediate branch ref in one
+  pass.  Use the old SHA the upper branch actually sits on (after an
+  amend it differs from the branch's own old tip).  Enable `rerere`.
 
 ## REFPROP
 
@@ -118,6 +130,48 @@ recorded history of finished or abandoned work were dropped (they remain in
   fluids** (it returns nullptr only for a pure fluid that has none); guard it
   with `is_pure()`.  H,S flashes without a superancillary (pseudo-pure, or
   pure without one) use the dome-free legs of `hs_cascade` (PR #3182).
+- **Cubic backends have no classic ancillaries.** `components[0].ancillaries`
+  (pL, pV, hL, ...) is empty on SRK/PR, so any path that reaches it throws
+  "type not set" (#3441).  `get_superanc()` is null there too.  Reach the
+  cubic Chebyshev superancillary through the virtuals
+  `superanc_saturation_at_p` / `superanc_saturation_at_T` (or
+  `calc_saturation_ancillary`); inside the cubic backend everything goes
+  through the private `cubic_superanc_eval`.  Q,T, P,Q and the T,P root
+  choice use it too (COO-136); the old secant saturation solve is no
+  fallback (~1e-7 in p near Tc, and silently the trivial or wrong root
+  outside the table).  When adding a superancillary, check that every input
+  pair needing saturation reaches it: the cubic one (#2739) sat unused for
+  Q,T and P,Q because `AbstractCubicBackend::update` intercepts both.
+  Direct `get_superanc()` callers that remain are listed in COO-146.
+- **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
+  (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
+  `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
+  real-fluid fit, because it decides gas vs liquid; the Soave alpha passes
+  through zero at T* = Tc(1+1/m)^2, where T,U is degenerate, Ttilde turns
+  over and the closed-form cubic loses ~10 digits (COO-145).  Within ~1e-9
+  of the critical point the expanded cubic's coefficients cancel: polish
+  roots against p(rho) in EOS form, never the polynomial.
+- **Flash non-uniqueness is physical, not a bug.**  H,T is non-unique below
+  the max Joule-Thomson inversion temperature (~5 Tc): a cold compressed
+  liquid's (T, h) is also a two-phase state.  Pure cubics refuse H,T; HEOS
+  and cubic mixtures still return the two-phase root (COO-158).  T,S is
+  unique for pure cubics but not for cold liquid water (alpha_p < 0 below
+  the density maximum): HEOS and REFPROP both return the two-phase state.
+  A round-trip test across such a region must not demand the reference
+  state back; exempt it only with an independent check that the input is
+  inside the saturated [L, V] interval at that T.
+- **Compute long constants, never transcribe them.**  #2745's "exact"
+  SRK/PR Omegas had doubled and dropped digits (fixed in #3515), which put
+  SRK's own critical point ~1e-9 below the input Tc/pc and surfaced as a
+  phantom "end gap" in the superancillary.  Evaluate the closed form in
+  high precision in a committed script and store the correctly rounded
+  double as a hex literal (`dev/scripts/cubic_constants.py` writes
+  `src/Backends/Cubics/CubicConstants.h`; evaluating in double at run time
+  is 1-2 ulp off and platform-dependent; the C++ build has no
+  multiprecision).  Test the defining property (critical conditions), not
+  digits.
+- **`recalculate_singlephase_phase()` reads `_rhomolar`.**  Assign the new
+  density before calling it (cubic `solver_rho_Tp` did not; fixed with #3441).
 - **HS cascade rules:** every cascade leg must be exception-guarded (a leg
   leaving the EOS domain otherwise aborts the cascade), and phase
   determination for two-phase (h,s) inputs is the dispatcher's job, done
@@ -153,6 +207,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   exceptions and Excel/VBA poll the status word.  `CoolProp::fpu_guard`
   (`include/CoolProp/FPUGuard.h`) keys on `_WIN32` (any compiler, incl.
   MinGW), not `_MSC_VER`.
+- **Mixture critical points: filter on `stable`, nothing else** (#3528).
+  `calc_all_critical_points()` also returns spurious points; most sit at
+  liquid-like density and negative pressure, which `calc_critical_point`
+  already marks unstable (negative pressure is physical, so don't filter on
+  p).  The TPD verdict on the ~100 K / 100s-of-MPa points is *marginal*: it
+  flips between builds (R470A), so don't assert per-blend stable counts there
+  (COO-155).  The N×N L*/M* formulation is general-N, but Air (ternary) yields
+  four stable points (COO-154), and natural gases take minutes.
 
 ## Fluid data, superancillaries and transport
 
@@ -172,6 +234,23 @@ recorded history of finished or abandoned work were dropped (they remain in
   fastchebpure's `fitcheb` CLI: `fitcheb -f FLUID -d <coolprop checkout>` to
   fit and check, then `fitcheb inject -f FLUID -d <coolprop checkout>` to
   replace the SUPERANCILLARY block, add check points and stamp the hash.
+- **Incompressible caloric fits come in two kinds, both loaded.**  A fluid
+  may ship `density`/`specific_heat` (classic polynomial) and
+  `density_cheb`/`specific_heat_cheb`; `IncompressibleFluid` keeps both and
+  every caloric function takes a `chebyshev` flag (`useChebyshevFit` picks, with
+  fallback to whichever exists).  `IncompressibleBackend` snapshots
+  `INCOMP_PREFER_CHEBYSHEV_CALORIC` in its constructor and must pass it to
+  every caloric call, including residuals inside `T_rho`/`T_c`: a call that
+  falls back to the default argument reads the live config and can mix fits
+  with the cached `_hmass_ref`/`_smass_ref`.  Derived matrices (`ddT`,
+  `int_dT`, `int_dTdivT`, `int_dTdivT_log`) exist only after `validate()`;
+  evaluation throws on an empty one rather than returning 0.  `setTbase()`
+  drops the polynomial entropy matrices (they embed the value of Tbase), so
+  call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
+  only when the fluid has no separate `_cheb` entry for that property.
+- **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
+  which every setter calls (the JSON setter only for changed values).  A side
+  effect wired into one setter is skipped when the key is set another way.
 - **Changing one fluid's viscosity can move other fluids.** Two couplings:
   (1) ECS — `viscosity_ECS` evaluates the reference fluid's
   `calc_viscosity_background()` (R134a moves seven refrigerants by 1–2.6%);
@@ -227,3 +306,82 @@ recorded history of finished or abandoned work were dropped (they remain in
   mixtures follow the trivial solution past the critical point to GPa
   pressures, and heavy traces underflow to NaN.  Use these cases when
   judging a replacement tracer.
+
+## Property plots (CoolProp::Plot)
+
+- **`src/CoolPropPlot.cpp` is a port of CoolPlot's numerics** (the Python
+  package: `thermo/isolines.py`, `tracer.py`, `stepping.py`, `fluid.py` of
+  CoolPlot 0.7+).  Names and the order of steps follow the Python files on
+  purpose; fix a numerics bug in both.  CoolPlot uses the port through
+  `CoolProp.CoolProp.Plot` when it is present and falls back to its Python
+  copy, which its tests treat as the reference.
+- **The nanobind submodule lives at `CoolProp.CoolProp.Plot`**, not
+  `CoolProp.Plot`: the package `__init__` is kept identical to the legacy
+  one (import-tree parity gate), and `CoolProp.Plots` is the old Python
+  plotting package.  Its stubs are a stub package,
+  `CoolProp/CoolProp/__init__.pyi` and `CoolProp/CoolProp/Plot.pyi`: a stub
+  module `CoolProp/CoolProp.pyi` cannot have submodules, and a `Plot.pyi`
+  next to it types the non-existent `CoolProp.Plot`.  The regeneration
+  imports the built module as `CoolProp.CoolProp` from a staging package;
+  imported as a top-level `CoolProp`, stubgen names the types in `Plot.pyi`
+  `CoolProp.<type>`, which do not resolve.
+- **Releasing the GIL** in `PropertyPlot.calc_isolines`, `isoline_range`
+  and `value_at` is safe for Python objects: the arguments are converted
+  to C++ before the call (the settings are copied, see the binding) and
+  the results after it.  `AbstractState.update` keeps the GIL: existing
+  code that shares one state between Python threads relies on the GIL to
+  serialise the calls.  `AbstractState.update_nogil` is the opt-in that
+  releases it, for code that gives each thread its own state.  CoolProp's
+  lazily built shared data (the fluid and mixture libraries, the caloric
+  superancillaries) is built under `std::call_once` or a mutex, so distinct
+  HEOS, cubic and GERG states are safe in parallel.  Not safe: a thread
+  that changes the configuration (`set_config_*` writes a global without a
+  lock), and a thread that builds tabular tables (creating a TTSE or
+  BICUBIC state, or setting its fractions, when its tables are not on
+  disk yet): the build toggles `DONT_CHECK_PROPERTY_LIMITS` globally
+  (`TabularBackends.cpp`, COO-144).
+  REFPROP states are serialised by `REFPROP_mutex()`.  Every other binding keeps the GIL; add
+  `nb::call_guard<nb::gil_scoped_release>()` only to calls that never
+  re-enter Python.  A REFPROP plot is safe without the GIL too: the
+  backend serialises its calls through `REFPROP_mutex()`.  But another
+  thread's REFPROP state can now run between two calls of a plot, and
+  REFPROP keeps one set of loaded fluids: interaction parameters set
+  with `set_binary_interaction_*`, a reference state or a custom `.MIX`
+  composition are lost when that other state loads different fluids
+  (see `REFPROPMixtureBackend.h`).
+- **Every isoline tracer builds its own phase envelope**, about a quarter
+  of the time of a traced line for a blend.  Do not share or cache that
+  saturation state between tracers: the mixture saturation flashes take
+  their guesses from it, so a line would depend on the lines computed
+  before it, and lines are cached and computed one by one in any order
+  (tried in COO-142 and reverted; CoolPlot's `tracer.py` has the same note).
+- **No `==` or `!=` between doubles in the plot numerics**, and no
+  tolerance in their place where an exact answer is meant.  The envelope's
+  Q flags (exactly 0 or 1) and the markers of `generate_update_pair` are
+  compared by side (`Q > 0.5`); an exact root or a vanished denominator is
+  `is_zero` (a classification); sign tests use `sign_of` (integers); a
+  cache key or a copied sample is `same_bits`; the start and end of a
+  stepped range are passed as flags, not found by comparing `u`; tests
+  that mean "the same double" use `WithinULP(x, 0)`.  `-Wfloat-equal` on
+  `src/CoolPropPlot.cpp` is clean (the warnings left come from the bundled
+  fmt).  The rewrite was checked bit-identical on about 1100 isolines of
+  pure fluids, blends and an incompressible.  CoolPlot has the same
+  helpers in `coolplot/thermo/floats.py`; its `is_zero` classifies the
+  bits too, since `abs(v) < math.ulp(0.0)` is false for 0.0 when an
+  extension built with fast-math sets denormals-are-zero.
+- **A `PropertyPlot` serialises its own calls**: every line of a plot is
+  computed with the plot's one `AbstractState`, updated in place, so
+  `calc_isolines`, `isoline_range` and `value_at` hold a mutex (they
+  release the GIL, and two Python threads really do call them at once).
+  Parallel work needs one plot per thread (CoolPlot's adapter keeps one
+  per thread, after a review of its thread workers found a shared plot).
+- **The mixture H-p flash on master refuses two-phase states 8.0.0 solved**
+  (R32/R125 70/30 at h = 4e5 J/kg, p = 9.65 bar: the residual gate after the
+  temperature search throws "the (T,p) flash is misclassifying the phase").
+  Tests of the tracer against the flash compare only where the flash
+  converges; the isoline tracer itself never needs that flash.
+- **Building the Python wheel offline:** the catch build fills
+  `.cpm_cache/` in the repo; `pip wheel .` configures a fresh tree, so pass
+  `CMAKE_ARGS="-DCPM_SOURCE_CACHE=$PWD/.cpm_cache"` (plus the valijson
+  source if downloads are blocked) or Eigen is fetched again (gitlab
+  returns 429 quickly).

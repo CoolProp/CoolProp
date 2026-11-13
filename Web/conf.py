@@ -107,6 +107,19 @@ doxylink = {
     'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'https://coolprop.org/_static/doxygen/html')
 }
 
+# Doxylink cannot parse these tag-file entries, so it skips them and logs a
+# warning for each.  Nothing in the docs links to them, so only the message
+# is silenced; the entries are skipped either way.  Keep the patterns narrow so
+# a parse failure on any other function still warns.
+#   - ERR_*: string constants in src/l10n/english.h that Doxygen lists as functions
+#   - INCBIN: the fluid-library embedding macro in FluidLibrary.cpp
+#   - set_reference_state: the IncompressibleBackend default argument 20+273.15
+doxylink_parse_error_ignore_regexes = [
+    r'Skipping function (english\.h|CoolProp)::ERR_[A-Z_]+\(',
+    r'Skipping function FluidLibrary\.cpp::INCBIN\(',
+    r'Skipping function CoolProp::IncompressibleBackend::set_reference_state\(double T0=20\+273\.15',
+]
+
 # Execute all the notebooks.
 # Timeout is bumped from nbconvert's 30 s default to 1 h to accommodate
 # notebooks that lazy-build expensive on-disk caches on first run
@@ -248,12 +261,11 @@ autoclass_content = 'both'
 # Fix the bibtext extension
 bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
-# Modules that are not installed in the docs environment (wxPython GUI, the
-# Python 2 ConfigParser, pytest) or no longer exist in matplotlib (the wx and
-# Qt4 backends, and PyQt4) but are imported by modules that apidoc lists.
+# Modules that are not installed in the docs environment (the Python 2
+# ConfigParser, pytest) or no longer exist in matplotlib (the Qt4 backend, and
+# PyQt4) but are imported by modules that apidoc lists.
 # Mocking them lets autodoc import those modules instead of warning.
-autodoc_mock_imports = ['wx', 'ConfigParser', 'pytest',
-                        'matplotlib.backends.backend_wxagg',
+autodoc_mock_imports = ['ConfigParser', 'pytest',
                         'matplotlib.backends.backend_qt4agg', 'PyQt4']
 
 # -- Options for the linkcheck builder -----------------------------------------

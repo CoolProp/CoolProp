@@ -119,7 +119,6 @@ You can select the compiler in the call to cmake below.
 
    .. note::
       Alternatively, if using MSYS2 UCRT64, you can simply issue the comman: ``ninja``
-|
 
 Linux & OSX
 -----------

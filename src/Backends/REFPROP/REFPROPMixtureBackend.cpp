@@ -19,6 +19,7 @@ dipole moment                   debye
 surface tension                 N/m
 */
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 
@@ -259,6 +260,27 @@ void REFPROPMixtureBackend::check_loaded_fluid() {
 // Both are only ever read or written with REFPROP_mutex() held.
 std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
 bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+
+/// ::load_REFPROP, but close the library again when the load fails.
+/** load_REFPROP can fail after the library itself was opened (when its
+ *  functions cannot be bound), and then leaves the library handle set. A
+ *  handle left behind makes the next load_REFPROP call, and the early return
+ *  in REFPROP_supported(), report REFPROP as loaded while its function
+ *  pointers are unset, so the first call into REFPROP crashes. Every load in
+ *  this file goes through here. Call with REFPROP_mutex() held.
+ */
+static bool load_REFPROP_or_close(std::string& err, const std::string& path, const std::string& name) {
+    if (::load_REFPROP(err, path, name)) return true;
+    std::string unload_err;
+    ::unload_REFPROP(unload_err);
+    return false;
+}
+void REFPROPMixtureBackend::forget_REFPROP_load_failure() {
+    const REFPROPLock refprop_lock(REFPROP_mutex());
+    // On a platform without REFPROP support the next check simply sets it
+    // back to false.
+    _REFPROP_supported = true;
+}
 bool REFPROPMixtureBackend::REFPROP_supported() {
     const REFPROPLock refprop_lock(REFPROP_mutex());
     /*
@@ -287,17 +309,24 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
 
             if (root) {
-                loaded_REFPROP = ::load_REFPROP(err, root.value().c_str(), "");
-                SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
+                loaded_REFPROP = load_REFPROP_or_close(err, root.value(), "");
+                if (loaded_REFPROP) {
+                    // SETPATHdll reads a fixed-length Fortran string of this
+                    // many characters, so hand it a zero-padded buffer of that
+                    // size rather than the shorter std::string storage.
+                    std::array<char, 400> root_path{};
+                    std::copy_n(root.value().begin(), std::min(root.value().size(), root_path.size()), root_path.begin());
+                    SETPATHdll(root_path.data(), root_path.size());
+                }
             }
             if (!loaded_REFPROP) {
                 if (!alt_rp_name.empty()) {
-                    loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+                    loaded_REFPROP = load_REFPROP_or_close(err, "", alt_rp_name);
                 } else {
                     if (alt_rp_path.empty()) {
-                        loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                        loaded_REFPROP = load_REFPROP_or_close(err, refpropPath, "");
                     } else {
-                        loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                        loaded_REFPROP = load_REFPROP_or_close(err, alt_rp_path, "");
                     }
                 }
             }
@@ -436,16 +465,24 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         }
         memcpy(hmx_bnc.data(), _HMX_path, strlen(_HMX_path) + 1);  // +1 for the NUL; length checked above
 
+        // Check platform support. This also (re)loads the library, so it must
+        // come before the first call into REFPROP: after a REFPROP path change
+        // the library has been unloaded, and GERG04dll below would otherwise
+        // call through a stale function pointer.
+        if (!REFPROP_supported()) {
+            throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
+        }
+
         if (get_config_bool(REFPROP_USE_GERG)) {
+            // The loader only insists on SETUPdll, so a REFPROP without GERG
+            // support loads with this pointer unset.
+            if (GERG04dll == nullptr) {
+                throw NotImplementedError("REFPROP_USE_GERG is set, but the loaded REFPROP library has no GERG04dll.");
+            }
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
               ierr_gerg = 0;
             std::array<char, 255> herr_gerg{};
             GERG04dll(&N, &iflag, &ierr_gerg, herr_gerg.data(), 255);
-        }
-
-        // Check platform support
-        if (!REFPROP_supported()) {
-            throw NotImplementedError("You cannot use the REFPROPMixtureBackend.");
         }
 
         if (N == 1 && upper(components_joined_raw).find(".MIX") != std::string::npos) {
@@ -3041,7 +3078,7 @@ THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_
 bool force_load_REFPROP() {
     const REFPROPLock refprop_lock(REFPROP_mutex());
     std::string err;
-    if (!load_REFPROP(err)) {
+    if (!load_REFPROP_or_close(err, "", "")) {
         if (CoolProp::get_debug_level() > 5) {
             std::cout << format("Error while loading REFPROP: %s", err) << '\n';
         }
@@ -3069,10 +3106,13 @@ bool force_unload_REFPROP() {
 
 void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, double& T0, double& p0, int& ierr, char* herr, int l1, int l2) {
     const REFPROPLock refprop_lock(REFPROP_mutex());
-    std::string err;
-    bool loaded_REFPROP = ::load_REFPROP(err);
-    if (!loaded_REFPROP) {
-        throw ValueError(format("Not able to load REFPROP; err is: %s", err.c_str()));
+    // Load through REFPROP_supported(), like every REFPROP backend does, so that
+    // COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings are honoured.
+    // Loading through the system library search path here instead used to fail
+    // once a REFPROP path change had unloaded a library that exists only at the
+    // configured path. REFPROP_supported() prints the reason when the load fails.
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
+        throw ValueError("Not able to load REFPROP; check COOLPROP_REFPROP_ROOT and the ALTERNATIVE_REFPROP_* settings.");
     }
     SETREFdll(hrf, &ixflag, x0, &h0, &s0, &T0, &p0, &ierr, herr, l1, l2);
 }

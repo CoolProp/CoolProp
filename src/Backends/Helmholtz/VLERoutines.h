@@ -163,6 +163,48 @@ void successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl
 void x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolPropDbl>& K, const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& x,
                     std::vector<CoolPropDbl>& y);
 
+/** \brief Imposes `ph` on `state` for its lifetime and restores the previously imposed phase on exit,
+ * also when unwinding.  `ph == iphase_not_imposed` lifts any imposed phase for the scope; `active == false`
+ * makes it a no-op, so a scope can be imposed conditionally.
+ *
+ * The SatL / SatV sub-backends are created with a liquid / gas phase imposed; a bare specify_phase() /
+ * unspecify_phase() pair leaves them with NO (or, on a throw, the wrong) imposed phase, which silently
+ * changes every later density solve on that backend.
+ */
+struct ScopedImposedPhase
+{
+    HelmholtzEOSMixtureBackend& state;
+    const phases previous;
+    const bool active;
+    ScopedImposedPhase(HelmholtzEOSMixtureBackend& s, phases ph, bool active_ = true) : state(s), previous(s.imposed_phase()), active(active_) {
+        if (!active) return;
+        if (ph == iphase_not_imposed) {
+            state.unspecify_phase();
+        } else {
+            state.specify_phase(ph);
+        }
+    }
+    ~ScopedImposedPhase() {
+        if (!active) return;
+        if (previous == iphase_not_imposed) {
+            state.unspecify_phase();
+        } else {
+            state.specify_phase(previous);
+        }
+    }
+    ScopedImposedPhase(const ScopedImposedPhase&) = delete;
+    ScopedImposedPhase& operator=(const ScopedImposedPhase&) = delete;
+};
+
+/** \brief solver_rho_Tp_global, guarded against a mechanically unstable root (GitHub #3448).
+ *
+ * If the global solver's root has dp/drho <= 0, solves both phase-specified roots and returns the
+ * mechanically stable one with the lower Gibbs energy; with no such alternative, returns the global
+ * root unchanged.  Throws only where solver_rho_Tp_global throws.  Leaves `phase` at the returned root.
+ * Sets *replaced = true (if given) when it returned a root other than the global solver's.
+ */
+CoolPropDbl solve_rho_Tp_global_stable(HelmholtzEOSMixtureBackend& phase, CoolPropDbl T, CoolPropDbl p, bool* replaced = nullptr);
+
 /** \brief Refine a two-phase guess (x, y, rhomolar_liq, rhomolar_vap) in place by
  * successive substitution at fixed (T, p): re-solve each phase density near its
  * current guess, recompute the K-factors from the fugacity-coefficient ratio, and
@@ -605,6 +647,12 @@ struct PTflash_twophase_options
      *  the caller distinguish "no convergent split here" from "could not
      *  evaluate", and fall back to single-phase only in the former case. */
     bool nonconvergence;
+    /** Optional warm-start densities for the solver's first liquid / vapor density solves (<= 0:
+     *  cold start through the global solver, the default).  PT_flash_mixtures sets them from the
+     *  densities the stability test recorded (trial and feed roots, or the flash-first split): the cold
+     *  global search can throw for an ordinary single-root phase, e.g. a near-pure supercritical vapor
+     *  (H2 at 300 K) or humid air at 360-400 K ("One stationary point"). */
+    CoolPropDbl rho_warm_liq_seed, rho_warm_vap_seed;
     PTflash_twophase_options()
       : Nstep_max(30),
         Nsteps(0),
@@ -616,7 +664,9 @@ struct PTflash_twophase_options
         p(_HUGE),
         T(_HUGE),
         beta(0.5),
-        nonconvergence(false) {}
+        nonconvergence(false),
+        rho_warm_liq_seed(-1),
+        rho_warm_vap_seed(-1) {}
 };
 
 /**
@@ -661,6 +711,8 @@ class PTflash_twophase
 };
 };  // namespace SaturationSolvers
 
+using SaturationSolvers::ScopedImposedPhase;  // also used by the stability and flash routines
+
 namespace StabilityRoutines {
 
 /** \brief Evaluate phase stability
@@ -681,7 +733,13 @@ class StabilityEvaluationClass
 
    private:
     bool _stable;
-    bool _uncertain;  ///< stability verdict was non-conclusive (minimize_tpd could not decide)
+    bool _uncertain;             ///< stability verdict was non-conclusive (minimize_tpd could not decide)
+    bool _near_pure;             ///< the instability (if any) was found by a near-pure trial phase
+    bool _guard_replaced;        ///< the instability (if any) relied on a root the #3448 guard replaced (feed or that trial)
+    bool _feed_guard_replaced;   ///< the guard replaced the feed's density root in this test
+    bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
+    bool _flash_first;           ///< the instability was found by the flash-first successive substitution
+    bool _flash_first_enabled;   ///< run the flash-first successive substitution (on by default)
     bool debug;
     bool use_michelsen;
 
@@ -699,6 +757,12 @@ class StabilityEvaluationClass
         m_p(-1),
         _stable(false),
         _uncertain(false),
+        _near_pure(false),
+        _guard_replaced(false),
+        _feed_guard_replaced(false),
+        _trial_guard_replaced(false),
+        _flash_first(false),
+        _flash_first_enabled(true),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -770,6 +834,35 @@ class StabilityEvaluationClass
     /// attempt a verified two-phase split instead of trusting the fail-open "stable".
     bool is_uncertain() const {
         return _uncertain;
+    }
+    /// True when the instability was found by a NEAR-PURE trial phase (wide-boiling feed): the
+    /// incipient phase is small and nearly pure, so the split is stiff (beta near 0 or 1) and the
+    /// caller should refine and verify it rather than hand it straight to the Newton solver.
+    bool unstable_by_near_pure_trial() const {
+        return !_stable && _near_pure;
+    }
+    /// True when the instability was found by the flash-first successive substitution (before the trial
+    /// search): get_liq / get_vap then return the split phases, with their densities, and get_beta() the
+    /// split's vapor fraction -- a better start for the phase-split solver than a trial phase.
+    bool unstable_by_flash_first() const {
+        return !_stable && _flash_first;
+    }
+    double get_beta() const {
+        return beta;
+    }
+    /// Switch the flash-first successive substitution off (or back on) for the next is_stable() call: the
+    /// flash retries the trial search when the split solver cannot follow a flash-first split.  The tester
+    /// is constructed per flash, so the setting does not outlive that flash.
+    void set_flash_first_enabled(bool enabled) {
+        _flash_first_enabled = enabled;
+    }
+    /// True when an instability was found that the stability test would not have reached before the
+    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or relying on a
+    /// density root the guard replaced -- the feed's, or one of the trial that found the instability
+    /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
+    /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
+    bool unstable_beyond_baseline() const {
+        return !_stable && (_near_pure || _guard_replaced);
     }
     /// Accessor for liquid-phase composition and density
     void get_liq(std::vector<double>& x, double& rhomolar) {

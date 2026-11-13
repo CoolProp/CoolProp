@@ -43,7 +43,9 @@ If anything goes wrong, the script prints explicit, copy-pasteable recovery step
 The delete *set* is computed by the same read-only logic the CI prune job uses
 (:mod:`testpypi_prune`), so final/tagged releases are never candidates.
 """
+import html
 import os
+import re
 import sys
 import time
 import argparse
@@ -112,6 +114,12 @@ class _DeleteFormCsrf(HTMLParser):
     the *session* CSRF token -- identical for every form on the page -- so we
     prefer the one inside the matching delete form but fall back to the first
     ``csrf_token`` seen anywhere, which guards against future markup churn.
+
+    The same form also carries the "I understand ..." acknowledgment checkboxes
+    that Warehouse has required since 2026 (``DELETE_RELEASE_ACKNOWLEDGMENTS`` in
+    ``warehouse/utils/project.py``); a POST without every one of them is bounced
+    back to the release page.  Their names are read from the rendered form rather
+    than hard-coded, so a renamed or added acknowledgment is picked up.
     """
 
     def __init__(self, action_target):
@@ -120,8 +128,10 @@ class _DeleteFormCsrf(HTMLParser):
         self._in_form = False
         self._form_has_confirm = False
         self._form_csrf = None
+        self._form_checkboxes = []
         self.csrf = None       # token from the matching delete form (preferred)
         self.any_csrf = None   # first csrf_token anywhere (fallback)
+        self.checkboxes = []   # acknowledge_* checkbox names in the matching delete form
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -130,6 +140,7 @@ class _DeleteFormCsrf(HTMLParser):
             self._in_form = action == self._target or action.startswith(self._target)
             self._form_has_confirm = False
             self._form_csrf = None
+            self._form_checkboxes = []
             return
         if tag == "input":
             if a.get("name") == "csrf_token":
@@ -140,11 +151,15 @@ class _DeleteFormCsrf(HTMLParser):
                     self._form_csrf = value
             elif a.get("name") == "confirm_delete_version" and self._in_form:
                 self._form_has_confirm = True
+            elif ((a.get("type") or "").lower() == "checkbox" and self._in_form
+                  and (a.get("name") or "").startswith("acknowledge_")):
+                self._form_checkboxes.append(a["name"])
 
     def handle_endtag(self, tag):
         if tag == "form" and self._in_form:
             if self._form_has_confirm and self._form_csrf and self.csrf is None:
                 self.csrf = self._form_csrf
+                self.checkboxes = list(self._form_checkboxes)
             self._in_form = False
 
 
@@ -240,18 +255,34 @@ def delete_release(session, base, package, version, do_it, browser):
             + _login_help(base, browser))
 
     if not do_it:
+        if not parser.checkboxes:
+            # Warehouse rejects a delete without its acknowledgments; say so now
+            # rather than after --do-it reports every release FAILED.
+            return "would-delete (WARNING: no acknowledge_* checkboxes found in the delete form; the real delete will likely be refused)"
         return "would-delete"
 
+    # Tick every acknowledgment checkbox, as a browser does for a checkbox with
+    # no value attribute ("on").
+    data = {"csrf_token": csrf, "confirm_delete_version": version}
+    data.update({name: "on" for name in parser.checkboxes})
     resp = session.post(
         url,
-        data={"csrf_token": csrf, "confirm_delete_version": version},
+        data=data,
         headers={"Referer": url, "Origin": base},
         timeout=30,
     )
     resp.raise_for_status()
-    # A successful delete redirects away from the (now-gone) release page.
+    # A successful delete redirects to the project's releases list.  Anything else
+    # (the release page with an error flash, a login or re-auth page) is not a
+    # confirmed delete.
     if resp.url.rstrip("/").endswith(f"/release/{version}"):
-        return f"FAILED (still on release page: {resp.url})"
+        # Warehouse says why in a flash message on the page it bounced back to.
+        reason = re.search(r"Could not delete release[^<]*", resp.text)
+        why = f": {html.unescape(reason.group(0)).strip()}" if reason else ""
+        return f"FAILED (still on release page: {resp.url}){why}"
+    # Warehouse redirects with the project's canonical name; compare case-blind.
+    if not resp.url.rstrip("/").lower().endswith(f"/manage/project/{package}/releases".lower()):
+        return f"FAILED (unexpected redirect, not confirmed deleted: {resp.url})"
     return "deleted"
 
 
