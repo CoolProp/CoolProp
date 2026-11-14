@@ -53,6 +53,8 @@ Technology (`NIST <https://www.nist.gov>`_).
   divides by the *physical* temperature :math:`T`, not by the centred
   :math:`T_\text{in} = T - T_\text{base}`, so it stays well-defined for every
   :math:`T>0`. Read on :ref:`below<BaseValue>` for the derivation.
+  Through ``PropsSI`` and ``AbstractState`` the reference state is fixed, see
+  :ref:`Reference State<IncompRefState>`.
 
 
 Pure Fluid Examples
@@ -148,6 +150,57 @@ form of percent, ``LiBr-23%``, or as a fraction between 0 and 1, ``LiBr[0.23]``.
   results when using other inputs than :math:`f(p,T)`. Keep that in mind and
   implement a way to validate the results you get from these functions. At the same
   time, mixture solvers are likely to produce errors due to the same reason...
+
+
+.. _IncompRefState:
+
+Reference State
+---------------
+
+The reference state given in the introduction is set by the incompressible
+backend, not by the fluid data: :math:`h = s = 0` at 293.15 K and 101325 Pa, at
+the current composition of the state. There is no reference state entry
+in the fluid's JSON file, so a fluid added through ``PureFluids.py`` or
+``SolutionFluids.py`` gets the same reference as all the others.
+
+The reference state cannot be changed through ``PropsSI`` or ``AbstractState``.
+``set_reference_state`` from the :ref:`high-level interface<high_level_set_reference_state>`
+only covers the HEOS and REFPROP backends: CoolProp 5.1 to 8.0.0 return from
+``set_reference_state('INCOMP::MEG', 'IIR')`` without changing anything; later
+versions raise a ``ValueError``.
+
+A few fluids are not valid at 293.15 K: ``LBE``, ``LiqNa``, ``NaK``, ``PBB``,
+``VMA`` and the slurries ``IceEA``, ``IceNA`` and ``IcePG``. Their zero is still
+placed at 293.15 K by extrapolating the heat capacity and density fits, so
+:math:`h` is not zero anywhere in their valid range at 1 atm, the absolute
+values can be several MJ/kg away from zero for the slurries, and they can change
+when the fits are regenerated.
+Only differences between two states are meaningful for these fluids.
+
+To use a different reference state, take the enthalpy and entropy at your own
+reference conditions, subtract them from every result, and add them back before
+passing an enthalpy or entropy as an input. Subtract the same enthalpy offset
+from the internal energy. For a mixture, the offsets only hold for the composition
+they were computed at. With :math:`h = s = 0` at 283.15 K and 1 atm for a
+30 % (by mass) ethylene glycol solution:
+
+.. ipython::
+
+    In [1]: from CoolProp.CoolProp import PropsSI
+
+    In [1]: fluid = 'INCOMP::MEG[0.3]'
+
+    In [1]: h0 = PropsSI('H','T',283.15,'P',101325,fluid)
+
+    In [1]: s0 = PropsSI('S','T',283.15,'P',101325,fluid)
+
+    #Enthalpy and entropy at 333.15 K and 1 atm relative to the new reference
+    In [1]: PropsSI('H','T',333.15,'P',101325,fluid) - h0
+
+    In [1]: PropsSI('S','T',333.15,'P',101325,fluid) - s0
+
+    #Temperature for h = 200 kJ/kg on the new scale
+    In [1]: PropsSI('T','H',200000 + h0,'P',101325,fluid)
 
 
   
@@ -560,7 +613,8 @@ queried, instead of returning made-up values.
 Once you have added your fluid data, you can regenerate the JSON files with the fitted
 parameters by running the script located at ``dev/incompressible_liquids/all_incompressibles.py``.
 Your new fluid is now part of the codebase and should be available to all CoolProp functions as
-soon as you recompile the sources.
+soon as you recompile the sources. Its enthalpy and entropy use the same
+:ref:`reference state<IncompRefState>` as every other incompressible fluid.
 
 Remember that the incompressible fluids are prefixed with the backend name ``INCOMP`` when accessed
 via the ``PropsSI`` function. If you define a new fluid called ``H2O2`` in ``PureFluids.py``, you
