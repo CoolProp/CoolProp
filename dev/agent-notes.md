@@ -91,6 +91,13 @@ recorded history of finished or abandoned work were dropped (they remain in
   <owner-new> <owner-old>`; it moves every intermediate branch ref in one
   pass.  Use the old SHA the upper branch actually sits on (after an
   amend it differs from the branch's own old tip).  Enable `rerere`.
+- **An interrupted CPM download poisons the source cache.**  CPM treats any
+  existing `<cache>/<name>/<hash>` directory as a hit, so a download cut off
+  part-way leaves an empty one that every later configure reuses.
+  `cmake/dependencies.cmake` stops with "The CPM source cache entry for
+  <name> is empty" (GH #3391); delete that directory and configure again.
+  A partially extracted, non-empty entry is not detected.  Reproduce with
+  `https_proxy=http://127.0.0.1:9` and the package's cache directory removed.
 
 ## REFPROP
 

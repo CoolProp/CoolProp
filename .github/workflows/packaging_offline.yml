@@ -139,6 +139,35 @@ jobs:
           expect_configure_failure "${RUNNER_TEMP}/pfx-empty-legacy" "-DCOOLPROP_INSTALL_PREFIX="
           expect_configure_failure "${RUNNER_TEMP}/pfx-empty-cmake" "-DCMAKE_INSTALL_PREFIX="
 
+      # CPM reuses any existing directory in its source cache, so a download
+      # cut off part-way leaves an empty entry that every later configure
+      # accepts (GH #3391).  The step above filled .cpm_cache; empty one entry,
+      # check the configure refuses it, and put the entry back.
+      - name: Check an empty CPM cache entry is refused
+        run: |
+          set -euo pipefail
+          mapfile -t entries < <(find "${GITHUB_WORKSPACE}/.cpm_cache/valijson" -mindepth 1 -maxdepth 1 -type d)
+          if [ "${#entries[@]}" -ne 1 ]; then
+            echo "expected one cached valijson entry, found ${#entries[@]}" >&2
+            exit 1
+          fi
+          entry="${entries[0]}"
+          mv "${entry}" "${entry}.full"
+          mkdir "${entry}"
+          build="${RUNNER_TEMP}/cpm-empty-entry"
+          if cmake -S "${GITHUB_WORKSPACE}" -B "${build}" > "${build}.log" 2>&1; then
+            echo "configure accepted an empty CPM cache entry for valijson" >&2
+            exit 1
+          fi
+          if ! grep -q "CPM source cache entry for valijson is empty" "${build}.log"; then
+            echo "configure failed, but not on the empty cache entry:" >&2
+            tail -20 "${build}.log" >&2
+            exit 1
+          fi
+          rmdir "${entry}"
+          mv "${entry}.full" "${entry}"
+          echo "ok: empty valijson cache entry refused"
+
       - name: Build the offline release tarball
         run: dev/packaging/make-release-tarball.sh --output-dir "${RUNNER_TEMP}/dist"
 
