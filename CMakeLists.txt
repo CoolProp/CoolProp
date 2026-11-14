@@ -492,6 +492,24 @@ list(APPEND APP_SOURCES ${SVD_SOURCES} ${REGION_SOURCES} ${SBTL_SOURCES} ${SVDSB
 
 # Add the miniz source file
 list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c")
+# miniz calls ftello/fseeko on x86_64 Linux, macOS and FreeBSD.  glibc declares
+# them only under a POSIX/large-file feature macro, and a strict -std=c99/c11
+# (a parent project that sets CMAKE_C_EXTENSIONS OFF, e.g.
+# dev/ci/cmake-consumer) turns off the implicit _DEFAULT_SOURCE.  GCC 14+ makes
+# the resulting implicit declaration a hard error.  _LARGEFILE_SOURCE declares
+# exactly those two functions and, unlike _POSIX_C_SOURCE, does not suppress
+# _DEFAULT_SOURCE in non-strict builds, so nothing else in miniz changes
+# (miniz's platform branch keys on __USE_LARGEFILE64, which this does not set).
+# macOS and FreeBSD declare both functions under -std=c99 anyway.  Not covered:
+# musl with a strict consumer, which hides fseeko unless _POSIX_C_SOURCE,
+# _XOPEN_SOURCE, _GNU_SOURCE or _BSD_SOURCE is set.  Do not edit the vendored
+# miniz.c for this.
+if(NOT MSVC)
+  set_property(
+    SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1/miniz.c"
+    APPEND
+    PROPERTY COMPILE_DEFINITIONS _LARGEFILE_SOURCE)
+endif()
 
 # For each enabled backend, grab its files
 foreach(backend ${COOLPROP_ENABLED_BACKENDS})
