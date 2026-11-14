@@ -21,14 +21,14 @@
 //   * Orders 3-4 first differed on arm64 / Apple clang -O3: 1-3 ulp at tau = 0.96 for the
 //     non-analytic fluids.  Rebuilding Helmholtz.cpp with -ffp-contract=off removed it, so FMA
 //     contraction was the mechanism there.  (That build is bit-exact again on all orders today.)
-//   * Order 2 first differed when GitHub's ubuntu-latest moved to ubuntu-26.04 (GCC 15.2,
-//     COO-182): 243 order-2 and 15 order-3/4 comparisons failed, across all five cases
-//     (orders 0 and 1 stayed bit-exact).  The
-//     worst order-3 point was Methane at tau = 0.78, delta = 0.35, relative 3.5e-14 on a value that
-//     cancels heavily.  The mechanism is NOT known.  The Release build there has no -march, so GCC
-//     cannot emit FMA; and the same compiler and flags in an amd64 ubuntu:26.04 container (under
-//     Rosetta) gave bit-exact agreement on every order, in this test alone and in the whole
-//     ~[slow] suite.
+//   * Order 2 first differed when GitHub's ubuntu-latest moved to ubuntu-26.04 (COO-182): 243
+//     order-2 and 15 order-3/4 comparisons failed, across all five cases; orders 0 and 1 stayed
+//     bit-exact.  The mechanism is FMA contraction again.  The runner image's GCC 15.2 defaults to
+//     -march=x86-64-v3, so -mfma is on and Helmholtz.cpp.o carries ~570 FMA instructions under
+//     GCC's default -ffp-contract=fast (gnu++17).  The gcc in a stock ubuntu:26.04 container, with
+//     the same version string, defaults to plain x86-64 (no FMA) and gives bit-exact agreement,
+//     which is why it did not reproduce there; adding -march=x86-64-v3 there reproduces it.  Measured on the runner (AMD EPYC 9V74) with the check below: worst
+//     scaled error 4.1e-15 (CarbonDioxide, order 2); worst distance ~700 ulp (orders 3-4).
 //
 // None of the callers need bit equality.  calc_alphar_deriv_nocache() and the density-root
 // residuals use all_deltaonly() for pressure and its delta-derivatives inside iterative solvers.
@@ -38,8 +38,8 @@
 // Why the floor 1e-3 * M.  A plain relative test has no fixed bound at a grid point where a
 // derivative passes close to zero, because there the value is a small difference of large terms
 // and its relative rounding error is unbounded.  The floor keeps the tolerance proportional to the
-// size of the terms in that field instead.  1e-12 is ~4500 ulp, about 30x above the worst order-3/4 measured
-// discrepancy.  A real formula change still fails by many orders: perturbing one coefficient in
+// size of the terms in that field instead.  1e-12 is ~4500 ulp, about 250x above the worst scaled
+// error measured on the ubuntu-26.04 runner.  A real formula change still fails by many orders: perturbing one coefficient in
 // all_deltaonly by 1e-7 relative fails 350 of 2865 assertions.  On failure the test captures the values,
 // their ulp distance and the scaled error, so rounding noise and a genuine regression are easy to
 // tell apart.
@@ -127,11 +127,6 @@ TEST_CASE("HEOS all_deltaonly agrees with full all() on the delta-derivatives", 
         // maximum across fields would be dominated by d4 (by 2 to 5 orders of magnitude here) and
         // would not notice alphar, d1, d2 or d3 collapsing.
         std::array<CoolPropDbl, 5> max_abs{};
-        // TEMPORARY (COO-182): per-field worst disagreement, reported below so the CI run on the real
-        // ubuntu-26.04 hardware records the numbers the header comment quotes.  Remove before merge.
-        // max_rel holds the scaled error used by the assertion, not the plain relative error.
-        std::array<std::uint64_t, 5> max_ulps{};
-        std::array<double, 5> max_rel{};
 
         // Pass 1: evaluate both paths over the grid.  The tolerance in pass 2 is scaled per field by
         // that field's largest magnitude on the grid, so it needs the whole grid first.
@@ -177,10 +172,6 @@ TEST_CASE("HEOS all_deltaonly agrees with full all() on the delta-derivatives", 
                 CAPTURE(c.fluids, pt.tau, pt.delta, names[q], g, r, ulps, err);
                 // Written as !(err > tol) would pass a NaN; this form fails it.
                 CHECK(err <= 1e-12);
-                if (std::isfinite(err)) {
-                    max_ulps[q] = std::max(max_ulps[q], ulps);
-                    max_rel[q] = std::max(max_rel[q], err);
-                }
             }
         }
         // Smallest per-field maximum measured over this grid is ~3e4 (Methane alphar), so 1e-12 is
@@ -188,8 +179,6 @@ TEST_CASE("HEOS all_deltaonly agrees with full all() on the delta-derivatives", 
         // field is zero at EVERY one of the 81 grid points, not at a subset.
         // Non-finite values need no check here -- all_delta_fields_finite() rejects them at every
         // grid point, and std::max keeps the old maximum when the candidate is NaN.
-        WARN("COO-182 " << c.fluids << " max ulp/rel by order: " << max_ulps[0] << "/" << max_rel[0] << " " << max_ulps[1] << "/" << max_rel[1] << " "
-                        << max_ulps[2] << "/" << max_rel[2] << " " << max_ulps[3] << "/" << max_rel[3] << " " << max_ulps[4] << "/" << max_rel[4]);
         for (std::size_t q = 0; q < 5; ++q) {
             CAPTURE(c.fluids, q, max_abs[q]);
             REQUIRE(max_abs[q] > 1e-12);

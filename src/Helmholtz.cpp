@@ -297,8 +297,9 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
 // identical), the delta-derivatives of u up to 4th order, the B_delta chain up to B_delta4, and the
 // alphar / dalphar_ddelta / d2alphar_ddelta2 / d3alphar_ddelta3 / d4alphar_ddelta4 accumulation +
 // scaling -- all expressions are term-for-term identical to all().  The results agree to rounding,
-// NOT bit-for-bit: two separately compiled bodies may round differently, and on the ubuntu-26.04
-// GitHub runners (GCC 15.2) they do, at order 2 as well (COO-182).  "HEOS all_deltaonly agrees
+// NOT bit-for-bit: two separately compiled bodies may contract a*b+c into FMAs differently, and on
+// the ubuntu-26.04 GitHub runners (GCC 15.2 defaulting to -march=x86-64-v3) they do, at order 2 as
+// well (COO-182).  "HEOS all_deltaonly agrees
 // with full all() on the delta-derivatives" in src/Tests/CoolProp-Tests-DeltaOnly.cpp holds the
 // line at 1e-12, scaled per field.  The tau/mixed fields of `derivs` are left untouched and must
 // not be read.
@@ -669,8 +670,9 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolProp
 // sub-ULP perturbation of an intermediate into the low mantissa bits near the critical point.
 // Historically, on arm64 (Apple clang -O3), they differed by 1 to 3 ULP at tau = 0.96 only, and
 // rebuilding THIS FILE with -ffp-contract=off made them bit-exact, which identified FMA contraction
-// as the mechanism there.  On the ubuntu-26.04 GitHub runners (GCC 15.2, COO-182) order 2 differs
-// too, for this term and for the generalized-exponential one; that mechanism is not known.
+// as the mechanism there.  On the ubuntu-26.04 GitHub runners (COO-182) order 2 differs too, for
+// this term and for the generalized-exponential one, by the same mechanism: that image's GCC 15.2
+// defaults to -march=x86-64-v3, so FMA contraction is on.
 // src/Tests/CoolProp-Tests-DeltaOnly.cpp records the bound.
 // The tau/mixed fields of `derivs` are left untouched and must not be read.
 void ResidualHelmholtzNonAnalytic::all_deltaonly(const CoolPropDbl& tau_in, const CoolPropDbl& delta_in, HelmholtzDerivatives& derivs) {

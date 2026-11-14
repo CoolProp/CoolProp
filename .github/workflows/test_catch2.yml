@@ -158,25 +158,6 @@ jobs:
         sudo locale-gen de_DE.UTF-8
         locale -a | grep -qi '^de_DE\.utf-\?8$'
 
-    # TEMPORARY (COO-182): record how Helmholtz.cpp was compiled on this runner, so the
-    # all_deltaonly/all() disagreement can be attributed.  Diagnostic only, never a gate.
-    # Remove before merge.
-    - name: COO-182 codegen diagnostics
-      continue-on-error: true
-      working-directory: ./build
-      shell: bash
-      run: |
-        set -x
-        gcc --version | head -1
-        gcc -Q --help=target | grep -E '^\s+-march=|^\s+-mfma ' || true
-        grep -h 'CXX_FLAGS\|CXX_DEFINES' CMakeFiles/CatchTestRunner.dir/flags.make || true
-        obj=CMakeFiles/CatchTestRunner.dir/src/Helmholtz.cpp.o
-        test -f "$obj" || echo "MISSING $obj (the FMA count below is meaningless)"
-        echo "vfmadd/vfmsub/vfnmadd count: $(objdump -d "$obj" | grep -cE 'vf(n)?m(add|sub)' || true)"
-        /lib64/ld-linux-x86-64.so.2 --list-diagnostics | grep -E 'isa_level|cpu_features.usable\.(FMA|AVX2|AVX512F)=' || true
-        grep -m1 'model name' /proc/cpuinfo || true
-        ./CatchTestRunner "[deltaonly]" || true
-
     # TODO: pick one style, for now I'm doing this so I can report zero new failures compared to catch1
     - name: Rerun failed Tests in CatchTestRunner directly
       # if: failure()
