@@ -83,6 +83,16 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
   `cmake/dependencies.cmake`) and do not reintroduce it.
 
+- **GitHub's ubuntu-26.04 image builds with FMA by default.**  Its GCC 15.2
+  reports `-march=x86-64-v3` / `-mfma [enabled]` with no flags passed, while
+  the `gcc` in a stock `ubuntu:26.04` Docker container (same `15.2.0-16ubuntu1`
+  version string) defaults to plain `x86-64`.  With GCC's default
+  `-ffp-contract=fast` (GNU dialects, which CoolProp builds with), any test that
+  compares two separately compiled code paths bit-for-bit can fail on CI and
+  pass in the container (COO-182: `all_deltaonly()` vs `all()`).  To
+  reproduce, add `-march=x86-64-v3` in the container; to diagnose, check
+  `gcc -Q --help=target | grep -E 'march|mfma'` and count `vfmadd` in the
+  object.  Compare such paths to a scaled tolerance, not bit-for-bit.
 - **Catch2 test names must not contain commas.**  A comma in a test spec
   is OR, so "Cubic T,P root choice" cannot be selected by name.  Write
   "TP", "P-input", etc.
