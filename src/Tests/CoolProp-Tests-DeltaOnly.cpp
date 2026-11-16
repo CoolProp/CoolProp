@@ -70,14 +70,12 @@ using namespace CoolProp;
 
 namespace {
 
-// The full storage of a value as bytes, so two values compare bit for bit.  Keyed on CoolPropDbl, not double: when
-// CoolPropDbl is long double, narrowing to double would hide a difference in the extended bits.  Used only where both
-// sides come from the SAME function at the same inputs (update_DmolarT_direct twice), which FMA contraction cannot
-// split (COO-182); a comparison of two different code paths must use the scaled-relative check instead.
-std::array<unsigned char, sizeof(CoolPropDbl)> bits_of(CoolPropDbl d) {
-    std::array<unsigned char, sizeof(CoolPropDbl)> u{};
-    std::memcpy(u.data(), &d, sizeof(CoolPropDbl));
-    return u;
+// Agreement to within a few ULP, relative to the larger magnitude.  For two evaluations of the same quantity at the same
+// inputs: an inlined and an out-of-line copy of the same code may still contract to FMA differently (COO-182), so the
+// check is not bit-exact.  A state whose cached fields belong to another density than the one it reports (e.g. the
+// iterate before the last solver step) is off by the relative size of that step, which this bound catches down to 1e-13.
+bool same_to_rounding(CoolPropDbl a, CoolPropDbl b) {
+    return std::isfinite(a) && std::isfinite(b) && std::abs(a - b) <= 1e-13 * std::max(std::abs(a), std::abs(b));
 }
 
 // Distance in units in the last place between two doubles, for the failure message only: the
@@ -255,15 +253,12 @@ TEST_CASE("Warm-started density solve leaves the state of update_DmolarT_direct 
                 REQUIRE(fresh_heos != nullptr);
                 fresh_heos->update_DmolarT_direct(rho, c.T);
                 CHECK(std::abs(fresh->p() / c.p - 1) < 1e-8);  // and it is a root
-                // Bit-exact on purpose: both states are written by update_DmolarT_direct at the same (T, rho, z), i.e.
-                // the same compiled code on the same inputs (see bits_of).
-                CHECK(std::isfinite(AS.p()));
-                CHECK(bits_of(AS.p()) == bits_of(fresh->p()));
+                // Both states are written by update_DmolarT_direct at the same (T, rho, z); see same_to_rounding.
+                CHECK(same_to_rounding(AS.p(), fresh->p()));
                 for (const auto& f : fields) {
                     CAPTURE(f.first);
                     const CoolPropDbl a = (AS.*f.second)(), b = ((*fresh).*f.second)();
-                    CHECK(std::isfinite(a));
-                    CHECK(bits_of(a) == bits_of(b));
+                    CHECK(same_to_rounding(a, b));
                 }
             };
             {  // update_TP_guessrho
