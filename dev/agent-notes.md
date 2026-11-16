@@ -224,7 +224,16 @@ recorded history of finished or abandoned work were dropped (they remain in
   p).  The TPD verdict on the ~100 K / 100s-of-MPa points is *marginal*: it
   flips between builds (R470A), so don't assert per-blend stable counts there
   (COO-155).  The N×N L*/M* formulation is general-N, but Air (ternary) yields
-  four stable points (COO-154), and natural gases take minutes.
+  four stable points (COO-154).
+- **`MixtureDerivatives` scalar chains nest O(N) sums** (#3560).  The
+  third-order composition derivatives (`n2Aijk` -> ... ->
+  `d2_ndalphardni_dxj_dxk`) each re-run a `sum_m x_m ...` that doesn't
+  depend on the outer index, so filling an N×N×N tensor from the scalars is
+  O(N^7): minutes for a 10-component natural gas.  Build whole arrays with
+  `nAij_matrix` / `n2Aijk_tensor` (each sub-term once); keep the scalars as
+  the test reference.  What remains is per-leaf: the GERG reducing
+  derivatives recompute rho_r(x), T_r(x) on every call.  Profile with a
+  RelWithDebInfo shared lib and `sample <pid>`: the pip wheel is stripped.
 
 ## Fluid data, superancillaries and transport
 

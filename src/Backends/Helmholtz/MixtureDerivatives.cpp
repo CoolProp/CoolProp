@@ -846,6 +846,204 @@ CoolPropDbl MixtureDerivatives::d3_ndalphardni_dxj_dxk_dDelta__consttau_xi(Helmh
     return term1 + term2 + term3;
 }
 
+Eigen::MatrixXd MixtureDerivatives::nAij_matrix(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag, parameters WRT) {
+    if (WRT != INVALID_PARAMETER && WRT != iTau && WRT != iDelta) {
+        throw ValueError(format("nAij_matrix: WRT must be INVALID_PARAMETER (no derivative), iTau or iDelta; got %d", static_cast<int>(WRT)));
+    }
+    const std::size_t N = HEOS.mole_fractions.size();
+    const std::size_t mmax = (xN_flag == XN_DEPENDENT) ? N - 1 : N;
+    const std::vector<CoolPropDbl>& x = HEOS.mole_fractions;
+    using vec_fn = CoolPropDbl (*)(HelmholtzEOSMixtureBackend&, std::size_t, x_N_dependency_flag);
+    using mat_fn = CoolPropDbl (*)(HelmholtzEOSMixtureBackend&, std::size_t, std::size_t, x_N_dependency_flag);
+    auto vec = [&](vec_fn f) {
+        Eigen::VectorXd v(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            v(i) = f(HEOS, i, xN_flag);
+        }
+        return v;
+    };
+    auto mat = [&](mat_fn f) {
+        Eigen::MatrixXd M(N, N);
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                M(i, j) = f(HEOS, i, j, xN_flag);
+            }
+        }
+        return M;
+    };
+
+    // All three variants have the shape
+    //   A(i,j) = s(i,j) + e(j) + sum a(i) b(j) + Q(i,j) - sum_k x_k Q(i,k)
+    // with s the Kronecker term, present only in the underived nAij (ndln_fugacity_i_dnj__constT_V_xi), e the
+    // j-only term, and the rest nd_ndalphardni_dnj__constT_V or its tau / delta derivative.
+    const Eigen::VectorXd ndtau = vec(ndtaudni__constT_V_nj), nddelta = vec(nddeltadni__constT_V_nj);
+    Eigen::VectorXd e;
+    Eigen::MatrixXd Q, ab;
+    if (WRT == INVALID_PARAMETER) {
+        e = vec(ndalphar_dni__constT_V_nj);
+        Q = mat(d_ndalphardni_dxj__constdelta_tau_xi);
+        ab = vec(d_ndalphardni_dDelta) * nddelta.transpose() + vec(d_ndalphardni_dTau) * ndtau.transpose();
+    } else if (WRT == iTau) {
+        const Eigen::VectorXd dA_dTau = vec(d_ndalphardni_dTau);
+        e = dA_dTau;
+        Q = mat(d2_ndalphardni_dxj_dTau__constdelta_xi);
+        ab = vec(d2_ndalphardni_dDelta_dTau) * nddelta.transpose() + vec(d2_ndalphardni_dTau2) * ndtau.transpose()
+             + dA_dTau * vec(d_ndtaudni_dTau).transpose();
+    } else {  // iDelta
+        const Eigen::VectorXd dA_dDelta = vec(d_ndalphardni_dDelta);
+        e = dA_dDelta;
+        Q = mat(d2_ndalphardni_dxj_dDelta__consttau_xi);
+        ab = vec(d2_ndalphardni_dDelta2) * nddelta.transpose() + dA_dDelta * vec(d_nddeltadni_dDelta).transpose()
+             + vec(d2_ndalphardni_dDelta_dTau) * ndtau.transpose();
+    }
+    Eigen::VectorXd SQ = Eigen::VectorXd::Zero(N);  // SQ(i) = sum_k x_k Q(i,k)
+    for (std::size_t k = 0; k < mmax; ++k) {
+        SQ += x[k] * Q.col(k);
+    }
+    Eigen::MatrixXd A(N, N);
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < N; ++j) {
+            double s = 0;
+            if (WRT == INVALID_PARAMETER && i == j && x[i] > DBL_EPSILON) {
+                s = 1 / x[i];
+            }
+            A(i, j) = s + e(j) + ab(i, j) + Q(i, j) - SQ(i);
+        }
+    }
+    return A;
+}
+
+std::vector<Eigen::MatrixXd> MixtureDerivatives::n2Aijk_tensor(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag, parameters WRT) {
+    if (WRT != INVALID_PARAMETER && WRT != iTau && WRT != iDelta) {
+        throw ValueError(format("n2Aijk_tensor: WRT must be INVALID_PARAMETER (no derivative), iTau or iDelta; got %d", static_cast<int>(WRT)));
+    }
+    const std::size_t N = HEOS.mole_fractions.size();
+    const std::size_t mmax = (xN_flag == XN_DEPENDENT) ? N - 1 : N;
+    const std::vector<CoolPropDbl>& x = HEOS.mole_fractions;
+
+    using vec_fn = CoolPropDbl (*)(HelmholtzEOSMixtureBackend&, std::size_t, x_N_dependency_flag);
+    using mat_fn = CoolPropDbl (*)(HelmholtzEOSMixtureBackend&, std::size_t, std::size_t, x_N_dependency_flag);
+    using ten_fn = CoolPropDbl (*)(HelmholtzEOSMixtureBackend&, std::size_t, std::size_t, std::size_t, x_N_dependency_flag);
+    auto vec = [&](vec_fn f) {
+        Eigen::VectorXd v(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            v(i) = f(HEOS, i, xN_flag);
+        }
+        return v;
+    };
+    auto mat = [&](mat_fn f) {
+        Eigen::MatrixXd M(N, N);
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                M(i, j) = f(HEOS, i, j, xN_flag);
+            }
+        }
+        return M;
+    };
+
+    // Each of the three nested levels has the same shape for the value and for its tau and delta derivatives,
+    // only the ingredients differ.  With C the innermost tensor (i,j,k), P the matching (i,k) matrix, and
+    // SC(i,k) = sum_m x_m C(i,m,k):
+    //   B(i,j,k) = sum a(i) D(j,k) + sum E(i,k) b(j) + C(i,j,k) - P(i,k) - SC(i,k)   [d_nd_ndalphardni_dnj_dxk & derivs]
+    //   G(i,j,k) = s(i,j,k) + P(j,k) + B(i,j,k)                                        [d_ndln_fugacity_i_dnj_ddxk & derivs]
+    //   T(i,j,k) = sum F(i,j) c(k) + G(i,j,k) - SG(i,j) - Fself(i,j)                  [n2Aijk & d_n2Aijk_dX]
+    // where s is the Kronecker term present only in the underived G, and SG(i,j) = sum_m x_m G(i,j,m).
+    struct VecMat
+    {
+        Eigen::VectorXd v;
+        Eigen::MatrixXd M;
+    };
+    std::vector<VecMat> a_D;  // a(i) * D(j,k)
+    std::vector<VecMat> b_E;  // E(i,k) * b(j)
+    std::vector<VecMat> c_F;  // F(i,j) * c(k)
+    Eigen::MatrixXd P, Fself;
+    ten_fn C_fn = nullptr;
+
+    const Eigen::VectorXd ndtau = vec(ndtaudni__constT_V_nj), nddelta = vec(nddeltadni__constT_V_nj);
+    const Eigen::MatrixXd D_delta = mat(d_nddeltadni_dxj__constdelta_tau), D_tau = mat(d_ndtaudni_dxj__constdelta_tau);
+    if (WRT == INVALID_PARAMETER) {
+        const Eigen::VectorXd dA_dDelta = vec(d_ndalphardni_dDelta), dA_dTau = vec(d_ndalphardni_dTau);
+        P = mat(d_ndalphardni_dxj__constdelta_tau_xi);
+        Fself = nAij_matrix(HEOS, xN_flag);
+        a_D = {{dA_dDelta, D_delta}, {dA_dTau, D_tau}};
+        b_E = {{nddelta, mat(d2_ndalphardni_dxj_dDelta__consttau_xi)}, {ndtau, mat(d2_ndalphardni_dxj_dTau__constdelta_xi)}};
+        c_F = {{ndtau, nAij_matrix(HEOS, xN_flag, iTau)}, {nddelta, nAij_matrix(HEOS, xN_flag, iDelta)}};
+        C_fn = d2_ndalphardni_dxj_dxk__constdelta_tau_xi;
+    } else if (WRT == iTau) {
+        const Eigen::VectorXd dA_dTau = vec(d_ndalphardni_dTau), d2A_dDelta_dTau = vec(d2_ndalphardni_dDelta_dTau),
+                              d2A_dTau2 = vec(d2_ndalphardni_dTau2), dndtau_dTau = vec(d_ndtaudni_dTau);
+        P = mat(d2_ndalphardni_dxj_dTau__constdelta_xi);
+        Fself = nAij_matrix(HEOS, xN_flag, iTau);
+        a_D = {{d2A_dDelta_dTau, D_delta}, {dA_dTau, mat(d2_ndtaudni_dxj_dTau__constdelta)}, {d2A_dTau2, D_tau}};
+        b_E = {{nddelta, mat(d3_ndalphardni_dxj_dDelta_dTau__constxi)}, {dndtau_dTau, P}, {ndtau, mat(d3_ndalphardni_dxj_dTau2__constdelta_xi)}};
+        c_F = {
+          {ndtau, mat(d2_ndln_fugacity_i_dnj_dtau2__constdelta_x)}, {dndtau_dTau, Fself}, {nddelta, mat(d2_ndln_fugacity_i_dnj_ddelta_dtau__constx)}};
+        C_fn = d3_ndalphardni_dxj_dxk_dTau__constdelta_xi;
+    } else {  // iDelta
+        const Eigen::VectorXd dA_dDelta = vec(d_ndalphardni_dDelta), d2A_dDelta2 = vec(d2_ndalphardni_dDelta2),
+                              d2A_dDelta_dTau = vec(d2_ndalphardni_dDelta_dTau), dnddelta_dDelta = vec(d_nddeltadni_dDelta);
+        P = mat(d2_ndalphardni_dxj_dDelta__consttau_xi);
+        Fself = nAij_matrix(HEOS, xN_flag, iDelta);
+        a_D = {{dA_dDelta, mat(d2_nddeltadni_dxj_dDelta__consttau)}, {d2A_dDelta2, D_delta}, {d2A_dDelta_dTau, D_tau}};
+        b_E = {{dnddelta_dDelta, P}, {nddelta, mat(d3_ndalphardni_dxj_dDelta2__consttau_xi)}, {ndtau, mat(d3_ndalphardni_dxj_dDelta_dTau__constxi)}};
+        c_F = {{ndtau, mat(d2_ndln_fugacity_i_dnj_ddelta_dtau__constx)},
+               {nddelta, mat(d2_ndln_fugacity_i_dnj_ddelta2__consttau_x)},
+               {dnddelta_dDelta, Fself}};
+        C_fn = d3_ndalphardni_dxj_dxk_dDelta__consttau_xi;
+    }
+
+    // Innermost tensor, stored as N matrices indexed [i](j,k); this is the only O(N^3) set of leaf evaluations
+    std::vector<Eigen::MatrixXd> C(N, Eigen::MatrixXd(N, N));
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < N; ++j) {
+            for (std::size_t k = 0; k < N; ++k) {
+                C[i](j, k) = C_fn(HEOS, i, j, k, xN_flag);
+            }
+        }
+    }
+    Eigen::MatrixXd SC = Eigen::MatrixXd::Zero(N, N);
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t m = 0; m < mmax; ++m) {
+            SC.row(i) += x[m] * C[i].row(m);
+        }
+    }
+
+    // G, stored as N matrices indexed [k](i,j) so that the result can be returned in the same layout
+    std::vector<Eigen::MatrixXd> G(N, Eigen::MatrixXd(N, N));
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < N; ++j) {
+            for (std::size_t k = 0; k < N; ++k) {
+                double B = 0;
+                for (const auto& t : a_D) {
+                    B += t.v(i) * t.M(j, k);
+                }
+                for (const auto& t : b_E) {
+                    B += t.M(i, k) * t.v(j);
+                }
+                B += C[i](j, k) - P(i, k) - SC(i, k);
+                double s = 0;
+                if (WRT == INVALID_PARAMETER && i == j && j == k && x[i] > DBL_EPSILON) {
+                    s = -1 / pow(x[i], 2);
+                }
+                G[k](i, j) = s + P(j, k) + B;
+            }
+        }
+    }
+    Eigen::MatrixXd SG = Eigen::MatrixXd::Zero(N, N);
+    for (std::size_t m = 0; m < mmax; ++m) {
+        SG += x[m] * G[m];
+    }
+
+    std::vector<Eigen::MatrixXd> T(N, Eigen::MatrixXd(N, N));
+    for (std::size_t k = 0; k < N; ++k) {
+        T[k] = G[k] - SG - Fself;
+        for (const auto& t : c_F) {
+            T[k] += t.v(k) * t.M;
+        }
+    }
+    return T;
+}
+
 CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
     // Reducing values are constant for all components under consideration
     double Tr = HEOS.T_reducing();
@@ -1749,6 +1947,173 @@ TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[m
     tol = 1e-3;  // Relax the tolerance a bit
     run_checks();
 };
+// n2Aijk_tensor / nAij_matrix re-associate the scalar n2Aijk / d_n2Aijk_dX / nAij / d_nAij_dX chains (GitHub #3560); the
+// scalar functions are the reference.  Sums are accumulated in a different order, so agreement is to rounding, not bit-exact.
+// Both share the leaf functions with the scalars, so leaf bugs are the job of the finite-difference [mixture_derivs2] tests.
+template <class backend>
+static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std::vector<CoolPropDbl>& z, double rhomolar, double T,
+                                x_N_dependency_flag xN) {
+    CAPTURE(xN);
+    backend HEOS(names);
+    HEOS.set_mole_fractions(z);
+    HEOS.specify_phase(CoolProp::iphase_gas);
+    HEOS.update_DmolarT_direct(rhomolar, T);
+    const std::size_t N = names.size();
+    const double rtol = 1e-12;
+    // Tolerance scale: the largest entry, because sums of large terms with cancellation set the rounding level.  The
+    // Kronecker-diagonal entries (1/x_i in nAij, -1/x_i^2 in n2Aijk) are excluded from it: for a trace component they are
+    // orders of magnitude larger than everything else and would let a wrong O(1) term through.  Those entries are checked
+    // against their own magnitude instead.
+    // The magnitude is taken from the reference, so it must be finite or an inf reference would pass its own check.
+    auto tol = [&](double scale_offdiag, double scalar, bool kronecker_entry) {
+        REQUIRE(std::isfinite(scalar));
+        return rtol * (kronecker_entry ? std::max(scale_offdiag, std::abs(scalar)) : scale_offdiag);
+    };
+    // T(i,i,k), k != i, carries +1/x_i (via -SG) and -1/x_i (via -Fself) that cancel, in a different order than in the
+    // scalar path; floor the n2Aijk scale at max_i 1/x_i so that rounding of that cancellation can't flake the check.
+    double inv_x_max = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        if (z[i] > DBL_EPSILON) {
+            inv_x_max = std::max(inv_x_max, 1.0 / static_cast<double>(z[i]));
+        }
+    }
+
+    for (parameters WRT : {INVALID_PARAMETER, iTau, iDelta}) {
+        CAPTURE(WRT);
+        const std::vector<Eigen::MatrixXd> tensor = MD::n2Aijk_tensor(HEOS, xN, WRT);
+        REQUIRE(tensor.size() == N);
+        double scale = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                for (std::size_t k = 0; k < N; ++k) {
+                    REQUIRE(std::isfinite(tensor[k](i, j)));
+                    if (!(WRT == INVALID_PARAMETER && i == j && j == k)) {
+                        scale = std::max(scale, std::abs(tensor[k](i, j)));
+                    }
+                }
+            }
+        }
+        REQUIRE(scale > 0);
+        if (WRT == INVALID_PARAMETER) {
+            scale = std::max(scale, inv_x_max);
+        }
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                for (std::size_t k = 0; k < N; ++k) {
+                    const double scalar = (WRT == INVALID_PARAMETER) ? MD::n2Aijk(HEOS, i, j, k, xN) : MD::d_n2Aijk_dX(HEOS, i, j, k, xN, WRT);
+                    const double t = tol(scale, scalar, WRT == INVALID_PARAMETER && i == j && j == k);
+                    CAPTURE(i, j, k, scalar, tensor[k](i, j), t);
+                    CHECK(std::abs(tensor[k](i, j) - scalar) <= t);
+                }
+            }
+        }
+    }
+    CHECK_THROWS(MD::n2Aijk_tensor(HEOS, xN, iT));
+
+    for (parameters WRT : {INVALID_PARAMETER, iTau, iDelta}) {
+        CAPTURE(WRT);
+        const Eigen::MatrixXd A = MD::nAij_matrix(HEOS, xN, WRT);
+        REQUIRE(A.rows() == static_cast<Eigen::Index>(N));
+        REQUIRE(A.cols() == static_cast<Eigen::Index>(N));
+        REQUIRE(A.allFinite());
+        double scale = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                if (!(WRT == INVALID_PARAMETER && i == j)) {
+                    scale = std::max(scale, std::abs(A(i, j)));
+                }
+            }
+        }
+        REQUIRE(scale > 0);
+        // Lstar / dLstar_dX are the upper triangle of this matrix, mirrored
+        const Eigen::MatrixXd L_or_dL = (WRT == INVALID_PARAMETER) ? MD::Lstar(HEOS, xN) : MD::dLstar_dX(HEOS, xN, WRT);
+        REQUIRE(L_or_dL.allFinite());
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                const bool kron = (WRT == INVALID_PARAMETER && i == j);
+                const double scalar = (WRT == INVALID_PARAMETER) ? MD::nAij(HEOS, i, j, xN) : MD::d_nAij_dX(HEOS, i, j, xN, WRT);
+                CAPTURE(i, j, scalar, A(i, j));
+                CHECK(std::abs(A(i, j) - scalar) <= tol(scale, scalar, kron));
+                const std::size_t r = std::min(i, j), c = std::max(i, j);
+                const double upper = (WRT == INVALID_PARAMETER) ? MD::nAij(HEOS, r, c, xN) : MD::d_nAij_dX(HEOS, r, c, xN, WRT);
+                CAPTURE(upper, L_or_dL(i, j));
+                CHECK(std::abs(L_or_dL(i, j) - upper) <= tol(scale, upper, kron));
+            }
+        }
+    }
+    CHECK_THROWS(MD::nAij_matrix(HEOS, xN, iT));
+    CHECK_THROWS(MD::dLstar_dX(HEOS, xN, INVALID_PARAMETER));
+
+    // Mstar and dMstar_dX against the same matrices assembled from the scalar functions, which pins down the index mapping
+    auto close = [](const Eigen::MatrixXd& a, const Eigen::MatrixXd& ref) {
+        // allFinite first: Eigen's maxCoeff need not propagate NaN, so a NaN entry could otherwise pass
+        return a.allFinite() && ref.allFinite() && (a - ref).cwiseAbs().maxCoeff() <= 1e-10 * ref.cwiseAbs().maxCoeff();
+    };
+    Eigen::MatrixXd L = MD::Lstar(HEOS, xN);
+    Eigen::MatrixXd M_ref = L, adjL = adjugate(L);
+    for (std::size_t i = 0; i < N; ++i) {
+        Eigen::MatrixXd n2dLdni(N, N);
+        for (std::size_t j = 0; j < N; ++j) {
+            for (std::size_t k = 0; k < N; ++k) {
+                n2dLdni(j, k) = MD::n2Aijk(HEOS, j, k, i, xN);
+            }
+        }
+        M_ref(N - 1, i) = (adjL * n2dLdni).trace();
+    }
+    const Eigen::MatrixXd M = MD::Mstar(HEOS, xN, L);
+    CAPTURE(M, M_ref);
+    CHECK(close(M, M_ref));
+
+    for (parameters WRT : {iTau, iDelta}) {
+        CAPTURE(WRT);
+        Eigen::MatrixXd dL = MD::dLstar_dX(HEOS, xN, WRT);
+        Eigen::MatrixXd dM_ref = dL, d_adjL = adjugate_derivative(L, dL);
+        for (std::size_t i = 0; i < N; ++i) {
+            Eigen::MatrixXd n2dLdni(N, N), d_n2dLdni(N, N);
+            for (std::size_t j = 0; j < N; ++j) {
+                for (std::size_t k = 0; k < N; ++k) {
+                    n2dLdni(j, k) = MD::n2Aijk(HEOS, j, k, i, xN);
+                    d_n2dLdni(j, k) = MD::d_n2Aijk_dX(HEOS, j, k, i, xN, WRT);
+                }
+            }
+            dM_ref(N - 1, i) = (n2dLdni * d_adjL + adjL * d_n2dLdni).trace();
+        }
+        const Eigen::MatrixXd dM = MD::dMstar_dX(HEOS, xN, WRT, L, dL);
+        CAPTURE(dM, dM_ref);
+        CHECK(close(dM, dM_ref));
+    }
+}
+
+TEST_CASE("nAij_matrix and n2Aijk_tensor match the scalar nAij, n2Aijk and their tau/delta derivatives", "[n2Aijk_tensor]") {
+    const std::vector<std::string> four = {"n-Pentane", "Ethane", "n-Propane", "n-Butane"};
+    const std::vector<CoolPropDbl> z4 = {0.1, 0.12, 0.18, 0.6};
+    // Lstar/Mstar criticality uses XN_INDEPENDENT only.  XN_DEPENDENT exercises the mmax = N-1 sums of the new functions;
+    // HEOS is run with XN_INDEPENDENT only because its fourth-order d4alphar_dxi_* leaves (reached by the tau/delta
+    // variants) throw "xN_flag is invalid", scalar path included.  The cubics' constant reducing function makes the
+    // m = N-1 summands of the inner sums vanish, so this pins mmax for the outer sum (SG) only; the inner ones (SQ, SC)
+    // cannot change a result under the dependent-x convention, where derivatives with respect to x_{N-1} are zero.
+    for (x_N_dependency_flag xN : {XN_INDEPENDENT, XN_DEPENDENT}) {
+        if (xN == XN_INDEPENDENT) {
+            DYNAMIC_SECTION("HEOS, 4 components, xN=" << xN) {
+                check_n2Aijk_tensor<HelmholtzEOSMixtureBackend>(four, z4, 300, 300, xN);
+            }
+            DYNAMIC_SECTION("HEOS, 6-component natural gas with trace components (#3560), xN=" << xN) {
+                // A subset of TypicalNaturalGas.mix keeping trace species, where the 1/x_i^2 Kronecker term is large.  Not all
+                // 10 components: the scalar reference is O(N^7) and would dominate the test time (and time out under ASAN).
+                const std::vector<std::string> ng = {"Methane", "Nitrogen", "CO2", "Ethane", "n-Pentane", "n-Hexane"};
+                const std::vector<CoolPropDbl> zng = {0.95123 + 0.00238 + 0.0004 + 0.00016 + 0.00014, 0.00089, 0.02555, 0.01835, 0.00011, 0.00079};
+                check_n2Aijk_tensor<HelmholtzEOSMixtureBackend>(ng, zng, 8000, 200, xN);
+            }
+        }
+        DYNAMIC_SECTION("Peng-Robinson, 4 components, xN=" << xN) {
+            check_n2Aijk_tensor<PengRobinsonBackend>(four, z4, 300, 300, xN);
+        }
+        DYNAMIC_SECTION("SRK, 4 components, xN=" << xN) {
+            check_n2Aijk_tensor<SRKBackend>(four, z4, 300, 300, xN);
+        }
+    }
+}
+
 // Make sure you set the VTPR UNIFAC path with something like set_config_string(VTPR_UNIFAC_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
 //TEST_CASE_METHOD(DerivativeFixture<VTPRBackend>, "Check derivatives for VTPR", "[mixture_derivs2]")
 //{
