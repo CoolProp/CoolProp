@@ -48,7 +48,6 @@ for fname in glob.glob('../fluids/*.json'):
         jj['INFO']['INCHI_STRING'] = getattr(result, 'stdinchi', None) or result.inchi
         jj['INFO']['INCHI_KEY'] = hit_key
         jj['INFO']['CHEMSPIDER_ID'] = result.csid
-        jj['INFO']['2DPNG_URL'] = result.image_url
         jj['INFO']['SMILES'] = result.smiles
         return True
 

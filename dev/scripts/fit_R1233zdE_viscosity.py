@@ -112,7 +112,7 @@ def probe(C, rhosr_critical):
     fluid["INFO"]["ALIASES"] = []
     fluid["INFO"]["CAS"] = "999-00-{0}".format(probe.counter)
     fluid["INFO"]["REFPROP_NAME"] = "N/A"
-    for key in ("INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"):
+    for key in ("INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID"):
         fluid["INFO"].pop(key, None)
     fluid["TRANSPORT"]["viscosity"]["C"] = C
     fluid["TRANSPORT"]["viscosity"]["rhosr_critical"] = rhosr_critical
