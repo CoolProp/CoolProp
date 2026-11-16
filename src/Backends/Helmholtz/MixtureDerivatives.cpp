@@ -1947,40 +1947,50 @@ TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[m
     tol = 1e-3;  // Relax the tolerance a bit
     run_checks();
 };
-// n2Aijk_tensor is a re-association of the scalar n2Aijk / d_n2Aijk_dX chain (GitHub #3560); the scalar functions are the
-// reference.  Sums are accumulated in a different order, so agreement is to rounding, not bit-exact.
+// n2Aijk_tensor / nAij_matrix re-associate the scalar n2Aijk / d_n2Aijk_dX / nAij / d_nAij_dX chains (GitHub #3560); the
+// scalar functions are the reference.  Sums are accumulated in a different order, so agreement is to rounding, not bit-exact.
+// Both share the leaf functions with the scalars, so leaf bugs are the job of the finite-difference [mixture_derivs2] tests.
 template <class backend>
-static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std::vector<CoolPropDbl>& z, double rhomolar, double T) {
+static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std::vector<CoolPropDbl>& z, double rhomolar, double T,
+                                x_N_dependency_flag xN) {
+    CAPTURE(xN);
     backend HEOS(names);
     HEOS.set_mole_fractions(z);
     HEOS.specify_phase(CoolProp::iphase_gas);
     HEOS.update_DmolarT_direct(rhomolar, T);
     const std::size_t N = names.size();
-    const x_N_dependency_flag xN = XN_INDEPENDENT;  // the only flag the Lstar/Mstar criticality code uses
     const double rtol = 1e-12;
-    // Scale for the comparison: the largest entry, since sums of large terms with cancellation set the rounding level
-    auto maxabs = [](const std::vector<Eigen::MatrixXd>& T) {
-        double m = 0;
-        for (const auto& Tk : T) {
-            m = std::max(m, Tk.cwiseAbs().maxCoeff());
-        }
-        return m;
+    // Tolerance scale: the largest entry, because sums of large terms with cancellation set the rounding level.  The
+    // Kronecker-diagonal entries (1/x_i in nAij, -1/x_i^2 in n2Aijk) are excluded from it: for a trace component they are
+    // orders of magnitude larger than everything else and would let a wrong O(1) term through.  Those entries are checked
+    // against their own magnitude instead.
+    auto tol = [&](double scale_offdiag, double scalar, bool kronecker_entry) {
+        return rtol * (kronecker_entry ? std::max(scale_offdiag, std::abs(scalar)) : scale_offdiag);
     };
 
     for (parameters WRT : {INVALID_PARAMETER, iTau, iDelta}) {
         CAPTURE(WRT);
         const std::vector<Eigen::MatrixXd> tensor = MD::n2Aijk_tensor(HEOS, xN, WRT);
         REQUIRE(tensor.size() == N);
-        const double scale = maxabs(tensor);
-        REQUIRE(std::isfinite(scale));
+        double scale = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            for (std::size_t j = 0; j < N; ++j) {
+                for (std::size_t k = 0; k < N; ++k) {
+                    REQUIRE(std::isfinite(tensor[k](i, j)));
+                    if (!(WRT == INVALID_PARAMETER && i == j && j == k)) {
+                        scale = std::max(scale, std::abs(tensor[k](i, j)));
+                    }
+                }
+            }
+        }
         REQUIRE(scale > 0);
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 for (std::size_t k = 0; k < N; ++k) {
                     const double scalar = (WRT == INVALID_PARAMETER) ? MD::n2Aijk(HEOS, i, j, k, xN) : MD::d_n2Aijk_dX(HEOS, i, j, k, xN, WRT);
-                    CAPTURE(i, j, k, scalar, tensor[k](i, j), scale);
-                    CHECK(std::isfinite(tensor[k](i, j)));
-                    CHECK(std::abs(tensor[k](i, j) - scalar) <= rtol * scale);
+                    const double t = tol(scale, scalar, WRT == INVALID_PARAMETER && i == j && j == k);
+                    CAPTURE(i, j, k, scalar, tensor[k](i, j), t);
+                    CHECK(std::abs(tensor[k](i, j) - scalar) <= t);
                 }
             }
         }
@@ -1992,24 +2002,29 @@ static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std
         const Eigen::MatrixXd A = MD::nAij_matrix(HEOS, xN, WRT);
         REQUIRE(A.rows() == static_cast<Eigen::Index>(N));
         REQUIRE(A.cols() == static_cast<Eigen::Index>(N));
-        const double scale = A.cwiseAbs().maxCoeff();
-        REQUIRE(std::isfinite(scale));
-        REQUIRE(scale > 0);
+        REQUIRE(A.allFinite());
+        double scale = 0;
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
-                const double scalar = (WRT == INVALID_PARAMETER) ? MD::nAij(HEOS, i, j, xN) : MD::d_nAij_dX(HEOS, i, j, xN, WRT);
-                CAPTURE(i, j, scalar, A(i, j), scale);
-                CHECK(std::abs(A(i, j) - scalar) <= rtol * scale);
+                if (!(WRT == INVALID_PARAMETER && i == j)) {
+                    scale = std::max(scale, std::abs(A(i, j)));
+                }
             }
         }
+        REQUIRE(scale > 0);
         // Lstar / dLstar_dX are the upper triangle of this matrix, mirrored
         const Eigen::MatrixXd L_or_dL = (WRT == INVALID_PARAMETER) ? MD::Lstar(HEOS, xN) : MD::dLstar_dX(HEOS, xN, WRT);
+        REQUIRE(L_or_dL.allFinite());
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
+                const bool kron = (WRT == INVALID_PARAMETER && i == j);
+                const double scalar = (WRT == INVALID_PARAMETER) ? MD::nAij(HEOS, i, j, xN) : MD::d_nAij_dX(HEOS, i, j, xN, WRT);
+                CAPTURE(i, j, scalar, A(i, j));
+                CHECK(std::abs(A(i, j) - scalar) <= tol(scale, scalar, kron));
                 const std::size_t r = std::min(i, j), c = std::max(i, j);
-                const double scalar = (WRT == INVALID_PARAMETER) ? MD::nAij(HEOS, r, c, xN) : MD::d_nAij_dX(HEOS, r, c, xN, WRT);
-                CAPTURE(i, j, scalar, L_or_dL(i, j));
-                CHECK(std::abs(L_or_dL(i, j) - scalar) <= rtol * scale);
+                const double upper = (WRT == INVALID_PARAMETER) ? MD::nAij(HEOS, r, c, xN) : MD::d_nAij_dX(HEOS, r, c, xN, WRT);
+                CAPTURE(upper, L_or_dL(i, j));
+                CHECK(std::abs(L_or_dL(i, j) - upper) <= tol(scale, upper, kron));
             }
         }
     }
@@ -2017,6 +2032,10 @@ static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std
     CHECK_THROWS(MD::dLstar_dX(HEOS, xN, INVALID_PARAMETER));
 
     // Mstar and dMstar_dX against the same matrices assembled from the scalar functions, which pins down the index mapping
+    auto close = [](const Eigen::MatrixXd& a, const Eigen::MatrixXd& ref) {
+        // allFinite first: Eigen's maxCoeff need not propagate NaN, so a NaN entry could otherwise pass
+        return a.allFinite() && ref.allFinite() && (a - ref).cwiseAbs().maxCoeff() <= 1e-10 * ref.cwiseAbs().maxCoeff();
+    };
     Eigen::MatrixXd L = MD::Lstar(HEOS, xN);
     Eigen::MatrixXd M_ref = L, adjL = adjugate(L);
     for (std::size_t i = 0; i < N; ++i) {
@@ -2030,7 +2049,7 @@ static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std
     }
     const Eigen::MatrixXd M = MD::Mstar(HEOS, xN, L);
     CAPTURE(M, M_ref);
-    CHECK((M - M_ref).cwiseAbs().maxCoeff() <= 1e-10 * M_ref.cwiseAbs().maxCoeff());
+    CHECK(close(M, M_ref));
 
     for (parameters WRT : {iTau, iDelta}) {
         CAPTURE(WRT);
@@ -2048,28 +2067,34 @@ static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std
         }
         const Eigen::MatrixXd dM = MD::dMstar_dX(HEOS, xN, WRT, L, dL);
         CAPTURE(dM, dM_ref);
-        CHECK((dM - dM_ref).cwiseAbs().maxCoeff() <= 1e-10 * dM_ref.cwiseAbs().maxCoeff());
+        CHECK(close(dM, dM_ref));
     }
 }
 
 TEST_CASE("nAij_matrix and n2Aijk_tensor match the scalar nAij, n2Aijk and their tau/delta derivatives", "[n2Aijk_tensor]") {
     const std::vector<std::string> four = {"n-Pentane", "Ethane", "n-Propane", "n-Butane"};
     const std::vector<CoolPropDbl> z4 = {0.1, 0.12, 0.18, 0.6};
-    SECTION("HEOS, 4 components") {
-        check_n2Aijk_tensor<HelmholtzEOSMixtureBackend>(four, z4, 300, 300);
-    }
-    SECTION("Peng-Robinson, 4 components") {
-        check_n2Aijk_tensor<PengRobinsonBackend>(four, z4, 300, 300);
-    }
-    SECTION("SRK, 4 components") {
-        check_n2Aijk_tensor<SRKBackend>(four, z4, 300, 300);
-    }
-    SECTION("HEOS, 6-component natural gas with trace components (#3560)") {
-        // A subset of TypicalNaturalGas.mix keeping trace species, where the 1/x_i^2 Kronecker term is large.  Not all
-        // 10 components: the scalar reference is O(N^7) and would dominate the test time (and time out under ASAN).
-        const std::vector<std::string> ng = {"Methane", "Nitrogen", "CO2", "Ethane", "n-Pentane", "n-Hexane"};
-        const std::vector<CoolPropDbl> zng = {0.95123 + 0.00238 + 0.0004 + 0.00016 + 0.00014, 0.00089, 0.02555, 0.01835, 0.00011, 0.00079};
-        check_n2Aijk_tensor<HelmholtzEOSMixtureBackend>(ng, zng, 8000, 200);
+    // Lstar/Mstar criticality uses XN_INDEPENDENT only.  XN_DEPENDENT exercises the mmax = N-1 sums of the new functions;
+    // only the cubic leaves support it (the HEOS residual leaves throw "xN_flag is invalid", scalar path included).
+    for (x_N_dependency_flag xN : {XN_INDEPENDENT, XN_DEPENDENT}) {
+        if (xN == XN_INDEPENDENT) {
+            DYNAMIC_SECTION("HEOS, 4 components, xN=" << xN) {
+                check_n2Aijk_tensor<HelmholtzEOSMixtureBackend>(four, z4, 300, 300, xN);
+            }
+            DYNAMIC_SECTION("HEOS, 6-component natural gas with trace components (#3560), xN=" << xN) {
+                // A subset of TypicalNaturalGas.mix keeping trace species, where the 1/x_i^2 Kronecker term is large.  Not all
+                // 10 components: the scalar reference is O(N^7) and would dominate the test time (and time out under ASAN).
+                const std::vector<std::string> ng = {"Methane", "Nitrogen", "CO2", "Ethane", "n-Pentane", "n-Hexane"};
+                const std::vector<CoolPropDbl> zng = {0.95123 + 0.00238 + 0.0004 + 0.00016 + 0.00014, 0.00089, 0.02555, 0.01835, 0.00011, 0.00079};
+                check_n2Aijk_tensor<HelmholtzEOSMixtureBackend>(ng, zng, 8000, 200, xN);
+            }
+        }
+        DYNAMIC_SECTION("Peng-Robinson, 4 components, xN=" << xN) {
+            check_n2Aijk_tensor<PengRobinsonBackend>(four, z4, 300, 300, xN);
+        }
+        DYNAMIC_SECTION("SRK, 4 components, xN=" << xN) {
+            check_n2Aijk_tensor<SRKBackend>(four, z4, 300, 300, xN);
+        }
     }
 }
 
