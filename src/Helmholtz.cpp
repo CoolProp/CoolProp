@@ -296,12 +296,13 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
 // tau-derivative and mixed term removed: the u-value (all six contributions, so ndteu is
 // identical), the delta-derivatives of u up to 4th order, the B_delta chain up to B_delta4, and the
 // alphar / dalphar_ddelta / d2alphar_ddelta2 / d3alphar_ddelta3 / d4alphar_ddelta4 accumulation +
-// scaling -- all expressions are term-for-term identical to all().  For this term the five
-// populated delta-fields come out bit-for-bit equal on every platform measured; that is not
-// guaranteed by the language (see ResidualHelmholtzNonAnalytic::all_deltaonly below, where it does
-// not hold), so "HEOS all_deltaonly agrees with full all() on the delta-derivatives" in
-// src/Tests/CoolProp-Tests-DeltaOnly.cpp is what actually holds the line.  The tau/mixed fields of
-// `derivs` are left untouched and must not be read.
+// scaling -- all expressions are term-for-term identical to all().  The results agree to rounding,
+// NOT bit-for-bit: two separately compiled bodies may contract a*b+c into FMAs differently, and on
+// the ubuntu-26.04 GitHub runners (GCC 15.2 defaulting to -march=x86-64-v3) they do, at order 2 as
+// well (COO-182).  "HEOS all_deltaonly agrees
+// with full all() on the delta-derivatives" in src/Tests/CoolProp-Tests-DeltaOnly.cpp holds the
+// line at 1e-12, scaled per field.  The tau/mixed fields of `derivs` are left untouched and must
+// not be read.
 void ResidualHelmholtzGeneralizedExponential::all_deltaonly(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     if (!finished) finish();
 
@@ -663,14 +664,16 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolProp
 // Delta-only (<=4) evaluation used by the density-root residuals (see BaseHelmholtzTerm::all_deltaonly).
 // This is all() with every tau-derivative and mixed term removed: the same critical-point guard, the
 // delta-derivatives of theta / PSI / DELTA / DELTA^bi, and the five delta-accumulations of alphar --
-// each expression copied verbatim from all().  alphar / dalphar_ddelta / d2alphar_ddelta2 come out
-// bit-for-bit equal to all(); d3alphar_ddelta3 and d4alphar_ddelta4 do NOT, and must not be assumed
-// to.  This is a separate function, so the compiler may fuse a*b+c into an FMA here and not there
-// (or vice versa), and those two accumulations divide by DELTA^2 / DELTA^3, which amplifies a
+// each expression copied verbatim from all().  The five delta-fields agree with all() to rounding and
+// must not be assumed bit-for-bit equal: this is a separate function, so the compiler may round it
+// differently.  d3alphar_ddelta3 and d4alphar_ddelta4 divide by DELTA^2 / DELTA^3, which amplifies a
 // sub-ULP perturbation of an intermediate into the low mantissa bits near the critical point.
-// Measured on arm64 (Apple clang -O3): 1 to 3 ULP, at tau = 0.96 only; rebuilding THIS FILE alone
-// with -ffp-contract=off makes all five bit-exact again, which is what identifies contraction as
-// the mechanism.  src/Tests/CoolProp-Tests-DeltaOnly.cpp records the bound.
+// Historically, on arm64 (Apple clang -O3), they differed by 1 to 3 ULP at tau = 0.96 only, and
+// rebuilding THIS FILE with -ffp-contract=off made them bit-exact, which identified FMA contraction
+// as the mechanism there.  On the ubuntu-26.04 GitHub runners (COO-182) order 2 differs too, for
+// this term and for the generalized-exponential one, by the same mechanism: that image's GCC 15.2
+// defaults to -march=x86-64-v3, so FMA contraction is on.
+// src/Tests/CoolProp-Tests-DeltaOnly.cpp records the bound.
 // The tau/mixed fields of `derivs` are left untouched and must not be read.
 void ResidualHelmholtzNonAnalytic::all_deltaonly(const CoolPropDbl& tau_in, const CoolPropDbl& delta_in, HelmholtzDerivatives& derivs) {
     if (N == 0) {
