@@ -699,9 +699,6 @@ jobs:
         shell: bash
         continue-on-error: true
         run: |
-          # Without the cfg cppcheck aborts before analysing anything, and the
-          # `|| true` below would hide that; fail the step visibly instead.
-          test -f dev/ci/cppcheck/catch2.cfg
           cppcheck \
             --std=c++17 \
             --library=dev/ci/cppcheck/catch2.cfg \
@@ -718,6 +715,12 @@ jobs:
             --force \
             ./src \
             3>&1 1>&2 2>&3 | tee cppcheck.txt || true
+          # A missing or malformed cfg makes cppcheck abort before analysing
+          # anything, which `|| true` would hide; fail the step visibly instead.
+          if grep -q failedToLoadCfg cppcheck.txt; then
+            echo "::error::cppcheck could not load dev/ci/cppcheck/catch2.cfg"
+            exit 1
+          fi
 
       - name: Parse and colorize cppcheck
         if: ${{ always() }}
