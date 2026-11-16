@@ -3985,13 +3985,12 @@
     }
   ],
   "INFO": {
-    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=9219",
     "ALIASES": [
       "C4F10",
       "n-Perfluorobutane"
     ],
     "CAS": "355-25-9",
-    "CHEMSPIDER_ID": 9219,
+    "CHEMSPIDER_ID": 13862701,
     "ENVIRONMENTAL": {
       "ASHRAE34": "?",
       "FH": 99999999,
@@ -4004,8 +4003,8 @@
       "PH": -999999
     },
     "FORMULA": "C4F10",
-    "INCHI_KEY": "SLOLNCFHRLPENK-UHFFFAOYSA-N",
-    "INCHI_STRING": "InChI=1S/C4F10/c5-1(6,2(7,8)3(9,10)11)4(12,13)14",
+    "INCHI_KEY": "KAVGMUDTWQVPDF-UHFFFAOYSA-N",
+    "INCHI_STRING": "InChI=1S/C4F10/c5-1(6,3(9,10)11)2(7,8)4(12,13)14",
     "NAME": "n-Perfluorobutane",
     "REFPROP_NAME": "C4F10",
     "SMILES": "FC(F)(F)C(F)(F)C(F)(F)C(F)(F)F"

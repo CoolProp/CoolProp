@@ -3831,7 +3831,6 @@
     }
   ],
   "INFO": {
-    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=638",
     "ALIASES": [
       "trans-1,2-dichloroethene",
       "trans-12-dichloroethene",
@@ -3839,7 +3838,7 @@
       "R-1130(E)"
     ],
     "CAS": "156-60-5",
-    "CHEMSPIDER_ID": 638,
+    "CHEMSPIDER_ID": 553742,
     "ENVIRONMENTAL": {
       "ASHRAE34": "?",
       "FH": 99999999,

@@ -223,11 +223,12 @@ class MixtureDerivatives
     }
     static Eigen::MatrixXd Lstar(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag) {
         std::size_t N = HEOS.mole_fractions.size();
+        const Eigen::MatrixXd nA = nAij_matrix(HEOS, xN_flag);
         Eigen::MatrixXd L;
         L.resize(N, N);
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = i; j < N; ++j) {
-                L(i, j) = nAij(HEOS, i, j, xN_flag);
+                L(i, j) = nA(i, j);  // nAij(HEOS, i, j, xN_flag)
             }
         }
         // Fill in the symmetric elements
@@ -241,10 +242,14 @@ class MixtureDerivatives
     static Eigen::MatrixXd dLstar_dX(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag, parameters WRT) {
 
         std::size_t N = HEOS.mole_fractions.size();
+        if (WRT != iTau && WRT != iDelta) {
+            throw ValueError(format("dLstar_dX: WRT must be iTau or iDelta"));
+        }
+        const Eigen::MatrixXd d_nA_dX = nAij_matrix(HEOS, xN_flag, WRT);
         Eigen::MatrixXd dLstar_dX(N, N);
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = i; j < N; ++j) {
-                dLstar_dX(i, j) = d_nAij_dX(HEOS, i, j, xN_flag, WRT);
+                dLstar_dX(i, j) = d_nA_dX(i, j);  // d_nAij_dX(HEOS, i, j, xN_flag, WRT)
             }
         }
         // Fill in the symmetric elements
@@ -276,17 +281,40 @@ class MixtureDerivatives
         }
         return d2Lstar_dX2;
     }
+    /** \brief All of nAij(i,j) at the current state, or all of its derivative with respect to tau or delta
+     *
+     * Returns the N x N matrix of nAij(HEOS,i,j,xN_flag) when WRT is INVALID_PARAMETER (the default), or of
+     * d_nAij_dX(HEOS,i,j,xN_flag,WRT) when WRT is iTau or iDelta.  Same terms as the scalar functions, but the sum
+     * over components inside nd_ndalphardni_dnj (and its tau and delta derivatives) is evaluated once per row
+     * instead of once per entry (GitHub #3560).
+     */
+    static Eigen::MatrixXd nAij_matrix(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag, parameters WRT = INVALID_PARAMETER);
+
+    /** \brief All of n2Aijk(i,j,k) at the current state, or all of its derivative with respect to tau or delta
+     *
+     * Returns N matrices T with T[k](i,j) equal to n2Aijk(HEOS,i,j,k,xN_flag) when WRT is INVALID_PARAMETER (the default),
+     * or to d_n2Aijk_dX(HEOS,i,j,k,xN_flag,WRT) when WRT is iTau or iDelta.
+     *
+     * Same terms as the scalar functions, but each distinct sub-term is evaluated once.  The scalar chain
+     * n2Aijk -> nd_ndln_fugacity_i_dnj_dnk -> d_nd_ndalphardni_dnj_dxk -> d2_ndalphardni_dxj_dxk re-runs a
+     * sum over the components at every level, so filling Mstar from it costs O(N^7), which made the
+     * critical-point tracer take minutes for a 10-component natural gas (GitHub #3560).
+     */
+    static std::vector<Eigen::MatrixXd> n2Aijk_tensor(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag,
+                                                      parameters WRT = INVALID_PARAMETER);
+
     static Eigen::MatrixXd Mstar(HelmholtzEOSMixtureBackend& HEOS, x_N_dependency_flag xN_flag, Eigen::MatrixXd& L) {
 
         std::size_t N = HEOS.mole_fractions.size();
         Eigen::MatrixXd M = L, adjL = adjugate(L);
+        const std::vector<Eigen::MatrixXd> n2A = n2Aijk_tensor(HEOS, xN_flag);
 
         // Last row
         for (std::size_t i = 0; i < N; ++i) {
             Eigen::MatrixXd n2dLdni(N, N);
             for (std::size_t j = 0; j < N; ++j) {
                 for (std::size_t k = j; k < N; ++k) {
-                    n2dLdni(j, k) = n2Aijk(HEOS, j, k, i, xN_flag);
+                    n2dLdni(j, k) = n2A[i](j, k);  // n2Aijk(HEOS, j, k, i, xN_flag)
                     // Fill in the symmetric elements
                     n2dLdni(k, j) = n2dLdni(j, k);
                 }
@@ -300,14 +328,15 @@ class MixtureDerivatives
 
         std::size_t N = HEOS.mole_fractions.size();
         Eigen::MatrixXd dMstar = dL_dX, adjL = adjugate(L), d_adjL_dX = adjugate_derivative(L, dL_dX);
+        const std::vector<Eigen::MatrixXd> n2A = n2Aijk_tensor(HEOS, xN_flag), d_n2A_dX = n2Aijk_tensor(HEOS, xN_flag, WRT);
 
         // Last row in the d(Mstar)/d(X) requires derivatives of
         for (std::size_t i = 0; i < N; ++i) {
             Eigen::MatrixXd n2dLdni(N, N), d_n2dLdni_dX(N, N);
             for (std::size_t j = 0; j < N; ++j) {
                 for (std::size_t k = j; k < N; ++k) {
-                    n2dLdni(j, k) = n2Aijk(HEOS, j, k, i, xN_flag);
-                    d_n2dLdni_dX(j, k) = d_n2Aijk_dX(HEOS, j, k, i, xN_flag, WRT);
+                    n2dLdni(j, k) = n2A[i](j, k);            // n2Aijk(HEOS, j, k, i, xN_flag)
+                    d_n2dLdni_dX(j, k) = d_n2A_dX[i](j, k);  // d_n2Aijk_dX(HEOS, j, k, i, xN_flag, WRT)
                     // Fill in the symmetric elements
                     n2dLdni(k, j) = n2dLdni(j, k);
                     d_n2dLdni_dX(k, j) = d_n2dLdni_dX(j, k);

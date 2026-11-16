@@ -132,6 +132,38 @@ def test_seccool_ice_refit_matches_disk(name):
     _assert_close_to_disk(target)
 
 
+@pytest.mark.parametrize("name, conversion, hasData", [
+    ("AKF", "mass2input", False),  # volume-based; Vol2Mass table is SecCool's -1 -1 no-data row
+    ("MEG2", "volume2input", False),  # mass-based; same
+    ("AEG", "mass2input", True),  # ASHRAE table carries real data
+])
+def test_seccool_conversion_without_data_is_not_shipped(name, conversion, hasData):
+    """A conversion fit with no source data must reach json/ as notdefined.
+
+    Issue #3302: SecCool seeds the conversion blocks with the all-zero
+    template and swallows the failed fit, and clearUnfittedCoefficients used
+    to skip the conversions, so 24 fluids shipped that template as a fit.
+    The golden master above cannot see this: it compares properties only, and
+    the refit and the committed file carried the same zeros.
+    """
+    fluids = {f.name: f for f in getSecCoolFluids()}
+    target = fluids[name]
+    writer = SolutionDataWriter()
+    writer.fitSecCoolList([target])
+    writer.clearUnfittedCoefficients(target)  # what toJSON runs before writing
+    block = getattr(target, conversion)
+    onDisk = _load_json_coeffs(name, conversion)
+    if hasData:
+        assert block.type == block.INCOMPRESSIBLE_POLYNOMIAL and np.any(block.coeffs), (
+            "{0}.{1}: a conversion backed by real data was cleared".format(name, conversion))
+        assert onDisk is not None and np.allclose(block.coeffs, onDisk, rtol=RELATIVE_TOLERANCE), (
+            "{0}.{1}: refit no longer matches json/{0}.json".format(name, conversion))
+    else:
+        assert block.type == block.INCOMPRESSIBLE_NOT_SET and block.coeffs is None, (
+            "{0}.{1}: a conversion with no source data survived as type {2!r}".format(name, conversion, block.type))
+        assert onDisk is None, "json/{0}.json still ships a {1} fit with no source data".format(name, conversion)
+
+
 # ---------------------------------------------------------------------------
 # "Does the committed fit still describe the data it was fitted to?"
 #

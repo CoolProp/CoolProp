@@ -52,7 +52,7 @@
       "T_r": 674.0,
       "Tmax": 674.0,
       "Tmin": 273.0,
-      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))",
+      "description": "rho'' = rhoc*exp(sum(n_i*theta^t_i))",
       "max_abserror_percentage": 0.07,
       "n": [
         -2.0507,
@@ -72,7 +72,7 @@
         12.0
       ],
       "type": "rhoV",
-      "using_tau_r": true
+      "using_tau_r": false
     }
   },
   "EOS": [
@@ -5553,7 +5553,6 @@
     }
   ],
   "INFO": {
-    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=13835224",
     "ALIASES": [
       "1,2-Propanediol",
       "PROPYLENEGLYCOL",
@@ -5578,7 +5577,7 @@
     "INCHI_STRING": "InChI=1S/C3H8O2/c1-3(5)2-4/h3-5H,2H2,1H3",
     "NAME": "PropyleneGlycol",
     "REFPROP_NAME": "N/A",
-    "SMILES": "?"
+    "SMILES": "CC(O)CO"
   },
   "STATES": {
     "critical": {

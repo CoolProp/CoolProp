@@ -83,6 +83,16 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **RapidJSON was removed** (#3112); use nlohmann/json (fetched via
   `cmake/dependencies.cmake`) and do not reintroduce it.
 
+- **GitHub's ubuntu-26.04 image builds with FMA by default.**  Its GCC 15.2
+  reports `-march=x86-64-v3` / `-mfma [enabled]` with no flags passed, while
+  the `gcc` in a stock `ubuntu:26.04` Docker container (same `15.2.0-16ubuntu1`
+  version string) defaults to plain `x86-64`.  With GCC's default
+  `-ffp-contract=fast` (GNU dialects, which CoolProp builds with), any test that
+  compares two separately compiled code paths bit-for-bit can fail on CI and
+  pass in the container (COO-182: `all_deltaonly()` vs `all()`).  To
+  reproduce, add `-march=x86-64-v3` in the container; to diagnose, check
+  `gcc -Q --help=target | grep -E 'march|mfma'` and count `vfmadd` in the
+  object.  Compare such paths to a scaled tolerance, not bit-for-bit.
 - **Catch2 test names must not contain commas.**  A comma in a test spec
   is OR, so "Cubic T,P root choice" cannot be selected by name.  Write
   "TP", "P-input", etc.
@@ -214,10 +224,25 @@ recorded history of finished or abandoned work were dropped (they remain in
   p).  The TPD verdict on the ~100 K / 100s-of-MPa points is *marginal*: it
   flips between builds (R470A), so don't assert per-blend stable counts there
   (COO-155).  The N×N L*/M* formulation is general-N, but Air (ternary) yields
-  four stable points (COO-154), and natural gases take minutes.
+  four stable points (COO-154).
+- **`MixtureDerivatives` scalar chains nest O(N) sums** (#3560).  The
+  third-order composition derivatives (`n2Aijk` -> ... ->
+  `d2_ndalphardni_dxj_dxk`) each re-run a `sum_m x_m ...` that doesn't
+  depend on the outer index, so filling an N×N×N tensor from the scalars is
+  O(N^7): minutes for a 10-component natural gas.  Build whole arrays with
+  `nAij_matrix` / `n2Aijk_tensor` (each sub-term once); keep the scalars as
+  the test reference.  What remains is per-leaf: the GERG reducing
+  derivatives recompute rho_r(x), T_r(x) on every call.  Profile with a
+  RelWithDebInfo shared lib and `sample <pid>`: the pip wheel is stripped.
 
 ## Fluid data, superancillaries and transport
 
+- **Validate E/Z SMILES against the stored InChI.** Slash directions depend
+  on traversal and branch order; matching slash characters alone do not
+  identify E versus Z. An `@` on an alkene carbon does not encode double-bond
+  stereochemistry. For metadata corrections, parse the SMILES with a chemistry
+  toolkit and compare its InChI and InChIKey with `INFO.INCHI_STRING` and
+  `INFO.INCHI_KEY`.
 - **Superancillary provenance.** fastchebpure fits superancillaries from the
   CoolProp EOS via its submodule pin, and the docs deviation plots download a
   pinned fastchebpure release.  Changing a fluid's EOS in `dev/fluids` trips the
@@ -234,6 +259,23 @@ recorded history of finished or abandoned work were dropped (they remain in
   fastchebpure's `fitcheb` CLI: `fitcheb -f FLUID -d <coolprop checkout>` to
   fit and check, then `fitcheb inject -f FLUID -d <coolprop checkout>` to
   replace the SUPERANCILLARY block, add check points and stamp the hash.
+- **Incompressible caloric fits come in two kinds, both loaded.**  A fluid
+  may ship `density`/`specific_heat` (classic polynomial) and
+  `density_cheb`/`specific_heat_cheb`; `IncompressibleFluid` keeps both and
+  every caloric function takes a `chebyshev` flag (`useChebyshevFit` picks, with
+  fallback to whichever exists).  `IncompressibleBackend` snapshots
+  `INCOMP_PREFER_CHEBYSHEV_CALORIC` in its constructor and must pass it to
+  every caloric call, including residuals inside `T_rho`/`T_c`: a call that
+  falls back to the default argument reads the live config and can mix fits
+  with the cached `_hmass_ref`/`_smass_ref`.  Derived matrices (`ddT`,
+  `int_dT`, `int_dTdivT`, `int_dTdivT_log`) exist only after `validate()`;
+  evaluation throws on an empty one rather than returning 0.  `setTbase()`
+  drops the polynomial entropy matrices (they embed the value of Tbase), so
+  call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
+  only when the fluid has no separate `_cheb` entry for that property.
+- **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
+  which every setter calls (the JSON setter only for changed values).  A side
+  effect wired into one setter is skipped when the key is set another way.
 - **Changing one fluid's viscosity can move other fluids.** Two couplings:
   (1) ECS — `viscosity_ECS` evaluates the reference fluid's
   `calc_viscosity_background()` (R134a moves seven refrigerants by 1–2.6%);

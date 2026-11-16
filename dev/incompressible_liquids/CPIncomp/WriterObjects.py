@@ -325,9 +325,16 @@ class SolutionDataWriter(object):
         throw instead, naming the fluid and the property:
         'INCOMP::<name> does not define <property>: no fit for this property
         is shipped in its fluid data'.
+
+        The three composition conversions are covered too. SecCool seeds them
+        with the same all-zero template and swallows a failed fit the same
+        way; 24 fluids whose Vol2Mass table is only SecCool's ``-1 -1``
+        no-data row used to ship that template as a "polynomial" (GitHub
+        #3302).
         """
         knownGuesses = (self.VISCOSITY_GUESS, self.PSAT_GUESS, self.TFREEZE_GUESS, self.LOGEXP_GUESS, self.SECCOOL_VISCOSITY_GUESS)
-        properties = ('density', 'specific_heat', 'conductivity', 'viscosity', 'saturation_pressure', 'T_freeze')
+        properties = ('density', 'specific_heat', 'conductivity', 'viscosity', 'saturation_pressure', 'T_freeze',
+                      'mass2input', 'volume2input', 'mole2input')
         for label in properties:
             data = getattr(fluidObject, label)
             if data.type == IncompressibleData.INCOMPRESSIBLE_NOT_SET:

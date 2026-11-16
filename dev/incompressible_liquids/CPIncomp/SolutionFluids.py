@@ -12,7 +12,7 @@ class LiBrData(SolutionData):
         SolutionData.__init__(self)
         self.name = "LiBr"
         self.description = "Lithium-bromide solution - aq"
-        self.reference = "Patek2006"
+        self.reference = "Patek2006,Flessner2023,Lee1990,DiGuilio1990,IAPWS-SR6-2011"
 
         self.temperature.data = np.array([2.73000e+02, 2.84947e+02, 2.96895e+02, 3.08842e+02, 3.20789e+02, 3.32737e+02, 3.44684e+02, 3.56632e+02, 3.68579e+02, 3.80526e+02, 3.92474e+02, 4.04421e+02, 4.16368e+02, 4.28316e+02, 4.40263e+02, 4.52211e+02, 4.64158e+02, 4.76105e+02, 4.88053e+02, 5.00000e+02])  # Kelvin
         self.concentration.data = np.array([0.00000e+00, 3.94737e-02, 7.89474e-02, 1.18421e-01, 1.57895e-01, 1.97368e-01, 2.36842e-01, 2.76316e-01, 3.15789e-01, 3.55263e-01, 3.94737e-01, 4.34211e-01, 4.73684e-01, 5.13158e-01, 5.52632e-01, 5.92105e-01, 6.31579e-01, 6.71053e-01, 7.10526e-01, 7.50000e-01])  # mass fraction
@@ -93,9 +93,73 @@ class LiBrData(SolutionData):
         self.xid = self.ifrac_mass
         self.TminPsat = self.Tmin
 
-        # Additional properties from
-        # Thermal conductivity: DiGuilio, R.M., Lee, R.J., Jeter, S.M., and Teja, A.S., "Properties of Lithium Bromide-Water Solutions at High Temperatures and Concentrations - I Thermal Conductivity", ASHRAE Transactions, Paper 3380, RP-527, pp. 702-708, 1990
-        # Viscosity: Lee, R.J., DiGuilio, R.M., Jeter, S.M., and Teja, A.S., "Properties of Lithium Bromide-Water Solutions at High Temperatures and Concentrations - II Density and Viscosity", ASHRAE Transactions, Paper 3381, RP-527, pp. 709-714, 1990
+        # Transport properties (issue #1331). Both are evaluated on the grid
+        # above; points a source does not cover stay nan and the fitter drops
+        # them. Neither applies the crystallisation line, same as density and
+        # cp, which already run to x = 0.75 at 273 K.
+        T, x = np.meshgrid(self.temperature.data, self.concentration.data, indexing="ij")
+
+        # Viscosity, each source only where it was measured:
+        # - up to 383 K, x <= 0.65: Flessner and Ziegler, Int. J. Thermophys.
+        #   44 (2023) 21, doi:10.1007/s10765-022-03122-w (CC BY 4.0), Eq. 2 and
+        #   Table 4, ln(eta/eta_w) = a (T/Tc)^(b1 + b2 x) x^c, eta_w from IAPWS
+        #   SR6-08. 586 points from 11 sources, RMS 0.068 in ln(eta/eta_w).
+        # - 383-476 K, x 0.45-0.65: Lee, DiGuilio, Jeter and Teja, ASHRAE Trans.
+        #   96(1) (1990) 709-714, Eqs. 5-8 of the RP-527 final report (Georgia
+        #   Tech, hdl:1853/58939): ln(mu/cP) = A1 + A2/T + A3 ln T, A1..A3
+        #   quadratic in x. AAD 1.1 %, max 3.1 % over their 52 points, which
+        #   reach 473 K; the grid row at 476 K pins the end of that range.
+        #   Flessner extrapolated past 383 K reads about 20 % high against
+        #   those points; at 383 K the two sources differ by 10-14 %.
+        # - above 383 K at x = 0: pure water from SR6-08, which stays within
+        #   1.3 % of IAPWS 2008 up to 500 K.
+        # Everything else (x < 0.45 above 383 K, T > 476 K, x > 0.65) is left
+        # to the fit.
+        eta = _water_viscosity_sr608(T) * np.exp(2.477 * (T / 647.096)**(3.609 - 5.871 * x) * x**0.2365)
+        A1 = (-0.494122 + 1.63967 * x - 1.45110 * x**2) * 1e3
+        A2 = (2.86064 - 9.34568 * x + 8.52755 * x**2) * 1e4
+        A3 = (0.703848 - 2.35014 * x + 2.07809 * x**2) * 1e2
+        mu_lee = 1e-3 * np.exp(A1 + A2 / T + A3 * np.log(T))
+        mu = np.where((T <= 383.15) & (x <= 0.65), eta, np.nan)
+        mu = np.where((T > 383.15) & (T < 480.0) & (x >= 0.45) & (x <= 0.65), mu_lee, mu)
+        mu = np.where((T > 383.15) & (x == 0.0), _water_viscosity_sr608(T), mu)
+        self.viscosity.source = self.viscosity.SOURCE_EQUATION
+        self.viscosity.data = mu  # Pa-s
+
+        # Thermal conductivity: DiGuilio, Lee, Jeter and Teja, ASHRAE Trans.
+        # 96(1) (1990) 702-708, constants from Table III of the RP-527 final
+        # report: lambda [mW/m-K] = A(T) + B(T) X + C(T) X^2, X in wt-%.
+        # Measured 293-463 K and 30-65 wt-%, +-2 %. Pure water (SR6-08, which
+        # is within 1 % of IAPWS 2011 up to 463 K) closes the dilute end.
+        X = 100.0 * x
+        A = -1407.5255 + 11.051253 * T - 1.4674147e-2 * T**2
+        B = 38.985550 - 0.24047484 * T + 3.4807273e-4 * T**2
+        C = -0.26502516 + 1.5191536e-3 * T - 2.3226242e-6 * T**2
+        in_range = (T >= 293.0) & (T <= 463.0) & (X >= 30.0) & (X <= 65.0)
+        lam = np.where(in_range, 1e-3 * (A + B * X + C * X**2), np.nan)
+        lam = np.where((x == 0.0) & (T <= 463.0), _water_conductivity_sr608(T), lam)
+        self.conductivity.source = self.conductivity.SOURCE_EQUATION
+        self.conductivity.data = lam  # W/m-K
+
+
+def _water_viscosity_sr608(T):
+    """Liquid water at 0.1 MPa, IAPWS SR6-08(2011), Pa-s.
+
+    The release covers 253-383 K. LiBrData uses it up to 500 K; see the
+    viscosity comment there for the error beyond 383 K.
+    """
+    t = T / 300.0
+    return 1e-6 * (280.68 * t**-1.9 + 511.45 * t**-7.7 + 61.131 * t**-19.6 + 0.45903 * t**-40.0)
+
+
+def _water_conductivity_sr608(T):
+    """Liquid water at 0.1 MPa, IAPWS SR6-08(2011), W/m-K.
+
+    The release covers 273-383 K. LiBrData uses it up to 463 K; see the
+    conductivity comment there for the error beyond 383 K.
+    """
+    t = T / 300.0
+    return 1.6630 * t**-1.15 - 1.7781 * t**-3.4 + 1.1567 * t**-6.0 - 0.432115 * t**-7.6
 
 
 class MITSeaWater(SolutionData):

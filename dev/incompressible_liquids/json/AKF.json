@@ -140,41 +140,8 @@
   "description": "Antifrogen KF, Potassium Formate",
   "mass2input": {
     "NRMS": null,
-    "coeffs": [
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ]
-    ],
-    "type": "polynomial"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "mole2input": {
     "NRMS": null,

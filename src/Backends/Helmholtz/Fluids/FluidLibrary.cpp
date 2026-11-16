@@ -242,12 +242,6 @@ void JSONFluidLibrary::add_one(const nlohmann::json& fluid_json) {
             fluid.ChemSpider_id = -1;
         }
 
-        if (fluid_json.at("INFO").contains("2DPNG_URL")) {
-            fluid.TwoDPNG_URL = cpjson::get_string(fluid_json.at("INFO"), "2DPNG_URL");
-        } else {
-            fluid.TwoDPNG_URL = "N/A";
-        }
-
         // Parse the environmental parameters
         if (!(fluid_json.at("INFO").contains("ENVIRONMENTAL"))) {
             if (get_debug_level() > 0) {

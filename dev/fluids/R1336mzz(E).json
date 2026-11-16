@@ -3821,7 +3821,6 @@
     }
   ],
   "INFO": {
-    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=-1",
     "ALIASES": [
       "(E)-1,1,1,4,4,4-HEXAFLUORO-2-BUTENE",
       "r1336mzz(e)",
@@ -3832,7 +3831,7 @@
       "R1336MZZE"
     ],
     "CAS": "66711-86-2",
-    "CHEMSPIDER_ID": -1,
+    "CHEMSPIDER_ID": 4647246,
     "ENVIRONMENTAL": {
       "ASHRAE34": "A1",
       "FH": 0,
@@ -3849,7 +3848,7 @@
     "INCHI_STRING": "InChI=1S/C4H2F6/c5-3(6,7)1-2-4(8,9)10/h1-2H/b2-1+",
     "NAME": "R1336mzz(E)",
     "REFPROP_NAME": "N/A",
-    "SMILES": "?"
+    "SMILES": "C(=C/C(F)(F)F)\\C(F)(F)F"
   },
   "STATES": {
     "critical": {
