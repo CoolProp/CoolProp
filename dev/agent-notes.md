@@ -38,6 +38,15 @@ recorded history of finished or abandoned work were dropped (they remain in
   and welcome as standalone sweeps.
 - **Catch2 v3 in this repo:** use `Catch::Approx`, and `~[slow]` (not
   `[!slow]`) to exclude slow tests.
+- **cppcheck `syntaxError` means the rest of the file went unchecked.**
+  cppcheck runs without Catch2's headers, so `dev/ci/cppcheck/catch2.cfg`
+  defines `TEST_CASE` / `TEST_CASE_METHOD`; without it, either macro inside a
+  namespace drops the whole file (COO-137).  cppcheck 2.x also cannot parse
+  unary-plus lambdas in a braced list (`for (auto f : {+[](...){...}})`);
+  use a named function-pointer array.  cppcheck reports one syntaxError per
+  file and the passes find different ones, so re-run after each fix.  To
+  locate one, cut the file at top-level boundaries with namespaces still
+  balanced, or the cut itself is reported.  Never suppress `syntaxError`.
 - **CMake per-target properties must follow every target-creation path.**
   `Main` is created under both `COOLPROP_MY_MAIN` (CodeQL/Coverity/IWYU CI)
   and `COOLPROP_MAIN_MODULE`.  A `set_property(TARGET ...)` nested in one of

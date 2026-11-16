@@ -11255,8 +11255,13 @@ TEST_CASE("IF97 update() that throws leaves no half-built state", "[IF97][update
         CHECK_THROWS(IF->rhomass());
         // The scalar getters must also agree with a never-updated object, not
         // return the inputs of the failed update (QT left _Q = 0.5 and _T = 700).
-        for (auto get : {+[](CoolProp::AbstractState& a) { return a.T(); }, +[](CoolProp::AbstractState& a) { return a.p(); },
-                         +[](CoolProp::AbstractState& a) { return a.Q(); }}) {
+        // A named function-pointer array, not `{+[](...){...}, ...}`: cppcheck
+        // 2.x cannot parse unary-plus lambdas in a braced list and drops the
+        // whole file with syntaxError (COO-137).
+        using Getter = double (*)(CoolProp::AbstractState&);
+        const Getter getters[] = {[](CoolProp::AbstractState& a) { return a.T(); }, [](CoolProp::AbstractState& a) { return a.p(); },
+                                  [](CoolProp::AbstractState& a) { return a.Q(); }};
+        for (Getter get : getters) {
             auto fresh = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("IF97", "Water"));
             bool fresh_throws = false, after_throws = false;
             double fresh_v = 0, after_v = 0;
