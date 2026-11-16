@@ -1964,9 +1964,19 @@ static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std
     // Kronecker-diagonal entries (1/x_i in nAij, -1/x_i^2 in n2Aijk) are excluded from it: for a trace component they are
     // orders of magnitude larger than everything else and would let a wrong O(1) term through.  Those entries are checked
     // against their own magnitude instead.
+    // The magnitude is taken from the reference, so it must be finite or an inf reference would pass its own check.
     auto tol = [&](double scale_offdiag, double scalar, bool kronecker_entry) {
+        REQUIRE(std::isfinite(scalar));
         return rtol * (kronecker_entry ? std::max(scale_offdiag, std::abs(scalar)) : scale_offdiag);
     };
+    // T(i,i,k), k != i, carries +1/x_i (via -SG) and -1/x_i (via -Fself) that cancel, in a different order than in the
+    // scalar path; floor the n2Aijk scale at max_i 1/x_i so that rounding of that cancellation can't flake the check.
+    double inv_x_max = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        if (z[i] > DBL_EPSILON) {
+            inv_x_max = std::max(inv_x_max, 1.0 / static_cast<double>(z[i]));
+        }
+    }
 
     for (parameters WRT : {INVALID_PARAMETER, iTau, iDelta}) {
         CAPTURE(WRT);
@@ -1984,6 +1994,9 @@ static void check_n2Aijk_tensor(const std::vector<std::string>& names, const std
             }
         }
         REQUIRE(scale > 0);
+        if (WRT == INVALID_PARAMETER) {
+            scale = std::max(scale, inv_x_max);
+        }
         for (std::size_t i = 0; i < N; ++i) {
             for (std::size_t j = 0; j < N; ++j) {
                 for (std::size_t k = 0; k < N; ++k) {
@@ -2075,7 +2088,10 @@ TEST_CASE("nAij_matrix and n2Aijk_tensor match the scalar nAij, n2Aijk and their
     const std::vector<std::string> four = {"n-Pentane", "Ethane", "n-Propane", "n-Butane"};
     const std::vector<CoolPropDbl> z4 = {0.1, 0.12, 0.18, 0.6};
     // Lstar/Mstar criticality uses XN_INDEPENDENT only.  XN_DEPENDENT exercises the mmax = N-1 sums of the new functions;
-    // only the cubic leaves support it (the HEOS residual leaves throw "xN_flag is invalid", scalar path included).
+    // HEOS is run with XN_INDEPENDENT only because its fourth-order d4alphar_dxi_* leaves (reached by the tau/delta
+    // variants) throw "xN_flag is invalid", scalar path included.  The cubics' constant reducing function makes the
+    // m = N-1 summands of the inner sums vanish, so this pins mmax for the outer sum (SG) only; the inner ones (SQ, SC)
+    // cannot change a result under the dependent-x convention, where derivatives with respect to x_{N-1} are zero.
     for (x_N_dependency_flag xN : {XN_INDEPENDENT, XN_DEPENDENT}) {
         if (xN == XN_INDEPENDENT) {
             DYNAMIC_SECTION("HEOS, 4 components, xN=" << xN) {
