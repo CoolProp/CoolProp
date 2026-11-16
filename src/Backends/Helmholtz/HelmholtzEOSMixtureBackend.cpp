@@ -2983,7 +2983,8 @@ class SolverTPResid : public FuncWrapper1DWithThreeDerivs
 // three density derivatives, i.e. the five pure-delta alphar fields; update_DmolarT_direct evaluates all fifteen, and
 // for a multi-fluid mixture the tau-derivatives are most of that cost.  call() evaluates once and the derivative
 // methods reuse it -- Householder4 calls them at the same rho right after call().  The delta-only evaluation agrees
-// with the full one bit for bit on orders 0-2 and to a few ULP on orders 3-4 (see calc_alphar_deriv_nocache).
+// with the full one to rounding, not bit for bit (COO-182; see calc_alphar_deriv_nocache), which is far below the
+// solver tolerance; the state at the root is then written by update_DmolarT_direct, so it is the full evaluation.
 class SolverTPResidDeltaOnly : public FuncWrapper1DWithThreeDerivs
 {
    public:

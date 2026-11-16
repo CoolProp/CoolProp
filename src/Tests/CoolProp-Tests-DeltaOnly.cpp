@@ -70,6 +70,16 @@ using namespace CoolProp;
 
 namespace {
 
+// The full storage of a value as bytes, so two values compare bit for bit.  Keyed on CoolPropDbl, not double: when
+// CoolPropDbl is long double, narrowing to double would hide a difference in the extended bits.  Used only where both
+// sides come from the SAME function at the same inputs (update_DmolarT_direct twice), which FMA contraction cannot
+// split (COO-182); a comparison of two different code paths must use the scaled-relative check instead.
+std::array<unsigned char, sizeof(CoolPropDbl)> bits_of(CoolPropDbl d) {
+    std::array<unsigned char, sizeof(CoolPropDbl)> u{};
+    std::memcpy(u.data(), &d, sizeof(CoolPropDbl));
+    return u;
+}
+
 // Distance in units in the last place between two doubles, for the failure message only: the
 // assertion itself is scaled-relative (see the header).  Maps the IEEE bit pattern onto a monotone
 // integer line so that the distance is well-defined across zero and between adjacent binades.
@@ -245,6 +255,9 @@ TEST_CASE("Warm-started density solve leaves the state of update_DmolarT_direct 
                 REQUIRE(fresh_heos != nullptr);
                 fresh_heos->update_DmolarT_direct(rho, c.T);
                 CHECK(std::abs(fresh->p() / c.p - 1) < 1e-8);  // and it is a root
+                // Bit-exact on purpose: both states are written by update_DmolarT_direct at the same (T, rho, z), i.e.
+                // the same compiled code on the same inputs (see bits_of).
+                CHECK(std::isfinite(AS.p()));
                 CHECK(bits_of(AS.p()) == bits_of(fresh->p()));
                 for (const auto& f : fields) {
                     CAPTURE(f.first);
