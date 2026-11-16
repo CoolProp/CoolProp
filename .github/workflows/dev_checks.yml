@@ -699,6 +699,7 @@ jobs:
         run: |
           cppcheck \
             --std=c++17 \
+            --library=dev/ci/cppcheck/catch2.cfg \
             --enable=warning,style,information \
             --suppress=noExplicitConstructor \
             --suppress=useStlAlgorithm \

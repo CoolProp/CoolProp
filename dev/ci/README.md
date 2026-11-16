@@ -40,7 +40,7 @@ error (exit 2), not an empty diff.
 | clang-format | uvx clang-format (version pinned from `.pre-commit-config.yaml`) dry-run on changed `.cpp` / `.h` files | `--skip=clang-format` |
 | build | cmake builds `CatchTestRunner` in `build_catch/` (configures it when missing or unusable: Release, Ninja when available) | `--skip=build` |
 | tests | Catch2 runner over `~[slow]` **plus** the tags of every path rule the diff matches (`[SBTL]`, `[Helmholtz]`, `[melting]`, …).  Sharded across `--jobs` cores by `run-catch-sharded.sh`; `BENCHMARK` bodies run once, with CI's one-sample flags; the verdict reports how many cases skipped | `--skip=tests` |
-| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers; findings **on changed lines** fail (analysis failures always fail) | `--skip=cppcheck` |
+| cppcheck | `--enable=warning` (real-bug-class) on changed files, `--language=c++ --std=c++17` to handle headers, `--library=dev/ci/cppcheck/catch2.cfg` so the Catch2 test macros parse; findings **on changed lines** fail (analysis failures always fail) | `--skip=cppcheck` |
 | clang-tidy | changed `.cpp` files via `run-clang-tidy-staged.sh` with `-line-filter` = the changed lines, one process per file, `--jobs` at a time; each file's exit status must agree with its log; requires `build_catch/compile_commands.json` | `--skip=clang-tidy` |
 | semgrep | `p/security-audit` + local `.semgrep/` rules (uvx-resolved, Python 3.12 pinned) | `--skip=semgrep` |
 | incomp-sanity | `dev/incompressible_liquids/test_json_sanity.py` on the committed incompressible JSON — rejects optimizer starting guesses, all-zero fits, non-finite/boolean coefficients and cleared vital properties. Only runs when `dev/incompressible_liquids/` is in the diff; falls back to calling the `test_*` functions directly when pytest is unavailable | `--skip=incomp-sanity` |
@@ -245,7 +245,7 @@ every PR but never fail the build — they exist to surface signal, not
 to gate. The exception is `asan`, which does fail.
 
 - **cppcheck** (`cppcheck` job in `dev_checks.yml`) — uploads a colorized
-  cppcheck report. Run locally with `cppcheck --std=c++17 ./src` after
+  cppcheck report. Run locally with `cppcheck --std=c++17 --library=dev/ci/cppcheck/catch2.cfg ./src` after
   `apt install cppcheck`.
 - **clang-tidy diff** (`clang-tidy` job in `dev_checks.yml`) — runs
   `clang-tidy-diff.py` on PR-touched lines and uploads
