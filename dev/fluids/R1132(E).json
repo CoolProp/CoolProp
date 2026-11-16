@@ -3600,7 +3600,7 @@
     }
   ],
   "INFO": {
-    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=-1",
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=4517484",
     "ALIASES": [
       "trans-1,2-difluoroethene",
       "R1132E",
@@ -3608,7 +3608,7 @@
       "R-1132(E)"
     ],
     "CAS": "1630-78-0",
-    "CHEMSPIDER_ID": -1,
+    "CHEMSPIDER_ID": 4517484,
     "ENVIRONMENTAL": {
       "ASHRAE34": "?",
       "FH": 99999999,
