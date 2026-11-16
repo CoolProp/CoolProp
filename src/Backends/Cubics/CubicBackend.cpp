@@ -122,8 +122,6 @@ std::string CoolProp::AbstractCubicBackend::fluid_param_string(const std::string
         throw NotImplementedError("Parameter \"INCHI\" not available for cubic backends.");
     } else if (ParamName == "INCHI_Key" || ParamName == "InChIKey" || ParamName == "INCHIKEY") {
         throw NotImplementedError("Parameter \"INCHI_Key\" not available for cubic backends.");
-    } else if (ParamName == "2DPNG_URL") {
-        throw NotImplementedError("Parameter \"2DPNG_URL\" not available for cubic backends.");
     } else if (ParamName == "SMILES" || ParamName == "smiles") {
         throw NotImplementedError("Parameter \"SMILES\" not available for cubic backends.");
     } else if (ParamName == "CHEMSPIDER_ID") {

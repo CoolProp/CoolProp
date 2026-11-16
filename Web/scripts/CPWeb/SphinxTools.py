@@ -521,7 +521,6 @@ class FluidInfoTableGenerator(object):
         InChiKey = CoolProp.CoolProp.get_fluid_param_string(self.name, "INCHIKEY")
         smiles = CoolProp.CoolProp.get_fluid_param_string(self.name, "SMILES")
         ChemSpider_id = CoolProp.CoolProp.get_fluid_param_string(self.name, "CHEMSPIDER_ID")
-        twoDurl = CoolProp.CoolProp.get_fluid_param_string(self.name, "2DPNG_URL")
 
         # Generate (or not) the reducing data
         reducing_data = ''
@@ -546,8 +545,7 @@ class FluidInfoTableGenerator(object):
                     inchi=InChI,
                     inchikey=InChiKey,
                     smiles=smiles,
-                    ChemSpider_id=ChemSpider_id,
-                    twoDurl=twoDurl
+                    ChemSpider_id=ChemSpider_id
                     )
         out = table_template.format(**args)
 

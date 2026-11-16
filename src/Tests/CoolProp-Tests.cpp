@@ -1456,7 +1456,7 @@ TEST_CASE("rhosr-CS viscosity honours x_crossover from the fluid file", "[viscos
         fluid["INFO"]["CAS"] = CAS;
         fluid["INFO"]["ALIASES"] = json::array();
         fluid["INFO"]["REFPROP_NAME"] = "N/A";
-        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID"}) {
             fluid["INFO"].erase(key);
         }
         fluid["TRANSPORT"]["viscosity"]["x_crossover"] = x_crossover;
@@ -1540,7 +1540,7 @@ TEST_CASE("rhosr-CS viscosity rejects a non-positive x_crossover", "[viscosity],
         fluid["INFO"]["CAS"] = "999-99-82";
         fluid["INFO"]["ALIASES"] = json::array();
         fluid["INFO"]["REFPROP_NAME"] = "N/A";
-        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID", "2DPNG_URL"}) {
+        for (const char* key : {"INCHI_KEY", "INCHI_STRING", "SMILES", "CHEMSPIDER_ID"}) {
             fluid["INFO"].erase(key);
         }
         fluid["TRANSPORT"]["viscosity"]["x_crossover"] = 0.0;

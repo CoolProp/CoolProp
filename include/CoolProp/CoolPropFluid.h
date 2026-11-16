@@ -608,7 +608,6 @@ class CoolPropFluid
     std::string InChIKey;              ///< The InChI key for the fluid
     std::string smiles;                ///< The SMILES identifier for the fluid
     int ChemSpider_id;                 ///< The ChemSpider identifier for the fluid
-    std::string TwoDPNG_URL;           ///< The URL to a 2D representation of the molecule (from ChemSpider)
 
     BibTeXKeysStruct BibTeXKeys;             ///< The BibTeX keys associated
     EnvironmentalFactorsStruct environment;  ///< The environmental variables for global warming potential, ODP, etc.
