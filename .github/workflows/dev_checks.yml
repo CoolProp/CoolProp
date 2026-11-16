@@ -88,7 +88,7 @@ jobs:
           cd .github/workflows
           chmod +x buildREFPROP.sh
           ./buildREFPROP.sh
-          echo COOLPROP_REFPROP_ROOT=`pwd`/gpgREFPROP/REFPROP-cmake/bld >> $GITHUB_ENV
+          echo "COOLPROP_REFPROP_ROOT=$(pwd)/gpgREFPROP/REFPROP-cmake/bld" >> "$GITHUB_ENV"
         env:
           REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
       - name: mkdir
@@ -98,7 +98,7 @@ jobs:
       - name: build all Catch tests
         # -j$(nproc): every other build job already parallelises; the ASan job
         # historically did not, leaving the compile serial on the multi-vCPU runner.
-        run: cmake --build build --config Asan -j$(nproc)
+        run: cmake --build build --config Asan -j"$(nproc)"
       # The [locale] tests load fluids under a decimal-comma LC_NUMERIC; the runner
       # image ships no such locale, and without it those tests would SKIP green.
       - name: Generate de_DE.UTF-8 locale for the [locale] tests
@@ -306,6 +306,7 @@ jobs:
           for PY in 3.9 3.10 3.11 3.12; do
             echo "::group::build nanobind wheel on Python $PY"
             uv venv --python "$PY" ".venv-build-$PY"
+            # shellcheck source=/dev/null
             source ".venv-build-$PY/bin/activate"
             # Pin nanobind: the cp312 wheel below regenerates the committed type
             # stub (REGEN_STUB), and the drift gate diffs it byte-for-byte, so the
@@ -412,6 +413,7 @@ jobs:
             fi
             echo "::group::pytest on Python $PY ($(basename "$WHL"))"
             uv venv --python "$PY" ".venv-$PY"
+            # shellcheck source=/dev/null
             source ".venv-$PY/bin/activate"
             # Install the TEST DEPS first: a brand-new interpreter may transiently
             # lack pytest/numpy cp wheels (a toolchain gap, not a regression) -- warn
@@ -697,6 +699,9 @@ jobs:
         shell: bash
         continue-on-error: true
         run: |
+          # Without the cfg cppcheck aborts before analysing anything, and the
+          # `|| true` below would hide that; fail the step visibly instead.
+          test -f dev/ci/cppcheck/catch2.cfg
           cppcheck \
             --std=c++17 \
             --library=dev/ci/cppcheck/catch2.cfg \
@@ -709,7 +714,7 @@ jobs:
             --inline-suppr \
             --inconclusive \
             --template='[{file}:{line}]:({severity}),[{id}],{message}' \
-            -j $(nproc) \
+            -j "$(nproc)" \
             --force \
             ./src \
             3>&1 1>&2 2>&3 | tee cppcheck.txt || true
@@ -950,7 +955,7 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build shared library
-        run: cmake --build build_shared -j$(nproc)
+        run: cmake --build build_shared -j"$(nproc)"
 
       - name: Run installed-header hygiene gate
         run: ./dev/ci/check-installed-headers.sh build_shared

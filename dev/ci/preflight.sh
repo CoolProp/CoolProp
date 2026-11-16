@@ -740,8 +740,8 @@ else
     CPPCHECK_RC=0
     # --library=dev/ci/cppcheck/catch2.cfg defines the Catch2 TEST_CASE macros;
     # without it cppcheck misparses them inside a namespace and drops the whole
-    # file with syntaxError (COO-137).  A missing cfg makes cppcheck exit 1 with
-    # its message on stdout and an empty findings log, which fails below.
+    # file with syntaxError (COO-137).  A missing cfg makes cppcheck exit 1 and
+    # log failedToLoadCfg at line 0, which the line-0 rule below keeps: fails.
     cppcheck --enable=warning --error-exitcode=1 --quiet --inline-suppr --language=c++ --std=c++17 \
              --library=dev/ci/cppcheck/catch2.cfg \
              --suppress=missingIncludeSystem --suppress=unknownMacro \
