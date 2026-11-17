@@ -9333,6 +9333,7 @@ TEST_CASE("PropsSImulti and Props1SImulti with an empty output list return an em
     std::vector<std::string> fluids{"Water"};
     std::vector<double> fractions{1.0};
     CHECK(CoolProp::PropsSImulti(no_outputs, "T", {300.0}, "P", {101325.0}, "HEOS", fluids, fractions).empty());
+    CHECK(CoolProp::get_global_param_string("errstring").find("At least one output") != std::string::npos);  // reading drains it
     CHECK(CoolProp::Props1SImulti(no_outputs, "HEOS", fluids, fractions).empty());
     CHECK(CoolProp::get_global_param_string("errstring").find("At least one output") != std::string::npos);
     // With empty inputs as well, the empty-input early return must not hide the error.
