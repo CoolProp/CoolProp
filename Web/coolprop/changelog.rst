@@ -277,6 +277,20 @@ Performance:
 * Mixture critical points (``all_critical_points()``, ``T_critical()``) build the L* and M* matrices from whole derivative arrays instead of per-entry nested sums, which removes the O(N^7) cost: a 10-component natural gas goes from 605 s to 10 s on ``HEOS`` and from 137 s to 3.6 s on ``PR`` (`#3560 <https://github.com/CoolProp/CoolProp/issues/3560>`__, `#3563 <https://github.com/CoolProp/CoolProp/pull/3563>`__).
 * Python property plots trace isolines instead of flashing every point cold: 255 s to 10 s for the R513A case in discussion #3269 (`#3344 <https://github.com/CoolProp/CoolProp/pull/3344>`__).
 
+* **Incompressible fluids are up to 17 times faster than in 8.0.0.**  The derivative and integrals of the density and heat-capacity fits are built once in ``validate()`` instead of on every call, and the fits for density, heat capacity, viscosity, conductivity, saturation pressure and freezing temperature are evaluated without allocating (`#3534 <https://github.com/CoolProp/CoolProp/pull/3534>`__).  Measured through the Python ``AbstractState`` on ``INCOMP::MEG[0.35]`` and ``INCOMP::Water`` at 1 bar, 300 to 350 K, with about 0.12 microseconds of Python call overhead included in every time.  Microseconds per call, 8.0.0 to 8.1 with the default Chebyshev fits (classic polynomial fits, ``INCOMP_PREFER_CHEBYSHEV_CALORIC`` set to false, in brackets):
+
+  ================================  ========================  ========================
+  Call                              MEG 35 %                  Water
+  ================================  ========================  ========================
+  ``T,p`` density                   0.49 to 0.20 (0.17)       0.42 to 0.20 (0.16)
+  ``T,p`` enthalpy                  1.51 to 0.30 (0.23)       1.18 to 0.29 (0.19)
+  ``T,p`` all six outputs           3.96 to 0.85 (0.62)       3.33 to 0.82 (0.47)
+  ``h,p`` flash                     9.83 to 1.44 (0.86)       7.44 to 1.29 (0.45)
+  ``h,p`` flash, all six outputs    12.65 to 2.05 (1.27)      9.82 to 1.80 (0.80)
+  ================================  ========================  ========================
+
+  The six outputs are density, heat capacity, viscosity, conductivity, entropy, and enthalpy (``T,p``) or temperature (``h,p``).  The ``h,p`` and ``p,s`` flashes gain the most, 5 to 7 times on the Chebyshev fits and 12 to 18 times on the polynomials, because they iterate on the forward enthalpy or entropy.  The Chebyshev fits cost 1.3 to 3.6 times more than the new polynomial path for enthalpy, entropy and these flashes, so set ``INCOMP_PREFER_CHEBYSHEV_CALORIC`` to false where the last factor of two matters and 8.0.0 values are wanted.  Viscosity and conductivity do not use the caloric fits and gain about 3 times on ``MEG``, 1.3 times (viscosity) and 2.8 times (conductivity) on ``Water``.  The ``p,s`` flash on the classic fits also stops failing: 123 of 100,000 ``Water`` calls hit the Brent iteration limit in 8.0.0.
+
 Bug fixes:
 
 * ``AbstractState::factory`` refuses empty or >256-component fluid lists and repeated ``::`` prefixes; factory-string options are capped at 64 KiB and tabular/SVDSBTL grid sizes set there at 10\ :sup:`6` points.
