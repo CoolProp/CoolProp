@@ -5,6 +5,7 @@
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
+#include "ScopedTablesDirectory.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Cubics/UNIFACLibrary.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
@@ -10675,6 +10676,8 @@ TEST_CASE("TTSE PT input with an imposed phase at the hot edge of the table", "[
 }
 
 TEST_CASE("Tabular state does not keep the previous table after a failed update", "[BICUBIC][TTSE][tabular]") {
+    // Small grids: keep them out of the shared table directory
+    const CoolProp::testing::ScopedTablesDirectory tables_dir("stale-table");
     // After a successful single-phase update, a (T, rho) or (p, s) update on a mixture whose
     // T or p lies outside the phase envelope throws from the phase test, before a cell has
     // been located.  update() had flushed the cell indices but kept the previous update's
@@ -10729,6 +10732,8 @@ TEST_CASE("Tabular state does not keep the previous table after a failed update"
 }
 
 TEST_CASE("Tabular backends refuse outputs before a successful update", "[BICUBIC][TTSE][Tabular]") {
+    // Small grids: keep them out of the shared table directory
+    const CoolProp::testing::ScopedTablesDirectory tables_dir("no-update");
     // The saturation-path accessors read the tables at the cached saturation indices,
     // which only a normally returning update() sets.  Before that they used to read
     // out of bounds; a mixture created without fractions does not even have tables

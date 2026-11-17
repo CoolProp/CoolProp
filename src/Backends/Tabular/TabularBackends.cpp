@@ -1857,6 +1857,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
 }
 
 #    if defined(ENABLE_CATCH)
+#        include "src/Tests/ScopedTablesDirectory.h"
 #        include <catch2/catch_all.hpp>
 
 // Defined global so we only load once
@@ -2153,6 +2154,8 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
 
 TEST_CASE("Tabular backends accept factory-string grid options", "[Tabular],[FactoryOptions]") {
     using namespace CoolProp;
+    // Non-default grids: keep them out of the shared table directory (one per SECTION)
+    const testing::ScopedTablesDirectory tables_dir("grid-options");
 
     SECTION("BICUBIC per-instance grid resolution") {
         std::shared_ptr<AbstractState> AS(AbstractState::factory(R"(BICUBIC&HEOS?{"grid":{"Nx":30,"Ny":30}})", "Water"));
