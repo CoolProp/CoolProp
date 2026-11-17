@@ -472,7 +472,12 @@ jobs:
       && (github.event_name != 'workflow_dispatch'
           || (inputs.push_to_obs && github.event.inputs.push_to_obs != 'false'))
       && (github.event_name != 'pull_request'
-          || github.event.pull_request.head.repo.full_name == github.repository)
+          || (github.event.pull_request.head.repo.full_name == github.repository
+              && contains(fromJSON('["master","main","develop"]'), github.base_ref)))
+    # The base_ref clause keeps a stacked PR (one targeting a feature branch)
+    # from overwriting the shared OBS package with unmerged sources: the
+    # workflow's pull_request trigger has no branch filter, so offline-build
+    # still runs for those PRs, but only PRs into a mainline branch write OBS.
     # The wait for OBS is unbounded in the script, so the bound lives here.
     timeout-minutes: 120
     # One OBS package cannot hold two commits at once, and this group is
