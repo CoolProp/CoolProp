@@ -18,7 +18,6 @@ on:
       - 'dev/generate_headers.py'
       - '.github/workflows/packaging_offline.yml'
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
     paths:
       - 'CMakeLists.txt'
       - 'cmake/**'

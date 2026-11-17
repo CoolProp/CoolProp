@@ -15,7 +15,6 @@ on:
     branches: [ 'master', 'main', 'develop', 'actions_docs' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
 
 env:
   REGISTRY: ghcr.io

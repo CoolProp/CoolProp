@@ -12,7 +12,6 @@ on:
     branches: [ 'master', 'main', 'develop' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

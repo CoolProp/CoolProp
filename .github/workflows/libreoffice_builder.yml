@@ -5,7 +5,6 @@ on:
     branches: [ 'master', 'main', 'develop', 'actions_javascript' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
 
 concurrency:
   # Cancel superseded runs on the same ref to cut CI backlog on heavy
