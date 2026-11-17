@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <string>
 #include <system_error>
@@ -36,9 +37,15 @@ class ScopedTablesDirectory
         set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir_);
     }
     ~ScopedTablesDirectory() {
-        set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev_);
-        std::error_code ec;
-        std::filesystem::remove_all(dir_, ec);
+        // A destructor must not throw (bad_alloc in either call would terminate)
+        try {
+            set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev_);
+            std::error_code ec;
+            std::filesystem::remove_all(dir_, ec);
+        } catch (...) {
+            // Cannot rethrow from a destructor; say so instead of terminating
+            (void)std::fputs("ScopedTablesDirectory: could not restore ALTERNATIVE_TABLES_DIRECTORY or remove the temp directory\n", stderr);
+        }
     }
     ScopedTablesDirectory(const ScopedTablesDirectory&) = delete;
     ScopedTablesDirectory& operator=(const ScopedTablesDirectory&) = delete;
