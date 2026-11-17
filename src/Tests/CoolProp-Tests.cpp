@@ -9334,6 +9334,10 @@ TEST_CASE("PropsSImulti and Props1SImulti with an empty output list return an em
     std::vector<double> fractions{1.0};
     CHECK(CoolProp::PropsSImulti(no_outputs, "T", {300.0}, "P", {101325.0}, "HEOS", fluids, fractions).empty());
     CHECK(CoolProp::Props1SImulti(no_outputs, "HEOS", fluids, fractions).empty());
+    CHECK(CoolProp::get_global_param_string("errstring").find("At least one output") != std::string::npos);
+    // With empty inputs as well, the empty-input early return must not hide the error.
+    CHECK(CoolProp::PropsSImulti(no_outputs, "T", {}, "P", {}, "HEOS", fluids, fractions).empty());
+    CHECK(CoolProp::get_global_param_string("errstring").find("At least one output") != std::string::npos);
 }
 TEST_CASE("first_saturation_deriv mixture: dT/dP via Gernert vs finite-difference along bubble curve", "[first_saturation_deriv][2091]") {
     // Issue #2091: the mixture path used the pure-fluid Clapeyron
