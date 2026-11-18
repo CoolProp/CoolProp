@@ -1090,6 +1090,9 @@ class TabularBackend : public AbstractState
     /// Per-instance grid resolution from factory-string options; 0 means
     /// "not requested" and the TABULAR_NX/TABULAR_NY configuration globals apply
     std::size_t Nx_requested, Ny_requested;
+    /// Largest Nx*Ny a factory-string options blob may request (the schema
+    /// only bounds each axis); 1000x1000 is ~600 MB of tables in memory
+    static constexpr std::size_t max_grid_points = 1000000;
 
     /// Validate + canonicalise the options blob and extract the per-instance
     /// grid resolution; called from the constructor only (options are

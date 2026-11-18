@@ -99,6 +99,18 @@ TEST_CASE("validate_against_schema: invalid schema JSON throws", "[SchemaValidat
     REQUIRE_THROWS_AS(CoolProp::validate_json_against_schema(R"({"schema": 1})", std::string("not json")), CoolProp::ValueError);
 }
 
+TEST_CASE("validate_against_schema: oversized instance is refused before parsing", "[SchemaValidation]") {
+    // 2^20 array items: ~2 MiB of text, ~16 MiB as a DOM.
+    std::string big = R"({"schema": 1, "grid": [)";
+    for (std::size_t i = 0; i < (std::size_t{1} << 20U); ++i) {
+        big += "0,";
+    }
+    big += "0]}";
+    REQUIRE_THROWS_WITH(CoolProp::validate_json_against_schema(big, std::string(kSchema)), Catch::Matchers::ContainsSubstring("bytes long"));
+    // Whitespace padding up to the limit is still accepted.
+    REQUIRE_NOTHROW(CoolProp::validate_json_against_schema(R"({"schema": 1})" + std::string(std::size_t{60} * 1024, ' '), std::string(kSchema)));
+}
+
 // ---------------------------------------------------------------------------
 // to_canonical_json_str
 // ---------------------------------------------------------------------------

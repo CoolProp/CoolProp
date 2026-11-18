@@ -57,6 +57,14 @@ TEST_CASE("SVDSBTL options: schema validation rejects bad payloads", "[SVDSBTL][
         REQUIRE_THROWS_AS(factory(R"({"grid":{"NR":2147483648}})"), CoolProp::ValueError);
         REQUIRE_THROWS_AS(factory(R"({"grid":{"rank":2147483648}})"), CoolProp::ValueError);
     }
+    SECTION("grid.NT * grid.NR above the grid-point cap") {
+        // Each axis is within the schema range; the product is what would
+        // make sample_grid allocate tens of GB per property.  Must throw at
+        // construction, before any surface is sampled.
+        REQUIRE_THROWS_AS(factory(R"({"grid":{"NT":100000,"NR":100000}})"), CoolProp::ValueError);
+        // A lone axis is resolved against the preset default (NR = 800)
+        REQUIRE_THROWS_AS(factory(R"({"grid":{"NT":100000}})"), CoolProp::ValueError);
+    }
     SECTION("bbox wrong arity") {
         REQUIRE_THROWS_AS(factory(R"({"critical_patch":{"bbox":[1,2,3]}})"), CoolProp::ValueError);
     }

@@ -227,15 +227,28 @@ CoolProp::sbtl::SVDSurface build_surface_for_pair_(::CoolProp::AbstractState& so
     return cp_sbtl::build_surface(source, std::move(spec));
 }
 
+// Largest NT*NR an options blob may request.  The schema bounds each axis
+// on its own (JSON Schema cannot bound a product); sample_grid allocates
+// NT*NR doubles per property per region, so 100000x100000 would be tens of
+// GB per property before the first state point is evaluated.
+constexpr std::size_t kMaxGridPoints = 1000000;
+
 // Parse + validate `options_json` against the SVDSBTL schema.  Returns
 // the canonical-JSON form (or "{}" when options_json was empty); throws
-// CoolProp::ValueError on schema violation.
+// CoolProp::ValueError on schema violation or an oversized NT*NR grid.
 std::string parse_and_canonicalise(const std::string& options_json) {
     if (options_json.empty()) {
         return "{}";
     }
     CoolProp::validate_json_against_schema(options_json, kSVDSBTLOptionsSchemaJson);
-    return CoolProp::to_canonical_json_str(options_json);
+    const std::string canonical = CoolProp::to_canonical_json_str(options_json);
+    // Resolved against the preset defaults so a lone NT or NR is bounded
+    // too.  Division form so the product cannot wrap on 32-bit size_t.
+    const PresetOptions po = resolve_preset_options(cpjson::parse(canonical));
+    if (po.NR != 0 && po.NT > kMaxGridPoints / po.NR) {
+        throw ValueError(format("SVDSBTL grid NT*NR = %zux%zu exceeds the maximum of %zu grid points", po.NT, po.NR, kMaxGridPoints));
+    }
+    return canonical;
 }
 
 // FNV-1a 64 over the canonical options blob — mirrors the opthash the
