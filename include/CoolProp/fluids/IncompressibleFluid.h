@@ -52,7 +52,11 @@ struct IncompressibleData
     /// that evaluating h and s is a plain evaluation of a stored matrix, in the
     /// same basis as coeffs:
     ///  - ddT:        coefficients of d/dT (the density fit needs this for
-    ///                the pressure terms of h and s)
+    ///                the pressure terms of h and s; both fits use it as the
+    ///                slope when T_rho and T_c invert them with Newton)
+    ///  - ddT2:       density fits only, coefficients of d2/dT2 (the exact
+    ///                slope of h and s at constant p in the HmassP and PSmass
+    ///                flashes)
     ///  - int_dT:     coefficients of the indefinite Int f dT (enthalpy)
     ///  - int_dTdivT: coefficients of the indefinite Int f/T dT (entropy)
     ///  - int_dTdivT_log: polynomial fits only. Int f/T dT of a polynomial
@@ -63,10 +67,10 @@ struct IncompressibleData
     ///                converges geometrically since T > 0.
     /// Integration constants are irrelevant: the backend always subtracts the
     /// same expression evaluated at the reference state.
-    Eigen::MatrixXd ddT, int_dT, int_dTdivT, int_dTdivT_log;
+    Eigen::MatrixXd ddT, ddT2, int_dT, int_dTdivT, int_dTdivT_log;
 
     IncompressibleData()
-      : type(INCOMPRESSIBLE_NOT_SET) {
+      : type(INCOMPRESSIBLE_NOT_SET){
 
         };
 };
@@ -205,7 +209,15 @@ class IncompressibleFluid
 
    public:
     IncompressibleFluid()
-      : strict(true), Tmin(_HUGE), Tmax(_HUGE), xmin(_HUGE), xmax(_HUGE), xid(IFRAC_UNDEFINED), TminPsat(_HUGE), xbase(_HUGE), Tbase(_HUGE) {
+      : strict(true),
+        Tmin(_HUGE),
+        Tmax(_HUGE),
+        xmin(_HUGE),
+        xmax(_HUGE),
+        xid(IFRAC_UNDEFINED),
+        TminPsat(_HUGE),
+        xbase(_HUGE),
+        Tbase(_HUGE){
 
         };
     // The virtual destructor below suppresses the implicitly-declared move
@@ -237,6 +249,11 @@ class IncompressibleFluid
     double getTmin() const {
         return Tmin;
     }
+    /// Lowest valid temperature at this pressure and composition: Tmin, or
+    /// the freezing point where that is higher (the limit checkT() applies).
+    /// The inverse functions search from here, so that a fit extrapolated
+    /// below the freezing point cannot offer a second, frozen solution.
+    double TminAt(double p, double x);
     double getxmax() const {
         return xmax;
     }
@@ -430,6 +447,8 @@ class IncompressibleFluid
     /// Partial derivative of density
     //  with respect to temperature at constant pressure and composition
     double drhodTatPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
+    /// Second partial derivative of density with respect to temperature at constant pressure and composition
+    double d2rhodT2atPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     ///// Partial derivative of entropy
     ////  with respect to temperature at constant pressure and composition
     //double dsdTatPx  (double T, double p, double x){return c(T,p,x)/T;};

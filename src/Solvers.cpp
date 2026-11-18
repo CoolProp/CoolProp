@@ -141,6 +141,91 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
     return x;
 }
 /**
+Newton-Raphson iteration safeguarded by a bracket, for a root of f in [xmin, xmax].
+
+f is evaluated at both ends first and must change sign between them, as for
+Brent's method. The iteration then keeps an interval on which f changes sign:
+every Newton step that would leave that interval (a poor derivative, a turning
+point of f) is replaced by a bisection step. So the result is always a root
+inside [xmin, xmax], f is never evaluated outside it, and the iteration
+converges like Newton near the root. A Newton step that does not shrink to at
+most half the step before last is also replaced by a bisection, so a step
+sequence that bounces inside the bracket cannot stall it. This is the "rtsafe" scheme of Numerical
+Recipes. The derivative only steers the steps, so an approximate one still
+converges, only more slowly.
+
+@param f A pointer to an instance of the FuncWrapper1DWithDeriv class that implements call() and deriv()
+@param x0 The initial guess. If it is not strictly inside (xmin, xmax), NAN for instance, the
+iteration starts from the false-position point of the two end values instead.
+@param xmin The lower bound for the solution
+@param xmax The upper bound for the solution
+@param xtol Absolute tolerance on x: the iteration stops once a Newton step, or the
+bracketing interval, is smaller than this
+@param maxiter Maximum number of iterations after the two end evaluations
+@returns The solution. Throws ValueError if f does not change sign on [xmin, xmax] or returns a
+value that is not finite, and SolutionError if it does not converge within maxiter.
+*/
+double BoundedNewton(FuncWrapper1DWithDeriv* f, double x0, double xmin, double xmax, double xtol, int maxiter) {
+    f->iter = 0;
+    f->errstring.clear();
+    if (!(xmin < xmax)) {
+        throw ValueError(format("BoundedNewton needs xmin < xmax, got [%g, %g]", xmin, xmax));
+    }
+    const double fmin = f->call(xmin);
+    const double fmax = f->call(xmax);
+    if (!ValidNumber(fmin) || !ValidNumber(fmax)) {
+        throw ValueError(format("BoundedNewton: f is not a valid number at the ends of [%g, %g]", xmin, xmax));
+    }
+    if (fmin == 0) return xmin;
+    if (fmax == 0) return xmax;
+    if ((fmin > 0) == (fmax > 0)) {
+        throw ValueError(format("Inputs in BoundedNewton [%g, %g] do not bracket the root.  Function values are [%g, %g]", xmin, xmax, fmin, fmax));
+    }
+    // The ends of the bracket on the negative and on the positive side of f
+    double x_neg = (fmin < 0) ? xmin : xmax;
+    double x_pos = (fmin < 0) ? xmax : xmin;
+    double x = (x0 > xmin && x0 < xmax) ? x0 : xmin - fmin * (xmax - xmin) / (fmax - fmin);
+    // Size of the step before last. A Newton step that is not at least half
+    // of it is not converging fast enough (it can bounce around a turning
+    // point while staying inside the bracket), so a bisection is taken
+    // instead. With this rule the bracket at least halves every two steps.
+    double dx_old = xmax - xmin, dx_last = xmax - xmin;
+    for (f->iter = 1; f->iter <= maxiter; f->iter++) {
+        const double fval = f->call(x);
+        if (!ValidNumber(fval)) {
+            f->errstring = "Residual function in BoundedNewton returned invalid number";
+            throw ValueError(format("Residual function in BoundedNewton returned invalid number at x = %g", x));
+        }
+        if (fval == 0) return x;
+        if (fval < 0) {
+            x_neg = x;
+        } else {
+            x_pos = x;
+        }
+        const double lo = std::min(x_neg, x_pos), hi = std::max(x_neg, x_pos);
+        const double dfdx = f->deriv(x);
+        double x_new = 0.5 * (lo + hi);  // bisection, unless the Newton step is usable
+        if (ValidNumber(dfdx) && dfdx != 0) {
+            const double dx = fval / dfdx;
+            if (f->verbosity > 0) {
+                std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g, [%0.15g, %0.15g]", f->iter, x, dx, fval, dfdx, lo, hi) << '\n';
+            }
+            // Converged. Checked before the interval test: near the root the
+            // step can be smaller than one ulp of x, so x - dx == x, which
+            // lies on the interval edge and would read as a step outside it.
+            if (std::abs(dx) < xtol) return x - dx;
+            if (x - dx > lo && x - dx < hi && std::abs(dx) <= 0.5 * std::abs(dx_old)) x_new = x - dx;
+        }
+        if (hi - lo < xtol) return x_new;
+        dx_old = dx_last;
+        dx_last = x_new - x;
+        x = x_new;
+    }
+    f->errstring = "reached maximum number of iterations";
+    throw SolutionError(format("BoundedNewton reached maximum number of iterations (%d)", maxiter));
+}
+
+/**
 In the Halley's method solver, two derivatives of the input variable are needed, it yields the following method:
 
 \f[
@@ -647,3 +732,67 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 }
 
 }; /* namespace CoolProp */
+
+#ifdef ENABLE_CATCH
+#    include <algorithm>
+#    include <functional>
+#    include <catch2/catch_all.hpp>
+
+namespace {
+/// Test residual: f, its derivative, and the range of x it was evaluated at
+class TestResidual : public CoolProp::FuncWrapper1DWithDeriv
+{
+   public:
+    std::function<double(double)> f, dfdx;
+    double x_lowest = HUGE_VAL, x_highest = -HUGE_VAL;
+    int n_calls = 0;
+    TestResidual(std::function<double(double)> f, std::function<double(double)> dfdx) : f(std::move(f)), dfdx(std::move(dfdx)) {}
+    double call(double x) override {
+        x_lowest = std::min(x_lowest, x);
+        x_highest = std::max(x_highest, x);
+        ++n_calls;
+        return f(x);
+    }
+    double deriv(double x) override {
+        return dfdx(x);
+    }
+};
+}  // namespace
+
+TEST_CASE("BoundedNewton finds the root inside its bracket", "[Solvers]") {
+    SECTION("Increasing function with the exact derivative") {
+        TestResidual r([](double x) { return x * x * x - 2.0; }, [](double x) { return 3 * x * x; });
+        const double x = CoolProp::BoundedNewton(&r, NAN, 0.5, 3.0, 1e-14, 100);
+        CHECK(x == Catch::Approx(std::cbrt(2.0)).epsilon(1e-14));
+        CHECK(r.n_calls < 12);
+    }
+    SECTION("Decreasing function, root found from either orientation") {
+        TestResidual r([](double x) { return std::exp(-x) - 0.1; }, [](double x) { return -std::exp(-x); });
+        CHECK(CoolProp::BoundedNewton(&r, 1.0, 0.0, 10.0, 1e-14, 100) == Catch::Approx(std::log(10.0)).epsilon(1e-14));
+    }
+    SECTION("A poor derivative still converges, and never leaves the interval") {
+        TestResidual r([](double x) { return x * x * x - 2.0; }, [](double x) { return 30 * x * x; });  // 10 times too steep
+        const double x = CoolProp::BoundedNewton(&r, NAN, 0.5, 3.0, 1e-13, 200);
+        CHECK(x == Catch::Approx(std::cbrt(2.0)).epsilon(1e-12));
+        CHECK(r.x_lowest >= 0.5);
+        CHECK(r.x_highest <= 3.0);
+    }
+    SECTION("A turning point inside the interval does not lead it out of the bracket") {
+        // f = (x - 1)^3 - (x - 1) + 0.5 has one root in [-1, 3] near x = -0.19 and
+        // a local maximum and minimum in between, where Newton steps go astray.
+        TestResidual r([](double x) { return std::pow(x - 1, 3) - (x - 1) + 0.5; }, [](double x) { return 3 * (x - 1) * (x - 1) - 1; });
+        const double x = CoolProp::BoundedNewton(&r, 1.2, -1.0, 3.0, 1e-14, 200);
+        CHECK(std::abs(std::pow(x - 1, 3) - (x - 1) + 0.5) < 1e-12);
+        CHECK(r.x_lowest >= -1.0);
+        CHECK(r.x_highest <= 3.0);
+    }
+    SECTION("No sign change on the interval throws instead of guessing") {
+        TestResidual r([](double x) { return (x - 1) * (x - 1) - 0.25; }, [](double x) { return 2 * (x - 1); });  // roots 0.5 and 1.5
+        CHECK_THROWS_AS(CoolProp::BoundedNewton(&r, NAN, 0.0, 2.0, 1e-14, 100), CoolProp::ValueError);
+    }
+    SECTION("A root at an end of the interval is returned") {
+        TestResidual r([](double x) { return x - 2.0; }, [](double x) { return 1.0; });
+        CHECK(CoolProp::BoundedNewton(&r, NAN, 2.0, 5.0, 1e-14, 100) == 2.0);
+    }
+}
+#endif /* ENABLE_CATCH */
