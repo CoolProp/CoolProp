@@ -386,6 +386,36 @@ were computed from the selected fits. Change the setting before creating the
 states it should apply to. ``PropsSI`` creates a new state on every call, so it
 follows the setting immediately.
 
+Solving for temperature
+-----------------------
+
+Inputs other than temperature and pressure (``D,P``, ``H,P``, ``P,S``, and heat
+capacity in the C++ ``T_c``) are solved for :math:`T` with the same method for
+the polynomial and the Chebyshev fits:
+
+* The search runs from the lowest valid temperature at that pressure and
+  composition, :math:`\max(T_{min}, T_{freeze}(p, x))`, to :math:`T_{max}`. A fit
+  extrapolated below the freezing point can therefore not offer a second,
+  frozen solution.
+* The function has to change sign over that range, as for Brent's method before.
+  An input outside the range, or a density that a fit with a turning point (water
+  near its density maximum at 277 K) reaches twice, raises an error rather than returning one of the two
+  temperatures.
+* Inside the range, a Newton iteration with the exact derivative is used, kept
+  within a shrinking bracket. For ``H,P`` and ``P,S`` the derivative includes the
+  pressure term, :math:`(\partial h/\partial T)_p = c - p\,T\,\partial^2 v/\partial T^2`
+  and :math:`(\partial s/\partial T)_p = c/T - p\,\partial^2 v/\partial T^2`, so
+  the iteration converges in three to four steps at any pressure. It starts
+  from :math:`T_{ref} + (h - h(T_{ref}, p))/c(T_{ref})`, the solution for a
+  constant heat capacity.
+
+For a state, CoolProp also puts the composition into each fit once, when the
+composition is set, so that every later evaluation is a sum over temperature
+only. This changes no result: the reduced fits run the same arithmetic in the
+same order and give the same values (to the last bit on x86-64; a compiler may
+fuse multiply-adds differently elsewhere, which changes a value by a few units
+in the last place at most).
+
 .. _Equations:
 
 Equations

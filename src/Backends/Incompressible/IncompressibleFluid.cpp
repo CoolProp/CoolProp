@@ -298,11 +298,15 @@ and transport properties.
 */
 //IncompressibleFluid::IncompressibleFluid();
 
+unsigned long IncompressibleFluid::nextDataVersion() {
+    static std::atomic<unsigned long> counter{0};
+    return ++counter;
+}
+
 void IncompressibleFluid::validate() {
     // A new value for every validation, unique across fluids, so that a fluid
     // replaced in place by one with new data never keeps the old number.
-    static std::atomic<unsigned long> validation_counter{0};
-    data_version = ++validation_counter;
+    data_version = nextDataVersion();
     // Caloric fits: check them and build the derived coefficient matrices
     // exactly once, at load time. Everything h and s need afterwards is a
     // plain evaluation of a stored matrix (see drhodTatPx, dhdTatPxdT and
@@ -1432,17 +1436,20 @@ TEST_CASE("Both kinds of caloric fit invert the same way", "[IncompressibleFluid
         // Water density has its maximum near 277 K, so a density just below
         // the maximum belongs to two temperatures. Both kinds of fit refuse to
         // choose one instead of returning whichever root the solver met first.
-        // (The classic water fit is a cubic without that maximum, so for it
-        // the density is unique and must come back as 275 K.)
+        // The classic water fit is a cubic without that maximum, so for it the
+        // density is unique and must come back as 275 K. Which case applies is
+        // asserted, so the test cannot quietly change branch with the data.
         CoolProp::IncompressibleFluid& water = CoolProp::get_incompressible_fluid("Water");
         const double rho_275 = water.rho(275.0, 1e5, 0.0, chebyshev);
-        if (water.rho(water.getTmin(), 1e5, 0.0, chebyshev) < rho_275) {
-            CHECK_THROWS(water.T_rho(rho_275, 1e5, 0.0, chebyshev));
+        const bool density_maximum = water.rho(water.getTmin(), 1e5, 0.0, chebyshev) < rho_275;
+        CHECK(density_maximum == chebyshev);
+        if (chebyshev) {
+            CHECK_THROWS_WITH(water.T_rho(rho_275, 1e5, 0.0, chebyshev), Catch::Matchers::ContainsSubstring("do not bracket the root"));
         } else {
             CHECK(water.T_rho(rho_275, 1e5, 0.0, chebyshev) == Catch::Approx(275.0).epsilon(1e-12));
         }
 
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);  // restored on leaving the scope, also on a failure
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "MEG"));
         AS->set_mass_fractions(std::vector<double>(1, x));
         // Up to 500 bar, where the pressure terms of h and s make cp alone a
@@ -1458,7 +1465,6 @@ TEST_CASE("Both kinds of caloric fit invert the same way", "[IncompressibleFluid
                 CHECK(std::abs(AS->T() - T) < 1e-9);
             }
         }
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, true);
     }
 }
 

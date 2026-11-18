@@ -282,6 +282,33 @@ recorded history of finished or abandoned work were dropped (they remain in
   drops the polynomial entropy matrices (they embed the value of Tbase), so
   call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
   only when the fluid has no separate `_cheb` entry for that property.
+- **Incompressible fits are evaluated in three places that must agree to the
+  last bit.**  The full evaluation (`polyEvalMatrix`, `chebEvalMatrix`) and
+  the per-state `CompositionFits` (`FitAtComposition::eval`, built by
+  `fixComposition` when the composition changes) share `rowAtComposition`,
+  `hornerSum` and `clenshawSum`.  Change the arithmetic only there.  To
+  check, dump rho, cp, h, s, mu, k as `%a` hex floats for every fluid before
+  and after and `diff` them (26485 values per fit kind, zero differences
+  expected).  A backend rebuilds its `CompositionFits` when
+  `IncompressibleFluid::data_version` changes, which `validate()` bumps:
+  `add_fluids_as_JSON` replaces a fluid in place under existing backends.
+- **Incompressible inversions use `BoundedNewton` (src/Solvers.cpp).**
+  `T_rho`, `T_c` and the `HmassP`/`PSmass` flashes search
+  `[TminAt(p, x), Tmax]`, where `TminAt` is the freezing point when it is
+  above `Tmin`: density fits extrapolated below freezing turn over, and on
+  the full range a valid density was reached twice.  `BoundedNewton` needs a
+  sign change over the range and throws otherwise, like Brent; it must never
+  orient its bracket from the sign of f' alone (that silently returned the
+  other root, 77 K off).  The flash slope is exact (`c - p T d2v/dT2`): cp
+  alone needs 8 iterations at 500 bar instead of 4.  Round-trip every shipped
+  fluid (T -> D, h, s -> T) after touching any of this; `INCOMP::Air` is a
+  1-atm gas fit and fails at 10 bar in every version.
+- **Profile incompressibles from C++, not Python.**  The Python wrapper adds
+  about 0.12 us per call, as much as a whole property evaluation.  Build a
+  static `RelWithDebInfo` library, time `AbstractState` in a small C++
+  program, and use `valgrind --tool=callgrind` (there is no `perf` in the
+  cloud container).  A thrown and caught exception costs about 1.3 us: one in
+  `checkP` (psat below `TminPsat`) used to dominate every update of 19 fluids.
 - **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
   which every setter calls (the JSON setter only for changed values).  A side
   effect wired into one setter is skipped when the key is set another way.

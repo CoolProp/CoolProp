@@ -36,6 +36,7 @@
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
 #    include "CoolProp/HumidAirProp.h"
+#    include "TestObjects.h"  // ChebyshevCaloricSetting
 
 using namespace CoolProp;
 
@@ -8895,22 +8896,6 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
     }
 }
-/// Set INCOMP_PREFER_CHEBYSHEV_CALORIC for one scope and restore the previous
-/// value on exit, also when an assertion throws, so no other test inherits it.
-struct ChebyshevCaloricSetting
-{
-    bool saved;
-    explicit ChebyshevCaloricSetting(bool value) : saved(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC)) {
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, value);
-    }
-    ~ChebyshevCaloricSetting() {
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, saved);
-    }
-    ChebyshevCaloricSetting(const ChebyshevCaloricSetting&) = delete;
-    ChebyshevCaloricSetting& operator=(const ChebyshevCaloricSetting&) = delete;
-    ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
-    ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
-};
 
 TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
     // A state keeps the fits of its fluid with the composition put in. When

@@ -125,10 +125,14 @@ class IncompressibleFluid
 
    protected:
     bool strict;
-    /// Changes every time validate() runs, so that a backend holding
-    /// CompositionFits of this fluid sees when the fluid was replaced
-    /// (add_fluids_as_JSON with an existing name) and builds them again.
+    /// Changes every time validate() runs or a fit, Tbase or xbase is set, so
+    /// that a backend holding CompositionFits of this fluid sees the change
+    /// (also when add_fluids_as_JSON replaces the fluid in place) and builds
+    /// them again.
     unsigned long data_version = 0;
+    /// A new data_version, unique across all fluids (see validate()). Every
+    /// setter of data that a backend caches calls it, as validate() does.
+    static unsigned long nextDataVersion();
 
     std::string name;
     std::string description;
@@ -345,6 +349,7 @@ class IncompressibleFluid
     }
     void setTbase(double Tbase) {
         this->Tbase = Tbase;
+        data_version = nextDataVersion();
         // The entropy integral of a polynomial fit has the value of Tbase
         // built in (see int_dTdivT_log), so drop it: evaluating s then throws
         // until validate() rebuilds it, instead of silently mixing the old
@@ -359,14 +364,17 @@ class IncompressibleFluid
     }
     void setxbase(double xbase) {
         this->xbase = xbase;
+        data_version = nextDataVersion();
     }
 
     /// Setters for the coefficients
     void setDensity(IncompressibleData density) {
         this->density = std::move(density);
+        data_version = nextDataVersion();
     }
     void setSpecificHeat(IncompressibleData specific_heat) {
         this->specific_heat = std::move(specific_heat);
+        data_version = nextDataVersion();
     }
     /// Setters for the optional Chebyshev alternatives, see density_cheb
     /** These slots only take Chebyshev fits (or an unset fit): anything else
@@ -377,16 +385,20 @@ class IncompressibleFluid
     void setDensityChebyshev(IncompressibleData density_cheb) {
         requireChebyshevOrUnset(density_cheb, "density");
         this->density_cheb = std::move(density_cheb);
+        data_version = nextDataVersion();
     }
     void setSpecificHeatChebyshev(IncompressibleData specific_heat_cheb) {
         requireChebyshevOrUnset(specific_heat_cheb, "specific heat");
         this->specific_heat_cheb = std::move(specific_heat_cheb);
+        data_version = nextDataVersion();
     }
     void setViscosity(IncompressibleData viscosity) {
         this->viscosity = std::move(viscosity);
+        data_version = nextDataVersion();
     }
     void setConductivity(IncompressibleData conductivity) {
         this->conductivity = std::move(conductivity);
+        data_version = nextDataVersion();
     }
     void setPsat(IncompressibleData p_sat) {
         this->p_sat = std::move(p_sat);

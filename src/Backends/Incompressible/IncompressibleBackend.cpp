@@ -619,6 +619,8 @@ double IncompressibleBackend::calc_dhdpatTx(double T, double rho, double drhodTa
 
 #    include "Tests/TestObjects.h"
 #    include "CoolProp/Configuration.h"
+#    include <memory>
+#    include "CoolProp/AbstractState.h"
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible backend", "[IncompressibleBackend]") {
     CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MMA2");
@@ -1126,7 +1128,11 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
 TEST_CASE("Fits with the composition put in give exactly the full evaluation", "[IncompressibleBackend]") {
     // The backend reduces each fit to a series in T once per composition
-    // (CompositionFits). That changes no result, to the last bit.
+    // (CompositionFits). Both evaluations run the same sums in the same order,
+    // so they agree to the last bit on x86-64. The check allows a few units in
+    // the last place, because a compiler may fuse multiply-adds differently in
+    // the two inlined copies (aarch64 does by default).
+    const auto same_value = [](double a, double b) { return a == Catch::Approx(b).epsilon(8 * DBL_EPSILON).margin(0); };
     struct Case
     {
         const char* name;
@@ -1136,27 +1142,80 @@ TEST_CASE("Fits with the composition put in give exactly the full evaluation", "
         for (const bool chebyshev : {false, true}) {
             CAPTURE(c.name, chebyshev);
             CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(c.name);
-            CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, chebyshev);
-            CoolProp::IncompressibleBackend backend(&fluid);
-            CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, true);
+            std::unique_ptr<CoolProp::IncompressibleBackend> made;
+            {
+                ChebyshevCaloricSetting setting(chebyshev);  // read once, by the constructor
+                made.reset(new CoolProp::IncompressibleBackend(&fluid));
+            }
+            CoolProp::IncompressibleBackend& backend = *made;
             if (!fluid.is_pure()) backend.set_mass_fractions(std::vector<CoolPropDbl>(1, c.x));
             const double x = fluid.is_pure() ? 1.0 : c.x;
             for (double T : {300.0, 320.0, 345.0}) {
                 CAPTURE(T);
                 const double p = 1e5;
                 backend.update(CoolProp::PT_INPUTS, p, T);
-                CHECK(backend.rhomass() == fluid.rho(T, p, x, chebyshev));
-                CHECK(backend.cmass() == fluid.c(T, p, x, chebyshev));
-                CHECK(backend.viscosity() == fluid.visc(T, p, x));
-                CHECK(backend.conductivity() == fluid.cond(T, p, x));
-                CHECK(
-                  backend.raw_calc_hmass(T, p, x)
-                  == fluid.dhdTatPxdT(T, p, x, chebyshev)
-                       + p * (1 / fluid.rho(T, p, x, chebyshev) * (1 + T / fluid.rho(T, p, x, chebyshev) * fluid.drhodTatPx(T, p, x, chebyshev))));
-                CHECK(backend.raw_calc_smass(T, p, x)
-                      == fluid.dsdTatPxdT(T, p, x, chebyshev)
-                           + p * (1 / fluid.rho(T, p, x, chebyshev) / fluid.rho(T, p, x, chebyshev) * fluid.drhodTatPx(T, p, x, chebyshev)));
+                CHECK(same_value(backend.rhomass(), fluid.rho(T, p, x, chebyshev)));
+                CHECK(same_value(backend.cmass(), fluid.c(T, p, x, chebyshev)));
+                CHECK(same_value(backend.viscosity(), fluid.visc(T, p, x)));
+                CHECK(same_value(backend.conductivity(), fluid.cond(T, p, x)));
+                const double rho = fluid.rho(T, p, x, chebyshev), drho = fluid.drhodTatPx(T, p, x, chebyshev);
+                CHECK(same_value(backend.raw_calc_hmass(T, p, x), fluid.dhdTatPxdT(T, p, x, chebyshev) + p * (1 / rho * (1 + T / rho * drho))));
+                CHECK(same_value(backend.raw_calc_smass(T, p, x), fluid.dsdTatPxdT(T, p, x, chebyshev) + p * (1 / rho / rho * drho)));
             }
+        }
+    }
+}
+
+TEST_CASE("A state sees changes made to its fluid through the setters", "[IncompressibleBackend]") {
+    // CompositionFits are rebuilt when the fluid's data_version changes, which
+    // every fit setter and setTbase / setxbase bump, not only validate().
+    CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MEG");  // a private copy
+    std::unique_ptr<CoolProp::IncompressibleBackend> made;
+    {
+        ChebyshevCaloricSetting setting(false);  // classic fits: their entropy depends on Tbase
+        made.reset(new CoolProp::IncompressibleBackend(&fluid));
+    }
+    CoolProp::IncompressibleBackend& backend = *made;
+    backend.set_mass_fractions(std::vector<CoolPropDbl>(1, 0.35));
+    backend.update(CoolProp::PT_INPUTS, 1e5, 300.0);
+    CHECK(std::isfinite(backend.smass()));
+
+    SECTION("setTbase drops the entropy integral until validate() runs again") {
+        fluid.setTbase(fluid.getTbase() + 10.0);
+        backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
+        CHECK_THROWS(backend.raw_calc_smass(310.0, 1e5, 0.35));
+    }
+    SECTION("A new viscosity fit is used at once") {
+        CoolProp::IncompressibleData viscosity;
+        viscosity.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        viscosity.coeffs = Eigen::MatrixXd::Constant(1, 1, 0.5);
+        fluid.setViscosity(viscosity);
+        backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
+        CHECK(backend.viscosity() == 0.5);
+    }
+}
+
+TEST_CASE("HmassP and PSmass flashes converge above 1000 K", "[IncompressibleBackend]") {
+    // Above 1024 K neighbouring doubles are further apart than the flash
+    // tolerance of 2.2e-13 K, so a purely absolute tolerance could not be met
+    // there (liquid sodium goes up to 2500 K, lead-bismuth to 1100 K).
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "LiqNa"));
+        // Above 2048 K neighbouring doubles are 4.5e-13 apart. At 200 bar sodium
+        // is liquid there, and h(Tmax) still lies above h(T) up to about 2080 K,
+        // so the flash has a bracket on [Tmin, Tmax]
+        const double p = 2e7;
+        for (int i = 0; i <= 200; ++i) {
+            const double T = 2050.0 + 0.14 * i + 0.123456789;
+            CAPTURE(T);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double h = AS->hmass(), s = AS->smass();
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
         }
     }
 }
