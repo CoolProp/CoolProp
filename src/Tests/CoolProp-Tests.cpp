@@ -49,13 +49,7 @@ struct vel
     std::string in1, in2, out, fluid;
     double v1, v2, tol, expected;
     vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, const std::string& out, double expected, double tol)
-      : in1(in1),
-        in2(in2),
-        fluid(fluid),
-        v1(v1),
-        v2(v2),
-        expected(expected),
-        tol(tol){
+      : in1(in1), in2(in2), fluid(fluid), v1(v1), v2(v2), expected(expected), tol(tol) {
 
         };
 };

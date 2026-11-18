@@ -219,8 +219,10 @@ double BoundedNewton(FuncWrapper1DWithDeriv* f, double x0, double xmin, double x
             // Converged. Checked before the interval test: near the root the
             // step can be smaller than one ulp of x, so x - dx == x, which
             // lies on the interval edge and would read as a step outside it.
-            // The result is clamped to the bracket, so it never leaves [xmin, xmax].
-            if (std::abs(dx) < tol) return std::min(std::max(x - dx, lo), hi);
+            // Only a step that stays inside the bracket counts: with a derivative
+            // of the wrong sign a tiny step can point away from the root, and
+            // the bisection below takes over instead.
+            if (std::abs(dx) < tol && x - dx >= lo && x - dx <= hi) return x - dx;
             if (x - dx > lo && x - dx < hi && std::abs(dx) <= 0.5 * std::abs(dx_old)) x_new = x - dx;
         }
         // The bracket is as small as asked for, or as small as doubles allow
@@ -800,13 +802,13 @@ TEST_CASE("BoundedNewton finds the root inside its bracket", "[Solvers]") {
         CHECK_THROWS_AS(CoolProp::BoundedNewton(&r, NAN, 0.0, 2.0, 1e-14, 100), CoolProp::ValueError);
     }
     SECTION("An absolute tolerance below the spacing of doubles does not stall it") {
-        // Near x = 2000 neighbouring doubles are 4.5e-13 apart, more than the
+        // Above 2048 neighbouring doubles are 4.5e-13 apart, twice the
         // 2.2e-13 the incompressible flashes ask for. f jumps by 2e-12 at the
         // root, so |f| never drops below 1e-12, as when the rounding noise of
         // f (h at a few MJ/kg) is larger than the tolerance. The bracket then
         // ends as two neighbouring doubles and cannot shrink any further; the
         // iteration must stop there instead of running out of iterations.
-        const double root = 2000.123456789;
+        const double root = 2100.123456789;
         auto noisy = [root](double x) { return (x - root) + std::copysign(1e-12, x - root); };
         TestResidual r(noisy, [](double) { return 1.0; });
         double x = NAN;

@@ -1185,6 +1185,18 @@ TEST_CASE("A state sees changes made to its fluid through the setters", "[Incomp
         backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
         CHECK_THROWS(backend.raw_calc_smass(310.0, 1e5, 0.35));
     }
+    SECTION("New density and conductivity fits are used at once") {
+        CoolProp::IncompressibleData density;
+        density.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        density.coeffs = Eigen::MatrixXd::Constant(1, 1, 1234.0);
+        fluid.setDensity(density);
+        CoolProp::IncompressibleData conductivity = density;
+        conductivity.coeffs = Eigen::MatrixXd::Constant(1, 1, 0.25);
+        fluid.setConductivity(conductivity);
+        backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
+        CHECK(backend.rhomass() == 1234.0);
+        CHECK(backend.conductivity() == 0.25);
+    }
     SECTION("A new viscosity fit is used at once") {
         CoolProp::IncompressibleData viscosity;
         viscosity.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
@@ -1195,10 +1207,12 @@ TEST_CASE("A state sees changes made to its fluid through the setters", "[Incomp
     }
 }
 
-TEST_CASE("HmassP and PSmass flashes converge above 1000 K", "[IncompressibleBackend]") {
-    // Above 1024 K neighbouring doubles are further apart than the flash
-    // tolerance of 2.2e-13 K, so a purely absolute tolerance could not be met
-    // there (liquid sodium goes up to 2500 K, lead-bismuth to 1100 K).
+TEST_CASE("HmassP and PSmass flashes converge above 2048 K", "[IncompressibleBackend]") {
+    // Above 1024 K neighbouring doubles are at least as far apart as the
+    // HmassP tolerance of 2.2e-13 K, so a purely absolute tolerance could not
+    // be met there (liquid sodium goes up to 2500 K, lead-bismuth to 1100 K).
+    // The solver-level test in src/Solvers.cpp forces that case; this one
+    // checks real fluid data at those temperatures.
     for (const bool chebyshev : {false, true}) {
         CAPTURE(chebyshev);
         ChebyshevCaloricSetting setting(chebyshev);

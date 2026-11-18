@@ -5,6 +5,7 @@
  *  and assures that the objects used for testing are the
  *  same in all places.
  */
+#pragma once
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "Eigen/Core"
 #include "CoolProp/numerics/MatrixMath.h"
