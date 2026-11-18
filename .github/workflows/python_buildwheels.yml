@@ -255,25 +255,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel twine requests packaging
 
-    # Publishing happens only on a push to master (TestPyPI) or of a v* tag
-    # (PyPI).  Pull requests -- whatever their base -- and pushes to any other
-    # branch build and check the distributions but never publish, and never
-    # load a token.  The same condition gates the upload step below; keep the
-    # two in sync.
-    - name: Select (Test)PyPI credentials
-      if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) }}
-      run: |
-        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-          TWINE_REPOSITORY=pypi
-          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
-        else
-          TWINE_REPOSITORY=testpypi
-          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
-        fi;
-        echo "Using TWINE_REPOSITORY=$TWINE_REPOSITORY"
-        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
-        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
-
     - name: Download ALL wheels
       uses: actions/download-artifact@v8
       with:
@@ -297,8 +278,15 @@ jobs:
     - name: Check every distribution ships THIRD_PARTY_NOTICES.md
       run: python src/dev/ci/check_dist_notices.py Python src/THIRD_PARTY_NOTICES.md
 
+    # Publishing happens only from CoolProp/CoolProp, on a push to master
+    # (TestPyPI) or of a v* tag (PyPI).  Pull requests -- whatever their base --
+    # pushes to any other branch, and forks build and check the distributions
+    # but never publish.  The token is scoped to this step alone, so no earlier
+    # step (third-party actions included) ever sees it.
     - name: Publish wheels to (Test)PyPI
-      if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) }}
+      if: ${{ github.repository == 'CoolProp/CoolProp' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) }}
       env:
         TWINE_USERNAME: __token__
+        TWINE_REPOSITORY: ${{ github.ref_type == 'tag' && 'pypi' || 'testpypi' }}
+        TWINE_PASSWORD: ${{ github.ref_type == 'tag' && secrets.PYPI_TOKEN || secrets.TESTPYPI_TOKEN }}
       run: python -m twine upload --verbose --skip-existing Python/*.whl Python/*.tar.gz
