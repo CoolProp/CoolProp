@@ -272,6 +272,15 @@ class IncompressibleBackend : public AbstractState
     CoolPropDbl calc_hmass() override;
     CoolPropDbl calc_smass() override;
 
+    /// h and s without the reference offsets, from rho and drho/dT at T:
+    /// h = Int c dT + p dh/dp|T and s = Int c/T dT + p ds/dp|T. The one place
+    /// these are written; raw_calc_hmass/smass and the flash residual use them.
+    double raw_hmass_from(double T, double p, double x, double rho, double drhodT) {
+        return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, rho, drhodT);
+    }
+    double raw_smass_from(double T, double p, double x, double rho, double drhodT) {
+        return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(rho, drhodT);
+    }
     /// Residual of the HmassP and PSmass flashes, see IncompressibleBackend.cpp
     class CaloricResidual;
     double flash_first_guess(bool enthalpy, double p, double raw_target);

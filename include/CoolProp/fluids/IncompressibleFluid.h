@@ -71,7 +71,7 @@ struct IncompressibleData
     Eigen::MatrixXd ddT, ddT2, int_dT, int_dTdivT, int_dTdivT_log;
 
     IncompressibleData()
-      : type(INCOMPRESSIBLE_NOT_SET){
+      : type(INCOMPRESSIBLE_NOT_SET) {
 
         };
 };
@@ -241,6 +241,12 @@ class IncompressibleFluid
      *  See the definition in IncompressibleFluid.cpp for why.
      */
     ValueError notDefinedError(const std::string& property) const;
+    /// Evaluate the matrix M of a caloric fit (fit.coeffs or one derived from
+    /// it in validate()) for either kind, polynomial or Chebyshev. Raises the
+    /// "not defined" error naming property for a missing fit, and an error
+    /// naming quantity for a fit type that has no such matrix.
+    double evalCaloricFit(const IncompressibleData& fit, const Eigen::MatrixXd& M, double T, double x, const char* property,
+                          const char* quantity) const;
 
     // Forward declaration of the some internal functions
     //double h_u(double T, double p, double x);
@@ -248,15 +254,7 @@ class IncompressibleFluid
 
    public:
     IncompressibleFluid()
-      : strict(true),
-        Tmin(_HUGE),
-        Tmax(_HUGE),
-        xmin(_HUGE),
-        xmax(_HUGE),
-        xid(IFRAC_UNDEFINED),
-        TminPsat(_HUGE),
-        xbase(_HUGE),
-        Tbase(_HUGE){
+      : strict(true), Tmin(_HUGE), Tmax(_HUGE), xmin(_HUGE), xmax(_HUGE), xid(IFRAC_UNDEFINED), TminPsat(_HUGE), xbase(_HUGE), Tbase(_HUGE) {
 
         };
     // The virtual destructor below suppresses the implicitly-declared move

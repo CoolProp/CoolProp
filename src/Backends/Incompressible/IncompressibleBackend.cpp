@@ -414,12 +414,7 @@ class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
       : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target) {}
     double call(double T) override {
         set_density_terms(T);
-        if (enthalpy) {
-            // the same expression as raw_calc_hmass
-            return backend->calc_dhdTatPxdT(T, p, x) + p * backend->calc_dhdpatTx(T, rho, drho) - target;
-        }
-        // the same expression as raw_calc_smass
-        return backend->calc_dsdTatPxdT(T, p, x) + p * backend->calc_dsdpatTx(rho, drho) - target;
+        return (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
     }
     double deriv(double T) override {
         const double c = backend->c_at(T, p, x);
@@ -564,10 +559,10 @@ CoolPropDbl IncompressibleBackend::calc_smass() {
 
 /// Functions that can be used with the solver, they miss the reference values!
 CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x) {
-    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, rho_at(T, p, x), calc_drhodTatPx(T, p, x));
+    return raw_hmass_from(T, p, x, rho_at(T, p, x), calc_drhodTatPx(T, p, x));
 };
 CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) {
-    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(rho_at(T, p, x), calc_drhodTatPx(T, p, x));
+    return raw_smass_from(T, p, x, rho_at(T, p, x), calc_drhodTatPx(T, p, x));
 };
 
 /// Calculate the first partial derivative for the desired derivative

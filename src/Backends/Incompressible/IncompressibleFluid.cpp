@@ -49,6 +49,53 @@ double evaluateAwayFromPole(double x_den, Func fnc) {
 // coefficient matrices in this same basis, so evaluating them costs no more
 // than evaluating the fit itself.
 
+// ---- The three sums every fit evaluation is made of -------------------------
+//
+// Each is written once and used by the full evaluation (polyEvalMatrix,
+// chebEvalMatrix), the load-time Chebyshev work (chebClenshaw) and the
+// per-composition evaluation (FitAtComposition). Sharing them keeps those
+// results bit for bit identical, which CompositionFits relies on.
+//
+// hornerSum and clenshawSum take the coefficients as a function a(k) rather
+// than an array, so the same code can read them from a matrix row reduced on
+// the fly or from a stored vector. The compiler inlines that function.
+
+/// Row i of M as a polynomial in dx, Horner's scheme from the highest power:
+/// the coefficient of the i-th temperature term at a fixed composition.
+/// Starting from the last coefficient (not 0 * dx) means a single-column
+/// matrix (a pure fluid) never touches dx.
+inline double rowAtComposition(const Eigen::MatrixXd& M, Eigen::Index i, double dx) {
+    double value = M(i, M.cols() - 1);
+    for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
+        value = value * dx + M(i, j);
+    }
+    return value;
+}
+
+/// Sum of a(k) y^k for k = 0 .. n-1, Horner's scheme (n >= 1).
+template <typename Coefficient>
+double hornerSum(Coefficient a, Eigen::Index n, double y) {
+    double result = a(n - 1);
+    for (Eigen::Index k = n - 2; k >= 0; --k) {
+        result = result * y + a(k);
+    }
+    return result;
+}
+
+/// Sum of a(k) T_k(u) for k = 0 .. n-1, Clenshaw's recurrence (n >= 1).
+/// Mirrors superancillary::ChebyshevExpansion::eval.
+template <typename Coefficient>
+double clenshawSum(Coefficient a, Eigen::Index n, double u) {
+    if (n == 1) return a(0);
+    double b_kp1 = a(n - 1), b_kp2 = 0.0;
+    for (Eigen::Index k = n - 2; k > 0; --k) {
+        const double b_k = 2.0 * u * b_kp1 - b_kp2 + a(k);
+        b_kp2 = b_kp1;
+        b_kp1 = b_k;
+    }
+    return a(0) + u * b_kp1 - b_kp2;
+}
+
 /// Evaluate a coefficient matrix in the polynomial basis with Horner's
 /// scheme: first along each row in (x - xbase), then down the rows in
 /// (T - Tbase). The highest coefficient is the starting value rather than
@@ -59,20 +106,8 @@ double polyEvalMatrix(const Eigen::MatrixXd& M, double T, double x, double Tbase
         throw CoolProp::ValueError(
           "Polynomial coefficient matrix is empty: the fit has no coefficients, or the fluid was not loaded through validate().");
     }
-    const double dT = T - Tbase;
     const double dx = x - xbase;
-    auto row_value = [&](Eigen::Index i) {
-        double value = M(i, M.cols() - 1);
-        for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
-            value = value * dx + M(i, j);
-        }
-        return value;
-    };
-    double result = row_value(M.rows() - 1);
-    for (Eigen::Index i = M.rows() - 2; i >= 0; --i) {
-        result = result * dT + row_value(i);
-    }
-    return result;
+    return hornerSum([&](Eigen::Index i) { return rowAtComposition(M, i, dx); }, M.rows(), T - Tbase);
 }
 
 /// Coefficients of d/dT: the term a_i (T - Tbase)^i becomes
@@ -136,15 +171,8 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> polyDivideByTAntiderivative(const Ei
 /// Clenshaw evaluation at the mapped argument u in [-1, 1]
 /// (mirrors superancillary::ChebyshevExpansion::eval).
 double chebClenshaw(const Eigen::VectorXd& a, double u) {
-    const int Norder = static_cast<int>(a.size()) - 1;
-    if (Norder < 1) return (Norder == 0) ? a(0) : 0.0;
-    double u_k = 0, u_kp1 = a(Norder), u_kp2 = 0;
-    for (int k = Norder - 1; k > 0; k--) {
-        u_k = 2.0 * u * u_kp1 - u_kp2 + a(k);
-        u_kp2 = u_kp1;
-        u_kp1 = u_k;
-    }
-    return a(0) + u * u_kp1 - u_kp2;
+    if (a.size() < 1) return 0.0;
+    return clenshawSum([&](Eigen::Index k) { return a(k); }, a.size(), u);
 }
 
 /// Evaluate a coefficient matrix that shares data's domain and xbase
@@ -158,27 +186,18 @@ double chebEvalMatrix(const Eigen::MatrixXd& M, const CoolProp::IncompressibleDa
     }
     const double u = (2.0 * T - (data.cheb_Tmax + data.cheb_Tmin)) / (data.cheb_Tmax - data.cheb_Tmin);
     const double dx = x - data.cheb_xbase;
-    const Eigen::Index ncols = M.cols();
-    // Coefficient of T_k at composition x: row k of M evaluated as a
-    // polynomial in dx with Horner's scheme. Done inline, row by row, so
-    // that no temporary vector is allocated on each call.
-    auto row_value = [&](Eigen::Index k) {
-        double value = M(k, ncols - 1);
-        for (Eigen::Index j = ncols - 2; j >= 0; --j) {
-            value = value * dx + M(k, j);
-        }
-        return value;
-    };
-    // Clenshaw recurrence over the rows, the same sums as chebClenshaw()
-    const Eigen::Index Norder = M.rows() - 1;
-    if (Norder == 0) return row_value(0);
-    double b_kp1 = row_value(Norder), b_kp2 = 0.0;
-    for (Eigen::Index k = Norder - 1; k > 0; --k) {
-        const double b_k = 2.0 * u * b_kp1 - b_kp2 + row_value(k);
-        b_kp2 = b_kp1;
-        b_kp1 = b_k;
+    // Each row is reduced to the composition as Clenshaw needs it, so no
+    // temporary vector is allocated on each call
+    return clenshawSum([&](Eigen::Index k) { return rowAtComposition(M, k, dx); }, M.rows(), u);
+}
+
+/// Evaluate a coefficient matrix of a caloric fit, polynomial or Chebyshev:
+/// fit.coeffs itself or one of the matrices validate() derives from it.
+double evalCaloricMatrix(const CoolProp::IncompressibleData& fit, const Eigen::MatrixXd& M, double T, double x, double Tbase, double xbase) {
+    if (fit.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+        return chebEvalMatrix(M, fit, T, x);
     }
-    return row_value(0) + u * b_kp1 - b_kp2;
+    return polyEvalMatrix(M, T, x, Tbase, xbase);
 }
 
 /// Coefficients of d/dT, one column at a time. Standard descending
@@ -591,74 +610,47 @@ double IncompressibleFluid::Tfreeze(double p, double x) {
  * derive the different functions with respect to temperature.
  */
 /// Partial derivative of density with respect to temperature at constant pressure and composition
-double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebyshev) {
-    const IncompressibleData& fit = densityFit(chebyshev);
+double IncompressibleFluid::evalCaloricFit(const IncompressibleData& fit, const Eigen::MatrixXd& M, double T, double x, const char* property,
+                                           const char* quantity) const {
     switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            // d/dT, derived once at load time in validate()
-            return polyEvalMatrix(fit.ddT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(fit.ddT, fit, T, x);
+            return evalCaloricMatrix(fit, M, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("density");
+            throw notDefinedError(property);
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, fit.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for %s.", __FILE__, __LINE__, fit.type, quantity));
     }
+}
+double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    return evalCaloricFit(fit, fit.ddT, T, x, "density", "density");  // d/dT, built in validate()
 }
 /// Second partial derivative of density with respect to temperature at constant pressure and composition
 double IncompressibleFluid::d2rhodT2atPx(double T, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = densityFit(chebyshev);
-    switch (fit.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return polyEvalMatrix(fit.ddT2, T, x, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(fit.ddT2, fit, T, x);
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("density");
-        default:
-            throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, fit.type));
-    }
+    return evalCaloricFit(fit, fit.ddT2, T, x, "density", "density");  // d2/dT2, built in validate()
 }
 /// Partial derivative of entropy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
 double IncompressibleFluid::dsdTatPxdT(double T, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = specificHeatFit(chebyshev);
-    switch (fit.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            // Indefinite Int c/T dT, derived once at load time in validate():
-            // a polynomial part plus a ln(T) term, see polyDivideByTAntiderivative
-            return polyEvalMatrix(fit.int_dTdivT, T, x, Tbase, xbase) + std::log(T) * polyEvalMatrix(fit.int_dTdivT_log, T, x, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            // Indefinite Int c/T dT, derived once at load time in validate()
-            return chebEvalMatrix(fit.int_dTdivT, fit, T, x);
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("a specific heat");
-        default:
-            throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
+    // Indefinite Int c/T dT, built in validate(). For a polynomial fit it is
+    // a polynomial part plus a ln(T) term, see polyDivideByTAntiderivative.
+    double value = evalCaloricFit(fit, fit.int_dTdivT, T, x, "a specific heat", "entropy");
+    if (fit.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
+        value += std::log(T) * polyEvalMatrix(fit.int_dTdivT_log, T, x, Tbase, xbase);
     }
+    return value;
 }
 /// Partial derivative of enthalpy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
 double IncompressibleFluid::dhdTatPxdT(double T, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = specificHeatFit(chebyshev);
-    switch (fit.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            // Indefinite Int c dT, derived once at load time in validate()
-            return polyEvalMatrix(fit.int_dT, T, x, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            // Indefinite Int c dT, derived once at load time in validate()
-            return chebEvalMatrix(fit.int_dT, fit, T, x);
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("a specific heat");
-        default:
-            throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
-    }
+    return evalCaloricFit(fit, fit.int_dT, T, x, "a specific heat", "enthalpy");  // Indefinite Int c dT, built in validate()
 }
 
 /// Mass fraction conversion function
@@ -779,15 +771,6 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
  * done here, but in the backend, T(h,p) for example.
  */
 namespace {
-/// Evaluate a coefficient matrix of a caloric fit, polynomial or Chebyshev:
-/// fit.coeffs itself or one of the matrices validate() derives from it.
-double evalCaloricMatrix(const CoolProp::IncompressibleData& fit, const Eigen::MatrixXd& M, double T, double x, double Tbase, double xbase) {
-    if (fit.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
-        return chebEvalMatrix(M, fit, T, x);
-    }
-    return polyEvalMatrix(M, T, x, Tbase, xbase);
-}
-
 /// Solve fit(T, x) = target for T in [Tmin, Tmax], the same way for the
 /// polynomial and the Chebyshev fits: Newton on the fit, with its exact
 /// derivative (the ddT matrix built by validate()), kept inside the range.
@@ -815,29 +798,14 @@ double invertCaloricFit(const CoolProp::IncompressibleData& fit, double target, 
 }  // namespace
 
 double FitAtComposition::eval(double T) const {
-    const std::size_t n = a.size();
+    // The same sums, in the same order, as polyEvalMatrix and chebEvalMatrix
+    const auto coefficient = [this](Eigen::Index k) { return a[static_cast<std::size_t>(k)]; };
+    const auto n = static_cast<Eigen::Index>(a.size());
     double value = 0.0;
     if (kind == POWER) {
-        // Same order as polyEvalMatrix: Horner from the highest power down
-        const double dT = T - T_offset;
-        value = a[n - 1];
-        for (std::size_t i = n - 1; i-- > 0;) {
-            value = value * dT + a[i];
-        }
+        value = hornerSum(coefficient, n, T - T_offset);
     } else if (kind == CHEBYSHEV) {
-        // Same recurrence as chebEvalMatrix
-        const double u = (2.0 * T - T_offset) / T_span;
-        if (n == 1) {
-            value = a[0];
-        } else {
-            double b_kp1 = a[n - 1], b_kp2 = 0.0;
-            for (std::size_t k = n - 2; k > 0; --k) {
-                const double b_k = 2.0 * u * b_kp1 - b_kp2 + a[k];
-                b_kp2 = b_kp1;
-                b_kp1 = b_k;
-            }
-            value = a[0] + u * b_kp1 - b_kp2;
-        }
+        value = clenshawSum(coefficient, n, (2.0 * T - T_offset) / T_span);
     } else {
         throw ValueError("FitAtComposition::eval called on a fit that was not reduced");
     }
@@ -870,15 +838,10 @@ CoolProp::FitAtComposition reduceAtComposition(const CoolProp::IncompressibleDat
         default:
             return out;  // exponential and other 1D forms: nothing to reduce
     }
-    // Each row in (x - xbase) with Horner's scheme, exactly as polyEvalMatrix
-    // and chebEvalMatrix do it inside their loops
+    // Each row exactly as polyEvalMatrix and chebEvalMatrix reduce it
     out.a.resize(static_cast<std::size_t>(M.rows()));
     for (Eigen::Index i = 0; i < M.rows(); ++i) {
-        double value = M(i, M.cols() - 1);
-        for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
-            value = value * dx + M(i, j);
-        }
-        out.a[static_cast<std::size_t>(i)] = value;
+        out.a[static_cast<std::size_t>(i)] = rowAtComposition(M, i, dx);
     }
     return out;
 }
