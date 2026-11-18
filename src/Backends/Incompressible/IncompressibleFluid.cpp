@@ -132,17 +132,6 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> polyDivideByTAntiderivative(const Ei
 // coefficient vector (a linear combination of the columns), then runs
 // Clenshaw -- the same collapse-then-evaluate structure Polynomial2DFrac uses.
 
-/// Effective 1D Chebyshev coefficients at composition x.
-Eigen::VectorXd chebCollapse(const Eigen::MatrixXd& C, double x, double xbase) {
-    Eigen::VectorXd dx(C.cols());
-    double power = 1.0;
-    for (Eigen::Index j = 0; j < C.cols(); ++j) {
-        dx(j) = power;
-        power *= (x - xbase);
-    }
-    return C * dx;
-}
-
 /// Clenshaw evaluation at the mapped argument u in [-1, 1]
 /// (mirrors superancillary::ChebyshevExpansion::eval).
 double chebClenshaw(const Eigen::VectorXd& a, double u) {
@@ -167,7 +156,28 @@ double chebEvalMatrix(const Eigen::MatrixXd& M, const CoolProp::IncompressibleDa
         throw CoolProp::ValueError("Chebyshev coefficient matrix is empty; the fluid was not loaded through validate().");
     }
     const double u = (2.0 * T - (data.cheb_Tmax + data.cheb_Tmin)) / (data.cheb_Tmax - data.cheb_Tmin);
-    return chebClenshaw(chebCollapse(M, x, data.cheb_xbase), u);
+    const double dx = x - data.cheb_xbase;
+    const Eigen::Index ncols = M.cols();
+    // Coefficient of T_k at composition x: row k of M evaluated as a
+    // polynomial in dx with Horner's scheme. Done inline, row by row, so
+    // that no temporary vector is allocated on each call.
+    auto row_value = [&](Eigen::Index k) {
+        double value = M(k, ncols - 1);
+        for (Eigen::Index j = ncols - 2; j >= 0; --j) {
+            value = value * dx + M(k, j);
+        }
+        return value;
+    };
+    // Clenshaw recurrence over the rows, the same sums as chebClenshaw()
+    const Eigen::Index Norder = M.rows() - 1;
+    if (Norder == 0) return row_value(0);
+    double b_kp1 = row_value(Norder), b_kp2 = 0.0;
+    for (Eigen::Index k = Norder - 1; k > 0; --k) {
+        const double b_k = 2.0 * u * b_kp1 - b_kp2 + row_value(k);
+        b_kp2 = b_kp1;
+        b_kp1 = b_k;
+    }
+    return row_value(0) + u * b_kp1 - b_kp2;
 }
 
 /// Coefficients of d/dT, one column at a time. Standard descending
@@ -843,7 +853,11 @@ bool IncompressibleFluid::checkT(double T, double p, double x) {
  *  */
 bool IncompressibleFluid::checkP(double T, double p, double x) {
     double ps = 0.0;
-    if (p_sat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+    // Below TminPsat there is no saturation curve to compare against. Skip
+    // psat() there instead of letting it throw and catching the exception:
+    // that throw cost about 1.3 microseconds on every state update, more
+    // than all the property evaluations together.
+    if (p_sat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && T > TminPsat) {
         // psat() now throws below TminPsat (#2209). For this validation
         // path, T below TminPsat means the saturation curve is not
         // available — there is nothing to compare p against, so skip

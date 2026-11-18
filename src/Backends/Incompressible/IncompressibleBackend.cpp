@@ -395,6 +395,51 @@ double IncompressibleBackend::smass_ref() {
     return _smass_ref;
 }
 
+namespace {
+/// Solve f(T) = 0 on [Tmin, Tmax] with Newton steps that use an approximate
+/// slope dfdT(T), keeping a bracket so a step can never leave the range.
+/// For a liquid, h and s are nearly linear in T and their slopes are cp and
+/// cp/T, so this converges in two to four steps where Brent over the whole
+/// range needs about ten. Returns false when it does not converge (no root
+/// in range, a bad slope, a non-finite value), and the caller then falls back
+/// to Brent, which also raises the usual errors.
+template <typename Residual, typename Slope>
+bool newton_in_range(Residual f, Slope dfdT, double Tmin, double Tmax, double tol, double& T_out) {
+    double T_lo = Tmin, T_hi = Tmax;
+    double T = 0.5 * (Tmin + Tmax);
+    for (int iter = 0; iter < 20; ++iter) {
+        const double r = f(T);
+        if (!std::isfinite(r)) return false;
+        if (r == 0.0) {
+            T_out = T;
+            return true;
+        }
+        // f increases with T (cp > 0), so the sign of r tells which side the root is on
+        if (r > 0) {
+            T_hi = T;
+        } else {
+            T_lo = T;
+        }
+        const double slope = dfdT(T);
+        if (!std::isfinite(slope) || !(slope > 0)) return false;
+        const double step = r / slope;
+        // Converged. Tested before the bracket check: near the root the step
+        // can be below one ulp of T, so T - step == T, which sits on the
+        // bracket edge and would wrongly be treated as leaving the bracket.
+        if (std::abs(step) < tol) {
+            T_out = T - step;
+            return true;
+        }
+        double T_new = T - step;
+        if (!(T_new > T_lo && T_new < T_hi)) {
+            T_new = 0.5 * (T_lo + T_hi);  // step left the bracket, bisect instead
+        }
+        T = T_new;
+    }
+    return false;
+}
+}  // namespace
+
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
     return fluid->T_rho(rhomass, p, _fractions[0], chebyshev_caloric);
 }
@@ -421,10 +466,18 @@ CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p
         //double deriv(double target);
     };
 
-    HmassP_residual res = HmassP_residual(this, p, _fractions[0], hmass - h_ref() + hmass_ref());
-
+    const double x = _fractions[0];
+    const double h_raw = hmass - h_ref() + hmass_ref();
     double macheps = DBL_EPSILON;
     double tol = DBL_EPSILON * 1e3;
+    // Fast path: Newton with dh/dT ~ cp (exact apart from the small p*d2v/dT2 term)
+    double T_newton = 0.0;
+    if (newton_in_range([&](double T) { return raw_calc_hmass(T, p, x) - h_raw; }, [&](double T) { return fluid->c(T, p, x, chebyshev_caloric); },
+                        fluid->getTmin(), fluid->getTmax(), tol, T_newton)) {
+        return T_newton;
+    }
+
+    HmassP_residual res = HmassP_residual(this, p, x, h_raw);
     int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
@@ -452,11 +505,19 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
         }
     };
 
-    PSmass_residual res = PSmass_residual(this, p, _fractions[0], smass - s_ref() + smass_ref());
-
+    const double x = _fractions[0];
+    const double s_raw = smass - s_ref() + smass_ref();
     double macheps = DBL_EPSILON;
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve and Brent bisects.
     double tol = 1e-12 * fluid->getTmax();
+    // Fast path: Newton with ds/dT ~ cp/T
+    double T_newton = 0.0;
+    if (newton_in_range([&](double T) { return raw_calc_smass(T, p, x) - s_raw; }, [&](double T) { return fluid->c(T, p, x, chebyshev_caloric) / T; },
+                        fluid->getTmin(), fluid->getTmax(), tol, T_newton)) {
+        return T_newton;
+    }
+
+    PSmass_residual res = PSmass_residual(this, p, x, s_raw);
     int maxiter = 15;
     double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
     //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
