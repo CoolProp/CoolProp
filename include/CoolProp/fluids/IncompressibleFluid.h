@@ -13,6 +13,7 @@
 #include "CoolProp/numerics/Solvers.h"
 
 #include <cmath>
+#include <cstdint>
 #include <numeric>
 #include <string>
 #include <utility>
@@ -93,7 +94,7 @@ in the same order, so the result is bit for bit the same.
 */
 struct FitAtComposition
 {
-    enum Kind
+    enum Kind : std::uint8_t
     {
         NONE,       ///< not reduced (another fit type): evaluate the full fit instead
         POWER,      ///< sum a[k] * (T - T_offset)^k, Horner's scheme
@@ -103,7 +104,7 @@ struct FitAtComposition
     bool exponential = false;  ///< exppolynomial fits: the value is exp(series)
     std::vector<double> a;
     double T_offset = 0.0, T_span = 1.0;
-    double eval(double T) const;
+    [[nodiscard]] double eval(double T) const;
 };
 
 /// All fits one state evaluates, at one composition and for one choice of
@@ -298,7 +299,7 @@ class IncompressibleFluid
     /// Reduce every fit a state evaluates to a series in T at composition x
     /// (see FitAtComposition). Fits of other types are left as NONE.
     void fixComposition(double x, bool chebyshev, CompositionFits& out) const;
-    unsigned long getDataVersion() const {
+    [[nodiscard]] unsigned long getDataVersion() const {
         return data_version;
     }
     double getxmax() const {

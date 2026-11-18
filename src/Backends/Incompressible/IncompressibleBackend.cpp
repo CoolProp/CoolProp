@@ -1145,7 +1145,7 @@ TEST_CASE("Fits with the composition put in give exactly the full evaluation", "
             std::unique_ptr<CoolProp::IncompressibleBackend> made;
             {
                 ChebyshevCaloricSetting setting(chebyshev);  // read once, by the constructor
-                made.reset(new CoolProp::IncompressibleBackend(&fluid));
+                made = std::make_unique<CoolProp::IncompressibleBackend>(&fluid);
             }
             CoolProp::IncompressibleBackend& backend = *made;
             if (!fluid.is_pure()) backend.set_mass_fractions(std::vector<CoolPropDbl>(1, c.x));
@@ -1173,7 +1173,7 @@ TEST_CASE("A state sees changes made to its fluid through the setters", "[Incomp
     std::unique_ptr<CoolProp::IncompressibleBackend> made;
     {
         ChebyshevCaloricSetting setting(false);  // classic fits: their entropy depends on Tbase
-        made.reset(new CoolProp::IncompressibleBackend(&fluid));
+        made = std::make_unique<CoolProp::IncompressibleBackend>(&fluid);
     }
     CoolProp::IncompressibleBackend& backend = *made;
     backend.set_mass_fractions(std::vector<CoolPropDbl>(1, 0.35));

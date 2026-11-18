@@ -785,17 +785,17 @@ double invertCaloricFit(const CoolProp::IncompressibleData& fit, double target, 
     class Residual : public CoolProp::FuncWrapper1DWithDeriv
     {
        public:
-        const CoolProp::IncompressibleData& fit;
+        const CoolProp::IncompressibleData* fit;
         double target, x, Tbase, xbase;
-        Residual(const CoolProp::IncompressibleData& fit, double target, double x, double Tbase, double xbase)
+        Residual(const CoolProp::IncompressibleData* fit, double target, double x, double Tbase, double xbase)
           : fit(fit), target(target), x(x), Tbase(Tbase), xbase(xbase) {}
         double call(double T) override {
-            return evalCaloricMatrix(fit, fit.coeffs, T, x, Tbase, xbase) - target;
+            return evalCaloricMatrix(*fit, fit->coeffs, T, x, Tbase, xbase) - target;
         }
         double deriv(double T) override {
-            return evalCaloricMatrix(fit, fit.ddT, T, x, Tbase, xbase);
+            return evalCaloricMatrix(*fit, fit->ddT, T, x, Tbase, xbase);
         }
-    } res(fit, target, x, Tbase, xbase);
+    } res(&fit, target, x, Tbase, xbase);
     // NAN: start from the false-position point of the two end values
     return CoolProp::BoundedNewton(&res, NAN, Tmin, Tmax, 1e3 * DBL_EPSILON, 100);
 }
