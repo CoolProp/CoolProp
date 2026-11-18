@@ -281,12 +281,19 @@ jobs:
     # Publishing happens only from CoolProp/CoolProp, on a push to master
     # (TestPyPI) or of a v* tag (PyPI).  Pull requests -- whatever their base --
     # pushes to any other branch, and forks build and check the distributions
-    # but never publish.  The token is scoped to this step alone, so no earlier
-    # step (third-party actions included) ever sees it.
+    # but never publish.  The token is passed only to this step's environment,
+    # never through GITHUB_ENV, so earlier steps do not see it.  Each index gets
+    # its own token or none: an unset secret fails here with a clear message
+    # instead of sending the other index's token.
     - name: Publish wheels to (Test)PyPI
       if: ${{ github.repository == 'CoolProp/CoolProp' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) }}
       env:
         TWINE_USERNAME: __token__
         TWINE_REPOSITORY: ${{ github.ref_type == 'tag' && 'pypi' || 'testpypi' }}
-        TWINE_PASSWORD: ${{ github.ref_type == 'tag' && secrets.PYPI_TOKEN || secrets.TESTPYPI_TOKEN }}
-      run: python -m twine upload --verbose --skip-existing Python/*.whl Python/*.tar.gz
+        TWINE_PASSWORD: ${{ github.ref_type == 'tag' && secrets.PYPI_TOKEN || github.ref_type != 'tag' && secrets.TESTPYPI_TOKEN || '' }}
+      run: |
+        if [ -z "$TWINE_PASSWORD" ]; then
+          echo "::error::No token secret set for $TWINE_REPOSITORY (PYPI_TOKEN for tags, TESTPYPI_TOKEN for master)"
+          exit 1
+        fi
+        python -m twine upload --verbose --skip-existing Python/*.whl Python/*.tar.gz
