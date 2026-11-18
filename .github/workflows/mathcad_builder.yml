@@ -6,7 +6,6 @@ on:
     branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
   # ========= Run on call from other workflows
   workflow_call:
 

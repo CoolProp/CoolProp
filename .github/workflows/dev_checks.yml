@@ -22,7 +22,6 @@ on:
   push:
     branches: [master]
   pull_request:
-    branches: [master, main, develop]
   schedule:
     - cron: '15 8 * * 0'    # weekly Sunday — cppcheck, iwyu fallback
     - cron: '15 8 * * 0,4'  # twice weekly Sun+Thu — codeql fallback

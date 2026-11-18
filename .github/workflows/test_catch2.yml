@@ -5,7 +5,6 @@ on:
     branches: [ 'master', 'main', 'develop', 'actions_tests' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
   #schedule:
   #  - cron: '15 8 * * 3' # Run weekly
 

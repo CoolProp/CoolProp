@@ -18,7 +18,6 @@ on:
       - 'dev/generate_headers.py'
       - '.github/workflows/packaging_offline.yml'
   pull_request:
-    branches: [ 'master', 'main', 'develop' ]
     paths:
       - 'CMakeLists.txt'
       - 'cmake/**'
@@ -422,10 +421,12 @@ jobs:
   obs-build:
     needs: offline-build
     runs-on: ubuntu-latest
-    # Two gates.  An unset OBS_PROJECT means this repository has no OBS package
+    # Three gates.  An unset OBS_PROJECT means this repository has no OBS package
     # configured, which is a legitimate state rather than a failure, so the job
     # is skipped.  A pull request from a fork gets no secrets, so it would fail
     # on the credential check through no fault of the contributor.
+    # A pull request into a non-mainline base (a stacked PR) is skipped too;
+    # see the comment after the condition.
     #
     # A project that IS configured, on a branch that DOES get secrets, but with
     # the credentials missing is a different thing entirely: obs-upload.sh
@@ -473,7 +474,12 @@ jobs:
       && (github.event_name != 'workflow_dispatch'
           || (inputs.push_to_obs && github.event.inputs.push_to_obs != 'false'))
       && (github.event_name != 'pull_request'
-          || github.event.pull_request.head.repo.full_name == github.repository)
+          || (github.event.pull_request.head.repo.full_name == github.repository
+              && contains(fromJSON('["master","main","develop"]'), github.base_ref)))
+    # The base_ref clause keeps OBS writes to the PRs that triggered this
+    # workflow before the pull_request branch filter was dropped: PRs into
+    # master/main/develop.  offline-build still runs for stacked PRs (ones
+    # targeting a feature branch); they just do not write the shared package.
     # The wait for OBS is unbounded in the script, so the bound lives here.
     timeout-minutes: 120
     # One OBS package cannot hold two commits at once, and this group is
