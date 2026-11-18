@@ -52,6 +52,10 @@ class IncompressibleBackend : public AbstractState
         const CompositionFits* f = fits_at(x);
         return (f && f->rho.kind != FitAtComposition::NONE) ? f->rho.eval(T) : fluid->rho(T, p, x, chebyshev_caloric);
     }
+    double d2rhodT2_at(double T, double p, double x) {
+        const CompositionFits* f = fits_at(x);
+        return (f && f->d2rhodT2.kind != FitAtComposition::NONE) ? f->d2rhodT2.eval(T) : fluid->d2rhodT2atPx(T, p, x, chebyshev_caloric);
+    }
     double c_at(double T, double p, double x) {
         const CompositionFits* f = fits_at(x);
         return (f && f->c.kind != FitAtComposition::NONE) ? f->c.eval(T) : fluid->c(T, p, x, chebyshev_caloric);
@@ -267,6 +271,16 @@ class IncompressibleBackend : public AbstractState
     /// ... and continue with the ones that depend on reference conditions.
     CoolPropDbl calc_hmass() override;
     CoolPropDbl calc_smass() override;
+
+    /// Residual of the HmassP and PSmass flashes, see IncompressibleBackend.cpp
+    class CaloricResidual;
+    double flash_first_guess(bool enthalpy, double p, double raw_target);
+    /// Values at T_ref that flash_first_guess needs, kept per composition
+    struct GuessCache
+    {
+        double x = NAN, T_ref = NAN, rho = NAN, drho = NAN, c = NAN;
+        unsigned long data_version = 0;
+    } guess_cache;
 
    public:
     /// Functions that can be used with the solver, they miss the reference values!

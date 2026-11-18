@@ -398,69 +398,110 @@ double IncompressibleBackend::smass_ref() {
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
     return fluid->T_rho(rhomass, p, _fractions[0], chebyshev_caloric);
 }
+/// Residual of the HmassP and PSmass flashes, with its derivative in T.
+/**
+h = Int c dT + p (v - T dv/dT) and s = Int c/T dT - p dv/dT, with v = 1/rho,
+so at constant p the exact slopes are
+    dh/dT = c - p T d2v/dT2,    ds/dT = c/T - p d2v/dT2,
+    d2v/dT2 = 2 rho'^2 / rho^3 - rho'' / rho^2.
+The term with d2v/dT2 grows with p, so at high pressure cp alone is a poor
+slope. call() keeps rho and rho' at its T for deriv() at the same T.
+*/
+class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
+{
+   public:
+    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target)
+      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target) {}
+    double call(double T) override {
+        set_density_terms(T);
+        if (enthalpy) {
+            // the same expression as raw_calc_hmass
+            return backend->calc_dhdTatPxdT(T, p, x) + p * backend->calc_dhdpatTx(T, rho, drho) - target;
+        }
+        // the same expression as raw_calc_smass
+        return backend->calc_dsdTatPxdT(T, p, x) + p * backend->calc_dsdpatTx(rho, drho) - target;
+    }
+    double deriv(double T) override {
+        const double c = backend->c_at(T, p, x);
+        set_density_terms(T);
+        const double d2rho = backend->d2rhodT2_at(T, p, x);
+        const double d2v = 2 * drho * drho / (rho * rho * rho) - d2rho / (rho * rho);
+        return enthalpy ? c - p * T * d2v : c / T - p * d2v;
+    }
+
+   private:
+    IncompressibleBackend* backend;
+    bool enthalpy;
+    double p, x, target;
+    double T_cached = NAN, rho = NAN, drho = NAN;
+    void set_density_terms(double T) {
+        if (T == T_cached) return;
+        rho = backend->rho_at(T, p, x);
+        drho = backend->calc_drhodTatPx(T, p, x);
+        T_cached = T;
+    }
+};
+
+/// First guess for the HmassP and PSmass flashes from the reference state and cp.
+/**
+h and s are exactly linear in p at fixed T in this model, so their values at
+(T_ref, p) follow from the cached reference values without approximation:
+    h(T_ref, p) = h(T_ref, p_ref) + (p - p_ref) dh/dp,   and the same for s.
+With cp taken constant from T_ref, h - h(T_ref, p) = cp (T - T_ref) and
+s - s(T_ref, p) = cp ln(T / T_ref). A guess outside the range is fine:
+BoundedNewton then starts from the false-position point of its bracket.
+*/
+double IncompressibleBackend::flash_first_guess(bool enthalpy, double p, double raw_target) {
+    const double x = _fractions[0], T_r = T_ref();
+    // rho, rho' and cp at T_ref do not depend on p: keep them until the
+    // composition, the reference temperature or the fluid's data change
+    GuessCache& g = guess_cache;
+    if (g.x != x || g.T_ref != T_r || g.data_version != fluid->getDataVersion()) {
+        g.rho = rho_at(T_r, p, x);
+        g.drho = calc_drhodTatPx(T_r, p, x);
+        g.c = c_at(T_r, p, x);
+        g.x = x;
+        g.T_ref = T_r;
+        g.data_version = fluid->getDataVersion();
+    }
+    const double rho_r = g.rho, drho_r = g.drho, c_r = g.c;
+    if (enthalpy) {
+        const double h_r = hmass_ref() + (p - p_ref()) * calc_dhdpatTx(T_r, rho_r, drho_r);
+        return T_r + (raw_target - h_r) / c_r;
+    }
+    const double s_r = smass_ref() + (p - p_ref()) * calc_dsdpatTx(rho_r, drho_r);
+    return T_r * std::exp((raw_target - s_r) / c_r);
+}
+
 /// Calculate T given pressure and enthalpy
 /**
-Newton on T inside a sign-change bracket on [TminAt(p, x), Tmax] (BoundedNewton).
-The slope is cp, which is dh/dT at constant p apart from the small term
--p T d2v/dT2, so Newton converges in a few steps. The bracket keeps every step
-inside the range and raises an error when h is outside it, as Brent did.
+Newton on T inside a sign-change bracket on [TminAt(p, x), Tmax] (BoundedNewton),
+with the exact slope dh/dT at constant p, starting from the cp-based guess of
+flash_first_guess. The bracket keeps every step inside the range and raises
+an error when h is outside it, as Brent did.
 @param hmass The mass enthalpy in J/kg
 @param p The pressure in Pa
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p) {
-
-    class HmassP_residual : public FuncWrapper1DWithDeriv
-    {
-       protected:
-        double p, x, h_in;
-        IncompressibleBackend* backend;
-
-       public:
-        HmassP_residual(IncompressibleBackend* backend, const double& p, const double& x, const double& h_in)
-          : p(p), x(x), h_in(h_in), backend(backend) {}
-        double call(double T) override {
-            return backend->raw_calc_hmass(T, p, x) - h_in;
-        }
-        double deriv(double T) override {
-            return backend->calc_dhdTatPx(T, p, x);  // cp
-        }
-    };
-
-    HmassP_residual res(this, p, _fractions[0], hmass - h_ref() + hmass_ref());
+    const double raw_target = hmass - h_ref() + hmass_ref();
+    CaloricResidual res(this, true, p, _fractions[0], raw_target);
     const double tol = DBL_EPSILON * 1e3;
-    return BoundedNewton(&res, NAN, fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);  // NAN: start from the false-position point
+    return BoundedNewton(&res, flash_first_guess(true, p, raw_target), fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);
 }
 /// Calculate T given pressure and entropy
 /**
-Solved like HmassP_flash, with the slope cp/T.
+Solved like HmassP_flash, with the exact slope ds/dT at constant p.
 @param smass The mass entropy in J/kg/K
 @param p The pressure in Pa
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass) {
-
-    class PSmass_residual : public FuncWrapper1DWithDeriv
-    {
-       protected:
-        double p, x, s_in;
-        IncompressibleBackend* backend;
-
-       public:
-        PSmass_residual(IncompressibleBackend* backend, const double& p, const double& x, const double& s_in)
-          : p(p), x(x), s_in(s_in), backend(backend) {}
-        double call(double T) override {
-            return backend->raw_calc_smass(T, p, x) - s_in;
-        }
-        double deriv(double T) override {
-            return backend->calc_dsdTatPx(T, p, x);  // cp/T
-        }
-    };
-
-    PSmass_residual res(this, p, _fractions[0], smass - s_ref() + smass_ref());
+    const double raw_target = smass - s_ref() + smass_ref();
+    CaloricResidual res(this, false, p, _fractions[0], raw_target);
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
     const double tol = 1e-12 * fluid->getTmax();
-    return BoundedNewton(&res, NAN, fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);  // NAN: start from the false-position point
+    return BoundedNewton(&res, flash_first_guess(false, p, raw_target), fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);
 }
 
 ///// Calculate T given pressure and internal energy

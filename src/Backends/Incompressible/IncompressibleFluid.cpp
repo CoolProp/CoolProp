@@ -320,6 +320,7 @@ void IncompressibleFluid::validate() {
                   format("%s (%d): Polynomial %s fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, fit.what, name.c_str()));
             }
             data->ddT = polyDerivativeMatrix(data->coeffs);
+            if (!fit.is_specific_heat) data->ddT2 = polyDerivativeMatrix(data->ddT);
             if (fit.is_specific_heat) {
                 data->int_dT = polyAntiderivativeMatrix(data->coeffs);
                 std::tie(data->int_dTdivT, data->int_dTdivT_log) = polyDivideByTAntiderivative(data->coeffs, Tbase);
@@ -356,6 +357,7 @@ void IncompressibleFluid::validate() {
                                     data->cheb_Tmin, data->cheb_Tmax, name.c_str(), Tmin, Tmax));
         }
         data->ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+        if (!fit.is_specific_heat) data->ddT2 = chebDerivativeMatrix(data->ddT, data->cheb_Tmin, data->cheb_Tmax);
         if (fit.is_specific_heat) {
             data->int_dT = chebAntiderivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
             data->int_dTdivT =
@@ -597,6 +599,21 @@ double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebys
             return polyEvalMatrix(fit.ddT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
             return chebEvalMatrix(fit.ddT, fit, T, x);
+        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+            throw notDefinedError("density");
+        default:
+            throw ValueError(
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, fit.type));
+    }
+}
+/// Second partial derivative of density with respect to temperature at constant pressure and composition
+double IncompressibleFluid::d2rhodT2atPx(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    switch (fit.type) {
+        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+            return polyEvalMatrix(fit.ddT2, T, x, Tbase, xbase);
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            return chebEvalMatrix(fit.ddT2, fit, T, x);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("density");
         default:
@@ -875,6 +892,7 @@ void IncompressibleFluid::fixComposition(double x, bool chebyshev, CompositionFi
     out.data_version = data_version;
     out.rho = reduceAtComposition(d, d.coeffs, x, Tbase, xbase);
     out.drhodT = reduceAtComposition(d, d.ddT, x, Tbase, xbase);
+    out.d2rhodT2 = reduceAtComposition(d, d.ddT2, x, Tbase, xbase);
     out.c = reduceAtComposition(c, c.coeffs, x, Tbase, xbase);
     out.int_c = reduceAtComposition(c, c.int_dT, x, Tbase, xbase);
     out.int_c_divT = reduceAtComposition(c, c.int_dTdivT, x, Tbase, xbase);
@@ -1464,14 +1482,18 @@ TEST_CASE("Both kinds of caloric fit invert the same way", "[IncompressibleFluid
         CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, chebyshev);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "MEG"));
         AS->set_mass_fractions(std::vector<double>(1, x));
-        for (double T : {260.0, 300.0, 350.0}) {
-            CAPTURE(T);
-            AS->update(CoolProp::PT_INPUTS, 1e6, T);
-            const double h = AS->hmass(), s = AS->smass();
-            AS->update(CoolProp::HmassP_INPUTS, h, 1e6);
-            CHECK(std::abs(AS->T() - T) < 1e-10);
-            AS->update(CoolProp::PSmass_INPUTS, 1e6, s);
-            CHECK(std::abs(AS->T() - T) < 1e-9);
+        // Up to 500 bar, where the pressure terms of h and s make cp alone a
+        // poor Newton slope (the flashes use the exact one)
+        for (double p : {1e5, 1e7, 5e7}) {
+            for (double T : {260.0, 300.0, 350.0}) {
+                CAPTURE(p, T);
+                AS->update(CoolProp::PT_INPUTS, p, T);
+                const double h = AS->hmass(), s = AS->smass();
+                AS->update(CoolProp::HmassP_INPUTS, h, p);
+                CHECK(std::abs(AS->T() - T) < 1e-10);
+                AS->update(CoolProp::PSmass_INPUTS, p, s);
+                CHECK(std::abs(AS->T() - T) < 1e-9);
+            }
         }
         CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, true);
     }

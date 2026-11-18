@@ -55,6 +55,9 @@ struct IncompressibleData
     ///  - ddT:        coefficients of d/dT (the density fit needs this for
     ///                the pressure terms of h and s; both fits use it as the
     ///                slope when T_rho and T_c invert them with Newton)
+    ///  - ddT2:       density fits only, coefficients of d2/dT2 (the exact
+    ///                slope of h and s at constant p in the HmassP and PSmass
+    ///                flashes)
     ///  - int_dT:     coefficients of the indefinite Int f dT (enthalpy)
     ///  - int_dTdivT: coefficients of the indefinite Int f/T dT (entropy)
     ///  - int_dTdivT_log: polynomial fits only. Int f/T dT of a polynomial
@@ -65,7 +68,7 @@ struct IncompressibleData
     ///                converges geometrically since T > 0.
     /// Integration constants are irrelevant: the backend always subtracts the
     /// same expression evaluated at the reference state.
-    Eigen::MatrixXd ddT, int_dT, int_dTdivT, int_dTdivT_log;
+    Eigen::MatrixXd ddT, ddT2, int_dT, int_dTdivT, int_dTdivT_log;
 
     IncompressibleData()
       : type(INCOMPRESSIBLE_NOT_SET){
@@ -110,7 +113,7 @@ struct CompositionFits
     double x = NAN;
     bool chebyshev = true;
     unsigned long data_version = 0;  ///< IncompressibleFluid::data_version these were built from
-    FitAtComposition rho, drhodT, c, int_c, int_c_divT, int_c_divT_log, visc, cond;
+    FitAtComposition rho, drhodT, d2rhodT2, c, int_c, int_c_divT, int_c_divT_log, visc, cond;
 };
 
 /// A property provider for incompressible solutions and pure fluids
@@ -489,6 +492,8 @@ class IncompressibleFluid
     /// Partial derivative of density
     //  with respect to temperature at constant pressure and composition
     double drhodTatPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
+    /// Second partial derivative of density with respect to temperature at constant pressure and composition
+    double d2rhodT2atPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     ///// Partial derivative of entropy
     ////  with respect to temperature at constant pressure and composition
     //double dsdTatPx  (double T, double p, double x){return c(T,p,x)/T;};
