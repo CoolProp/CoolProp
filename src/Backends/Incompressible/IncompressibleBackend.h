@@ -38,6 +38,25 @@ class IncompressibleBackend : public AbstractState
     /// h and s by a constant.
     bool chebyshev_caloric = true;
 
+    /// The fits of this state with its composition put in (see FitAtComposition),
+    /// built when the composition changes or the fluid's data is replaced.
+    CompositionFits fits;
+    /// The reduced fits if x is this state's composition, else nullptr: the
+    /// reference state and other compositions use the full evaluation.
+    const CompositionFits* fits_at(double x) {
+        if (_fractions.size() != 1 || x != _fractions[0]) return nullptr;
+        if (fits.x != x || fits.data_version != fluid->getDataVersion()) fluid->fixComposition(x, chebyshev_caloric, fits);
+        return &fits;
+    }
+    double rho_at(double T, double p, double x) {
+        const CompositionFits* f = fits_at(x);
+        return (f && f->rho.kind != FitAtComposition::NONE) ? f->rho.eval(T) : fluid->rho(T, p, x, chebyshev_caloric);
+    }
+    double c_at(double T, double p, double x) {
+        const CompositionFits* f = fits_at(x);
+        return (f && f->c.kind != FitAtComposition::NONE) ? f->c.eval(T) : fluid->c(T, p, x, chebyshev_caloric);
+    }
+
     /// Set the fractions
     /**
     @param fractions The vector of fractions of the components converted to the correct input
@@ -218,10 +237,10 @@ class IncompressibleBackend : public AbstractState
 
     /// We start with the functions that do not need a reference state
     CoolPropDbl calc_rhomass() override {
-        return fluid->rho(_T, _p, _fractions[0], chebyshev_caloric);
+        return rho_at(_T, _p, _fractions[0]);
     };
     CoolPropDbl calc_cmass() {
-        return fluid->c(_T, _p, _fractions[0], chebyshev_caloric);
+        return c_at(_T, _p, _fractions[0]);
     };
     CoolPropDbl calc_cpmass() override {
         return cmass();
@@ -230,10 +249,12 @@ class IncompressibleBackend : public AbstractState
         return cmass();
     };
     CoolPropDbl calc_viscosity() override {
-        return fluid->visc(_T, _p, _fractions[0]);
+        const CompositionFits* f = fits_at(_fractions[0]);
+        return (f && f->visc.kind != FitAtComposition::NONE) ? f->visc.eval(_T) : fluid->visc(_T, _p, _fractions[0]);
     };
     CoolPropDbl calc_conductivity() override {
-        return fluid->cond(_T, _p, _fractions[0]);
+        const CompositionFits* f = fits_at(_fractions[0]);
+        return (f && f->cond.kind != FitAtComposition::NONE) ? f->cond.eval(_T) : fluid->cond(_T, _p, _fractions[0]);
     };
     CoolPropDbl calc_T_freeze() override {
         // No update is called - T_freeze is a trivial output
@@ -262,27 +283,36 @@ class IncompressibleBackend : public AbstractState
 	 */
     /// Partial derivative of density with respect to temperature at constant pressure and composition
     double calc_drhodTatPx(double T, double p, double x) {
-        return fluid->drhodTatPx(T, p, x, chebyshev_caloric);
+        const CompositionFits* f = fits_at(x);
+        return (f && f->drhodT.kind != FitAtComposition::NONE) ? f->drhodT.eval(T) : fluid->drhodTatPx(T, p, x, chebyshev_caloric);
     };
     /// Partial derivative of entropy with respect to temperature at constant pressure and composition
     double calc_dsdTatPx(double T, double p, double x) {
-        return fluid->c(T, p, x, chebyshev_caloric) / T;
+        return c_at(T, p, x) / T;
     };
     /// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
     double calc_dhdTatPx(double T, double p, double x) {
-        return fluid->c(T, p, x, chebyshev_caloric);
+        return c_at(T, p, x);
     };
     /// Partial derivative of entropy
     ///  with respect to temperature at constant pressure and composition
     ///  integrated in temperature
     double calc_dsdTatPxdT(double T, double p, double x) {
+        const CompositionFits* f = fits_at(x);
+        if (f && f->int_c_divT.kind != FitAtComposition::NONE) {
+            // Polynomial fits add a ln(T) term, as IncompressibleFluid::dsdTatPxdT does
+            double value = f->int_c_divT.eval(T);
+            if (f->int_c_divT_log.kind != FitAtComposition::NONE) value += std::log(T) * f->int_c_divT_log.eval(T);
+            return value;
+        }
         return fluid->dsdTatPxdT(T, p, x, chebyshev_caloric);
     };
     /// Partial derivative of enthalpy
     ///  with respect to temperature at constant pressure and composition
     ///  integrated in temperature
     double calc_dhdTatPxdT(double T, double p, double x) {
-        return fluid->dhdTatPxdT(T, p, x, chebyshev_caloric);
+        const CompositionFits* f = fits_at(x);
+        return (f && f->int_c.kind != FitAtComposition::NONE) ? f->int_c.eval(T) : fluid->dhdTatPxdT(T, p, x, chebyshev_caloric);
     };
 
     /* Other useful derivatives

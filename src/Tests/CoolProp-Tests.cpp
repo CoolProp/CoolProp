@@ -48,7 +48,13 @@ struct vel
     std::string in1, in2, out, fluid;
     double v1, v2, tol, expected;
     vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, const std::string& out, double expected, double tol)
-      : in1(in1), in2(in2), fluid(fluid), v1(v1), v2(v2), expected(expected), tol(tol) {
+      : in1(in1),
+        in2(in2),
+        fluid(fluid),
+        v1(v1),
+        v2(v2),
+        expected(expected),
+        tol(tol){
 
         };
 };
@@ -8905,6 +8911,26 @@ struct ChebyshevCaloricSetting
     ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
     ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
 };
+
+TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
+    // A state keeps the fits of its fluid with the composition put in. When
+    // add_fluids_as_JSON replaces that fluid in place, the state must use the
+    // new data on its next update, not the reduced fits of the old one.
+    auto definition = [](double rho) {
+        return std::string(R"([{"name": "CatchRuntimeReplacedFluid", "description": "replaced at runtime", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[)")
+               + std::to_string(rho) + R"(]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}}])";
+    };
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(1000.0)));
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeReplacedFluid"));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->rhomass() == Catch::Approx(1000.0).epsilon(1e-14));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(900.0)));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->rhomass() == Catch::Approx(900.0).epsilon(1e-14));
+}
 
 TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {
     // Smoke test only: grid targets s(T) converge within 15 iterations even with the old absolute Brent tolerance, so it does not guard the 1e-12*Tmax fix.

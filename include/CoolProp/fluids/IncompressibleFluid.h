@@ -12,6 +12,7 @@
 #include "CoolProp/fluids/Helmholtz.h"
 #include "CoolProp/numerics/Solvers.h"
 
+#include <cmath>
 #include <numeric>
 #include <string>
 #include <utility>
@@ -54,9 +55,6 @@ struct IncompressibleData
     ///  - ddT:        coefficients of d/dT (the density fit needs this for
     ///                the pressure terms of h and s; both fits use it as the
     ///                slope when T_rho and T_c invert them with Newton)
-    ///  - ddT2:       density fits only, coefficients of d2/dT2 (the exact
-    ///                slope of h and s at constant p in the HmassP and PSmass
-    ///                flashes)
     ///  - int_dT:     coefficients of the indefinite Int f dT (enthalpy)
     ///  - int_dTdivT: coefficients of the indefinite Int f/T dT (entropy)
     ///  - int_dTdivT_log: polynomial fits only. Int f/T dT of a polynomial
@@ -67,7 +65,7 @@ struct IncompressibleData
     ///                converges geometrically since T > 0.
     /// Integration constants are irrelevant: the backend always subtracts the
     /// same expression evaluated at the reference state.
-    Eigen::MatrixXd ddT, ddT2, int_dT, int_dTdivT, int_dTdivT_log;
+    Eigen::MatrixXd ddT, int_dT, int_dTdivT, int_dTdivT_log;
 
     IncompressibleData()
       : type(INCOMPRESSIBLE_NOT_SET){
@@ -81,6 +79,40 @@ inline int format_as(IncompressibleData::IncompressibleTypeEnum type) {
 }
 #endif
 
+/// One fit with the composition already put in: a series in T alone.
+/**
+The polynomial and Chebyshev fits are matrices, rows in T and columns in
+(x - xbase). For a state the composition is fixed, so each row can be
+reduced to a single number once, and every later evaluation is a short sum
+over T. The reduced coefficients are computed exactly as the full evaluation
+computes them (Horner over the columns, row by row), and the sum over T runs
+in the same order, so the result is bit for bit the same.
+*/
+struct FitAtComposition
+{
+    enum Kind
+    {
+        NONE,       ///< not reduced (another fit type): evaluate the full fit instead
+        POWER,      ///< sum a[k] * (T - T_offset)^k, Horner's scheme
+        CHEBYSHEV,  ///< sum a[k] * T_k(u), u = (2 T - T_offset) / T_span, Clenshaw
+    };
+    Kind kind = NONE;
+    bool exponential = false;  ///< exppolynomial fits: the value is exp(series)
+    std::vector<double> a;
+    double T_offset = 0.0, T_span = 1.0;
+    double eval(double T) const;
+};
+
+/// All fits one state evaluates, at one composition and for one choice of
+/// caloric fit (classic or Chebyshev). Built by IncompressibleFluid::fixComposition.
+struct CompositionFits
+{
+    double x = NAN;
+    bool chebyshev = true;
+    unsigned long data_version = 0;  ///< IncompressibleFluid::data_version these were built from
+    FitAtComposition rho, drhodT, c, int_c, int_c_divT, int_c_divT_log, visc, cond;
+};
+
 /// A property provider for incompressible solutions and pure fluids
 /**
 This fluid instance is populated using an entry from a JSON file
@@ -90,6 +122,10 @@ class IncompressibleFluid
 
    protected:
     bool strict;
+    /// Changes every time validate() runs, so that a backend holding
+    /// CompositionFits of this fluid sees when the fluid was replaced
+    /// (add_fluids_as_JSON with an existing name) and builds them again.
+    unsigned long data_version = 0;
 
     std::string name;
     std::string description;
@@ -254,6 +290,12 @@ class IncompressibleFluid
     /// The inverse functions search from here, so that a fit extrapolated
     /// below the freezing point cannot offer a second, frozen solution.
     double TminAt(double p, double x);
+    /// Reduce every fit a state evaluates to a series in T at composition x
+    /// (see FitAtComposition). Fits of other types are left as NONE.
+    void fixComposition(double x, bool chebyshev, CompositionFits& out) const;
+    unsigned long getDataVersion() const {
+        return data_version;
+    }
     double getxmax() const {
         return xmax;
     }
@@ -447,8 +489,6 @@ class IncompressibleFluid
     /// Partial derivative of density
     //  with respect to temperature at constant pressure and composition
     double drhodTatPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
-    /// Second partial derivative of density with respect to temperature at constant pressure and composition
-    double d2rhodT2atPx(double T, double p, double x, bool chebyshev = chebyshevCaloricPreferred());
     ///// Partial derivative of entropy
     ////  with respect to temperature at constant pressure and composition
     //double dsdTatPx  (double T, double p, double x){return c(T,p,x)/T;};

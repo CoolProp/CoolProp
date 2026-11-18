@@ -398,81 +398,66 @@ double IncompressibleBackend::smass_ref() {
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
     return fluid->T_rho(rhomass, p, _fractions[0], chebyshev_caloric);
 }
-namespace {
-/// Residual of the HmassP or PSmass flash with its exact derivative in T.
-/**
-h = Int c dT + p (v - T dv/dT) and s = Int c/T dT - p dv/dT, with v = 1/rho,
-so at constant p
-    dh/dT = c - p T d2v/dT2,    ds/dT = c/T - p d2v/dT2,
-    d2v/dT2 = 2 rho'^2 / rho^3 - rho'' / rho^2.
-With this exact slope Newton converges quadratically. call() keeps rho and
-rho' at its T, so deriv() at the same T only adds c and rho''.
-*/
-class CaloricResidual : public CoolProp::FuncWrapper1DWithDeriv
-{
-   public:
-    enum Kind
-    {
-        ENTHALPY,
-        ENTROPY
-    };
-    CaloricResidual(CoolProp::IncompressibleFluid* fluid, Kind kind, double p, double x, double target, bool chebyshev)
-      : fluid(fluid), kind(kind), p(p), x(x), target(target), chebyshev(chebyshev) {}
-    double call(double T) override {
-        set_density_terms(T);
-        if (kind == ENTHALPY) {
-            // Int c dT + p * dh/dp|T, the same expression as raw_calc_hmass
-            return fluid->dhdTatPxdT(T, p, x, chebyshev) + p * (1 / rho * (1 + T / rho * drho)) - target;
-        }
-        // Int c/T dT + p * ds/dp|T, the same expression as raw_calc_smass
-        return fluid->dsdTatPxdT(T, p, x, chebyshev) + p * (drho / rho / rho) - target;
-    }
-    double deriv(double T) override {
-        set_density_terms(T);
-        const double d2rho = fluid->d2rhodT2atPx(T, p, x, chebyshev);
-        const double d2v = 2 * drho * drho / (rho * rho * rho) - d2rho / (rho * rho);
-        const double c = fluid->c(T, p, x, chebyshev);
-        return (kind == ENTHALPY) ? c - p * T * d2v : c / T - p * d2v;
-    }
-
-   private:
-    CoolProp::IncompressibleFluid* fluid;
-    Kind kind;
-    double p, x, target;
-    bool chebyshev;
-    double T_cached = NAN, rho = NAN, drho = NAN;
-    void set_density_terms(double T) {
-        if (T == T_cached) return;
-        rho = fluid->rho(T, p, x, chebyshev);
-        drho = fluid->drhodTatPx(T, p, x, chebyshev);
-        T_cached = T;
-    }
-};
-}  // namespace
-
 /// Calculate T given pressure and enthalpy
 /**
-Newton on T with its exact derivative, inside a sign-change bracket on
-[Tmin, Tmax] (BoundedNewton). The bracket keeps every step inside the range
-and raises an error when h is outside it, as Brent did.
+Newton on T inside a sign-change bracket on [TminAt(p, x), Tmax] (BoundedNewton).
+The slope is cp, which is dh/dT at constant p apart from the small term
+-p T d2v/dT2, so Newton converges in a few steps. The bracket keeps every step
+inside the range and raises an error when h is outside it, as Brent did.
 @param hmass The mass enthalpy in J/kg
 @param p The pressure in Pa
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p) {
-    CaloricResidual res(fluid, CaloricResidual::ENTHALPY, p, _fractions[0], hmass - h_ref() + hmass_ref(), chebyshev_caloric);
+
+    class HmassP_residual : public FuncWrapper1DWithDeriv
+    {
+       protected:
+        double p, x, h_in;
+        IncompressibleBackend* backend;
+
+       public:
+        HmassP_residual(IncompressibleBackend* backend, const double& p, const double& x, const double& h_in)
+          : p(p), x(x), h_in(h_in), backend(backend) {}
+        double call(double T) override {
+            return backend->raw_calc_hmass(T, p, x) - h_in;
+        }
+        double deriv(double T) override {
+            return backend->calc_dhdTatPx(T, p, x);  // cp
+        }
+    };
+
+    HmassP_residual res(this, p, _fractions[0], hmass - h_ref() + hmass_ref());
     const double tol = DBL_EPSILON * 1e3;
     return BoundedNewton(&res, NAN, fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);  // NAN: start from the false-position point
 }
 /// Calculate T given pressure and entropy
 /**
-Solved like HmassP_flash.
+Solved like HmassP_flash, with the slope cp/T.
 @param smass The mass entropy in J/kg/K
 @param p The pressure in Pa
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass) {
-    CaloricResidual res(fluid, CaloricResidual::ENTROPY, p, _fractions[0], smass - s_ref() + smass_ref(), chebyshev_caloric);
+
+    class PSmass_residual : public FuncWrapper1DWithDeriv
+    {
+       protected:
+        double p, x, s_in;
+        IncompressibleBackend* backend;
+
+       public:
+        PSmass_residual(IncompressibleBackend* backend, const double& p, const double& x, const double& s_in)
+          : p(p), x(x), s_in(s_in), backend(backend) {}
+        double call(double T) override {
+            return backend->raw_calc_smass(T, p, x) - s_in;
+        }
+        double deriv(double T) override {
+            return backend->calc_dsdTatPx(T, p, x);  // cp/T
+        }
+    };
+
+    PSmass_residual res(this, p, _fractions[0], smass - s_ref() + smass_ref());
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
     const double tol = 1e-12 * fluid->getTmax();
     return BoundedNewton(&res, NAN, fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);  // NAN: start from the false-position point
@@ -538,10 +523,10 @@ CoolPropDbl IncompressibleBackend::calc_smass() {
 
 /// Functions that can be used with the solver, they miss the reference values!
 CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x) {
-    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
+    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, rho_at(T, p, x), calc_drhodTatPx(T, p, x));
 };
 CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) {
-    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
+    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(rho_at(T, p, x), calc_drhodTatPx(T, p, x));
 };
 
 /// Calculate the first partial derivative for the desired derivative
@@ -597,6 +582,7 @@ double IncompressibleBackend::calc_dhdpatTx(double T, double rho, double drhodTa
 #    include <catch2/catch_all.hpp>
 
 #    include "Tests/TestObjects.h"
+#    include "CoolProp/Configuration.h"
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible backend", "[IncompressibleBackend]") {
     CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MMA2");
@@ -1100,6 +1086,43 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
     //        CHECK( check_abs(val,res,acc) );
     //        }
     //    }
+}
+
+TEST_CASE("Fits with the composition put in give exactly the full evaluation", "[IncompressibleBackend]") {
+    // The backend reduces each fit to a series in T once per composition
+    // (CompositionFits). That changes no result, to the last bit.
+    struct Case
+    {
+        const char* name;
+        double x;
+    };
+    for (const Case& c : {Case{"MEG", 0.35}, Case{"LiBr", 0.5}, Case{"Water", 1.0}, Case{"DowQ", 1.0}}) {
+        for (const bool chebyshev : {false, true}) {
+            CAPTURE(c.name, chebyshev);
+            CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(c.name);
+            CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, chebyshev);
+            CoolProp::IncompressibleBackend backend(&fluid);
+            CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, true);
+            if (!fluid.is_pure()) backend.set_mass_fractions(std::vector<CoolPropDbl>(1, c.x));
+            const double x = fluid.is_pure() ? 1.0 : c.x;
+            for (double T : {300.0, 320.0, 345.0}) {
+                CAPTURE(T);
+                const double p = 1e5;
+                backend.update(CoolProp::PT_INPUTS, p, T);
+                CHECK(backend.rhomass() == fluid.rho(T, p, x, chebyshev));
+                CHECK(backend.cmass() == fluid.c(T, p, x, chebyshev));
+                CHECK(backend.viscosity() == fluid.visc(T, p, x));
+                CHECK(backend.conductivity() == fluid.cond(T, p, x));
+                CHECK(
+                  backend.raw_calc_hmass(T, p, x)
+                  == fluid.dhdTatPxdT(T, p, x, chebyshev)
+                       + p * (1 / fluid.rho(T, p, x, chebyshev) * (1 + T / fluid.rho(T, p, x, chebyshev) * fluid.drhodTatPx(T, p, x, chebyshev))));
+                CHECK(backend.raw_calc_smass(T, p, x)
+                      == fluid.dsdTatPxdT(T, p, x, chebyshev)
+                           + p * (1 / fluid.rho(T, p, x, chebyshev) / fluid.rho(T, p, x, chebyshev) * fluid.drhodTatPx(T, p, x, chebyshev)));
+            }
+        }
+    }
 }
 
 #endif /* ENABLE_CATCH */
