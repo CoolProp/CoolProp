@@ -220,8 +220,18 @@ TEST_CASE("A first-order refill carries no Hessians from an earlier composition;
     CHECK(c.d_ndTr_dxj.empty());
     CHECK(c.d_ndrhor_dxj.empty());
 
-    // composition_derivatives on a composition of the wrong length clears every output instead of reading past it
+    // composition_derivatives on a composition of the wrong length clears every output instead of reading past it.
+    // Fill `out` first, so the checks below see entries removed rather than never written.  The wrong-length call passes
+    // with_hessian=true on purpose: with false, the earlier !with_hessian branch would empty the Hessians and hide a
+    // wrong-length branch that forgot them.
     ReducingFunction::CompositionDerivatives out;
+    heos->Reducing->composition_derivatives(std::vector<CoolPropDbl>{0.5, 0.3, 0.2}, XN_DEPENDENT, true, out);
+    REQUIRE(out.dTr.size() == 3);
+    REQUIRE(out.drhor.size() == 3);
+    REQUIRE(out.ndTr.size() == 3);
+    REQUIRE(out.ndrhor.size() == 3);
+    REQUIRE(out.d_ndTr_dxj.size() == 3);
+    REQUIRE(out.d_ndrhor_dxj.size() == 3);
     heos->Reducing->composition_derivatives(std::vector<CoolPropDbl>{0.5, 0.5}, XN_DEPENDENT, true, out);
     CHECK(out.dTr.empty());
     CHECK(out.drhor.empty());
