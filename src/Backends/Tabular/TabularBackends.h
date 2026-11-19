@@ -1214,6 +1214,19 @@ class TabularBackend : public AbstractState
         }
     }
     TabularDataSet* dataset;
+    /// path_to_tables() for the composition `dataset` was loaded for; set_mole_fractions()
+    /// compares against it to tell when the tables must be reselected
+    std::string loaded_tables_path;
+    /// Forget the last state: flush the cached table indices, deselect the table and
+    /// put Q at the impossible value the saturation accessors refuse
+    void invalidate_state() {
+        cached_single_phase_i = std::numeric_limits<std::size_t>::max();
+        cached_single_phase_j = std::numeric_limits<std::size_t>::max();
+        cached_saturation_iL = std::numeric_limits<std::size_t>::max();
+        cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+        selected_table = SELECTED_NO_TABLE;
+        _Q = -1000;
+    }
 
     void recalculate_singlephase_phase() {
         if (p() > p_critical()) {
@@ -1315,6 +1328,17 @@ class TabularBackend : public AbstractState
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
         this->AS->set_mole_fractions(mole_fractions);
         is_mixture = (this->AS->get_mole_fractions().size() > 1);
+        // The previous state belongs to the previous composition: its cached
+        // indices point into that dataset's phase envelope, which can be
+        // shorter than the new one's.  Leave the state as a fresh one.
+        invalidate_state();
+        // The tables are keyed by composition (path_to_tables), so a new
+        // composition needs its own dataset; without this, check_tables() saw
+        // tables_loaded and kept the first composition's tables (COO-186)
+        if (tables_loaded && path_to_tables() != loaded_tables_path) {
+            tables_loaded = false;
+            dataset = nullptr;
+        }
         // Check the tables and build if necessary
         check_tables();
         // For mixtures, the construction of the coefficients is delayed until this
@@ -1414,6 +1438,7 @@ class TabularBackend : public AbstractState
                 load_tables();
                 // Set the flag saying tables have been successfully loaded
                 tables_loaded = true;
+                loaded_tables_path = path_to_tables();
             } catch (CoolProp::UnableToLoadError& e) {
                 if (get_debug_level() > 0) {
                     std::cout << format("Table loading failed with error: %s\n", e.what());
@@ -1449,6 +1474,7 @@ class TabularBackend : public AbstractState
                 load_tables();
                 // Set the flag saying tables have been successfully loaded
                 tables_loaded = true;
+                loaded_tables_path = path_to_tables();
             }
         }
     };
