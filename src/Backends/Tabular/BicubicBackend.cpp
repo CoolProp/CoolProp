@@ -2,6 +2,7 @@
 
 #    include "BicubicBackend.h"
 
+#    include <algorithm>
 #    include <cmath>
 #    include "CoolProp/numerics/MatrixMath.h"
 #    include "CoolProp/DataStructures.h"
@@ -31,6 +32,11 @@ void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData
                                                      const parameters variable1, const double value1, const parameters otherkey,
                                                      const double otherval, std::size_t& i, std::size_t& j) {
     table.find_nearest_neighbor(variable1, value1, otherkey, otherval, i, j);
+    // The table returns a node index (up to Nx-1, Ny-1); its closest-node fallback can land on the last node
+    // when otherval lies outside the column.  coeffs is indexed by cell (i,i+1),(j,j+1), so there is one fewer
+    // entry in each direction: clamp to the last cell, which is what the bisection path already returns.
+    i = std::min(i, table.Nx - 2);
+    j = std::min(j, table.Ny - 2);
     const CellCoeffs& cell = coeffs[i][j];
     if (!cell.valid()) {
         if (auto alt = cell.get_alternate()) {
