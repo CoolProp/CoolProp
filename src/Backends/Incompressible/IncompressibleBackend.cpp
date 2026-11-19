@@ -1227,8 +1227,18 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
     {
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
         AS->update(CoolProp::PT_INPUTS, 2e6, 400.0);
-        const double h_400 = AS->hmass();
+        const double h_400 = AS->hmass(), s_400 = AS->smass();  // read before the failing updates clear the state
         CHECK_THROWS_WITH(AS->update(CoolProp::HmassP_INPUTS, h_400, 101325.0), Catch::Matchers::ContainsSubstring("boils at"));
+        CHECK_THROWS_WITH(AS->update(CoolProp::PSmass_INPUTS, 101325.0, s_400), Catch::Matchers::ContainsSubstring("boils at"));
+    }
+    // Too cold is not boiling: an enthalpy below the liquid range keeps the
+    // bracket error, also at 1 atm where the liquid range ends at boiling
+    {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325.0, 280.0);
+        const double h_cold = AS->hmass() - 1e6;
+        CHECK_THROWS_WITH(AS->update(CoolProp::HmassP_INPUTS, h_cold, 101325.0),
+                          !Catch::Matchers::ContainsSubstring("boils at") && Catch::Matchers::ContainsSubstring("do not bracket"));
     }
 
     // A liquid exactly at its boiling point is still inside the bracket

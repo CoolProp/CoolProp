@@ -13,6 +13,7 @@
 #include "CoolProp/numerics/Solvers.h"
 
 #include <cmath>
+#include <exception>
 #include <cstdint>
 #include <numeric>
 #include <string>
@@ -316,18 +317,38 @@ class IncompressibleFluid
     double solveInLiquidRange(double p, double x, Solve solve) {
         const double T_lo = TminAt(p, x);
         if (p_sat.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET || !(TminPsat < Tmax)) return solve(T_lo, Tmax);
+        // First pass on the full range. Keep its error, if any: when the second
+        // pass fails as well, the first error is the one that explains why (a
+        // target below freezing, a NaN input, a density reached twice).
+        std::exception_ptr first_error;
+        bool boiling = false;
         try {
             const double T = solve(T_lo, Tmax);
             if (T <= TminPsat || psat(T, x) <= p) return T;  // a liquid state: done
+            boiling = true;                                  // the solution boils at p
         } catch (const CoolPropBaseError&) {
-            // no root on the full range; try the liquid range below
+            first_error = std::current_exception();  // maybe only the extrapolation above boiling
         }
-        const double T_boil = TmaxAt(p, x);
-        if (!(T_boil < Tmax)) return solve(T_lo, Tmax);  // no boiling point inside the range: the first error stands
+        double T_boil = Tmax;
+        try {
+            T_boil = TmaxAt(p, x);
+        } catch (const CoolPropBaseError&) {
+            if (first_error) std::rethrow_exception(first_error);
+            throw;
+        }
+        if (!(T_boil < Tmax)) {
+            // No boiling point inside the range; with a monotonic psat a
+            // boiling first result cannot happen here
+            if (first_error) std::rethrow_exception(first_error);
+            throw ValueError(format("%s: no liquid state at p = %g Pa", name.c_str(), p));
+        }
         try {
             return solve(T_lo, T_boil);
         } catch (const CoolPropBaseError& e) {
-            throw ValueError(format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (%s)", name.c_str(), p, T_boil, e.what()));
+            if (boiling) {
+                throw ValueError(format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (%s)", name.c_str(), p, T_boil, e.what()));
+            }
+            std::rethrow_exception(first_error);
         }
     }
     /// Reduce every fit a state evaluates to a series in T at composition x
