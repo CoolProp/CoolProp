@@ -293,10 +293,15 @@ recorded history of finished or abandoned work were dropped (they remain in
   `IncompressibleFluid::data_version` changes, which `validate()` bumps:
   `add_fluids_as_JSON` replaces a fluid in place under existing backends.
 - **Incompressible inversions use `BoundedNewton` (src/Solvers.cpp).**
-  `T_rho`, `T_c` and the `HmassP`/`PSmass` flashes search
-  `[TminAt(p, x), Tmax]`, where `TminAt` is the freezing point when it is
-  above `Tmin`: density fits extrapolated below freezing turn over, and on
-  the full range a valid density was reached twice.  `BoundedNewton` needs a
+  `T_rho`, `T_c` and the `HmassP`/`PSmass` flashes search the liquid range
+  through `solveInLiquidRange`: `[TminAt(p, x), Tmax]` first, where
+  `TminAt` is the freezing point when it is above `Tmin` (density fits
+  extrapolated below freezing turn over, and on the full range a valid
+  density was reached twice); and `[TminAt, TmaxAt]` only if that lands on a
+  boiling state or finds no root (fits extrapolated above the boiling point
+  turn over too, COO-190).  `TmaxAt` solves psat(T) = p with Brent, about
+  300 ns: computing it on every flash doubled the cost when p changes with
+  every call, hence the lazy second pass.  `BoundedNewton` needs a
   sign change over the range and throws otherwise, like Brent; it must never
   orient its bracket from the sign of f' alone (that silently returned the
   other root, 77 K off).  The flash slope is exact (`c - p T d2v/dT2`): cp

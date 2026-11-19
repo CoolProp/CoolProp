@@ -296,6 +296,40 @@ class IncompressibleFluid
     /// The inverse functions search from here, so that a fit extrapolated
     /// below the freezing point cannot offer a second, frozen solution.
     double TminAt(double p, double x);
+    /// Highest valid temperature at this pressure and composition: Tmax, or
+    /// the saturation temperature where the liquid boils below Tmax (the limit
+    /// checkP() applies, where p must not be below psat). The inverse functions
+    /// search up to here, so that a fit extrapolated above the boiling point,
+    /// where h or s can fall with T again, cannot hide the liquid solution.
+    double TmaxAt(double p, double x);
+    /// Solve for a temperature inside the valid liquid range at (p, x).
+    /** solve(T_lo, T_hi) must return the root on [T_lo, T_hi] or throw. The
+     *  search runs on [TminAt(p, x), Tmax] first. When that gives a liquid
+     *  state (p not below psat), it is the answer, and the boiling point is
+     *  never computed, which keeps this cheap. When it gives a boiling state,
+     *  or finds no root (the fit can turn over above the boiling point), the
+     *  search is repeated on [TminAt(p, x), TmaxAt(p, x)].
+     *  A template, so that the solver call is inlined: Solve is any callable,
+     *  typically a lambda around BoundedNewton.
+     */
+    template <typename Solve>
+    double solveInLiquidRange(double p, double x, Solve solve) {
+        const double T_lo = TminAt(p, x);
+        if (p_sat.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET || !(TminPsat < Tmax)) return solve(T_lo, Tmax);
+        try {
+            const double T = solve(T_lo, Tmax);
+            if (T <= TminPsat || psat(T, x) <= p) return T;  // a liquid state: done
+        } catch (const CoolPropBaseError&) {
+            // no root on the full range; try the liquid range below
+        }
+        const double T_boil = TmaxAt(p, x);
+        if (!(T_boil < Tmax)) return solve(T_lo, Tmax);  // no boiling point inside the range: the first error stands
+        try {
+            return solve(T_lo, T_boil);
+        } catch (const CoolPropBaseError& e) {
+            throw ValueError(format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (%s)", name.c_str(), p, T_boil, e.what()));
+        }
+    }
     /// Reduce every fit a state evaluates to a series in T at composition x
     /// (see FitAtComposition). Fits of other types are left as NONE.
     void fixComposition(double x, bool chebyshev, CompositionFits& out) const;

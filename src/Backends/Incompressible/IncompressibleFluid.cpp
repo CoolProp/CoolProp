@@ -775,7 +775,8 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
  * done here, but in the backend, T(h,p) for example.
  */
 namespace {
-/// Solve fit(T, x) = target for T in [Tmin, Tmax], the same way for the
+/// Solve fit(T, x) = target for T in [Tmin, Tmax] (the valid liquid range at
+/// this pressure, see TminAt and TmaxAt), the same way for the
 /// polynomial and the Chebyshev fits: Newton on the fit, with its exact
 /// derivative (the ddT matrix built by validate()), kept inside the range.
 /// The fit must change sign over the range, as for Brent before: a target
@@ -873,6 +874,34 @@ void IncompressibleFluid::fixComposition(double x, bool chebyshev, CompositionFi
     out.cond = reduceAtComposition(conductivity, conductivity.coeffs, x, Tbase, xbase);
 }
 
+double IncompressibleFluid::TmaxAt(double p, double x) {
+    // checkP() compares p with psat only above TminPsat, so without a
+    // saturation curve inside the range every temperature up to Tmax is valid
+    if (p_sat.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET || !(TminPsat < Tmax)) return Tmax;
+    if (psat(Tmax, x) <= p) return Tmax;  // still liquid at Tmax
+    // psat() is defined only above TminPsat. If the liquid already boils just
+    // above it, the valid temperatures end at TminPsat.
+    const double T_lo = std::nextafter(TminPsat, Tmax);
+    if (psat(T_lo, x) >= p) return TminPsat;
+    // Saturation temperature: psat(T) = p, with Brent. (Not on ln p: a
+    // polynomial psat fit can reach zero or below near TminPsat.)
+    class Residual : public FuncWrapper1D
+    {
+       public:
+        IncompressibleFluid* fluid;
+        double p, x;
+        Residual(IncompressibleFluid* fluid, double p, double x) : fluid(fluid), p(p), x(x) {}
+        double call(double T) override {
+            return fluid->psat(T, x) - p;
+        }
+    } res(this, p, x);
+    const double tol = 1e-9 * Tmax;
+    const double T_sat = Brent(&res, T_lo, Tmax, DBL_EPSILON, tol, 100);
+    // Brent returns T_sat to within tol, possibly just below the exact value;
+    // the margin keeps a state exactly at saturation inside the bracket
+    return std::min(Tmax, T_sat + 2 * tol);
+}
+
 double IncompressibleFluid::TminAt(double p, double x) {
     if (T_freeze.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET) return Tmin;
     return std::max(Tmin, Tfreeze(p, x));
@@ -884,7 +913,7 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x, bool chebysh
     switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return invertCaloricFit(fit, Dmass, x, TminAt(p, x), Tmax, Tbase, xbase);
+            return solveInLiquidRange(p, x, [&](double T_lo, double T_hi) { return invertCaloricFit(fit, Dmass, x, T_lo, T_hi, Tbase, xbase); });
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("density");
         default:
@@ -901,7 +930,7 @@ double IncompressibleFluid::T_c(double Cmass, double p, double x, bool chebyshev
     switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return invertCaloricFit(fit, Cmass, x, TminAt(p, x), Tmax, Tbase, xbase);
+            return solveInLiquidRange(p, x, [&](double T_lo, double T_hi) { return invertCaloricFit(fit, Cmass, x, T_lo, T_hi, Tbase, xbase); });
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:

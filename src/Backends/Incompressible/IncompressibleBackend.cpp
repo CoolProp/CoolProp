@@ -470,7 +470,8 @@ double IncompressibleBackend::flash_first_guess(bool enthalpy, double p, double 
 
 /// Calculate T given pressure and enthalpy
 /**
-Newton on T inside a sign-change bracket on [TminAt(p, x), Tmax] (BoundedNewton),
+Newton on T inside a sign-change bracket over the liquid range at p (BoundedNewton,
+see IncompressibleFluid::solveInLiquidRange),
 with the exact slope dh/dT at constant p, starting from the cp-based guess of
 flash_first_guess. The bracket keeps every step inside the range and raises
 an error when h is outside it, as Brent did.
@@ -482,7 +483,8 @@ CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p
     const double raw_target = hmass - h_ref() + hmass_ref();
     CaloricResidual res(this, true, p, _fractions[0], raw_target);
     const double tol = DBL_EPSILON * 1e3;
-    return BoundedNewton(&res, flash_first_guess(true, p, raw_target), fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);
+    const double T_guess = flash_first_guess(true, p, raw_target);
+    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
 }
 /// Calculate T given pressure and entropy
 /**
@@ -496,7 +498,8 @@ CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass
     CaloricResidual res(this, false, p, _fractions[0], raw_target);
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
     const double tol = 1e-12 * fluid->getTmax();
-    return BoundedNewton(&res, flash_first_guess(false, p, raw_target), fluid->TminAt(p, _fractions[0]), fluid->getTmax(), tol, 100);
+    const double T_guess = flash_first_guess(false, p, raw_target);
+    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
 }
 
 ///// Calculate T given pressure and internal energy
@@ -1207,6 +1210,44 @@ TEST_CASE("A state sees changes made to its fluid through the setters", "[Incomp
     }
 }
 
+TEST_CASE("The flashes search only the liquid range at the given pressure", "[IncompressibleBackend]") {
+    CoolProp::IncompressibleFluid& water = CoolProp::get_incompressible_fluid("Water");
+    // Water boils at about 373 K at 1 atm, well below Tmax = 473 K
+    const double T_boil = water.TmaxAt(101325.0, 0.0);
+    CHECK(T_boil == Catch::Approx(373.1).margin(0.5));
+    CHECK(water.psat(T_boil, 0.0) == Catch::Approx(101325.0).epsilon(1e-6));
+    // At 20 bar it stays liquid up to Tmax, and without a saturation curve
+    // (MEG) the limit is always Tmax
+    CHECK(water.TmaxAt(2e6, 0.0) == water.getTmax());
+    CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
+    CHECK(meg.TmaxAt(101325.0, 0.35) == meg.getTmax());
+
+    // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
+    // error says that the liquid boils, not only that there is no bracket
+    {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 2e6, 400.0);
+        const double h_400 = AS->hmass();
+        CHECK_THROWS_WITH(AS->update(CoolProp::HmassP_INPUTS, h_400, 101325.0), Catch::Matchers::ContainsSubstring("boils at"));
+    }
+
+    // A liquid exactly at its boiling point is still inside the bracket
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+        for (double T : {300.0, 350.0, 400.0, 450.0}) {
+            CAPTURE(T);
+            AS->update(CoolProp::QT_INPUTS, 0.0, T);
+            const double p = AS->p(), h = AS->hmass(), s = AS->smass();
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
+}
+
 TEST_CASE("HmassP and PSmass flashes converge above 2048 K", "[IncompressibleBackend]") {
     // Above 1024 K neighbouring doubles are at least as far apart as the
     // HmassP tolerance of 2.2e-13 K, so a purely absolute tolerance could not
@@ -1218,11 +1259,12 @@ TEST_CASE("HmassP and PSmass flashes converge above 2048 K", "[IncompressibleBac
         ChebyshevCaloricSetting setting(chebyshev);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "LiqNa"));
         // Above 2048 K neighbouring doubles are 4.5e-13 apart. At 200 bar sodium
-        // is liquid there, and h(Tmax) still lies above h(T) up to about 2080 K,
-        // so the flash has a bracket on [Tmin, Tmax]
+        // is liquid up to about 2360 K; above that the fits are extrapolated
+        // and h can fall with T, so the flash must stop at the boiling point
+        // (TmaxAt) to keep its bracket.
         const double p = 2e7;
         for (int i = 0; i <= 200; ++i) {
-            const double T = 2050.0 + 0.14 * i + 0.123456789;
+            const double T = 2050.0 + 1.5 * i + 0.123456789;
             CAPTURE(T);
             AS->update(CoolProp::PT_INPUTS, p, T);
             const double h = AS->hmass(), s = AS->smass();

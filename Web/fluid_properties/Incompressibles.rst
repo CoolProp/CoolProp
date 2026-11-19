@@ -393,10 +393,15 @@ Inputs other than temperature and pressure (``D,P``, ``H,P``, ``P,S``, and heat
 capacity in the C++ ``T_c``) are solved for :math:`T` with the same method for
 the polynomial and the Chebyshev fits:
 
-* The search runs from the lowest valid temperature at that pressure and
-  composition, :math:`\max(T_{min}, T_{freeze}(p, x))`, to :math:`T_{max}`. A fit
-  extrapolated below the freezing point can therefore not offer a second,
-  frozen solution.
+* The search covers the valid liquid range at that pressure and composition:
+  from :math:`\max(T_{min}, T_{freeze}(p, x))` up to :math:`T_{max}`, or up to the
+  boiling point :math:`T_{sat}(p, x)` where the liquid boils below :math:`T_{max}`.
+  A fit extrapolated below the freezing point or above the boiling point, where
+  enthalpy can even fall with temperature, can therefore not offer a second
+  solution or hide the liquid one. The boiling point is only computed when the
+  search over the full range lands on a boiling state or finds no solution, so
+  it costs nothing in the common case. An input that has no liquid state at
+  that pressure raises an error that names the boiling point.
 * The function has to change sign over that range, as for Brent's method before.
   An input outside the range, or a density that a fit with a turning point (water
   near its density maximum at 277 K) reaches twice, raises an error rather than returning one of the two
