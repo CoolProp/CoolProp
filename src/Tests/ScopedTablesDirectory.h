@@ -18,6 +18,7 @@
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 
@@ -30,10 +31,29 @@ class ScopedTablesDirectory
 {
    public:
     explicit ScopedTablesDirectory(const std::string& tag) : prev_(get_config_string(ALTERNATIVE_TABLES_DIRECTORY)) {
+        // The stamp and counter make a clash unlikely but not impossible: the
+        // counter is per process, so two test processes can draw the same name.
+        // Reserve the directory by creating it, which fails if it already
+        // exists, and move on to the next name in that case.  Only a directory
+        // this instance created is ever removed.
         static std::atomic<unsigned long> counter{0};
-        const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-        dir_ = (std::filesystem::temp_directory_path() / ("CoolProp-" + tag + "-" + std::to_string(stamp) + "-" + std::to_string(counter++))).string()
-               + "/";
+        const std::filesystem::path base = std::filesystem::temp_directory_path();
+        for (int attempt = 0; attempt < 100; ++attempt) {
+            const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+            const std::filesystem::path candidate = base / ("CoolProp-" + tag + "-" + std::to_string(stamp) + "-" + std::to_string(counter++));
+            std::error_code ec;
+            if (std::filesystem::create_directory(candidate, ec)) {
+                dir_ = candidate.string() + "/";
+                break;
+            }
+            if (ec) {
+                throw std::runtime_error("ScopedTablesDirectory: cannot create " + candidate.string() + ": " + ec.message());
+            }
+            // created == false without an error: the name is taken, try the next one
+        }
+        if (dir_.empty()) {
+            throw std::runtime_error("ScopedTablesDirectory: no free temporary directory name after 100 attempts");
+        }
         set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir_);
     }
     ~ScopedTablesDirectory() {

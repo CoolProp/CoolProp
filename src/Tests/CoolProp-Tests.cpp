@@ -10729,6 +10729,28 @@ TEST_CASE("Tabular state does not keep the previous table after a failed update"
     CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-6));
 }
 
+TEST_CASE("ScopedTablesDirectory reserves and then removes its own directory", "[Tabular]") {
+    const std::string before = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+    std::string a, b;
+    {
+        const CoolProp::testing::ScopedTablesDirectory first("helper-test");
+        a = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+        CHECK(a != before);
+        CHECK(std::filesystem::is_directory(a));  // created up front, not on first build
+        {
+            const CoolProp::testing::ScopedTablesDirectory second("helper-test");
+            b = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+            CHECK(b != a);
+            CHECK(std::filesystem::is_directory(b));
+        }
+        CHECK(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY) == a);
+        CHECK_FALSE(std::filesystem::exists(b));
+        CHECK(std::filesystem::is_directory(a));
+    }
+    CHECK(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY) == before);
+    CHECK_FALSE(std::filesystem::exists(a));
+}
+
 TEST_CASE("Tabular backends refuse outputs before a successful update", "[BICUBIC][TTSE][Tabular]") {
     // Small grids: keep them out of the shared table directory
     const CoolProp::testing::ScopedTablesDirectory tables_dir("no-update");
