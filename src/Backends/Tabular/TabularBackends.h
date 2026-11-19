@@ -1329,8 +1329,10 @@ class TabularBackend : public AbstractState
         this->AS->set_mole_fractions(mole_fractions);
         is_mixture = (this->AS->get_mole_fractions().size() > 1);
         // The previous state belongs to the previous composition: its cached
-        // indices point into that dataset's phase envelope, which can be
-        // shorter than the new one's.  Leave the state as a fresh one.
+        // outputs are that mixture's, and its indices point into that dataset's
+        // phase envelope, which can be shorter than the new one's.  Leave the
+        // state as a fresh one.
+        clear();
         invalidate_state();
         // The tables are keyed by composition (path_to_tables), so a new
         // composition needs its own dataset; without this, check_tables() saw
@@ -1339,16 +1341,8 @@ class TabularBackend : public AbstractState
             tables_loaded = false;
             dataset = nullptr;
         }
-        // Check the tables and build if necessary
+        // Check the tables and build if necessary (check_tables also builds the coefficients)
         check_tables();
-        // For mixtures, the construction of the coefficients is delayed until this
-        // function so that the set_mole_fractions function can be called; this is
-        // done here for every tabular backend (BICUBIC and TTSE) since update()
-        // indexes coeffs_pT/coeffs_ph regardless of the derived class
-        SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
-        SinglePhaseGriddedTableData& single_phase_logpT = dataset->single_phase_logpT;
-        dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
-        dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
     };
     void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         // Let the inner backend do the mass→mole conversion, then forward the
@@ -1476,6 +1470,13 @@ class TabularBackend : public AbstractState
                 tables_loaded = true;
                 loaded_tables_path = path_to_tables();
             }
+            // update() indexes coeffs_pT/coeffs_ph for every tabular backend.  Build them
+            // whenever tables are (re)loaded, so no path (constructor, set_mole_fractions,
+            // or an update() after an earlier failed load) reaches update() without them.
+            // Only here, not on every call: build_coeffs takes the dataset lock, and it
+            // returns at once when another backend has already built them.
+            dataset->build_coeffs(dataset->single_phase_logph, dataset->coeffs_ph);
+            dataset->build_coeffs(dataset->single_phase_logpT, dataset->coeffs_pT);
         }
     };
 };
