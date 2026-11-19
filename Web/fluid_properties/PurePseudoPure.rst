@@ -93,6 +93,22 @@ The EOS is set up with temperature and density as the two independent properties
     
 The documentation of the :mod:`CoolProp.CoolProp` module, or the :mod:`CoolProp.State` module are also available.
 
+.. _pseudo_pure_two_phase:
+
+Pseudo-pure fluids in the two-phase region
+------------------------------------------
+
+The pseudo-pure fluids (Air, R404A, R407C, R410A, R507A and SES36) are mixtures modeled with a single Helmholtz energy equation, which is not valid inside the two-phase region.
+
+.. warning::
+
+    Two-phase states (0 < Q < 1) of pseudo-pure fluids are not supported, and inputs inside the two-phase region are meant to raise an error.  For historical reasons some input pairs still get through:
+
+    * Pairs with pressure (``P,Q``, ``P,H``, ``P,S``, ``P,U`` and ``P,D``) return a state interpolated in quality between saturated states placed by the bubble and dew pressure ancillary equations.
+    * ``T,D``, ``T,S`` and ``H,S``, and at some states ``D,H``, ``D,S`` and ``D,U``, return a different state without an error, sometimes a single-phase state or one at a pressure far from the input.
+
+    Do not rely on the values returned for these inputs.
+
 .. _list_of_fluids:
 
 List of Fluids
