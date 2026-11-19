@@ -2265,7 +2265,9 @@ TEST_CASE("Tabular mixtures switch tables when the composition changes", "[Tabul
     CHECK(std::abs(AS->hmolar() - h1) < tol);
 
     AS->set_mole_fractions(z2);
-    // The previous state does not survive a composition change
+    // The previous state does not survive a composition change: no cached
+    // output of the first mixture, no table selected
+    CHECK_THROWS_AS(AS->hmolar(), ValueError);
     CHECK_THROWS_AS(AS->saturated_liquid_keyed_output(iDmolar), ValueError);
     AS->update(PT_INPUTS, p, T);
     CAPTURE(h1, h2, AS->hmolar());
