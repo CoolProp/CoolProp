@@ -45,8 +45,7 @@ class SurfaceTensionCorrelation
         std::string BibTeX;
     };
 
-    explicit SurfaceTensionCorrelation(const Values& v)
-      : a(v.a), n(v.n), s(v.n), Tc(v.Tc), N(v.n.size()), BibTeX(v.BibTeX) {}
+    explicit SurfaceTensionCorrelation(const Values& v) : a(v.a), n(v.n), s(v.n), Tc(v.Tc), N(v.n.size()), BibTeX(v.BibTeX) {}
 
     /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T) {
@@ -129,15 +128,15 @@ class SaturationAncillaryFunction
             std::size_t N;               ///< The number of values in the arrays
         };
     };
-    CoolPropDbl Tmax,  ///< The maximum temperature in K
-      Tmin;            ///< The minimum temperature in K
+    CoolPropDbl Tmax,             ///< The maximum temperature in K
+      Tmin;                       ///< The minimum temperature in K
     ancillaryfunctiontypes type;  ///< The type of ancillary curve being used
 
    public:
-    SaturationAncillaryFunction()
-      : type(TYPE_NOT_SET), Tmin(_HUGE), Tmax(_HUGE) {
-
-        };
+    // max_abs_error is the union's first member, so initialising it gives an
+    // unset ancillary a defined (zero) error band; get_max_abs_error() on one
+    // read indeterminate memory before (ANT-2026-LPPFYEJC)
+    SaturationAncillaryFunction() : max_abs_error(0), Tmax(_HUGE), Tmin(_HUGE), type(TYPE_NOT_SET) {};
 
     /// Build from a plain-typed Values bundle (defined out-of-line in
     /// Ancillaries.cpp). All JSON parsing happens in the non-installed factory.

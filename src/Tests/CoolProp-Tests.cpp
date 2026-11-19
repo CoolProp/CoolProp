@@ -7908,6 +7908,70 @@ TEST_CASE("Cubic-library-only fluids report a real molar mass", "[cubic][uniniti
     CHECK(M == Catch::Approx(0.1304944).epsilon(1e-9));
 }
 
+TEST_CASE("Cubic-library-only fluids have real EOS limits", "[cubic][uninitialized]") {
+    // The same FluidLibrary branch never assigned EquationOfState::limits, so
+    // Tmin(), Tmax() and pmax() on HEOS::R1233ZD(E)-SRK read whatever the stack
+    // held, and every range check on the fluid compared against it.  The
+    // limits now follow CubicBackend: 0.3*Tc, 10*Tc and 100*pc.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-BEY35K4J.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1233ZD(E)-SRK"));
+    const double Tc = AS->T_critical(), pc = AS->p_critical();
+    CAPTURE(Tc, pc, AS->Tmin(), AS->Tmax(), AS->pmax());
+    CHECK(AS->Tmin() == Catch::Approx(0.3 * Tc).epsilon(1e-12));
+    CHECK(AS->Tmax() == Catch::Approx(10.0 * Tc).epsilon(1e-12));
+    CHECK(AS->pmax() == Catch::Approx(100.0 * pc).epsilon(1e-12));
+    // A supercritical state inside those limits works.  (Subcritical flashes
+    // still fail with "type not set": this fluid carries no saturation
+    // ancillaries.  That is a clean error, not a wrong number.)
+    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e5, 600.0));
+    CHECK(AS->rhomolar() == Catch::Approx(1e5 / (8.314462618 * 600.0)).epsilon(0.02));
+}
+
+TEST_CASE("An unset saturation ancillary reports no error band", "[ancillary][uninitialized]") {
+    // get_max_abs_error() read the union member of a default-constructed
+    // ancillary, which nothing had written.  GERG fluids carry no sL
+    // ancillary, and saturation_PHSU_pure compared |s - s_crit| against that
+    // value to pick its starting temperature for a Q,S flash.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-LPPFYEJC.
+    CoolProp::SaturationAncillaryFunction anc;
+    CHECK_FALSE(anc.enabled());
+    CHECK(anc.get_max_abs_error() == 0.0);
+
+    // A Q,S flash on a GERG fluid either finds the right temperature or says
+    // it cannot; it never starts from a guess built on that value.
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
+    ref->update(CoolProp::QT_INPUTS, 0, 150.0);
+    const double s = ref->smolar();
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
+    try {
+        AS->update(CoolProp::QSmolar_INPUTS, 0, s);
+        CHECK(AS->T() == Catch::Approx(150.0).epsilon(1e-8));
+    } catch (CoolProp::ValueError& e) {
+        CHECK_THAT(std::string(e.what()), Catch::Matchers::ContainsSubstring("sL"));
+    }
+}
+
+TEST_CASE("PC-SAFT rejects charged species without water", "[pcsaft][uninitialized]") {
+    // The ionic term divides by the solvent dielectric constant, and only
+    // water sets one (dielc_water).  With ions but no water, dielc was never
+    // written, so every property came from whatever the member held.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-X3963FK5.
+    nlohmann::json ion = {{"name", "PCSAFTTestCation"},
+                          {"CAS", "9999-77-1"},
+                          {"aliases", nlohmann::json::array({"PCSAFTTestCation"})},
+                          {"m", 1.0},
+                          {"sigma", 2.8232},
+                          {"sigma_units", "Angstrom"},
+                          {"u", 230.0},
+                          {"u_units", "K"},
+                          {"charge", 1},
+                          {"molemass", 0.02299},
+                          {"molemass_units", "kg/mol"}};
+    CoolProp::add_fluids_as_JSON("PCSAFT", nlohmann::json::array({ion}).dump());
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "PCSAFTTestCation&METHANE"), Catch::Matchers::ContainsSubstring("water"));
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "PCSAFTTestCation"), Catch::Matchers::ContainsSubstring("water"));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.

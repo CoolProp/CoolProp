@@ -7,6 +7,7 @@
 #include "PCSAFTLibrary.h"
 #include "CoolProp/Configuration.h"
 #include "CoolProp/Exceptions.h"
+#include <cmath>
 #include <vector>
 
 using std::vector;
@@ -34,7 +35,7 @@ class PCSAFTBackend : public AbstractState
     std::vector<double> mole_fractions_double;  ///< A copy of the bulk mole fractions of the mixture stored as doubles
     std::vector<CoolPropDbl> K,                 ///< The K factors for the components
       lnK;                                      ///< The natural logarithms of the K factors of the components
-    double dielc;                               ///< The dielectric constant of the solvent, if ion term is used
+    double dielc = NAN;                         ///< The dielectric constant of the solvent, if ion term is used
 
     shared_ptr<PCSAFTBackend> SatL;
     shared_ptr<PCSAFTBackend> SatV;
@@ -64,6 +65,8 @@ class PCSAFTBackend : public AbstractState
     vector<double> dXAdt_find(vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dt, vector<double> x);
     void set_assoc_matrix();
     double dielc_water(double t);
+    /// Throw if charged species are present without water, the only solvent with a dielectric constant
+    void require_solvent_for_ions() const;
 
    public:
     PCSAFTBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV = true);

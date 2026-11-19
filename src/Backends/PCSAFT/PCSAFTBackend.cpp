@@ -54,6 +54,15 @@ revised,” Chem. Eng. Res. Des., vol. 92, no. 12, pp. 2884–2897, Dec. 2014.
 
 namespace CoolProp {
 
+void PCSAFTBackend::require_solvent_for_ions() const {
+    // The ionic term divides by the solvent's dielectric constant, and only
+    // water provides one (dielc_water).  Without water, dielc was never set
+    // and every property came from uninitialised memory (ANT-2026-X3963FK5).
+    if (ion_term && !water_present) {
+        throw ValueError("PC-SAFT: charged species need water as the solvent; no other solvent dielectric constant is available");
+    }
+}
+
 PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV)
   : N(component_names.size()), ion_term(false), polar_term(false), assoc_term(false), water_present(false), water_idx(0) {
 
@@ -76,6 +85,7 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
             water_idx = i;
         }
     }
+    require_solvent_for_ions();
 
     // Set up association scheme
     if (assoc_term) {
@@ -141,6 +151,7 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
             water_idx = i;
         }
     }
+    require_solvent_for_ions();
 
     // Set up association scheme
     if (assoc_term) {
