@@ -290,7 +290,9 @@ recorded history of finished or abandoned work were dropped (they remain in
   check, dump rho, cp, h, s, mu, k as `%a` hex floats for every fluid before
   and after and `diff` them (26485 values per fit kind, zero differences
   expected).  A backend rebuilds its `CompositionFits` when
-  `IncompressibleFluid::data_version` changes, which `validate()` bumps:
+  `IncompressibleFluid::data_version` changes, which `validate()` and every
+  setter of cached data (fits, `setTbase`, `setxbase`) bump through
+  `nextDataVersion()`; a new setter for cached data must bump it too.
   `add_fluids_as_JSON` replaces a fluid in place under existing backends.
 - **Incompressible inversions use `BoundedNewton` (src/Solvers.cpp).**
   `T_rho`, `T_c` and the `HmassP`/`PSmass` flashes search the liquid range

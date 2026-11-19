@@ -91,7 +91,9 @@ The polynomial and Chebyshev fits are matrices, rows in T and columns in
 reduced to a single number once, and every later evaluation is a short sum
 over T. The reduced coefficients are computed exactly as the full evaluation
 computes them (Horner over the columns, row by row), and the sum over T runs
-in the same order, so the result is bit for bit the same.
+in the same order, so the result is bit for bit the same (on x86-64; where a
+compiler fuses multiply-adds, as on aarch64, the two inlined copies can differ
+by a few units in the last place).
 */
 struct FitAtComposition
 {

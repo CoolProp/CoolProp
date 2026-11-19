@@ -1135,7 +1135,21 @@ TEST_CASE("Fits with the composition put in give exactly the full evaluation", "
     // so they agree to the last bit on x86-64. The check allows a few units in
     // the last place, because a compiler may fuse multiply-adds differently in
     // the two inlined copies (aarch64 does by default).
-    const auto same_value = [](double a, double b) { return a == Catch::Approx(b).epsilon(8 * DBL_EPSILON).margin(0); };
+    // A few ulp relative, plus a margin far below any physical resolution for
+    // values that are themselves the small difference of larger terms
+    const auto same_value = [](double a, double b) { return a == Catch::Approx(b).epsilon(8 * DBL_EPSILON).margin(1e-9); };
+    // The fast path must actually be taken: a fit left unreduced would also
+    // pass the comparisons below, through the full evaluation.
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        CoolProp::CompositionFits reduced;
+        CoolProp::get_incompressible_fluid("MEG").fixComposition(0.35, chebyshev, reduced);
+        CHECK(reduced.rho.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.c.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.int_c.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.int_c_divT.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.visc.kind != CoolProp::FitAtComposition::NONE);
+    }
     struct Case
     {
         const char* name;

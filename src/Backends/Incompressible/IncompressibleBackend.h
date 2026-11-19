@@ -41,11 +41,14 @@ class IncompressibleBackend : public AbstractState
     /// The fits of this state with its composition put in (see FitAtComposition),
     /// built when the composition changes or the fluid's data is replaced.
     CompositionFits fits;
-    /// The reduced fits if x is this state's composition, else nullptr: the
-    /// reference state and other compositions use the full evaluation.
+    /// The reduced fits if x is this state's composition (the reference state
+    /// uses the same one), else nullptr: other compositions use the full
+    /// evaluation.
     const CompositionFits* fits_at(double x) {
         if (_fractions.size() != 1 || x != _fractions[0]) return nullptr;
-        if (fits.x != x || fits.data_version != fluid->getDataVersion()) fluid->fixComposition(x, chebyshev_caloric, fits);
+        if (fits.x != x || fits.chebyshev != chebyshev_caloric || fits.data_version != fluid->getDataVersion()) {
+            fluid->fixComposition(x, chebyshev_caloric, fits);
+        }
         return &fits;
     }
     double rho_at(double T, double p, double x) {

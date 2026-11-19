@@ -400,8 +400,8 @@ the polynomial and the Chebyshev fits:
   enthalpy can even fall with temperature, can therefore not offer a second
   solution or hide the liquid one. The boiling point is only computed when the
   search over the full range lands on a boiling state or finds no solution, so
-  it costs nothing in the common case. An enthalpy or entropy that belongs to a
-  boiling state at that pressure raises an error that names the boiling point;
+  it costs nothing in the common case. An enthalpy, entropy or density that
+  belongs to a boiling state at that pressure raises an error that names the boiling point;
   other inputs outside the range keep the error of the solver.
 * The function has to change sign over that range, as for Brent's method before.
   An input outside the range, or a density that a fit with a turning point (water
