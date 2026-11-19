@@ -98,15 +98,16 @@ The documentation of the :mod:`CoolProp.CoolProp` module, or the :mod:`CoolProp.
 Pseudo-pure fluids in the two-phase region
 ------------------------------------------
 
-The pseudo-pure fluids (Air, R404A, R407C, R410A, R507A and SES36) are mixtures modeled with a single Helmholtz energy equation, which is not valid inside the two-phase region.  For these fluids, a two-phase state is built from the bubble and dew pressure ancillary equations: at a given pressure, the temperature and the specific volume are interpolated in quality between the saturated liquid and the saturated vapor.
+The pseudo-pure fluids (Air, R404A, R407C, R410A, R507A and SES36) are mixtures modeled with a single Helmholtz energy equation, which is not valid inside the two-phase region.
 
 .. warning::
 
-    Inside the two-phase region of a pseudo-pure fluid, use input pairs that include pressure (``P,Q``, ``P,H``, ``P,S``, ``P,U`` or ``P,D``).  They give back the state defined by ``P,Q``, or raise an error at some states (Air and SES36 at low quality or very close to the critical point).  The other pairs do not:
+    Two-phase states (0 < Q < 1) of pseudo-pure fluids are not supported, and inputs inside the two-phase region are meant to raise an error.  For historical reasons some input pairs still get through:
 
-    * ``T,D``, ``T,S`` and ``H,S`` return a different state without raising an error.  ``T,D`` and ``T,S`` place it at another pressure (off by about 0.1 % for R507A, but by tens of percent at some states for Air, R407C and SES36), and ``H,S`` often returns a single-phase state, sometimes at a negative pressure.
-    * ``D,H``, ``D,S`` and ``D,U`` usually raise an error, but at some states they return a single-phase state without an error, sometimes at a pressure off by tens of percent or even at a negative pressure.
-    * ``T,Q`` (with 0 < Q < 1) and ``D,Q`` raise an error.  ``P,T`` does too, except for SES36, and for Air very close to the critical point, where it returns a single-phase state.
+    * Pairs with pressure (``P,Q``, ``P,H``, ``P,S``, ``P,U`` and ``P,D``) return a state interpolated in quality between saturated states placed by the bubble and dew pressure ancillary equations.
+    * ``T,D``, ``T,S`` and ``H,S``, and at some states ``D,H``, ``D,S`` and ``D,U``, return a different state without an error, sometimes a single-phase state or one at a pressure far from the input.
+
+    Do not rely on the values returned for these inputs.
 
 .. _list_of_fluids:
 
