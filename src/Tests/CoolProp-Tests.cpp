@@ -17,11 +17,13 @@
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include "TestUtils.h"
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <chrono>
 #include <filesystem>
 #include <map>
+#include <new>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -7933,9 +7935,14 @@ TEST_CASE("An unset saturation ancillary reports no error band", "[ancillary][un
     // ancillary, and saturation_PHSU_pure compared |s - s_crit| against that
     // value to pick its starting temperature for a Q,S flash.
     // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-LPPFYEJC.
-    CoolProp::SaturationAncillaryFunction anc;
-    CHECK_FALSE(anc.enabled());
-    CHECK(anc.get_max_abs_error() == 0.0);
+    // Construct over 0xFF-filled storage so a member the constructor skips
+    // shows up as garbage rather than as whatever zeros the stack held
+    alignas(CoolProp::SaturationAncillaryFunction) unsigned char storage[sizeof(CoolProp::SaturationAncillaryFunction)];
+    std::fill(std::begin(storage), std::end(storage), static_cast<unsigned char>(0xFF));
+    auto* anc = new (storage) CoolProp::SaturationAncillaryFunction();
+    CHECK_FALSE(anc->enabled());
+    CHECK(anc->get_max_abs_error() == 0.0);
+    anc->~SaturationAncillaryFunction();
 
     // A Q,S flash on a GERG fluid either finds the right temperature or says
     // it cannot; it never starts from a guess built on that value.
@@ -7956,20 +7963,11 @@ TEST_CASE("PC-SAFT rejects charged species without water", "[pcsaft][uninitializ
     // water sets one (dielc_water).  With ions but no water, dielc was never
     // written, so every property came from whatever the member held.
     // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-X3963FK5.
-    nlohmann::json ion = {{"name", "PCSAFTTestCation"},
-                          {"CAS", "9999-77-1"},
-                          {"aliases", nlohmann::json::array({"PCSAFTTestCation"})},
-                          {"m", 1.0},
-                          {"sigma", 2.8232},
-                          {"sigma_units", "Angstrom"},
-                          {"u", 230.0},
-                          {"u_units", "K"},
-                          {"charge", 1},
-                          {"molemass", 0.02299},
-                          {"molemass_units", "kg/mol"}};
-    CoolProp::add_fluids_as_JSON("PCSAFT", nlohmann::json::array({ion}).dump());
-    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "PCSAFTTestCation&METHANE"), Catch::Matchers::ContainsSubstring("water"));
-    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "PCSAFTTestCation"), Catch::Matchers::ContainsSubstring("water"));
+    // Na+ and the other shipped ions are only parameterised for aqueous solutions
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "Na+&METHANE"), Catch::Matchers::ContainsSubstring("water"));
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "Na+"), Catch::Matchers::ContainsSubstring("water"));
+    // With water the ionic term has its solvent and the mixture builds
+    CHECK_NOTHROW(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "Na+&Cl-&WATER")));
 }
 
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
