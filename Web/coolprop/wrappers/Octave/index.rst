@@ -60,7 +60,7 @@ OSX
 
 Per https://wiki.octave.org/Octave_for_macOS, there's no installer anymore for the latest GNU Octave on macOS; Homebrew is now the maintained path to the current stable release.  This has not been tested in recent years by the CoolProp team.  Following installation, it might be desirable to add the octave binary folder onto the path.  To do so, add to the file .profile (or create it) in the user's home directory::
 
-    export PATH="/usr/local/octave/11.3.0/bin:$PATH"
+    export PATH="$(brew --prefix octave)/bin:$PATH"
 
 .. attention::
     Testing and updating of this OSX section is requested by an OSX Octave user.  An update PR is welcome.
@@ -177,6 +177,9 @@ A generated Octave example is how a build is verified. The example Octave code i
     octave Example.m
 
 This file can also be loaded into the GUI editor and run by pressing F5.
+
+.. note::
+    The commands below assume ``CoolProp.oct`` is already on Octave's path, which the (optional) ``cmake --install .`` step arranges via ``~/.octaverc``. When that step was skipped, either run Octave from inside the build folder, or add it to the path for the session first with ``addpath('/path/to/build/folder')``.
 
 The first call to any ``CoolProp.*`` function can take several seconds while CoolProp's fluid library gets initialized; that's expected, not a hang. A quicker one-line check that skips the rest of the example::
 

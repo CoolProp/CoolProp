@@ -1495,34 +1495,52 @@ if(COOLPROP_OCTAVE_MODULE)
   # distro package, the Windows installer's Program Files), so rather than
   # need elevated privileges to land there, point ~/.octaverc at this
   # install dir instead -- Octave reads it automatically on every startup.
-  if(DEFINED ENV{HOME})
-    file(TO_CMAKE_PATH "$ENV{HOME}" COOLPROP_OCTAVERC_DIR)
-  elseif(DEFINED ENV{USERPROFILE})
-    file(TO_CMAKE_PATH "$ENV{USERPROFILE}" COOLPROP_OCTAVERC_DIR)
-  endif()
-  if(COOLPROP_OCTAVERC_DIR)
-    set(COOLPROP_OCTAVERC "${COOLPROP_OCTAVERC_DIR}/.octaverc")
-  else()
-    message(
-      WARNING
-        "Neither HOME nor USERPROFILE is set; CoolProp.oct was built and installed, but ~/.octaverc could not be updated to register it with Octave. Add the addpath() line shown below to Octave's startup file by hand."
-    )
-  endif()
-  if(COOLPROP_OCTAVERC)
-    install(CODE "
-      set(line \"addpath('\${CMAKE_INSTALL_PREFIX}/${COOLPROP_OCTAVE_INSTALL_DIR}');\")
-      set(rc \"${COOLPROP_OCTAVERC}\")
-      set(existing \"\")
-      if(EXISTS \"\${rc}\")
-        file(READ \"\${rc}\" existing)
+  # HOME/USERPROFILE are resolved inside install(CODE ...) below, not here,
+  # so they're read from the installing user's environment (cmake --install
+  # may run later, as a different user, than the cmake .. that configured
+  # the build) -- same reasoning as deferring CMAKE_INSTALL_PREFIX below.
+  install(CODE "
+    set(prefix \"\${CMAKE_INSTALL_PREFIX}\")
+    string(REPLACE \"'\" \"''\" prefix \"\${prefix}\")
+    set(line \"addpath('\${prefix}/${COOLPROP_OCTAVE_INSTALL_DIR}');\")
+    set(rc_dir \"\")
+    if(DEFINED ENV{HOME})
+      file(TO_CMAKE_PATH \"\$ENV{HOME}\" rc_dir)
+    elseif(DEFINED ENV{USERPROFILE})
+      file(TO_CMAKE_PATH \"\$ENV{USERPROFILE}\" rc_dir)
+    endif()
+    if(\"\${rc_dir}\" STREQUAL \"\")
+      message(WARNING \"Neither HOME nor USERPROFILE is set; CoolProp.oct was installed, but ~/.octaverc could not be updated to register it with Octave. Add this line to Octave's startup file by hand: \${line}\")
+    else()
+      set(rc \"\${rc_dir}/.octaverc\")
+      if(DEFINED ENV{DESTDIR} AND NOT \"\$ENV{DESTDIR}\" STREQUAL \"\")
+        message(STATUS \"DESTDIR staging detected (\$ENV{DESTDIR}); skipping ~/.octaverc registration\")
+      else()
+        set(existing \"\")
+        if(EXISTS \"\${rc}\")
+          file(READ \"\${rc}\" existing)
+        endif()
+        string(FIND \"\${existing}\" \"\${line}\" pos)
+        if(pos EQUAL -1)
+          execute_process(
+            COMMAND \"\${CMAKE_COMMAND}\" -E touch \"\${rc}\"
+            RESULT_VARIABLE write_probe
+            ERROR_QUIET
+          )
+          if(NOT write_probe EQUAL 0)
+            message(WARNING \"Could not write to \${rc}; add this line to Octave's startup file by hand: \${line}\")
+          else()
+            set(sep \"\")
+            if(existing AND NOT existing MATCHES \"\n$\")
+              set(sep \"\n\")
+            endif()
+            file(APPEND \"\${rc}\" \"\${sep}\${line}\n\")
+            message(STATUS \"Added CoolProp to \${rc}\")
+          endif()
+        endif()
       endif()
-      string(FIND \"\${existing}\" \"\${line}\" pos)
-      if(pos EQUAL -1)
-        file(APPEND \"\${rc}\" \"\${line}\n\")
-        message(STATUS \"Added CoolProp to \${rc}\")
-      endif()
-    ")
-  endif()
+    endif()
+  ")
 endif()
 
 if(COOLPROP_CSHARP_MODULE)
