@@ -1502,6 +1502,11 @@ if(COOLPROP_OCTAVE_MODULE)
   endif()
   if(COOLPROP_OCTAVERC_DIR)
     set(COOLPROP_OCTAVERC "${COOLPROP_OCTAVERC_DIR}/.octaverc")
+  else()
+    message(
+      WARNING
+        "Neither HOME nor USERPROFILE is set; CoolProp.oct was built and installed, but ~/.octaverc could not be updated to register it with Octave. Add the addpath() line shown below to Octave's startup file by hand."
+    )
   endif()
   if(COOLPROP_OCTAVERC)
     install(CODE "

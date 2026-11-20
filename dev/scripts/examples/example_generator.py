@@ -774,7 +774,7 @@ class Octave(BaseParser):
                 body = '\n'.join('  ' + l for l in guarded if l)
                 lines.append(
                     'try\n' + body + '\n'
-                    "catch\n  disp('REFPROP not available -- skipping the REFPROP example(s).')\n"
+                    "catch err\n  disp(['REFPROP example skipped: ', err.message])\n"
                     'end_try_catch'
                 )
             return lines
