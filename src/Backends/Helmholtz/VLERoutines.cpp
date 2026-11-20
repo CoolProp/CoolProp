@@ -2615,14 +2615,16 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                     ss_decided = true;
                     // The proximity heuristic says "converging to the trivial solution", but for a near-azeotrope
                     // (R410A, R507A, R404A, R454B) the real incipient phase also sits close to z with a shallow
-                    // tm, so trusting it here skipped genuine splits (COO-193).  Trust it only when the trial has
-                    // essentially collapsed onto z, or tm is not shallow and well above the local curvature;
-                    // otherwise leave the verdict to the TPD minimizer.  Thresholds from 2,653 logged proximity
-                    // verdicts over six refrigerant blends: 437 of 438 real splits go to the minimizer, ~4% of
-                    // stable trials pay for it.
+                    // tm, so trusting it here skipped genuine splits (COO-193).  Trust it only when tm is well
+                    // above the local curvature (tm/curvature >= 5) AND the trial has either collapsed onto z
+                    // (distance <= 5e-4) or has a tm that is not shallow (>= 0.01); otherwise leave the verdict
+                    // to the TPD minimizer.  Thresholds from 2,653 logged proximity verdicts over six
+                    // refrigerant blends: 437 of 438 real splits go to the minimizer.  Note that tm is from Y
+                    // before this SS step and distance/curvature from Y after it; the thresholds were fitted
+                    // on exactly these quantities.
                     const double d = std::sqrt(distance_sq);
                     const bool maybe_near_azeotropic = (d > 5e-4 && tm < 0.01) || tm / curvature < 5;
-                    ss_stable = !maybe_near_azeotropic;
+                    ss_stable = !maybe_near_azeotropic && diffs_finite && ValidNumber(tm);
                     break;
                 }
 

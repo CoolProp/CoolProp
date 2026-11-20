@@ -250,7 +250,9 @@ recorded history of finished or abandoned work were dropped (they remain in
   tm, so the PT flash called most dome states single-phase.  Gas-mixture
   benchmarks (Amarillo, air) never showed it.  Check any change to the
   stability test with a QT-to-PT dome sweep over refrigerant blends
-  (`CoolProp-Tests-NearAzeotrope.cpp`), not only with timings.
+  (`CoolProp-Tests-NearAzeotrope.cpp`), not only with timings.  The same
+  test decides critical-point stability: with the minimizer back, two of
+  R452A's three "stable" critical points (COO-154) became unstable.
 
 ## Fluid data, superancillaries and transport
 

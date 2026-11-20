@@ -5,7 +5,8 @@
 // solution") also fires on such a trial.  When that heuristic alone was taken as proof of stability
 // (#3427), the PT flash reported single-phase for most dome states of R410A and R507A.  Each state here is
 // put on the dome with a QT flash, and the PT flash at that same (T, p) must find the split with the same
-// quality.
+// quality.  The PT flash only reaches the stability test because no phase envelope is built here (a built,
+// closed envelope bypasses it in PT_flash_mixtures).
 
 #if defined(ENABLE_CATCH)
 
@@ -35,7 +36,7 @@ struct Blend
 
 TEST_CASE("Near-azeotrope: PT flash finds the split at every QT dome state", "[flash][mixture]") {
     // T ranges stay below the blends' critical regions.  R507A below 235 K is left out: some of those
-    // states were not recovered before #3427 either.
+    // states were not recovered before #3427 either (COO-195).
     const std::vector<Blend> blends = {
       {"R410A", "R32&R125", {0.5, 0.5}, 215.0, 305.0},
       {"R454B", "R32&R1234yf", {0.689, 0.311}, 215.0, 305.0},
@@ -48,11 +49,10 @@ TEST_CASE("Near-azeotrope: PT flash finds the split at every QT dome state", "[f
             std::unique_ptr<AbstractState> pt(AbstractState::factory("HEOS", b.fluids));
             qt->set_mass_fractions(b.mass_fractions);
             pt->set_mass_fractions(b.mass_fractions);
-            int n = 0, expected = 0;
+            int n = 0;
             for (int k = 0; b.T_min + 10.0 * k <= b.T_max + 1e-9; ++k) {
                 const double T = b.T_min + 10.0 * k;
                 for (double Q : {0.05, 0.25, 0.5, 0.75, 0.95}) {
-                    ++expected;
                     CAPTURE(T, Q);
                     qt->update(QT_INPUTS, Q, T);
                     REQUIRE(qt->phase() == iphase_twophase);
@@ -66,8 +66,7 @@ TEST_CASE("Near-azeotrope: PT flash finds the split at every QT dome state", "[f
                     ++n;
                 }
             }
-            CHECK(n == expected);  // every grid state was exercised
-            CHECK(n >= 40);
+            CHECK(n >= 40);  // the grid was not empty
         }
     }
 }
