@@ -243,6 +243,14 @@ recorded history of finished or abandoned work were dropped (they remain in
   the test reference.  What remains is per-leaf: the GERG reducing
   derivatives recompute rho_r(x), T_r(x) on every call.  Profile with a
   RelWithDebInfo shared lib and `sample <pid>`: the pip wheel is stripped.
+- **Stability-test shortcuts must be swept on near-azeotropes** (COO-193).
+  #3427 took the SS proximity heuristic ("trial converging to the trivial
+  solution") as proof of stability and skipped the TPD minimizer.  For
+  R410A or R507A the real incipient phase is also close to z with a shallow
+  tm, so the PT flash called most dome states single-phase.  Gas-mixture
+  benchmarks (Amarillo, air) never showed it.  Check any change to the
+  stability test with a QT-to-PT dome sweep over refrigerant blends
+  (`CoolProp-Tests-NearAzeotrope.cpp`), not only with timings.
 
 ## Fluid data, superancillaries and transport
 

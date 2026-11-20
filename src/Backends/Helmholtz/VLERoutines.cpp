@@ -2612,7 +2612,17 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 }
                 if (distance_sq < 0) distance_sq = -distance_sq;
                 if (std::sqrt(distance_sq) < 0.1 && curvature > 0 && tm / curvature > 0.8) {
-                    ss_decided = ss_stable = true;
+                    ss_decided = true;
+                    // The proximity heuristic says "converging to the trivial solution", but for a near-azeotrope
+                    // (R410A, R507A, R404A, R454B) the real incipient phase also sits close to z with a shallow
+                    // tm, so trusting it here skipped genuine splits (COO-193).  Trust it only when the trial has
+                    // essentially collapsed onto z, or tm is not shallow and well above the local curvature;
+                    // otherwise leave the verdict to the TPD minimizer.  Thresholds from 2,653 logged proximity
+                    // verdicts over six refrigerant blends: 437 of 438 real splits go to the minimizer, ~4% of
+                    // stable trials pay for it.
+                    const double d = std::sqrt(distance_sq);
+                    const bool maybe_near_azeotropic = (d > 5e-4 && tm < 0.01) || tm / curvature < 5;
+                    ss_stable = !maybe_near_azeotropic;
                     break;
                 }
 
@@ -2647,9 +2657,10 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         }
         // When SS did decide, the trial is stable and the minimizer is skipped.  Either SS reached
         // a stationary point with tm >= 0, which the minimizer would only re-confirm, or the
-        // proximity test found the trial converging to the trivial solution ([M&M2007] Ch. 12);
-        // that test is a heuristic, but a descent method started there typically converges to
-        // the same trivial minimum.  Previously the minimizer ran regardless: ~3 Newton
+        // proximity test found the trial converging to the trivial solution ([M&M2007] Ch. 12).
+        // That test is a heuristic: a near-azeotrope's real incipient phase also passes it, so it
+        // only counts as "stable" when the trial is not plausibly such a phase (see above; COO-193).
+        // Previously the minimizer ran regardless: ~3 Newton
         // iterations (each an N x N Hessian of composition derivatives) and ~5 trial-density
         // solves per trial, most of the cost of a PT flash.
         if (ss_stable) continue;
