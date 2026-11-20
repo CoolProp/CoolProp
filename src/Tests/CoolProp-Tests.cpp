@@ -7939,23 +7939,20 @@ TEST_CASE("An unset saturation ancillary reports no error band", "[ancillary][un
     // shows up as garbage rather than as whatever zeros the stack held
     alignas(CoolProp::SaturationAncillaryFunction) unsigned char storage[sizeof(CoolProp::SaturationAncillaryFunction)];
     std::fill(std::begin(storage), std::end(storage), static_cast<unsigned char>(0xFF));
-    auto* anc = new (storage) CoolProp::SaturationAncillaryFunction();
+    // Default-initialisation (no parentheses): value-initialisation would zero the
+    // object first, since the constructor is defaulted, and hide a missing initialiser
+    auto* anc = new (storage) CoolProp::SaturationAncillaryFunction;
     CHECK_FALSE(anc->enabled());
     CHECK(anc->get_max_abs_error() == 0.0);
     anc->~SaturationAncillaryFunction();
 
-    // A Q,S flash on a GERG fluid either finds the right temperature or says
-    // it cannot; it never starts from a guess built on that value.
+    // A Q=0,S flash on a GERG fluid says it has no sL ancillary rather than
+    // starting from a guess built on that value
     std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
     ref->update(CoolProp::QT_INPUTS, 0, 150.0);
     const double s = ref->smolar();
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
-    try {
-        AS->update(CoolProp::QSmolar_INPUTS, 0, s);
-        CHECK(AS->T() == Catch::Approx(150.0).epsilon(1e-8));
-    } catch (CoolProp::ValueError& e) {
-        CHECK_THAT(std::string(e.what()), Catch::Matchers::ContainsSubstring("sL"));
-    }
+    CHECK_THROWS_WITH(AS->update(CoolProp::QSmolar_INPUTS, 0, s), Catch::Matchers::ContainsSubstring("sL ancillary"));
 }
 
 TEST_CASE("PC-SAFT rejects charged species without water", "[pcsaft][uninitialized]") {
