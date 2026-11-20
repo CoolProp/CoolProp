@@ -10,6 +10,36 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 
+# CPM takes any existing directory in the source cache as a hit (it only tests
+# EXISTS).  A download that fails part-way - dropped connection, Ctrl-C, full
+# disk - leaves an empty directory there, every later configure accepts it,
+# and the build fails much later on a missing header that points nowhere near
+# the cause (GH #3391).  Refuse such entries and say how to recover.  A git
+# checkout holding nothing but .git counts as empty too.
+function(coolprop_check_cpm_cache)
+  if(NOT CPM_SOURCE_CACHE)
+    return()
+  endif()
+  get_filename_component(_cache "${CPM_SOURCE_CACHE}" REALPATH)
+  foreach(_pkg IN LISTS CPM_PACKAGES)
+    get_filename_component(_dir "${CPM_PACKAGE_${_pkg}_SOURCE_DIR}" REALPATH)
+    string(FIND "${_dir}/" "${_cache}/" _pos)
+    if(NOT _pos EQUAL 0)
+      continue() # vendored, overridden by CPM_<name>_SOURCE, or not cached
+    endif()
+    file(GLOB _entries LIST_DIRECTORIES true "${_dir}/*")
+    list(FILTER _entries EXCLUDE REGEX "/\\.git$")
+    if(NOT _entries)
+      message(
+        FATAL_ERROR
+          "The CPM source cache entry for ${_pkg} is empty: '${_dir}'.  An earlier "
+          "download into the cache was probably interrupted, and CPM reuses any "
+          "existing cache directory without checking it.  Delete that directory "
+          "and configure again.")
+    endif()
+  endforeach()
+endfunction()
+
 # Components compiled into the distributed library are listed, with their
 # license texts, in THIRD_PARTY_NOTICES.md (shipped in the Python wheel).
 # Update it when adding, removing, or re-pinning a non-test dependency.
@@ -204,6 +234,9 @@ if(COOLPROP_VENDOR_THIRD_PARTY)
   endif()
   set(COOLPROP_FMT_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
 
+  # An empty cache entry would otherwise be reported below as a missing header.
+  coolprop_check_cpm_cache()
+
   # Diagnose unavailable CPM sources here, not halfway through installation.
   foreach(_header_or_license IN ITEMS
       "${Eigen_SOURCE_DIR}/Eigen/Core"
@@ -258,6 +291,8 @@ if(COOLPROP_MATHEMATICA_MODULE)
     DOWNLOAD_ONLY  YES
   )
 endif()
+
+coolprop_check_cpm_cache()
 
 # --- Offline gate, GH #3388 -----------------------------------------------
 #
