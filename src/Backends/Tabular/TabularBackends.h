@@ -1214,9 +1214,15 @@ class TabularBackend : public AbstractState
         }
     }
     TabularDataSet* dataset;
-    /// path_to_tables() for the composition `dataset` was loaded for; set_mole_fractions()
-    /// compares against it to tell when the tables must be reselected
-    std::string loaded_tables_path;
+    /// The mole fractions as path_to_tables() writes them (10 decimals): two compositions
+    /// with the same key share one set of tables
+    static std::string composition_key(const std::vector<CoolPropDbl>& z) {
+        std::string key;
+        for (CoolPropDbl zi : z) {
+            key += format("%0.10Lf;", zi);
+        }
+        return key;
+    }
     /// Forget the last state: flush the cached table indices, deselect the table and
     /// put Q at the impossible value the saturation accessors refuse
     void invalidate_state() {
@@ -1326,30 +1332,37 @@ class TabularBackend : public AbstractState
     }
     void update(CoolProp::input_pairs input_pair, double Value1, double Value2) override;
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
+        // The tables belong to one composition (path_to_tables is keyed on it), and
+        // building a new set costs a phase envelope plus every table, kept on disk and
+        // in memory for the life of the process.  So once the tables are loaded the
+        // composition is fixed: setting it again to the same values is harmless, any
+        // other composition needs a new AbstractState (COO-186).  Checked before the
+        // inner backend is touched, so a refused call leaves this one unchanged.
+        if (tables_loaded) {
+            if (composition_key(mole_fractions) != composition_key(this->AS->get_mole_fractions())) {
+                throw ValueError(format("The composition of a %s backend is fixed once its tables are loaded (%s); "
+                                        "create a new AbstractState for another composition",
+                                        backend_name().c_str(), path_to_tables().c_str()));
+            }
+            return;
+        }
         this->AS->set_mole_fractions(mole_fractions);
         is_mixture = (this->AS->get_mole_fractions().size() > 1);
-        // The previous state belongs to the previous composition: its cached
-        // outputs are that mixture's, and its indices point into that dataset's
-        // phase envelope, which can be shorter than the new one's.  Leave the
-        // state as a fresh one.
-        clear();
-        invalidate_state();
-        // The tables are keyed by composition (path_to_tables), so a new
-        // composition needs its own dataset; without this, check_tables() saw
-        // tables_loaded and kept the first composition's tables (COO-186)
-        if (tables_loaded && path_to_tables() != loaded_tables_path) {
-            tables_loaded = false;
-            dataset = nullptr;
-        }
         // Check the tables and build if necessary (check_tables also builds the coefficients)
         check_tables();
     };
     void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         // Let the inner backend do the mass→mole conversion, then forward the
         // resulting mole fractions through set_mole_fractions so that the
-        // tables and coefficients get built.
+        // tables and coefficients get built, or the latch refuses them.  A
+        // refusal puts the inner backend's mole fractions back as they were.
+        const std::vector<CoolPropDbl> previous = this->AS->get_mole_fractions();
         this->AS->set_mass_fractions(mass_fractions);
-        this->set_mole_fractions(this->AS->get_mole_fractions());
+        const std::vector<CoolPropDbl> converted = this->AS->get_mole_fractions();
+        if (tables_loaded) {
+            this->AS->set_mole_fractions(previous);
+        }
+        this->set_mole_fractions(converted);
     };
     const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return AS->get_mole_fractions();
@@ -1432,7 +1445,6 @@ class TabularBackend : public AbstractState
                 load_tables();
                 // Set the flag saying tables have been successfully loaded
                 tables_loaded = true;
-                loaded_tables_path = path_to_tables();
             } catch (CoolProp::UnableToLoadError& e) {
                 if (get_debug_level() > 0) {
                     std::cout << format("Table loading failed with error: %s\n", e.what());
@@ -1468,7 +1480,6 @@ class TabularBackend : public AbstractState
                 load_tables();
                 // Set the flag saying tables have been successfully loaded
                 tables_loaded = true;
-                loaded_tables_path = path_to_tables();
             }
             // update() indexes coeffs_pT/coeffs_ph for every tabular backend.  Build them
             // whenever tables are (re)loaded, so no path (constructor, set_mole_fractions,
