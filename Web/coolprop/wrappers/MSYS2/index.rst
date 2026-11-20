@@ -91,11 +91,11 @@ MSYS2 **Ninja** is a compact, ultra-fast, low-level build system optimized stric
 
 **Install SWIG if Necessary**
 
-Some wrappers use the ``SWIG`` (Simplified Wrapper and Interface Generator) package to interface between CoolProp's C++ code and the native software language that the wrapper is being built for (e.g., Octave, MATLAB, Java, R, and others).  You can install this through pacman with::
+Some wrappers use the ``SWIG`` (Simplified Wrapper and Interface Generator) package to interface between CoolProp's C++ code and the native software language that the wrapper is being built for (e.g., Octave, MATLAB, Java, R, and others).  It is installed through pacman with::
 
    pacman -S mingw-w64-ucrt-x86_64-swig
 
-The installation may also install a number of dependencies.  There is no need to install ``SWIG`` if you do not intend to build any of the SWIG based wrappers.  Refer to the documentation for the interfaces you intend to build to see if you need ``SWIG``.
+The installation may also install a number of dependencies.  There is no need to install ``SWIG`` unless one of the SWIG-based wrappers is being built.  Refer to the documentation for the interface being built to see if ``SWIG`` is needed.
 
 Verify the Installation
 =======================

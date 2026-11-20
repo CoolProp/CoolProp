@@ -176,7 +176,7 @@ A generated Octave example is how a build is verified. The example Octave code i
 
     octave Example.m
 
-You can also load this file into the GUI editor and run it by pressing F5.
+This file can also be loaded into the GUI editor and run by pressing F5.
 
 The first call to any ``CoolProp.*`` function can take several seconds while CoolProp's fluid library gets initialized; that's expected, not a hang. A quicker one-line check that skips the rest of the example::
 
