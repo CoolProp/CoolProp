@@ -1372,6 +1372,14 @@ endif()
 
 if(COOLPROP_OCTAVE_MODULE)
 
+  # Default to Release: an unoptimized build is markedly slower to load
+  # (and has failed a memory boundary on MSYS2). An explicit -DCMAKE_BUILD_TYPE=Debug
+  # still overrides this.
+  if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+    set(CMAKE_BUILD_TYPE Release)
+  endif()
+  message(STATUS "Octave build: CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+
   # Must have SWIG and Octave
   find_package(SWIG REQUIRED)
   include(${SWIG_USE_FILE})
@@ -1445,19 +1453,27 @@ if(COOLPROP_OCTAVE_MODULE)
   endif()
 
   if(WIN32)
-    include_directories($ENV{OCTAVE_ROOT}/include)
-    include_directories(
-      $ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}/octave)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-fpermissive")
-    swig_link_libraries(CoolProp octave octinterp)
-    set_target_properties(
-      CoolProp
-      PROPERTIES
-        LINK_FLAGS
-        "-L$ENV{OCTAVE_ROOT}/mingw64/lib/octave/${OCTAVE_VERSION} -L$ENV{OCTAVE_ROOT}"
-    )
+    if(MINGW AND DEFINED ENV{MSYSTEM})
+      # MSYS2 (e.g. UCRT64) Octave: find_package(Octave) has already located
+      # the headers (OCTAVE_INCLUDE_DIRS, added above) and the import
+      # libraries (full paths in OCTAVE_LIBRARIES), so OCTAVE_ROOT is not needed.
+      target_link_libraries(CoolProp ${OCTAVE_LIBRARIES})
+    else()
+      # Old-style Octave for Windows (MinGW zip layout), which needs OCTAVE_ROOT
+      include_directories($ENV{OCTAVE_ROOT}/include)
+      include_directories(
+        $ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION_STRING}/octave)
+      target_link_libraries(CoolProp octave octinterp)
+      set_target_properties(
+        CoolProp
+        PROPERTIES
+          LINK_FLAGS
+          "-L$ENV{OCTAVE_ROOT}/mingw64/lib/octave/${OCTAVE_VERSION_STRING} -L$ENV{OCTAVE_ROOT}"
+      )
+    endif()
   else()
-    swig_link_libraries(CoolProp ${OCTAVE_LIBRARIES})
+    target_link_libraries(CoolProp ${OCTAVE_LIBRARIES})
   endif()
   coolprop_hide_json_symbols(CoolProp)
 
@@ -1468,11 +1484,40 @@ if(COOLPROP_OCTAVE_MODULE)
   #                   POST_BUILD
   #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
   #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+
+  set(COOLPROP_OCTAVE_INSTALL_DIR
+      "Octave/Octave${OCTAVE_VERSION_STRING}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit"
+  )
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
-  install(
-    TARGETS ${app_name}
-    DESTINATION
-      Octave/Octave${OCTAVE_VERSION}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+  install(TARGETS ${app_name} DESTINATION "${COOLPROP_OCTAVE_INSTALL_DIR}")
+
+  # Octave's own site .oct directory is frequently root-owned (a Linux
+  # distro package, the Windows installer's Program Files), so rather than
+  # need elevated privileges to land there, point ~/.octaverc at this
+  # install dir instead -- Octave reads it automatically on every startup.
+  if(DEFINED ENV{HOME})
+    file(TO_CMAKE_PATH "$ENV{HOME}" COOLPROP_OCTAVERC_DIR)
+  elseif(DEFINED ENV{USERPROFILE})
+    file(TO_CMAKE_PATH "$ENV{USERPROFILE}" COOLPROP_OCTAVERC_DIR)
+  endif()
+  if(COOLPROP_OCTAVERC_DIR)
+    set(COOLPROP_OCTAVERC "${COOLPROP_OCTAVERC_DIR}/.octaverc")
+  endif()
+  if(COOLPROP_OCTAVERC)
+    install(CODE "
+      set(line \"addpath('\${CMAKE_INSTALL_PREFIX}/${COOLPROP_OCTAVE_INSTALL_DIR}');\")
+      set(rc \"${COOLPROP_OCTAVERC}\")
+      set(existing \"\")
+      if(EXISTS \"\${rc}\")
+        file(READ \"\${rc}\" existing)
+      endif()
+      string(FIND \"\${existing}\" \"\${line}\" pos)
+      if(pos EQUAL -1)
+        file(APPEND \"\${rc}\" \"\${line}\n\")
+        message(STATUS \"Added CoolProp to \${rc}\")
+      endif()
+    ")
+  endif()
 endif()
 
 if(COOLPROP_CSHARP_MODULE)
