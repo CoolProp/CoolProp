@@ -2280,6 +2280,15 @@ TEST_CASE("Tabular mixtures refuse a composition change once the tables are load
     AS2->set_mole_fractions(z2);
     CHECK(AS2->get_mole_fractions() == z2);
     CHECK_THROWS_AS(AS2->set_mole_fractions(z1), ValueError);
+    // ...and its properties are those of its own composition, not the first one's
+    HEOS->set_mole_fractions(z2);
+    HEOS->update(PT_INPUTS, p, T);
+    const double h2 = HEOS->hmolar();
+    REQUIRE(std::abs(h2 - h1) > 0.05 * std::abs(h1));
+    AS2->specify_phase(iphase_gas);
+    AS2->update(PT_INPUTS, p, T);
+    CAPTURE(h1, h2, AS2->hmolar());
+    CHECK(std::abs(AS2->hmolar() - h2) < 1e-3 * std::abs(h2));
 }
 
 TEST_CASE("Freshly built single-phase tables have nearest-good-neighbor matrices", "[Tabular]") {
