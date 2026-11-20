@@ -2237,46 +2237,49 @@ TEST_CASE("Tabular backends accept factory-string grid options", "[Tabular],[Fac
     }
 }
 
-TEST_CASE("Tabular mixtures switch tables when the composition changes", "[Tabular]") {
+TEST_CASE("Tabular mixtures refuse a composition change once the tables are loaded", "[Tabular]") {
     using namespace CoolProp;
-    // set_mole_fractions() a second time kept the first composition's tables:
-    // check_tables() only ever loaded while tables_loaded was false (COO-186)
+    // set_mole_fractions() a second time kept the first composition's tables and
+    // returned that mixture's properties for the new one (COO-186).  The tables
+    // are built for one composition, so the composition is now fixed once they load.
     const testing::ScopedTablesDirectory tables_dir("composition");
     const std::string backend = GENERATE(as<std::string>{}, "TTSE", "BICUBIC");
     CAPTURE(backend);
     const double p = 101325, T = 300;
     const std::vector<CoolPropDbl> z1{0.5, 0.5}, z2{0.2, 0.8};
-    auto h_HEOS = [&](const std::vector<CoolPropDbl>& z) {
-        std::shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS", "Methane&Ethane"));
-        HEOS->set_mole_fractions(z);
-        HEOS->specify_phase(iphase_gas);
-        HEOS->update(PT_INPUTS, p, T);
-        return HEOS->hmolar();
-    };
-    const double h1 = h_HEOS(z1), h2 = h_HEOS(z2);
-    // Tight enough that the other composition's value cannot pass
-    const double tol = 0.05 * std::abs(h2 - h1);
-    REQUIRE(tol > 0);
+    std::shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS", "Methane&Ethane"));
+    HEOS->set_mole_fractions(z1);
+    HEOS->specify_phase(iphase_gas);
+    HEOS->update(PT_INPUTS, p, T);
+    const double h1 = HEOS->hmolar();
 
     std::shared_ptr<AbstractState> AS(AbstractState::factory(backend + R"(&HEOS?{"grid":{"Nx":12,"Ny":12}})", "Methane&Ethane"));
     AS->specify_phase(iphase_gas);
     AS->set_mole_fractions(z1);
     AS->update(PT_INPUTS, p, T);
-    CHECK(std::abs(AS->hmolar() - h1) < tol);
+    const double h_tab = AS->hmolar();
+    CHECK(std::abs(h_tab - h1) < 1e-3 * std::abs(h1));
 
-    AS->set_mole_fractions(z2);
-    // The previous state does not survive a composition change: no cached
-    // output of the first mixture, no table selected
-    CHECK_THROWS_AS(AS->hmolar(), ValueError);
-    CHECK_THROWS_AS(AS->saturated_liquid_keyed_output(iDmolar), ValueError);
+    // Another composition, by mole or by mass, is refused and changes nothing
+    CHECK_THROWS_AS(AS->set_mole_fractions(z2), ValueError);
+    CHECK_THROWS_AS(AS->set_mass_fractions(z2), ValueError);
+    CHECK(AS->get_mole_fractions() == z1);
+    CHECK(AS->hmolar() == h_tab);
     AS->update(PT_INPUTS, p, T);
-    CAPTURE(h1, h2, AS->hmolar());
-    CHECK(std::abs(AS->hmolar() - h2) < tol);
+    CHECK(AS->hmolar() == h_tab);
 
-    // And back: the first composition's tables are found again
-    AS->set_mole_fractions(z1);
+    // The same composition again is accepted, including through mass fractions
+    CHECK_NOTHROW(AS->set_mole_fractions(z1));
+    CHECK_NOTHROW(AS->set_mass_fractions(HEOS->get_mass_fractions()));
+    CHECK(AS->get_mole_fractions() == z1);
     AS->update(PT_INPUTS, p, T);
-    CHECK(std::abs(AS->hmolar() - h1) < tol);
+    CHECK(AS->hmolar() == h_tab);
+
+    // Before the tables load the composition is still free: the first call sets it
+    std::shared_ptr<AbstractState> AS2(AbstractState::factory(backend + R"(&HEOS?{"grid":{"Nx":12,"Ny":12}})", "Methane&Ethane"));
+    AS2->set_mole_fractions(z2);
+    CHECK(AS2->get_mole_fractions() == z2);
+    CHECK_THROWS_AS(AS2->set_mole_fractions(z1), ValueError);
 }
 
 TEST_CASE("Freshly built single-phase tables have nearest-good-neighbor matrices", "[Tabular]") {

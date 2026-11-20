@@ -285,7 +285,7 @@ Bug fixes:
 
 * BICUBIC/TTSE: no out-of-bounds table reads at the grid edges, after a failed update, with ``Ny > Nx``, or before fractions are set; transport-property derivatives are refused.
 
-* BICUBIC/TTSE mixtures load the tables for the new composition when ``set_mole_fractions()`` is called again; they kept the first composition's tables and returned its properties.
+* BICUBIC/TTSE mixtures refuse a composition change once their tables are loaded; they kept the first composition's tables and returned its properties.
 
 * Cubic EOS (SRK/PR): exact Omega constants (`#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__); P- and T-input flashes, Q,T/P,Q from the superancillary, robust density roots near the critical point and above Tc, T,P phase labels and fresh-state caloric properties (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
 
