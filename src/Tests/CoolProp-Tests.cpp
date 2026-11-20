@@ -17,11 +17,13 @@
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include "TestUtils.h"
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <chrono>
 #include <filesystem>
 #include <map>
+#include <new>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -7906,6 +7908,63 @@ TEST_CASE("Cubic-library-only fluids report a real molar mass", "[cubic][uniniti
     // 0.1304944 kg/mol is the "molemass" this fluid carries in
     // dev/cubics/all_cubic_fluids.json -- the value the branch should be reading.
     CHECK(M == Catch::Approx(0.1304944).epsilon(1e-9));
+}
+
+TEST_CASE("Cubic-library-only fluids have real EOS limits", "[cubic][uninitialized]") {
+    // The same FluidLibrary branch never assigned EquationOfState::limits, so
+    // Tmin(), Tmax() and pmax() on HEOS::R1233ZD(E)-SRK read whatever the stack
+    // held, and every range check on the fluid compared against it.  The
+    // limits now follow CubicBackend: 0.3*Tc, 10*Tc and 100*pc.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-BEY35K4J.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1233ZD(E)-SRK"));
+    const double Tc = AS->T_critical(), pc = AS->p_critical();
+    CAPTURE(Tc, pc, AS->Tmin(), AS->Tmax(), AS->pmax());
+    CHECK(AS->Tmin() == Catch::Approx(0.3 * Tc).epsilon(1e-12));
+    CHECK(AS->Tmax() == Catch::Approx(10.0 * Tc).epsilon(1e-12));
+    CHECK(AS->pmax() == Catch::Approx(100.0 * pc).epsilon(1e-12));
+    // A supercritical state inside those limits works.  (Subcritical flashes
+    // still fail with "type not set": this fluid carries no saturation
+    // ancillaries.  That is a clean error, not a wrong number.)
+    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e5, 600.0));
+    CHECK(AS->rhomolar() == Catch::Approx(1e5 / (8.314462618 * 600.0)).epsilon(0.02));
+}
+
+TEST_CASE("An unset saturation ancillary reports no error band", "[ancillary][uninitialized]") {
+    // get_max_abs_error() read the union member of a default-constructed
+    // ancillary, which nothing had written.  GERG fluids carry no sL
+    // ancillary, and saturation_PHSU_pure compared |s - s_crit| against that
+    // value to pick its starting temperature for a Q,S flash.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-LPPFYEJC.
+    // Construct over 0xFF-filled storage so a member the constructor skips
+    // shows up as garbage rather than as whatever zeros the stack held
+    alignas(CoolProp::SaturationAncillaryFunction) unsigned char storage[sizeof(CoolProp::SaturationAncillaryFunction)];
+    std::fill(std::begin(storage), std::end(storage), static_cast<unsigned char>(0xFF));
+    // Default-initialisation (no parentheses): value-initialisation would zero the
+    // object first, since the constructor is defaulted, and hide a missing initialiser
+    auto* anc = new (storage) CoolProp::SaturationAncillaryFunction;
+    CHECK_FALSE(anc->enabled());
+    CHECK(anc->get_max_abs_error() == 0.0);
+    anc->~SaturationAncillaryFunction();
+
+    // A Q=0,S flash on a GERG fluid says it has no sL ancillary rather than
+    // starting from a guess built on that value
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
+    ref->update(CoolProp::QT_INPUTS, 0, 150.0);
+    const double s = ref->smolar();
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
+    CHECK_THROWS_WITH(AS->update(CoolProp::QSmolar_INPUTS, 0, s), Catch::Matchers::ContainsSubstring("sL ancillary"));
+}
+
+TEST_CASE("PC-SAFT rejects charged species without water", "[pcsaft][uninitialized]") {
+    // The ionic term divides by the solvent dielectric constant, and only
+    // water sets one (dielc_water).  With ions but no water, dielc was never
+    // written, so every property came from whatever the member held.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-X3963FK5.
+    // Na+ and the other shipped ions are only parameterised for aqueous solutions
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "Na+&METHANE"), Catch::Matchers::ContainsSubstring("water"));
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "Na+"), Catch::Matchers::ContainsSubstring("water"));
+    // With water the ionic term has its solvent and the mixture builds
+    CHECK_NOTHROW(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "Na+&Cl-&WATER")));
 }
 
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {

@@ -124,7 +124,10 @@ struct CriticalRegionSplines
 /// A set of limits for the eos parameters
 struct EOSLimits
 {
-    double Tmin, Tmax, rhomax, pmax;
+    // Zero, matching what value-initialization gave the cubic components
+    // built by AbstractCubicBackend::set_alpha0_from_components; see the
+    // note on EquationOfState's scalars for why 0 rather than _HUGE.
+    double Tmin = 0, Tmax = 0, rhomax = 0, pmax = 0;
 };
 
 struct ConductivityECSVariables

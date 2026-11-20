@@ -1403,6 +1403,13 @@ class JSONFluidLibrary
                         E.R_u = get_config_double(R_U_CODATA);
                         E.sat_min_liquid.T = _HUGE;
                         E.sat_min_liquid.p = _HUGE;
+                        // Same practical bounds CubicBackend::calc_Tmin/calc_Tmax/calc_pmax use;
+                        // left unset, the range checks on this fluid read whatever the stack held
+                        // (ANT-2026-BEY35K4J)
+                        E.limits.Tmin = 0.3 * vals.Tc;
+                        E.limits.Tmax = 10.0 * vals.Tc;
+                        E.limits.pmax = 100.0 * vals.pc;
+                        E.limits.rhomax = 0;  // nothing reads limits.rhomax
                         E.reduce.T = vals.Tc;
                         E.reduce.p = vals.pc;
                         E.reduce.rhomolar = ac->get_rhor();

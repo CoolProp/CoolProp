@@ -236,9 +236,13 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
         } else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL) {
             CoolPropFluid& component = HEOS.get_components()[0];
             CoolProp::SaturationAncillaryFunction& anc = component.ancillaries.sL;
+            // GERG fluids carry no sL ancillary; its error band below would be meaningless
+            if (!anc.enabled()) {
+                throw ValueError("No sL ancillary is available for this fluid, so an imposed saturated-liquid entropy cannot be solved");
+            }
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // If near the critical point, use a near critical guess value for T
-            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(component.ancillaries.sL.get_max_abs_error())) {
+            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(anc.get_max_abs_error())) {
                 T = std::max(0.99 * crit.T, crit.T - 0.1);
             } else {
                 CoolPropDbl Tmin = NAN, Tmax = NAN, Tmin_satV = NAN;
