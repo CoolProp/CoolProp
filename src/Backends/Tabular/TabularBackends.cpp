@@ -1123,21 +1123,15 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
     // Check the tables, build if necessary
     check_tables();
 
-    // Flush the cached indices (set to large number)
-    cached_single_phase_i = std::numeric_limits<std::size_t>::max();
-    cached_single_phase_j = std::numeric_limits<std::size_t>::max();
-    cached_saturation_iL = std::numeric_limits<std::size_t>::max();
-    cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+    // Flush the cached indices (set to large number) and deselect the table, and set
+    // quality to a value that is impossible.
     // The indices belong to the selected table, so deselect it with them: a branch below
     // that throws before it has located a cell (e.g. the mixture phase test for inputs
     // outside the phase envelope) must leave the state as a fresh one, not with the
     // previous update's table and the flushed indices, which the accessors would then
     // use to index the table out of bounds.  Each branch selects its table only once
     // the cell has been found.
-    selected_table = SELECTED_NO_TABLE;
-
-    // To start, set quality to value that is impossible
-    _Q = -1000;
+    invalidate_state();
     // Several branches assign _Q from the inputs before a step that can still throw
     // (e.g. PQ/QT outside the saturation table); the saturation accessors key on _Q,
     // so put it back to the impossible value whenever update() exits by an exception.
@@ -2241,6 +2235,60 @@ TEST_CASE("Tabular backends accept factory-string grid options", "[Tabular],[Fac
             CHECK(std::abs(AS->T() / HEOS->T() - 1) < 1e-2);
         }
     }
+}
+
+TEST_CASE("Tabular mixtures refuse a composition change once the tables are loaded", "[Tabular]") {
+    using namespace CoolProp;
+    // set_mole_fractions() a second time kept the first composition's tables and
+    // returned that mixture's properties for the new one (COO-186).  The tables
+    // are built for one composition, so the composition is now fixed once they load.
+    const testing::ScopedTablesDirectory tables_dir("composition");
+    const std::string backend = GENERATE(as<std::string>{}, "TTSE", "BICUBIC");
+    CAPTURE(backend);
+    const double p = 101325, T = 300;
+    const std::vector<CoolPropDbl> z1{0.5, 0.5}, z2{0.2, 0.8};
+    std::shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS", "Methane&Ethane"));
+    HEOS->set_mole_fractions(z1);
+    HEOS->specify_phase(iphase_gas);
+    HEOS->update(PT_INPUTS, p, T);
+    const double h1 = HEOS->hmolar();
+
+    std::shared_ptr<AbstractState> AS(AbstractState::factory(backend + R"(&HEOS?{"grid":{"Nx":12,"Ny":12}})", "Methane&Ethane"));
+    AS->specify_phase(iphase_gas);
+    AS->set_mole_fractions(z1);
+    AS->update(PT_INPUTS, p, T);
+    const double h_tab = AS->hmolar();
+    CHECK(std::abs(h_tab - h1) < 1e-3 * std::abs(h1));
+
+    // Another composition, by mole or by mass, is refused and changes nothing
+    CHECK_THROWS_AS(AS->set_mole_fractions(z2), ValueError);
+    CHECK_THROWS_AS(AS->set_mass_fractions(z2), ValueError);
+    CHECK(AS->get_mole_fractions() == z1);
+    CHECK(AS->hmolar() == h_tab);
+    AS->update(PT_INPUTS, p, T);
+    CHECK(AS->hmolar() == h_tab);
+
+    // The same composition again is accepted, including through mass fractions
+    CHECK_NOTHROW(AS->set_mole_fractions(z1));
+    CHECK_NOTHROW(AS->set_mass_fractions(HEOS->get_mass_fractions()));
+    CHECK(AS->get_mole_fractions() == z1);
+    AS->update(PT_INPUTS, p, T);
+    CHECK(AS->hmolar() == h_tab);
+
+    // Before the tables load the composition is still free: the first call sets it
+    std::shared_ptr<AbstractState> AS2(AbstractState::factory(backend + R"(&HEOS?{"grid":{"Nx":12,"Ny":12}})", "Methane&Ethane"));
+    AS2->set_mole_fractions(z2);
+    CHECK(AS2->get_mole_fractions() == z2);
+    CHECK_THROWS_AS(AS2->set_mole_fractions(z1), ValueError);
+    // ...and its properties are those of its own composition, not the first one's
+    HEOS->set_mole_fractions(z2);
+    HEOS->update(PT_INPUTS, p, T);
+    const double h2 = HEOS->hmolar();
+    REQUIRE(std::abs(h2 - h1) > 0.05 * std::abs(h1));
+    AS2->specify_phase(iphase_gas);
+    AS2->update(PT_INPUTS, p, T);
+    CAPTURE(h1, h2, AS2->hmolar());
+    CHECK(std::abs(AS2->hmolar() - h2) < 1e-3 * std::abs(h2));
 }
 
 TEST_CASE("Freshly built single-phase tables have nearest-good-neighbor matrices", "[Tabular]") {
