@@ -1540,19 +1540,26 @@ if(COOLPROP_OCTAVE_MODULE)
         endif()
         string(FIND \"\${existing}\" \"\${line}\" pos)
         if(pos EQUAL -1)
+          set(sep \"\")
+          if(existing AND NOT existing MATCHES \"\n$\")
+            set(sep \"\n\")
+          endif()
+          set(append_text \"\${sep}\${line}\n\")
+          set(data_file \"\${rc}.coolprop_append.txt\")
+          file(WRITE \"\${data_file}\" \"\${append_text}\")
           execute_process(
-            COMMAND \"\${CMAKE_COMMAND}\" -E touch \"\${rc}\"
-            RESULT_VARIABLE write_probe
+            COMMAND \"\${CMAKE_COMMAND}\"
+                    \"-DTARGET_FILE=\${rc}\"
+                    \"-DDATA_FILE=\${data_file}\"
+                    -P \"${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/append_text_to_file.cmake\"
+            RESULT_VARIABLE append_result
+            OUTPUT_QUIET
             ERROR_QUIET
           )
-          if(NOT write_probe EQUAL 0)
+          file(REMOVE \"\${data_file}\")
+          if(NOT append_result EQUAL 0)
             message(WARNING \"Could not write to \${rc}; add this line to Octave's startup file by hand: \${line}\")
           else()
-            set(sep \"\")
-            if(existing AND NOT existing MATCHES \"\n$\")
-              set(sep \"\n\")
-            endif()
-            file(APPEND \"\${rc}\" \"\${sep}\${line}\n\")
             message(STATUS \"Added CoolProp to \${rc}\")
           endif()
         endif()
