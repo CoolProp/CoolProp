@@ -1509,6 +1509,16 @@ if(COOLPROP_OCTAVE_MODULE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
   install(TARGETS ${app_name} DESTINATION "${COOLPROP_OCTAVE_INSTALL_DIR}")
 
+  # Copy the append helper into the build tree so the generated install
+  # script depends on CMAKE_CURRENT_BINARY_DIR, not on the source tree
+  # still being present when `cmake --install` is later run (e.g. from a
+  # packaging step working off a copied/relocated build tree).
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/append_text_to_file.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/append_text_to_file.cmake"
+    COPYONLY
+  )
+
   # Octave's own site .oct directory is frequently root-owned (a Linux
   # distro package, the Windows installer's Program Files), so rather than
   # need elevated privileges to land there, point ~/.octaverc at this
@@ -1529,6 +1539,8 @@ if(COOLPROP_OCTAVE_MODULE)
     endif()
     if(\"\${rc_dir}\" STREQUAL \"\")
       message(WARNING \"Neither HOME nor USERPROFILE is set; CoolProp.oct was installed, but ~/.octaverc could not be updated to register it with Octave. Add this line to Octave's startup file by hand: \${line}\")
+    elseif(NOT IS_DIRECTORY \"\${rc_dir}\")
+      message(WARNING \"\${rc_dir} (from HOME/USERPROFILE) is not a directory; CoolProp.oct was installed, but ~/.octaverc could not be updated to register it with Octave. Add this line to Octave's startup file by hand: \${line}\")
     else()
       set(rc \"\${rc_dir}/.octaverc\")
       if(DEFINED ENV{DESTDIR} AND NOT \"\$ENV{DESTDIR}\" STREQUAL \"\")
@@ -1540,19 +1552,23 @@ if(COOLPROP_OCTAVE_MODULE)
         endif()
         string(FIND \"\${existing}\" \"\${line}\" pos)
         if(pos EQUAL -1)
+          set(sep \"\")
+          if(existing AND NOT existing MATCHES \"\n$\")
+            set(sep \"\n\")
+          endif()
           execute_process(
-            COMMAND \"\${CMAKE_COMMAND}\" -E touch \"\${rc}\"
-            RESULT_VARIABLE write_probe
-            ERROR_QUIET
+            COMMAND \"\${CMAKE_COMMAND}\"
+                    \"-DTARGET_FILE=\${rc}\"
+                    \"-DSEP=\${sep}\"
+                    \"-DLINE=\${line}\"
+                    -P \"${CMAKE_CURRENT_BINARY_DIR}/append_text_to_file.cmake\"
+            RESULT_VARIABLE append_result
+            OUTPUT_QUIET
+            ERROR_VARIABLE append_error
           )
-          if(NOT write_probe EQUAL 0)
-            message(WARNING \"Could not write to \${rc}; add this line to Octave's startup file by hand: \${line}\")
+          if(NOT append_result EQUAL 0)
+            message(WARNING \"Could not write to \${rc} (\${append_error}); add this line to Octave's startup file by hand: \${line}\")
           else()
-            set(sep \"\")
-            if(existing AND NOT existing MATCHES \"\n$\")
-              set(sep \"\n\")
-            endif()
-            file(APPEND \"\${rc}\" \"\${sep}\${line}\n\")
             message(STATUS \"Added CoolProp to \${rc}\")
           endif()
         endif()
