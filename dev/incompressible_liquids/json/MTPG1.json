@@ -1,0 +1,141 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 428.15,
+  "Tmax": 613.15,
+  "Tmin": 243.15,
+  "TminPsat": 383.15,
+  "conductivity": {
+    "NRMS": 0.001056678,
+    "coeffs": [
+      [
+        0.1232349
+      ],
+      [
+        -7.228985e-05
+      ],
+      [
+        1.595725e-10
+      ],
+      [
+        1.401125e-12
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.001803405,
+    "coeffs": [
+      [
+        816.5735
+      ],
+      [
+        -0.4185388
+      ],
+      [
+        4.559215e-07
+      ],
+      [
+        -3.528758e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density_cheb": {
+    "NRMS": 0.001818918,
+    "Trange": [
+      243.15,
+      613.15
+    ],
+    "coeffs": [
+      [
+        816.5789
+      ],
+      [
+        -77.57085
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "description": "MultiTherm PG-1",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "MTPG1",
+  "reference": "MultiTherm2004",
+  "saturation_pressure": {
+    "NRMS": 0.002311512,
+    "coeffs": [
+      -9418.984,
+      16.47131,
+      -25.95748
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.0002044201,
+    "coeffs": [
+      [
+        2368.5
+      ],
+      [
+        3.633053
+      ],
+      [
+        0.0
+      ],
+      [
+        1.734726e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "specific_heat_cheb": {
+    "NRMS": 0.000204853,
+    "Trange": [
+      243.15,
+      613.15
+    ],
+    "coeffs": [
+      [
+        2368.5
+      ],
+      [
+        672.1842
+      ]
+    ],
+    "fit_source": "tabular_data",
+    "type": "chebyshev",
+    "xbase": 0.0
+  },
+  "viscosity": {
+    "NRMS": 0.003253835,
+    "coeffs": [
+      850.8486,
+      -168.4856,
+      9.963902
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

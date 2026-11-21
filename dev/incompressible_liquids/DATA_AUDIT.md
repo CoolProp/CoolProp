@@ -23,6 +23,40 @@ convention the loader already handles (see the don't-touch list).
 | 4 | Empty `*_Vol2Mass.txt` grids for mass-based fluids. | Expected — mass-based fluids carry no volume→mass table. |
 | 5 | **23 of the 32** `xTables/*.csv` files were **latin-1 encoded** (`·` in unit headers) and failed a default UTF-8 read — the nine orphaned ones (`Freezium_{Cond,Cp,Mu}`, `Ice{EA,NA,PG}_{Cond,Mu}`) plus `AS{10,20,30,40,55}`, `HY{20,30,40,45,50}` and four `ASHRAE`/`CO2_*` tables. | The six `Ice{EA,NA,PG}_{Cond,Mu}` files are **now plain ASCII** (`W/(m K)`, `Pa s`) and back in the production pipeline: `SecCoolSolutionData.__init__` read them inside a bare `try/except`, so the `UnicodeDecodeError` silently dropped ice-slurry conductivity and viscosity from every refit (issue #3303). The refit now reproduces the committed coefficients to ~3e-7 relative. `test_data_sanity.py::test_loaded_data_files_are_ascii` pins the encoding for every file the loaders read, and `SecCoolIceData.getRequiredArray` refuses to construct the fluid when a grid is missing or unreadable (moving the reads out of the bare `try/except` alone was not enough: `getArray` returns `(None, None, None)` for a file it cannot find, rather than raising). The remaining 17 are still latin-1 and still orphaned; anyone reviving those must re-encode them the same way. |
 
+## Addendum: MultiTherm PG-1 (`MTPG1`, added 2026-11)
+
+`PureFluids.py` → `MultiThermPG1`, 38 rows from −30 °C to 340 °C in 10 K
+steps, source `MultiTherm2004` (vendor SI table, form PG-1C EXP 5/04).
+
+| Property | Source unit → stored | Plausibility | Committed fit, max \|dev\| vs table |
+|---|---|---|---|
+| density | kg/m³ | 894 → 739, linear in T (vendor correlation) | ≈0.06 % (polynomial and Chebyshev) |
+| specific heat | J/(kg·K) | 1696 → 3041, linear in T | 0.02 % |
+| conductivity | W/(m·K) | 0.137 → 0.110, linear in T | 0.04 % |
+| viscosity | cP → Pa·s (×1e-3) | 16 cP at 40 °C, 3.0 cP at 100 °C: in range for a white mineral oil | 5.4 % at 40 °C over −20…300 °C; 7.4 % at 340 °C over the full range (3-parameter `exponential`) |
+| saturation pressure | hPa (mbar) → Pa, already converted in the array | 61.3 kPa at 340 °C, consistent with an initial boiling point near 363 °C | 5.8 % at 260 °C (`exponential`, 15 points) |
+
+- Vapour pressure is published only from 110 °C (`TminPsat` = 383.15 K).
+  Within 110…340 °C the rows at 130, 170, 190, 210, 230, 270, 290, 310 and
+  330 °C are also `NaN`, because the source table leaves those cells blank.
+  The fitter masks them.
+- All 38 rows of every array were checked value by value against the SI
+  table (form PG-1C EXP 5/04) and match exactly.
+- The 5.8 % psat residual is a single outlier at 260 °C (6400 Pa); the
+  neighbours at 250 °C and 280 °C fit within 0.6 %. It is the vendor's own
+  value, not a transcription slip: the table gives 48.0 mmHg = 64.0 hPa, and
+  the °F table (form PG-1F EXP 5/04) agrees at 500 °F. Leave it as published.
+- The source SI table's 270 °C row misprints the °F column (554 instead of
+  518) and g/cc (0.760, copied from the 290 °C row). The kg/m³ value (768)
+  fits the linear trend and is the one used.
+- Viscosity spans four orders of magnitude. The fitter's alternatives are
+  worse, not better: a cubic `exppolynomial` (its cap for a pure fluid) is
+  off by up to 49 % and the `logexponential` by 35 %; only a degree-6
+  polynomial in ln μ beats the exponential (2.3 %). The exponential stays.
+- `src/Tests/CoolProp-Tests.cpp` ("INCOMP::MTPG1 … reproduces the published
+  property table") anchors density, cp, conductivity, viscosity and psat
+  against table rows at 0/100/200/300 °C.
+
 ## Don't-touch list (looks wrong, is right)
 
 | Value | Where | Why it's correct |
