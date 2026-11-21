@@ -197,21 +197,187 @@ The following sections describe the Michelsen algorithm as implemented.
 
 .. _flash-logic-diagram:
 
-Logic diagram
-^^^^^^^^^^^^^
+Logic diagrams
+^^^^^^^^^^^^^^
 
-.. figure:: pt-flash-flowchart.png
-   :width: 100%
-   :align: center
-   :alt: Flowchart of the blind PT flash algorithm showing initialisation,
-         Stage 1 (stability analysis) and Stage 2 (phase-split calculation).
+The PT flash for mixtures is a set of nested solvers with several fallback
+paths.  The five diagrams below show how they connect, from the entry point
+down to the individual solvers.  Rounded boxes are entry and exit points,
+diamonds are decisions, and double-bordered boxes refer to another diagram.
+The function names are those in ``src/Backends/Helmholtz/FlashRoutines.cpp``
+(``FlashRoutines::PT_flash_mixtures``) and
+``src/Backends/Helmholtz/VLERoutines.cpp`` (the stability test and the
+phase-split solver).  Where the diagrams and the code disagree, the code is
+right and the diagram should be updated.
 
-   Overview of the blind PT flash algorithm.  Initialisation checks for
-   pre-computed phase boundaries or caller-imposed phases before entering
-   the Michelsen two-stage procedure.  Stage 1 evaluates the tangent plane
-   distance (TPD) to detect instability; Stage 2 solves the phase split
-   via successive substitution, GDEM acceleration and, if needed, a
-   second-order Gibbs energy minimisation.
+**1. Entry and dispatch.**  The phase envelope is used only if the caller has
+built it (``build_phase_envelope``) and has not imposed a single phase.  If
+anything on the envelope path throws, the flash continues with the blind
+flash.
+
+.. mermaid::
+
+   flowchart TD
+       A(["PT_flash(T, p, z)"]) --> B{"Pure or<br/>pseudo-pure?"}
+       B -- yes --> B1["Pure-fluid PT path<br/>(not covered here)"]
+       B -- no --> C{"Single phase imposed<br/>by the caller?"}
+       C -- no --> D{"Phase envelope<br/>built and closed?"}
+       C -- yes --> I
+       D -- no --> I{"Phase imposed?"}
+       D -- yes --> E{"(T, p) inside<br/>the envelope?"}
+       E -- no --> F["Gas if T is above the closest envelope point,<br/>else liquid; solve the density on that branch,<br/>the other branch if it throws"]
+       E -- yes --> G["Two-phase solver (diagram 4),<br/>seeded from the closest envelope point"]
+       G --> H["β collapse"]
+       F --> Z(["Done"])
+       H --> Z
+       E -. "anything throws" .-> I
+       I -- "no" --> J[["Blind flash<br/>(diagram 2)"]]
+       I -- "yes" --> K["Density solve on the imposed branch;<br/>phase = imposed phase"]
+       J --> Z
+       K --> Z
+
+The *β collapse* step, used on every two-phase path: a split with
+:math:`\beta < 10^{-10}` is published as the single-phase liquid root, one with
+:math:`\beta > 1 - 10^{-10}` as the single-phase vapour root, and anything
+in between as a two-phase state with :math:`Q = \beta`.
+
+**2. Blind flash.**  This is the main path when no phase envelope is available.
+The stability test (diagram 3) gives a verdict.  A "stable" verdict is
+cross-checked against a Wilson K-factor estimate, because the test can
+converge to the trivial solution near a phase boundary.  Every split that does
+not come from a proven instability must pass ``verify_split`` before it is
+published.  This requires a composition spread of at least
+:math:`\max(10^{-6}, \mathrm{tol})`, a material balance to :math:`10^{-6}`, both phase
+pressures within 0.1 % of :math:`p`, and equal fugacities to ``tol``.
+
+.. mermaid::
+
+   flowchart TD
+       A(["Blind flash"]) --> S[["Stability test<br/>(diagram 3)"]]
+       S --> U{"Unstable?"}
+
+       U -- "stable" --> W{"Wilson K-factors give a split?<br/>(bracketing not required<br/>when the verdict was uncertain)"}
+       W -- "no, or it throws" --> SP
+       W -- yes --> WS["Seed x, y, ρ from Wilson; β from<br/>the widest-spread component"]
+       WS --> WN["Two-phase solver<br/>(diagram 4)"]
+       WN --> WV{"Converged and<br/>verify_split(1e-7)?"}
+       WV -- yes --> BC
+       WV -- no --> WR{"Wilson seed passes<br/>verify_split(1e-4)?"}
+       WR -- yes --> BC
+       WR -- no --> SP
+
+       U -- "unstable" --> FF{"Found by<br/>flash-first?"}
+       FF -- yes --> FS["Seed from the flash-first split<br/>(x, y, β and both densities)"]
+       FF -- no --> TS["Seed from the trial phase and the feed;<br/>their densities are warm starts"]
+       FS --> N["Two-phase solver<br/>(diagram 4)"]
+       TS --> N
+       N -- converged --> BC
+       N -- throws --> R1{"Flash-first verdict?"}
+       R1 -- yes --> R2["Rerun the stability test<br/>with flash-first switched off"]
+       R2 --> R3{"Still unstable?"}
+       R3 -- yes --> R4["Two-phase solver from the trial phase,<br/>β = 0.5"]
+       R4 -- converged --> BC
+       R4 -- throws --> G
+       R3 -- "no: keep the<br/>flash-first split" --> G
+       R1 -- no --> G{"Solver reported non-convergence,<br/>or the verdict is beyond baseline?"}
+       G -- no --> X(["Rethrow"])
+       G -- yes --> RC["Recovery: refine the stability split by<br/>successive substitution (80 steps, tol 1e-11),<br/>neither phase's branch imposed"]
+       RC --> RV{"0 < β < 1 and<br/>verify_split(1e-4)?"}
+       RV -- yes --> BC
+       RV -- "no, or it throws" --> SP
+
+       BC["β collapse"] --> Z(["Done"])
+       SP[["Single-phase root<br/>(diagram 5)"]] --> Z
+
+*Beyond baseline* means the instability was found by a near-pure trial phase,
+or depended on a density root that the stable-root guard replaced (GitHub
+#3448), or came from a flash-first split that the plain trial search cannot
+reproduce.  Before these mechanisms existed the flash returned a single-phase
+answer at such states.  So if the split solver cannot converge there, the flash
+falls back to single phase instead of throwing.
+
+**3. Stability test** (``StabilityEvaluationClass::check_stability_michelsen``).
+It decides whether the feed is stable, and if it is not, gives the split or
+trial phase that showed it.  Stage 1 below describes the equations.
+
+.. mermaid::
+
+   flowchart TD
+       A(["is_stable()"]) --> B["Feed density: the stable root<br/>(guarded global solve)<br/>h_i = ln z_i + ln φ_i(z)"]
+       B --> C["Wilson K-factors;<br/>Rachford-Rice residuals g(0), g(1)"]
+       C --> D{"Flash-first enabled and<br/>g(0) > 0 > g(1)?"}
+       D -- yes --> E["Up to 3 SS steps of the two-phase<br/>flash: Rachford-Rice, phase densities,<br/>K = φ_L / φ_V"]
+       E --> F{"ΔG/nRT < 0, or<br/>tpd of either phase < 0?"}
+       F -- yes --> UF(["Unstable, flash-first:<br/>split, β and densities recorded"])
+       F -- no --> T
+       D -- no --> T["Trial phases: vapour-like z·K and liquid-like z/K,<br/>plus one near-pure trial if K_max / K_min > 1000"]
+       T --> L["Next trial: SS + GDEM on ln Y<br/>(4 loops × 2 steps; a near-pure<br/>trial gets a single step)"]
+       L --> M{"tm < 0?"}
+       M -- yes --> UT(["Unstable: trial phase and<br/>feed recorded as x, y"])
+       M -- no --> N{"SS decided stable?<br/>(stationary point, or<br/>converging to the feed)"}
+       N -- yes --> NX
+       N -- no --> NP{"Near-pure trial?"}
+       NP -- "yes: skip it" --> NX
+       NP -- no --> Q["Second-order TPD minimisation,<br/>α = 2√Y, trust region"]
+       Q --> QR{"Result"}
+       QR -- "tm < 0" --> UT
+       QR -- "tm ≥ 0" --> NX
+       QR -- "failed" --> QU["Mark the verdict uncertain"] --> NX
+       NX{"More trials?"} -- yes --> L
+       NX -- no --> ST(["Stable<br/>(uncertain if any trial failed)"])
+
+**4. Two-phase solver** (``PTflash_twophase::solve_michelsen``).  It refines a
+seed (x, y, densities, and optionally β) to phase equilibrium.  When it fails
+it sets ``nonconvergence`` and throws a ``SolutionError``.  Diagram 2 uses that
+flag to decide between recovery and rethrowing.  Every step solves both phase
+densities, warm-started from the previous root and guarded to stay on the same
+branch.  If that fails, the solver falls back to the lowest-Gibbs root with the
+phase specified.  If both fail, the density solve is *lost*.
+
+.. mermaid::
+
+   flowchart TD
+       A(["solve()"]) --> B{"Seed finite?"}
+       B -- no --> XN(["Throw, nonconvergence"])
+       B -- yes --> P1["Phase 1: SS + GDEM on ln K<br/>(4 loops × 2 steps, stops at 1e-7)"]
+       P1 -- "density solve lost" --> XD(["Throw"])
+       P1 -- "non-finite K" --> XN
+       P1 --> P2["Phase 2: second-order Gibbs minimisation<br/>in v_i = β y_i (always runs;<br/>2 restarts × 50 iterations)"]
+       P2 --> Q{"max|ln f_V − ln f_L|<br/>< 1e-9?"}
+       Q -- yes --> O
+       Q -- no --> FB["Minority-phase fallback: Newton on the<br/>incipient phase's mole numbers, Armijo search,<br/>reseeded from Wilson if the trial is trivial"]
+       FB --> FG{"Residual ≤ 1e-5, spread ≥ 1e-4,<br/>interior β, Gibbs below the feed,<br/>liquid denser than vapour?"}
+       FG -- yes --> O
+       FG -- "no: restore the<br/>state before the fallback" --> O
+       O["Relabel so the liquid is the denser phase;<br/>recompute the residual on the final split"]
+       O --> G{"Spread > 1e-7, and<br/>converged or residual ≤ 1e-5<br/>with spread ≥ 1e-4?"}
+       G -- yes --> OK(["Return x, y, β, ρ_L, ρ_V"])
+       G -- no --> XN
+
+**5. Single-phase root** (``solve_single_phase`` in ``PT_flash_mixtures``).  It
+picks the density root for a state that has been judged single phase.
+
+.. mermaid::
+
+   flowchart TD
+       A(["Single-phase root"]) --> C{"Chebyshev all-roots solver<br/>(CHEBYSHEV_DENSITY_SOLVER)<br/>returns a root?"}
+       C -- yes --> Z
+       C -- "no, or disabled" --> S["SRK cubic: gas and liquid roots"]
+       S --> D{"Two distinct<br/>valid SRK roots?"}
+       D -- yes --> B["Solve the EOS on both branches"]
+       B --> BG{"Both converged?"}
+       BG -- yes --> BL["Take the root with the lower Gibbs energy"]
+       BG -- "one" --> BO["Take that one"]
+       BG -- none --> X(["Throw"])
+       D -- no --> P["Primary branch: liquid if the SRK root is denser<br/>than the SRK critical density 3Ω_b / b, else gas"]
+       P --> PS{"EOS solve on the<br/>primary branch"}
+       PS -- ok --> Z
+       PS -- throws --> PF{"EOS solve on<br/>the other branch"}
+       PF -- ok --> Z
+       PF -- throws --> X
+       BL --> Z
+       BO --> Z
+       Z(["Phase: gas if ρ is below the reducing density, else liquid"])
 
 .. _tpd-stability:
 
@@ -341,8 +507,8 @@ K-factors are stored in log space
 declared when :math:`\max_i |\Delta \ln K_i| < 10^{-7}`.
 
 **Second-order Gibbs energy minimisation.**
-If successive substitution has not converged to the required tolerance, a
-Newton-Raphson minimisation of the Gibbs energy is employed.  The independent
+After successive substitution, a Newton-Raphson minimisation of the Gibbs
+energy always runs, to bring the split to the strict tolerance.  The independent
 variables are the vapour-phase mole numbers :math:`v_i = \beta\,y_i`, from
 which the liquid mole numbers are :math:`l_i = z_i - v_i`.
 
@@ -362,7 +528,27 @@ The Newton step :math:`\Delta\mathbf{v} = -\mathbf{H}^{-1}\mathbf{g}` is
 accepted only if the Gibbs energy decreases; otherwise the step is halved
 (backtracking line search).  Feasibility is maintained by scaling the step so
 that all mole numbers remain positive.  Convergence requires
-:math:`\max_i |g_i| < 10^{-9}`, with a maximum of 30 iterations.
+:math:`\max_i |\ln f_i^{(V)} - \ln f_i^{(L)}| < 10^{-9}`, with at most 50
+iterations, restarted up to twice.
+
+**Minority-phase fallback.**
+Because the reduced gradient carries a factor :math:`\beta(1-\beta)`, the
+Newton step above stalls when one phase is very small, i.e. near the dew or
+bubble line.  If it has not converged, a second-order Newton
+:cite:`Michelsen-FPE-1982b` is run on the mole numbers of the incipient
+(minority) phase, with an Armijo line search.  Its result is kept only if it
+is a genuine split: equal-fugacity residual :math:`\le 10^{-5}`, composition
+spread :math:`\ge 10^{-4}`, an interior :math:`\beta`, a Gibbs energy below
+that of the feed, and a liquid denser than the vapour.  Otherwise the solver
+goes back to the state it had before the fallback.
+
+**Acceptance.**
+The solver throws, and marks the result as non-converged, if the split is
+trivial (spread :math:`\le 10^{-7}`).  It also throws if the split has not
+reached the strict tolerance and is not near-converged (residual
+:math:`\le 10^{-5}` with a spread :math:`\ge 10^{-4}`).  Diagram 2 of the
+:ref:`logic diagrams <flash-logic-diagram>` shows how the flash handles that
+failure.
 
 .. _legacy-algorithm:
 
