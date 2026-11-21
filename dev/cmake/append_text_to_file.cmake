@@ -5,8 +5,8 @@
 # `cmake --install` run: `cmake -E touch` cannot be used as a write-access
 # probe for that purpose, since on POSIX a file's owner can update its
 # mtime without write permission on its contents, so the probe can report
-# success while this append still fails. Everything that can fail --
-# including the write itself -- happens in this child process; the parent
+# success while this append still fails. Everything that can fail,
+# including the write itself, happens in this child process; the parent
 # passes LINE as a plain `-D` argument (no shell is involved, so no
 # quoting/escaping concerns) instead of writing it to an intermediate file,
 # which would reintroduce the same abort-the-install risk this exists to
