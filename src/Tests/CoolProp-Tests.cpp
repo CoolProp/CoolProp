@@ -39,6 +39,7 @@
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
 #    include "CoolProp/HumidAirProp.h"
+#    include "TestObjects.h"  // ChebyshevCaloricSetting
 
 using namespace CoolProp;
 
@@ -8949,22 +8950,26 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
     }
 }
-/// Set INCOMP_PREFER_CHEBYSHEV_CALORIC for one scope and restore the previous
-/// value on exit, also when an assertion throws, so no other test inherits it.
-struct ChebyshevCaloricSetting
-{
-    bool saved;
-    explicit ChebyshevCaloricSetting(bool value) : saved(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC)) {
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, value);
-    }
-    ~ChebyshevCaloricSetting() {
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, saved);
-    }
-    ChebyshevCaloricSetting(const ChebyshevCaloricSetting&) = delete;
-    ChebyshevCaloricSetting& operator=(const ChebyshevCaloricSetting&) = delete;
-    ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
-    ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
-};
+
+TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
+    // A state keeps the fits of its fluid with the composition put in. When
+    // add_fluids_as_JSON replaces that fluid in place, the state must use the
+    // new data on its next update, not the reduced fits of the old one.
+    auto definition = [](double rho) {
+        return std::string(R"([{"name": "CatchRuntimeReplacedFluid", "description": "replaced at runtime", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[)")
+               + std::to_string(rho) + R"(]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}}])";
+    };
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(1000.0)));
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeReplacedFluid"));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->rhomass() == Catch::Approx(1000.0).epsilon(1e-14));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(900.0)));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->rhomass() == Catch::Approx(900.0).epsilon(1e-14));
+}
 
 TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {
     // Smoke test only: grid targets s(T) converge within 15 iterations even with the old absolute Brent tolerance, so it does not guard the 1e-12*Tmax fix.

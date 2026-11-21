@@ -398,69 +398,108 @@ double IncompressibleBackend::smass_ref() {
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
     return fluid->T_rho(rhomass, p, _fractions[0], chebyshev_caloric);
 }
+/// Residual of the HmassP and PSmass flashes, with its derivative in T.
+/**
+h = Int c dT + p (v - T dv/dT) and s = Int c/T dT - p dv/dT, with v = 1/rho,
+so at constant p the exact slopes are
+    dh/dT = c - p T d2v/dT2,    ds/dT = c/T - p d2v/dT2,
+    d2v/dT2 = 2 rho'^2 / rho^3 - rho'' / rho^2.
+The term with d2v/dT2 grows with p, so at high pressure cp alone is a poor
+slope. call() keeps rho and rho' at its T for deriv() at the same T.
+*/
+class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
+{
+   public:
+    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target)
+      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target) {}
+    double call(double T) override {
+        set_density_terms(T);
+        return (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
+    }
+    double deriv(double T) override {
+        const double c = backend->c_at(T, p, x);
+        set_density_terms(T);
+        const double d2rho = backend->d2rhodT2_at(T, p, x);
+        const double d2v = 2 * drho * drho / (rho * rho * rho) - d2rho / (rho * rho);
+        return enthalpy ? c - p * T * d2v : c / T - p * d2v;
+    }
+
+   private:
+    IncompressibleBackend* backend;
+    bool enthalpy;
+    double p, x, target;
+    double T_cached = NAN, rho = NAN, drho = NAN;
+    void set_density_terms(double T) {
+        if (T == T_cached) return;
+        rho = backend->rho_at(T, p, x);
+        drho = backend->calc_drhodTatPx(T, p, x);
+        T_cached = T;
+    }
+};
+
+/// First guess for the HmassP and PSmass flashes from the reference state and cp.
+/**
+h and s are exactly linear in p at fixed T in this model, so their values at
+(T_ref, p) follow from the cached reference values without approximation:
+    h(T_ref, p) = h(T_ref, p_ref) + (p - p_ref) dh/dp,   and the same for s.
+With cp taken constant from T_ref, h - h(T_ref, p) = cp (T - T_ref) and
+s - s(T_ref, p) = cp ln(T / T_ref). A guess outside the range is fine:
+BoundedNewton then starts from the false-position point of its bracket.
+*/
+double IncompressibleBackend::flash_first_guess(bool enthalpy, double p, double raw_target) {
+    const double x = _fractions[0], T_r = T_ref();
+    // rho, rho' and cp at T_ref do not depend on p: keep them until the
+    // composition, the reference temperature or the fluid's data change
+    GuessCache& g = guess_cache;
+    if (g.x != x || g.T_ref != T_r || g.data_version != fluid->getDataVersion()) {
+        g.rho = rho_at(T_r, p, x);
+        g.drho = calc_drhodTatPx(T_r, p, x);
+        g.c = c_at(T_r, p, x);
+        g.x = x;
+        g.T_ref = T_r;
+        g.data_version = fluid->getDataVersion();
+    }
+    const double rho_r = g.rho, drho_r = g.drho, c_r = g.c;
+    if (enthalpy) {
+        const double h_r = hmass_ref() + (p - p_ref()) * calc_dhdpatTx(T_r, rho_r, drho_r);
+        return T_r + (raw_target - h_r) / c_r;
+    }
+    const double s_r = smass_ref() + (p - p_ref()) * calc_dsdpatTx(rho_r, drho_r);
+    return T_r * std::exp((raw_target - s_r) / c_r);
+}
+
 /// Calculate T given pressure and enthalpy
 /**
+Newton on T inside a sign-change bracket over the liquid range at p (BoundedNewton,
+see IncompressibleFluid::solveInLiquidRange),
+with the exact slope dh/dT at constant p, starting from the cp-based guess of
+flash_first_guess. The bracket keeps every step inside the range and raises
+an error when h is outside it, as Brent did.
 @param hmass The mass enthalpy in J/kg
 @param p The pressure in Pa
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p) {
-
-    class HmassP_residual : public FuncWrapper1D
-    {
-       protected:
-        double p, x, h_in;
-        IncompressibleBackend* backend;
-
-       public:
-        HmassP_residual(IncompressibleBackend* backend, const double& p, const double& x, const double& h_in)
-          : p(p), x(x), h_in(h_in), backend(backend) {}
-        double call(double target) override {
-            return backend->raw_calc_hmass(target, p, x) - h_in;  //fluid.u(target,p,x)+ p / fluid.rho(target,p,x) - h_in;
-        }
-        //double deriv(double target);
-    };
-
-    HmassP_residual res = HmassP_residual(this, p, _fractions[0], hmass - h_ref() + hmass_ref());
-
-    double macheps = DBL_EPSILON;
-    double tol = DBL_EPSILON * 1e3;
-    int maxiter = 15;
-    double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
-    //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
-    return result;
+    const double raw_target = hmass - h_ref() + hmass_ref();
+    CaloricResidual res(this, true, p, _fractions[0], raw_target);
+    const double tol = DBL_EPSILON * 1e3;
+    const double T_guess = flash_first_guess(true, p, raw_target);
+    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
 }
 /// Calculate T given pressure and entropy
 /**
+Solved like HmassP_flash, with the exact slope ds/dT at constant p.
 @param smass The mass entropy in J/kg/K
 @param p The pressure in Pa
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass) {
-
-    class PSmass_residual : public FuncWrapper1D
-    {
-       protected:
-        double p, x, s_in;
-        IncompressibleBackend* backend;
-
-       public:
-        PSmass_residual(IncompressibleBackend* backend, const double& p, const double& x, const double& s_in)
-          : p(p), x(x), s_in(s_in), backend(backend) {}
-        double call(double target) override {
-            return backend->raw_calc_smass(target, p, x) - s_in;
-        }
-    };
-
-    PSmass_residual res = PSmass_residual(this, p, _fractions[0], smass - s_ref() + smass_ref());
-
-    double macheps = DBL_EPSILON;
-    // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve and Brent bisects.
-    double tol = 1e-12 * fluid->getTmax();
-    int maxiter = 15;
-    double result = Brent(&res, fluid->getTmin(), fluid->getTmax(), macheps, tol, maxiter);
-    //if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
-    return result;
+    const double raw_target = smass - s_ref() + smass_ref();
+    CaloricResidual res(this, false, p, _fractions[0], raw_target);
+    // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
+    const double tol = 1e-12 * fluid->getTmax();
+    const double T_guess = flash_first_guess(false, p, raw_target);
+    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
 }
 
 ///// Calculate T given pressure and internal energy
@@ -523,10 +562,10 @@ CoolPropDbl IncompressibleBackend::calc_smass() {
 
 /// Functions that can be used with the solver, they miss the reference values!
 CoolPropDbl IncompressibleBackend::raw_calc_hmass(double T, double p, double x) {
-    return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
+    return raw_hmass_from(T, p, x, rho_at(T, p, x), calc_drhodTatPx(T, p, x));
 };
 CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) {
-    return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(fluid->rho(T, p, x, chebyshev_caloric), calc_drhodTatPx(T, p, x));
+    return raw_smass_from(T, p, x, rho_at(T, p, x), calc_drhodTatPx(T, p, x));
 };
 
 /// Calculate the first partial derivative for the desired derivative
@@ -582,6 +621,9 @@ double IncompressibleBackend::calc_dhdpatTx(double T, double rho, double drhodTa
 #    include <catch2/catch_all.hpp>
 
 #    include "Tests/TestObjects.h"
+#    include "CoolProp/Configuration.h"
+#    include <memory>
+#    include "CoolProp/AbstractState.h"
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible backend", "[IncompressibleBackend]") {
     CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MMA2");
@@ -1085,6 +1127,177 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
     //        CHECK( check_abs(val,res,acc) );
     //        }
     //    }
+}
+
+TEST_CASE("Fits with the composition put in give exactly the full evaluation", "[IncompressibleBackend]") {
+    // The backend reduces each fit to a series in T once per composition
+    // (CompositionFits). Both evaluations run the same sums in the same order,
+    // so they agree to the last bit on x86-64. The check allows a few units in
+    // the last place, because a compiler may fuse multiply-adds differently in
+    // the two inlined copies (aarch64 does by default).
+    // A few ulp relative, plus a margin far below any physical resolution for
+    // values that are themselves the small difference of larger terms
+    const auto same_value = [](double a, double b) { return a == Catch::Approx(b).epsilon(8 * DBL_EPSILON).margin(1e-9); };
+    // The fast path must actually be taken: a fit left unreduced would also
+    // pass the comparisons below, through the full evaluation.
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        CoolProp::CompositionFits reduced;
+        CoolProp::get_incompressible_fluid("MEG").fixComposition(0.35, chebyshev, reduced);
+        CHECK(reduced.rho.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.c.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.int_c.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.int_c_divT.kind != CoolProp::FitAtComposition::NONE);
+        CHECK(reduced.visc.kind != CoolProp::FitAtComposition::NONE);
+    }
+    struct Case
+    {
+        const char* name;
+        double x;
+    };
+    for (const Case& c : {Case{"MEG", 0.35}, Case{"LiBr", 0.5}, Case{"Water", 1.0}, Case{"DowQ", 1.0}}) {
+        for (const bool chebyshev : {false, true}) {
+            CAPTURE(c.name, chebyshev);
+            CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(c.name);
+            std::unique_ptr<CoolProp::IncompressibleBackend> made;
+            {
+                ChebyshevCaloricSetting setting(chebyshev);  // read once, by the constructor
+                made = std::make_unique<CoolProp::IncompressibleBackend>(&fluid);
+            }
+            CoolProp::IncompressibleBackend& backend = *made;
+            if (!fluid.is_pure()) backend.set_mass_fractions(std::vector<CoolPropDbl>(1, c.x));
+            const double x = fluid.is_pure() ? 1.0 : c.x;
+            for (double T : {300.0, 320.0, 345.0}) {
+                CAPTURE(T);
+                const double p = 1e5;
+                backend.update(CoolProp::PT_INPUTS, p, T);
+                CHECK(same_value(backend.rhomass(), fluid.rho(T, p, x, chebyshev)));
+                CHECK(same_value(backend.cmass(), fluid.c(T, p, x, chebyshev)));
+                CHECK(same_value(backend.viscosity(), fluid.visc(T, p, x)));
+                CHECK(same_value(backend.conductivity(), fluid.cond(T, p, x)));
+                const double rho = fluid.rho(T, p, x, chebyshev), drho = fluid.drhodTatPx(T, p, x, chebyshev);
+                CHECK(same_value(backend.raw_calc_hmass(T, p, x), fluid.dhdTatPxdT(T, p, x, chebyshev) + p * (1 / rho * (1 + T / rho * drho))));
+                CHECK(same_value(backend.raw_calc_smass(T, p, x), fluid.dsdTatPxdT(T, p, x, chebyshev) + p * (1 / rho / rho * drho)));
+            }
+        }
+    }
+}
+
+TEST_CASE("A state sees changes made to its fluid through the setters", "[IncompressibleBackend]") {
+    // CompositionFits are rebuilt when the fluid's data_version changes, which
+    // every fit setter and setTbase / setxbase bump, not only validate().
+    CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MEG");  // a private copy
+    std::unique_ptr<CoolProp::IncompressibleBackend> made;
+    {
+        ChebyshevCaloricSetting setting(false);  // classic fits: their entropy depends on Tbase
+        made = std::make_unique<CoolProp::IncompressibleBackend>(&fluid);
+    }
+    CoolProp::IncompressibleBackend& backend = *made;
+    backend.set_mass_fractions(std::vector<CoolPropDbl>(1, 0.35));
+    backend.update(CoolProp::PT_INPUTS, 1e5, 300.0);
+    CHECK(std::isfinite(backend.smass()));
+
+    SECTION("setTbase drops the entropy integral until validate() runs again") {
+        fluid.setTbase(fluid.getTbase() + 10.0);
+        backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
+        CHECK_THROWS(backend.raw_calc_smass(310.0, 1e5, 0.35));
+    }
+    SECTION("New density and conductivity fits are used at once") {
+        CoolProp::IncompressibleData density;
+        density.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        density.coeffs = Eigen::MatrixXd::Constant(1, 1, 1234.0);
+        fluid.setDensity(density);
+        CoolProp::IncompressibleData conductivity = density;
+        conductivity.coeffs = Eigen::MatrixXd::Constant(1, 1, 0.25);
+        fluid.setConductivity(conductivity);
+        backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
+        CHECK(backend.rhomass() == 1234.0);
+        CHECK(backend.conductivity() == 0.25);
+    }
+    SECTION("A new viscosity fit is used at once") {
+        CoolProp::IncompressibleData viscosity;
+        viscosity.type = CoolProp::IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL;
+        viscosity.coeffs = Eigen::MatrixXd::Constant(1, 1, 0.5);
+        fluid.setViscosity(viscosity);
+        backend.update(CoolProp::PT_INPUTS, 1e5, 310.0);
+        CHECK(backend.viscosity() == 0.5);
+    }
+}
+
+TEST_CASE("The flashes search only the liquid range at the given pressure", "[IncompressibleBackend]") {
+    CoolProp::IncompressibleFluid& water = CoolProp::get_incompressible_fluid("Water");
+    // Water boils at about 373 K at 1 atm, well below Tmax = 473 K
+    const double T_boil = water.TmaxAt(101325.0, 0.0);
+    CHECK(T_boil == Catch::Approx(373.1).margin(0.5));
+    CHECK(water.psat(T_boil, 0.0) == Catch::Approx(101325.0).epsilon(1e-6));
+    // At 20 bar it stays liquid up to Tmax, and without a saturation curve
+    // (MEG) the limit is always Tmax
+    CHECK(water.TmaxAt(2e6, 0.0) == water.getTmax());
+    CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
+    CHECK(meg.TmaxAt(101325.0, 0.35) == meg.getTmax());
+
+    // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
+    // error says that the liquid boils, not only that there is no bracket
+    {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 2e6, 400.0);
+        const double h_400 = AS->hmass(), s_400 = AS->smass();  // read before the failing updates clear the state
+        CHECK_THROWS_WITH(AS->update(CoolProp::HmassP_INPUTS, h_400, 101325.0), Catch::Matchers::ContainsSubstring("boils at"));
+        CHECK_THROWS_WITH(AS->update(CoolProp::PSmass_INPUTS, 101325.0, s_400), Catch::Matchers::ContainsSubstring("boils at"));
+    }
+    // Too cold is not boiling: an enthalpy below the liquid range keeps the
+    // bracket error, also at 1 atm where the liquid range ends at boiling
+    {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+        AS->update(CoolProp::PT_INPUTS, 101325.0, 280.0);
+        const double h_cold = AS->hmass() - 1e6;
+        CHECK_THROWS_WITH(AS->update(CoolProp::HmassP_INPUTS, h_cold, 101325.0),
+                          !Catch::Matchers::ContainsSubstring("boils at") && Catch::Matchers::ContainsSubstring("do not bracket"));
+    }
+
+    // A liquid exactly at its boiling point is still inside the bracket
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+        for (double T : {300.0, 350.0, 400.0, 450.0}) {
+            CAPTURE(T);
+            AS->update(CoolProp::QT_INPUTS, 0.0, T);
+            const double p = AS->p(), h = AS->hmass(), s = AS->smass();
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
+}
+
+TEST_CASE("HmassP and PSmass flashes converge above 2048 K", "[IncompressibleBackend]") {
+    // Above 1024 K neighbouring doubles are at least as far apart as the
+    // HmassP tolerance of 2.2e-13 K, so a purely absolute tolerance could not
+    // be met there (liquid sodium goes up to 2500 K, lead-bismuth to 1100 K).
+    // The solver-level test in src/Solvers.cpp forces that case; this one
+    // checks real fluid data at those temperatures.
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "LiqNa"));
+        // Above 2048 K neighbouring doubles are 4.5e-13 apart. At 200 bar sodium
+        // is liquid up to about 2360 K; above that the fits are extrapolated
+        // and h can fall with T, so the flash must stop at the boiling point
+        // (TmaxAt) to keep its bracket.
+        const double p = 2e7;
+        for (int i = 0; i <= 200; ++i) {
+            const double T = 2050.0 + 1.5 * i + 0.123456789;
+            CAPTURE(T);
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double h = AS->hmass(), s = AS->smass();
+            AS->update(CoolProp::HmassP_INPUTS, h, p);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            AS->update(CoolProp::PSmass_INPUTS, p, s);
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
 }
 
 #endif /* ENABLE_CATCH */

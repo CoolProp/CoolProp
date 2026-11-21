@@ -76,6 +76,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter);
 double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter);
 double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter);
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter);
+double BoundedNewton(FuncWrapper1DWithDeriv* f, double x0, double xmin, double xmax, double xtol, int maxiter);
 double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12);
 double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12);
 
@@ -95,6 +96,9 @@ inline double BoundedSecant(FuncWrapper1D& f, double x0, double xmin, double xma
 }
 inline double Newton(FuncWrapper1DWithDeriv& f, double x0, double ftol, int maxiter) {
     return Newton(&f, x0, ftol, maxiter);
+}
+inline double BoundedNewton(FuncWrapper1DWithDeriv& f, double x0, double xmin, double xmax, double xtol, int maxiter) {
+    return BoundedNewton(&f, x0, xmin, xmax, xtol, maxiter);
 }
 inline double Halley(FuncWrapper1DWithTwoDerivs& f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12) {
     return Halley(&f, x0, ftol, maxiter, xtol_rel);
