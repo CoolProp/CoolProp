@@ -226,20 +226,24 @@ flash.
        D -- no --> I{"Phase imposed?"}
        D -- yes --> E{"(T, p) inside<br/>the envelope?"}
        E -- no --> F["Gas if T is above the closest envelope point,<br/>else liquid; solve the density on that branch,<br/>the other branch if it throws"]
-       E -- yes --> G["Two-phase solver (diagram 4),<br/>seeded from the closest envelope point"]
+       E -- yes --> G[["Two-phase solver (diagram 4),<br/>seeded from the closest envelope point"]]
        G --> H["β collapse"]
        F --> Z(["Done"])
        H --> Z
-       E -. "anything throws" .-> I
+       E -. "throws" .-> I
+       F -. "throws" .-> I
+       G -. "throws" .-> I
        I -- "no" --> J[["Blind flash<br/>(diagram 2)"]]
        I -- "yes" --> K["Density solve on the imposed branch;<br/>phase = imposed phase"]
        J --> Z
        K --> Z
 
 The *β collapse* step, used on every two-phase path: a split with
-:math:`\beta < 10^{-10}` is published as the single-phase liquid root, one with
-:math:`\beta > 1 - 10^{-10}` as the single-phase vapour root, and anything
-in between as a two-phase state with :math:`Q = \beta`.
+:math:`\beta < 10^{-10}` is published as a single phase at the liquid density,
+one with :math:`\beta > 1 - 10^{-10}` as a single phase at the vapour density,
+and anything in between as a two-phase state with :math:`Q = \beta`.  A
+collapsed state is labelled gas or liquid by comparing its density with the
+reducing density, not by which phase it came from.
 
 **2. Blind flash.**  This is the main path when no phase envelope is available.
 The stability test (diagram 3) gives a verdict.  A "stable" verdict is
@@ -255,11 +259,12 @@ pressures within 0.1 % of :math:`p`, and equal fugacities to ``tol``.
    flowchart TD
        A(["Blind flash"]) --> S[["Stability test<br/>(diagram 3)"]]
        S --> U{"Unstable?"}
+       S -- "throws" --> X
 
        U -- "stable" --> W{"Wilson K-factors give a split?<br/>(bracketing not required<br/>when the verdict was uncertain)"}
        W -- "no, or it throws" --> SP
-       W -- yes --> WS["Seed x, y, ρ from Wilson; β from<br/>the widest-spread component"]
-       WS --> WN["Two-phase solver<br/>(diagram 4)"]
+       W -- yes --> WS["Seed: Wilson K + 10 SS steps;<br/>β from the widest-spread component<br/>if in (0, 1), else 0.5"]
+       WS --> WN[["Two-phase solver<br/>(diagram 4)"]]
        WN --> WV{"Converged and<br/>verify_split(1e-7)?"}
        WV -- yes --> BC
        WV -- no --> WR{"Wilson seed passes<br/>verify_split(1e-4)?"}
@@ -268,19 +273,19 @@ pressures within 0.1 % of :math:`p`, and equal fugacities to ``tol``.
 
        U -- "unstable" --> FF{"Found by<br/>flash-first?"}
        FF -- yes --> FS["Seed from the flash-first split<br/>(x, y, β and both densities)"]
-       FF -- no --> TS["Seed from the trial phase and the feed;<br/>their densities are warm starts"]
-       FS --> N["Two-phase solver<br/>(diagram 4)"]
+       FF -- no --> TS["Seed from the trial phase and the feed;<br/>their densities are warm starts<br/>when the SS stage recorded them"]
+       FS --> N[["Two-phase solver<br/>(diagram 4)"]]
        TS --> N
        N -- converged --> BC
        N -- throws --> R1{"Flash-first verdict?"}
        R1 -- yes --> R2["Rerun the stability test<br/>with flash-first switched off"]
        R2 --> R3{"Still unstable?"}
-       R3 -- yes --> R4["Two-phase solver from the trial phase,<br/>β = 0.5"]
+       R3 -- yes --> R4[["Two-phase solver (diagram 4)<br/>from the trial phase, β = 0.5"]]
        R4 -- converged --> BC
        R4 -- throws --> G
        R3 -- "no: keep the<br/>flash-first split" --> G
        R1 -- no --> G{"Solver reported non-convergence,<br/>or the verdict is beyond baseline?"}
-       G -- no --> X(["Rethrow"])
+       G -- no --> X(["Throw"])
        G -- yes --> RC["Recovery: refine the stability split by<br/>successive substitution (80 steps, tol 1e-11),<br/>neither phase's branch imposed"]
        RC --> RV{"0 < β < 1 and<br/>verify_split(1e-4)?"}
        RV -- yes --> BC
@@ -299,6 +304,8 @@ falls back to single phase instead of throwing.
 **3. Stability test** (``StabilityEvaluationClass::check_stability_michelsen``).
 It decides whether the feed is stable, and if it is not, gives the split or
 trial phase that showed it.  Stage 1 below describes the equations.
+Diagrams 3 and 4 describe the default ``MIXTURE_STABILITY_ALGORITHM = 1``; with
+``0`` the legacy routines run instead (see :ref:`legacy-algorithm`).
 
 .. mermaid::
 
@@ -316,23 +323,28 @@ trial phase that showed it.  Stage 1 below describes the equations.
        M -- yes --> UT(["Unstable: trial phase and<br/>feed recorded as x, y"])
        M -- no --> N{"SS decided stable?<br/>(stationary point, or<br/>converging to the feed)"}
        N -- yes --> NX
-       N -- no --> NP{"Near-pure trial?"}
+       N -- no --> AB{"Trial mole numbers<br/>went non-finite?"}
+       AB -- yes --> QU
+       AB -- no --> NP{"Near-pure trial?"}
        NP -- "yes: skip it" --> NX
        NP -- no --> Q["Second-order TPD minimisation,<br/>α = 2√Y, trust region"]
        Q --> QR{"Result"}
        QR -- "tm < 0" --> UT
        QR -- "tm ≥ 0" --> NX
-       QR -- "failed" --> QU["Mark the verdict uncertain"] --> NX
+       QR -- "failed" --> QU
+       QU["Mark the verdict uncertain"] --> NX
        NX{"More trials?"} -- yes --> L
        NX -- no --> ST(["Stable<br/>(uncertain if any trial failed)"])
 
 **4. Two-phase solver** (``PTflash_twophase::solve_michelsen``).  It refines a
-seed (x, y, densities, and optionally β) to phase equilibrium.  When it fails
-it sets ``nonconvergence`` and throws a ``SolutionError``.  Diagram 2 uses that
-flag to decide between recovery and rethrowing.  Every step solves both phase
-densities, warm-started from the previous root and guarded to stay on the same
-branch.  If that fails, the solver falls back to the lowest-Gibbs root with the
-phase specified.  If both fail, the density solve is *lost*.
+seed (x, y, densities, and optionally β) to phase equilibrium.  It throws a
+``SolutionError`` on failure.  For a non-converged or trivial split it also sets
+``nonconvergence``, but not when a phase density solve is lost.  Diagram 2 uses
+that flag to decide between recovery and rethrowing.  In Phase 1 both phase
+densities are solved warm-started from the previous root and guarded to stay on
+the same branch, with the lowest-Gibbs phase-specified root as a fallback; if
+both fail, the density solve is *lost*.  The Phase 2 trial steps use cold
+guarded solves instead, and a failed solve there only rejects the step.
 
 .. mermaid::
 
@@ -342,7 +354,7 @@ phase specified.  If both fail, the density solve is *lost*.
        B -- yes --> P1["Phase 1: SS + GDEM on ln K<br/>(4 loops × 2 steps, stops at 1e-7)"]
        P1 -- "density solve lost" --> XD(["Throw"])
        P1 -- "non-finite K" --> XN
-       P1 --> P2["Phase 2: second-order Gibbs minimisation<br/>in v_i = β y_i (always runs;<br/>2 restarts × 50 iterations)"]
+       P1 --> P2["Phase 2: second-order Gibbs minimisation<br/>in v_i = β y_i (always runs; trust region,<br/>2 passes × 50 iterations)"]
        P2 --> Q{"max|ln f_V − ln f_L|<br/>< 1e-9?"}
        Q -- yes --> O
        Q -- no --> FB["Minority-phase fallback: Newton on the<br/>incipient phase's mole numbers, Armijo search,<br/>reseeded from Wilson if the trial is trivial"]
@@ -524,12 +536,14 @@ Appendix B) are:
    + \beta\,\left(\frac{\partial \ln \hat{\varphi}_i^{(L)}}{\partial n_j}\right)_{T,P}
    + (1-\beta)\,\left(\frac{\partial \ln \hat{\varphi}_i^{(V)}}{\partial n_j}\right)_{T,P} - 1
 
-The Newton step :math:`\Delta\mathbf{v} = -\mathbf{H}^{-1}\mathbf{g}` is
-accepted only if the Gibbs energy decreases; otherwise the step is halved
-(backtracking line search).  Feasibility is maintained by scaling the step so
+The step is a Hebden restricted (trust-region) step :cite:`Hebden-1973` on the
+diagonally scaled system: the Hessian is shifted until it is positive definite
+and the step lies inside the trust radius.  The step is accepted only if the
+Gibbs energy decreases; otherwise the trust radius is reduced.  Feasibility is maintained by scaling the step so
 that all mole numbers remain positive.  Convergence requires
 :math:`\max_i |\ln f_i^{(V)} - \ln f_i^{(L)}| < 10^{-9}`, with at most 50
-iterations, restarted up to twice.
+iterations per pass and two passes (the second restarts with a smaller trust
+region).
 
 **Minority-phase fallback.**
 Because the reduced gradient carries a factor :math:`\beta(1-\beta)`, the
