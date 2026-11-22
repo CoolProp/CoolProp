@@ -43,6 +43,7 @@
 #include "ChebDensitySolver.h"
 #include <atomic>
 #include <cstdlib>
+#include <list>
 #include <map>
 #include <mutex>
 #include <random>
@@ -3072,7 +3073,17 @@ struct ChebDensityEntry
 };
 namespace {
 std::mutex cheb_cache_mtx;
-std::map<std::string, std::shared_ptr<const ChebDensityEntry>> cheb_cache;  // by model key, see cheb_model_key
+// Tables by model key (see cheb_model_key), least recently used evicted beyond cheb_cache_max_entries: every change of
+// the mixture parameters (set_binary_interaction_double, e.g. in a parameter fit) is a new key, so an unbounded cache
+// would grow by one set of tables per change.  An evicted entry stays alive in the backends that hold it.
+constexpr std::size_t cheb_cache_max_entries = 64;
+std::list<std::string> cheb_cache_lru;  // most recently used first
+struct ChebCacheSlot
+{
+    std::shared_ptr<const ChebDensityEntry> entry;  // null: the model is declined
+    std::list<std::string>::iterator lru;
+};
+std::map<std::string, ChebCacheSlot> cheb_cache;
 
 // Key of the model the tables are built from: backend, components, gas-constant configuration, and a fingerprint of
 // the mixture parameters -- the reducing temperature and density and alphar at fixed points, as exact hex floats, at
@@ -3149,7 +3160,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, C
                 std::scoped_lock lk(cheb_cache_mtx);
                 const auto it = cheb_cache.find(key);
                 if (it != cheb_cache.end()) {
-                    cheb_density = it->second;
+                    cheb_density = it->second.entry;
+                    cheb_cache_lru.splice(cheb_cache_lru.begin(), cheb_cache_lru, it->second.lru);
                 } else {
                     auto e = std::make_shared<ChebDensityEntry>();
                     double Tcmax = 0;
@@ -3186,7 +3198,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, C
                         e->tab.reset();  // cached as declined below, so later backends do not retry
                     }
                     if (e->tab) cheb_density = e;
-                    cheb_cache[key] = cheb_density;  // null too: the model is declined, do not try again
+                    // null too: the model is declined, do not try again
+                    cheb_cache_lru.push_front(key);
+                    cheb_cache[key] = ChebCacheSlot{cheb_density, cheb_cache_lru.begin()};
+                    while (cheb_cache.size() > cheb_cache_max_entries) {
+                        cheb_cache.erase(cheb_cache_lru.back());
+                        cheb_cache_lru.pop_back();
+                    }
                 }
             } catch (...) {
                 cheb_density.reset();  // e.g. a component without a multiparameter EOS: the existing solvers

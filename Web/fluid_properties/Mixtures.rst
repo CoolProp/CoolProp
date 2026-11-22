@@ -407,9 +407,10 @@ picks the density root for a state that has been judged single phase.
 .. _chebyshev-density-solver:
 
 **Chebyshev all-roots density solver.**  Since CoolProp 8.1 the PT flash of
-HEOS and GERG mixtures finds density roots with a Chebyshev all-roots solver,
-controlled by the configuration variable ``CHEBYSHEV_DENSITY_SOLVER`` (default
-``true``).  It isolates every density root of the isotherm with certified error
+HEOS and GERG mixtures finds density roots with a Chebyshev all-roots solver:
+for the single-phase root, and for the trial and feed phases of the stability
+analysis and the starting guesses of the phase split.  It is controlled by the
+configuration variable ``CHEBYSHEV_DENSITY_SOLVER`` (default ``true``).  It isolates every density root of the isotherm with certified error
 bounds and takes the stable one by spinodal branch.  Wherever it cannot answer
 (an unsupported model, a state outside its tables, a root it cannot certify),
 the solvers in the chart above answer instead.  For gas mixtures this makes the
@@ -421,6 +422,11 @@ Its tables are built once per set of components, the first time that mixture is
 flashed, and are then shared by every state of that mixture in the process.
 Building them takes a few milliseconds for two components and tens of
 milliseconds for ten.  Mixtures containing water take longer, about 0.3 s.
+Changing the mixture parameters (for instance with
+``set_binary_interaction_double``) makes it a new mixture with new tables.  The
+process keeps the tables of the 64 most recently used mixtures.  A parameter
+fit therefore pays the table build on every evaluation of its objective, and
+may run faster with the solver switched off.
 
 The densities it returns agree with the previous solvers to about 1e-7.  The
 exceptions are states where the previous solvers returned the wrong root, such
