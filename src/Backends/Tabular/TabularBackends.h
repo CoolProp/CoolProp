@@ -1443,8 +1443,6 @@ class TabularBackend : public AbstractState
             try {
                 /// Try to load the tables if you can.
                 load_tables();
-                // Set the flag saying tables have been successfully loaded
-                tables_loaded = true;
             } catch (CoolProp::UnableToLoadError& e) {
                 if (get_debug_level() > 0) {
                     std::cout << format("Table loading failed with error: %s\n", e.what());
@@ -1478,8 +1476,6 @@ class TabularBackend : public AbstractState
                 }
                 /// Load the tables back into memory as a consistency check
                 load_tables();
-                // Set the flag saying tables have been successfully loaded
-                tables_loaded = true;
             }
             // update() indexes coeffs_pT/coeffs_ph for every tabular backend.  Build them
             // whenever tables are (re)loaded, so no path (constructor, set_mole_fractions,
@@ -1488,6 +1484,9 @@ class TabularBackend : public AbstractState
             // returns at once when another backend has already built them.
             dataset->build_coeffs(dataset->single_phase_logph, dataset->coeffs_ph);
             dataset->build_coeffs(dataset->single_phase_logpT, dataset->coeffs_pT);
+            // Ready only now: if a build throws, the next call loads (from the
+            // in-memory cache) and builds again instead of indexing empty coefficients
+            tables_loaded = true;
         }
     };
 };

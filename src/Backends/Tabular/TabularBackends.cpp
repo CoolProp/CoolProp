@@ -1694,13 +1694,16 @@ std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set
     return {&(dataset), loaded};
 }
 
-void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
+void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& out) {
     // Every backend sharing this dataset calls this after check_tables(); the
     // lock makes the first caller fill coeffs and the rest wait, then skip.
     std::scoped_lock lock(build_mutex);
-    if (!coeffs.empty()) {
+    if (!out.empty()) {
         return;
     }
+    // Fill a local and move it into `out` only once complete: a throw part-way
+    // (allocation) must leave `out` empty, or the check above would skip the retry
+    std::vector<std::vector<CellCoeffs>> coeffs;
     const bool debug = get_debug_level() > 5 || false;
     const int param_count = 6;
     parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
@@ -1848,6 +1851,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
     if (debug) {
         std::cout << format("Remapped %d cells\n", remap_count);
     }
+    out = std::move(coeffs);
 }
 
 #    if defined(ENABLE_CATCH)
