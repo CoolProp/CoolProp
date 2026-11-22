@@ -89,6 +89,14 @@ MSYS2 **Ninja** is a compact, ultra-fast, low-level build system optimized stric
 .. note::
    Ninja is actually the default backend for the MSYS2 version of CMake. If you do not pass a -G flag to CMake, it automatically looks for a Ninja installation.
 
+**Install SWIG if Necessary**
+
+Some wrappers use the ``SWIG`` (Simplified Wrapper and Interface Generator) package to interface between CoolProp's C++ code and the native software language that the wrapper is being built for (e.g., Octave, MATLAB, Java, R, and others).  It is installed through pacman with::
+
+   pacman -S mingw-w64-ucrt-x86_64-swig
+
+The installation may also install a number of dependencies.  There is no need to install ``SWIG`` unless one of the SWIG-based wrappers is being built.  Refer to the documentation for the interface being built to see if ``SWIG`` is needed.
+
 Verify the Installation
 =======================
 
@@ -105,13 +113,16 @@ MSYS2 uses a global update process, rather than a package update, in order to en
 
   pacman -Syu
 
+**IMPORTANT:** If the update requires a restart of the shell environment, do so and then re-run the update command above as it is likely that the system update is incomplete and some packages will be left in an incompatible state.
+
 UCRT64 Shell Environment
 ========================
 
-**Always, always, always** build CoolProp in a ``UCRT64`` terminal (see `MSYS2 Terminals <https://www.msys2.org/docs/terminals/>`_ on setting this up).  Inside a UCRT64 Shell, the normal Windows environment variable and paths are completely replaced with a UCRT64 environment.  This means that running git, cmake, or g++ will use the MSYS2 UCRT64 versions of these codes instead of the Windows native or Cygwin versions if they are installed on the machine.
+**Always, always, always** build CoolProp in a ``UCRT64`` terminal (see `MSYS2 Terminals <https://www.msys2.org/docs/terminals/>`_ on setting this up).  Inside a ``UCRT64`` Shell, the normal Windows environment variable and paths are completely replaced with a ``UCRT64`` environment.  This means that running git, cmake, or g++ will use the MSYS2 ``UCRT64`` versions of these codes instead of the Windows native or Cygwin versions if they are installed on the machine.
 
-Pro-Tip:
-========
+Pro-Tips:
+=========
 
-1. If using VS Code as your IDE/Text Editor, add the `MSYS2 recommended json <https://www.msys2.org/docs/terminals/>`_ so that the ``MSYS2 UCRT64`` profile is available when launching a terminal window.
-2. Add the path to VS Code to your .bashrc file so that it is available within a UCRT64 Shell and can be launched by typing ``code`` at the shell prompt.
+1. If using VS Code as your IDE/Text Editor, add the `MSYS2 recommended json <https://www.msys2.org/docs/ides-editors/>`__ to the VS Code ``settings.json`` file so that the ``MSYS2 UCRT64`` profile is available in the IDE's terminal window.
+2. Add the `MSYS2 recommended json <https://www.msys2.org/docs/terminals/>`_ so that ``MSYS2 UCRT64`` is an available profile in the Windows Terminal.
+3. Add the path to VS Code to your .bashrc file so that it is available within a UCRT64 Shell and can be launched by typing ``code`` at the shell prompt.

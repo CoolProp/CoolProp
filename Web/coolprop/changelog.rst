@@ -254,6 +254,8 @@ New features:
 
 Performance:
 
+* **The mixture PT flash uses the Chebyshev all-roots density solver by default** (``CHEBYSHEV_DENSITY_SOLVER``, now ``true``): 10-25x faster for gas mixtures, built once per component set on first use; densities change only where the previous solvers returned the wrong root (CO2/water gas states); set it to ``false`` for the previous solvers (:ref:`chebyshev-density-solver`).
+
 * **The p,T flash stops recomputing derivatives it already has**, and the
   supercritical-liquid branch, which solved without derivatives at all, now tries a
   derivative method before its bracketed fallback.  ``Householder4`` was doing six
@@ -284,6 +286,8 @@ Bug fixes:
 * C API: buffer and array lengths are checked before every copy (negative lengths, ``Props1SImulti`` output count, ``get_parameter_information_string`` input), ``Props1``/``Props1SI``/``PropsSI``/``HAPropsSI`` catch exceptions instead of terminating the host, and new ``AbstractState_fluid_names_checkedMemory``/``AbstractState_backend_name_checkedMemory`` take the output-buffer length.
 
 * BICUBIC/TTSE: no out-of-bounds table reads at the grid edges, after a failed update, with ``Ny > Nx``, or before fractions are set; transport-property derivatives are refused.
+
+* ``HEOS::R1233ZD(E)-SRK`` has real temperature and pressure limits; PC-SAFT refuses charged species without water instead of using an unset dielectric constant; a Q=0,S flash on a fluid with no saturated-liquid entropy ancillary (GERG fluids, and HEOS fluids such as Chlorine when superancillaries are off) now raises a clear error instead of starting from uninitialised memory.
 
 * Cubic EOS (SRK/PR): exact Omega constants (`#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__); P- and T-input flashes, Q,T/P,Q from the superancillary, robust density roots near the critical point and above Tc, T,P phase labels and fresh-state caloric properties (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
 
