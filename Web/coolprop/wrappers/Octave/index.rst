@@ -40,13 +40,13 @@ Compilation of the Octave wrapper requires a few :ref:`common wrapper pre-requis
 
 Additional requirements:
 
-* SWIG (see :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`)
-* Octave (and development headers)
+* SWIG (as indicated below)
+* Octave (and development headers below)
 
 Linux
 -----
 
-On Ubuntu and friends, GNU Octave and its associated build dependencies are installed this way::
+On **Ubuntu** and friends, GNU Octave and its associated build dependencies are installed this way::
 
     sudo apt-get install swig octave octave-dev build-essential cmake ninja-build git
 
@@ -54,6 +54,15 @@ On Ubuntu and friends, GNU Octave and its associated build dependencies are inst
     The development package, ``octave-dev``, used to be called ``liboctave-dev`` on older Debian/Ubuntu releases. Either way, ``apt`` builds ``octave`` and its matching dev package from the same source and pins them to each other with a hard version dependency, so there's no separate compiler toolchain to match by hand.
 
     The Octave version that comes from ``apt`` depends on which Ubuntu release is used. **Ubuntu 24.04 LTS** ships *Octave 8.4.0* and **26.04 LTS** ships *Octave 11.1.0*, which is much closer to the current upstream version as of this update. Either way, the dev package is version-locked to its matching ``octave`` package, so the GCC compiler version is always in sync.
+
+On **RHEL 9**, see :ref:`RHEL Octave Info <octave_rhel>` for installing a *current* Octave (and SWIG) through Flatpak and building the wrapper inside its sandbox.  *Note that this distro's native version of GNU Octave, installed through ``dnf`` is several releases behind.*
+
+Hopefully, between the instructions for these two flavors of Linux and with a little AI help, it should be easy enough to figure out how to build on other Linux distros.  
+
+.. toctree::
+    :hidden:
+
+    RHEL.rst
 
 OSX
 ---
@@ -99,22 +108,43 @@ One of the two routes below should be used exclusively:
 .. warning:: 
     **A standalone MinGW-w64 toolchain** installed apart from either recommended route above (*e.g., an old bare* ``MinGW`` *install or a distribution like* ``TDM-GCC``) isn't recommended. Nothing guarantees its GCC version matches whichever Octave it's loaded into, and a mismatch fails at module *load* time with an unhelpful "specified procedure could not be found" error, not at build time. ``TDM-GCC`` in particular also targets the older ``msvcrt.dll`` runtime rather than the ``UCRT`` runtime used by both recommended routes above, so it's doubly unsuitable.  Additionally, Microsoft's Visual C/C++ compiler (``MSVC``) is not an option.
 
-Build
------
 
-**On Linux**, once the dependencies above are in place, the builder is run this way::
+Build the CoolProp Wrapper
+--------------------------
+
+Follow the instructions below for your specific OS.
+
+Linux (Ubuntu & RHEL)
+^^^^^^^^^^^^^^^^^^^^^
+
+.. Note::
+    On RHEL(Flatpak), after cloning the CoolProp repository issue the instructions below from within the Octave flatpak shell::
+
+        flatpak run --command=bash org.octave.Octave
+    
+    On Ubuntu, run from a standard bash shell.
+
+Once the dependencies above are in place, the builder is run this way::
 
     # Check out the sources from GitHub
     git clone https://github.com/CoolProp/CoolProp.git
+    #
+    # On RHEL(Flatpak) only, open the Flatpak shell at this point, as noted above, 
+    #    and continue the rest of these instructions from there
+    #
     # ...and move into the folder just created
     cd CoolProp
     # Make a build folder and change to that folder
-    # The build folder must start with "build", e.g., "buildOctave"
+    # The build folder must start with "build", e.g., "buildOctave" or "buildOct"
     mkdir -p build && cd build
     # Use CMake to generate the make file
+    #
+    # NOTE: On RHEL(Flatpak), add switch -DSWIG_EXECUTABLE=$HOME/swig-build/install/bin/swig
+    #       so that Flatpak can find the compiled SWIG library.
+    #
     cmake .. -DCOOLPROP_OCTAVE_MODULE=ON
-    # Build the OCT file
-    cmake --build .
+    # Build the OCT file (use parallel switch for speed)
+    cmake --build . --parallel $(nproc)
     # (OPTIONAL) Install, and register it with ~/.octaverc for auto-loading
     cmake --install .
 
@@ -124,20 +154,23 @@ Build
 .. note::
     The CMake script defaults to an optimized Release build. An unoptimized build (using the switch ``-DCMAKE_BUILD_TYPE=Debug``) still works if desired.  However, there will be a noticeable delay (~30s) on the first ``CoolProp.*`` function call while the fluid library is initialized.
 
-**On Windows**, the same build is run from whichever shell matches the Octave installation route chosen above:
+    Build step with ``--parallel $(nproc)`` switch builds all of the external dependencies in parallel and dramatically speeds up the build.
 
-From the official installer's own **Bash Shell (Recommended)**:
+Windows
+^^^^^^^
+
+The same build is run from whichever shell matches the Octave installation route chosen above with the changes noted below.
 
 .. note::
-    This Bash Shell doesn't actually bundle SWIG or a CMake-compatible build driver, even though its CMake reports both ``Ninja`` and ``MinGW Makefiles`` as available generators; that list is just what CMake was compiled to support, not what's installed on this machine. Two one-time fixes, neither needing admin rights:
+    Tthe official installer's own **Bash Shell (Recommended)** doesn't actually bundle **SWIG** or a **CMake-compatible build driver**, even though its CMake reports both ``Ninja`` and ``MinGW Makefiles`` as available generators; that list is just what CMake was compiled to support, not what's installed on this machine. There are two one-time fixes for these, neither require admin rights:
 
-    * **SWIG**: download ``swigwin-<version>.zip`` from `swig.org <https://www.swig.org/download.html>`_ (a self-contained build, no installer). SWIG only generates wrapper source, so it doesn't need to match the GCC/Octave toolchain the way ``CoolProp.oct`` does. Unzip it anywhere and add that folder to ``PATH`` for this session::
+    * **SWIG:** download ``swigwin-<version>.zip`` from `swig.org <https://www.swig.org/download.html>`__ (a self-contained build, no installer). SWIG only generates wrapper source, so it doesn't need to match the GCC/Octave toolchain the way ``CoolProp.oct`` does. Unzip it anywhere and add that folder to ``PATH`` for this session::
 
         export PATH="/c/path/to/swigwin-<version>:$PATH"
 
-    * **Build driver**: ``mingw32-make.exe`` and ``ninja.exe`` are both missing, so ``-G "MinGW Makefiles"`` and ``-G Ninja`` fail. Use ``-G "MSYS Makefiles"`` instead, which runs on this shell's own bundled ``make``.
+    * **Build driver:** ``mingw32-make.exe`` and ``ninja.exe`` are both missing, so ``-G "MinGW Makefiles"`` and ``-G Ninja`` fail. Use ``-G "MSYS Makefiles"`` instead, which runs on this shell's own bundled ``make``.
 
-::
+Depending on the Octave installation route, there is only one difference in the cmake configuration step in the instructions below::
 
     # Clone the CoolProp repository in a CoolProp directory at the current location
     git clone https://github.com/CoolProp/CoolProp.git
@@ -145,29 +178,20 @@ From the official installer's own **Bash Shell (Recommended)**:
     cd CoolProp
     # Make a build* directory and cd into that directory
     mkdir buildOct && cd buildOct
-    # Create the make system for the Octave wrapper using the MSYS generator
+    # Configure the make system for the Octave wrapper 
+    #   >>> In OCTAVE'S BASH SHELL (Recommended) using the "MSYS Makefiles" generator
     cmake .. -G "MSYS Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON
+    #   >>> In MSYS UCRT64 environment using the "Ninja" generator
+    cmake .. -G "Ninja" -DCOOLPROP_OCTAVE_MODULE=ON
     # Build the CoolProp wrapper package
-    cmake --build .
-    # (OPTIONAL) Register the package in ~/.octaverc for auto-loading
-    cmake --install .
-
-From an **MSYS2 UCRT64** shell::
-
-    # Clone the CoolProp repository in a CoolProp directory at the current location
-    git clone https://github.com/CoolProp/CoolProp.git
-    # Change to the CoolProp folder just created
-    cd CoolProp
-    # Make a build* directory and cd into that directory
-    mkdir buildOct && cd buildOct
-    # Create the make system for the Octave wrapper using the Ninja generator
-    cmake .. -G Ninja -DCOOLPROP_OCTAVE_MODULE=ON
-    # Build the CoolProp wrapper package
-    cmake --build .
+    cmake --build . -j 8
     # (OPTIONAL) Register the package in ~/.octaverc for auto-loading
     cmake --install .
 
 ``cmake --install .`` works the same way here as on Linux: no administrator shell is needed, since it installs under the build's own prefix and adds that folder to ``~/.octaverc`` automatically.  Of course, the file can be saved in any desired location and the ``~/.octaverc`` file can be updated to point to the package there.
+
+.. note::
+    The ``-j 8`` switch (or ``--parallel 8``) tells the compiler to run in paralle on multi-processor machines.  The default is 8 processes (using ``--parallel``).  On **Ninja** and **MSYS Makefiles**, this parallelizes at the file level and builds *much* faster.
 
 Verifying the CoolProp Build
 ============================
@@ -205,10 +229,37 @@ Example Code Output
 
 .. literalinclude:: Example.out
 
+.. _octave_calls_notes:
+
+Making CoolProp Calls in Octave
+===============================
+
+Loading CoolProp
+----------------
+
+* If the optional ``cmake --install .`` step was skipped, the folder holding ``CoolProp.oct`` has to be added to Octave's path first::
+
+    octave:1> addpath('path-to-the-folder-holding-CoolProp.oct')
+
+  The ``cmake --install .`` step in the scripts above perform thisstep automatically *every time the user launches Octave*
+
+* CoolProp is loaded by simply typing ``CoolProp`` at the Octave prompt.  That first call loads the module and defines ``CoolProp`` (along with CoolProp's classes and constants) in the workspace.
+
+* From then on, ``CoolProp`` is an ordinary variable, so typing it again without a semicolon returns the CoolProp object and lists all of its methods/functions.  Use ``CoolProp;`` to suppress that output.
+
+REFPROP
+-------
+
+If you have a licensed version of **NIST REFPROP** installed (preferably v10.0 or higher), the following may be useful in making CoolProp calls to the REFPROP backend.
+
+* The ``RPPREFIX`` (Linux)/ ``RPprefix`` (Windows) environment variable must be set to the REFPROP installation directory, the one containing REFPROP's ``Fluids`` and ``Mixtures`` folders.  The REFPROP installer on Windows sets this environment variable automatically.
+* The folder holding REFPROP's shared library must be on the system's library search path.  On Windows, the REFPROP installer does this automatically; on Linux and macOS it has to be done by hand.  Alternatively, set the ``COOLPROP_REFPROP_ROOT`` environment variable to the REFPROP directory.
+* A Flatpak-installed Octave (as on :ref:`RHEL <octave_rhel>`) does not see the host shell's environment, so these variables have to be set for the Flatpak itself; see :ref:`REFPROP Under Flatpak <octave_rhel_refprop>`.  However, these environment variable settins appear to be persistent in the Octave flatpak bash shell once set.
+* See :ref:`REFPROP` for more on usage of the REFPROP backend in CoolProp.
 
 .. raw:: html
 
     <div style="width: 100%; height: 2px; background-color: #72727254; margin-top: 2rem; margin-bottom: 0px; display: block; clear: both;"></div>
     <p style="margin-top: 4px; margin-bottom: 2rem; font-style: italic;">
-        Page Last Updated and verified: 11-20-2026
+        Page Last Updated and verified: 11-22-2026
     </p>
