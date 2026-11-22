@@ -204,14 +204,15 @@ The PT flash for mixtures is a set of nested solvers with several fallback
 paths.  The five diagrams below show how they connect, from the entry point
 down to the individual solvers.  Rounded boxes are entry and exit points,
 diamonds are decisions, and double-bordered boxes refer to another diagram.
-The function names are those in ``src/Backends/Helmholtz/FlashRoutines.cpp``
-(``FlashRoutines::PT_flash_mixtures``) and
-``src/Backends/Helmholtz/VLERoutines.cpp`` (the stability test and the
-phase-split solver).  Where the diagrams and the code disagree, the code is
+The names are those of the C++ code, and each links to its API documentation:
+:cpapi:`FlashRoutines::PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>` for the flash
+itself, :cpapi:`StabilityEvaluationClass <CoolProp::StabilityRoutines::StabilityEvaluationClass>` for the stability test, and
+:cpapi:`PTflash_twophase <CoolProp::SaturationSolvers::PTflash_twophase>` for the phase-split solver.  An
+*In the code* line under each diagram lists the functions it covers.  Where the diagrams and the code disagree, the code is
 right and the diagram should be updated.
 
 **1. Entry and dispatch.**  The phase envelope is used only if the caller has
-built it (``build_phase_envelope``) and has not imposed a single phase.  If
+built it (:cpapi:`build_phase_envelope <CoolProp::AbstractState::build_phase_envelope>`) and has not imposed a single phase.  If
 anything on the envelope path throws, the flash continues with the blind
 flash.
 
@@ -238,6 +239,8 @@ flash.
        J --> Z
        K --> Z
 
+*In the code:* :cpapi:`PT_flash <CoolProp::FlashRoutines::PT_flash>`, :cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`, :cpapi:`build_phase_envelope <CoolProp::AbstractState::build_phase_envelope>`, :cpapi:`PhaseEnvelopeRoutines::is_inside <CoolProp::PhaseEnvelopeRoutines::is_inside>`, :cpapi:`specify_phase <CoolProp::AbstractState::specify_phase>`, :cpapi:`solver_rho_Tp <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp>`.
+
 The *β collapse* step, used on every two-phase path: a split with
 :math:`\beta < 10^{-10}` is published as a single phase at the liquid density,
 one with :math:`\beta > 1 - 10^{-10}` as a single phase at the vapour density,
@@ -249,7 +252,8 @@ reducing density, not by which phase it came from.
 The stability test (diagram 3) gives a verdict.  A "stable" verdict is
 cross-checked against a Wilson K-factor estimate, because the test can
 converge to the trivial solution near a phase boundary.  Every split that does
-not come from a proven instability must pass ``verify_split`` before it is
+not come from a proven instability must pass ``verify_split`` (a lambda inside
+:cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`) before it is
 published.  This requires a composition spread of at least
 :math:`\max(10^{-6}, \mathrm{tol})`, a material balance to :math:`10^{-6}`, both phase
 pressures within 0.1 % of :math:`p`, and equal fugacities to ``tol``.
@@ -294,6 +298,8 @@ pressures within 0.1 % of :math:`p`, and equal fugacities to ``tol``.
        BC["β collapse"] --> Z(["Done"])
        SP[["Single-phase root<br/>(diagram 5)"]] --> Z
 
+*In the code:* :cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`, :cpapi:`StabilityEvaluationClass::is_stable <CoolProp::StabilityRoutines::StabilityEvaluationClass::is_stable>`, :cpapi:`guess_split_from_wilson <CoolProp::SaturationSolvers::guess_split_from_wilson>`, :cpapi:`PTflash_twophase::solve <CoolProp::SaturationSolvers::PTflash_twophase::solve>`, :cpapi:`successive_substitution_guessrho <CoolProp::SaturationSolvers::successive_substitution_guessrho>`, :cpapi:`solve_rho_Tp_global_stable <CoolProp::SaturationSolvers::solve_rho_Tp_global_stable>`.
+
 *Beyond baseline* means the instability was found by a near-pure trial phase,
 or depended on a density root that the stable-root guard replaced (GitHub
 #3448), or came from a flash-first split that the plain trial search cannot
@@ -301,7 +307,7 @@ reproduce.  Before these mechanisms existed the flash returned a single-phase
 answer at such states.  So if the split solver cannot converge there, the flash
 falls back to single phase instead of throwing.
 
-**3. Stability test** (``StabilityEvaluationClass::check_stability_michelsen``).
+**3. Stability test** (:cpapi:`StabilityEvaluationClass::check_stability_michelsen <CoolProp::StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen>`).
 It decides whether the feed is stable, and if it is not, gives the split or
 trial phase that showed it.  Stage 1 below describes the equations.
 Diagrams 3 and 4 describe the default ``MIXTURE_STABILITY_ALGORITHM = 1``; with
@@ -336,7 +342,9 @@ Diagrams 3 and 4 describe the default ``MIXTURE_STABILITY_ALGORITHM = 1``; with
        NX{"More trials?"} -- yes --> L
        NX -- no --> ST(["Stable<br/>(uncertain if any trial failed)"])
 
-**4. Two-phase solver** (``PTflash_twophase::solve_michelsen``).  It refines a
+*In the code:* :cpapi:`check_stability_michelsen <CoolProp::StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen>`, :cpapi:`minimize_tpd <CoolProp::StabilityRoutines::StabilityEvaluationClass::minimize_tpd>`, :cpapi:`solve_rho_Tp_global_stable <CoolProp::SaturationSolvers::solve_rho_Tp_global_stable>`.
+
+**4. Two-phase solver** (:cpapi:`PTflash_twophase::solve_michelsen <CoolProp::SaturationSolvers::PTflash_twophase::solve_michelsen>`).  It refines a
 seed (x, y, densities, and optionally β) to phase equilibrium.  It throws a
 ``SolutionError`` on failure.  For a non-converged or trivial split it also sets
 ``nonconvergence``, but not when a phase density solve is lost.  Diagram 2 uses
@@ -366,7 +374,10 @@ guarded solves instead, and a failed solve there only rejects the step.
        G -- yes --> OK(["Return x, y, β, ρ_L, ρ_V"])
        G -- no --> XN
 
-**5. Single-phase root** (``solve_single_phase`` in ``PT_flash_mixtures``).  It
+*In the code:* :cpapi:`PTflash_twophase::solve_michelsen <CoolProp::SaturationSolvers::PTflash_twophase::solve_michelsen>`, :cpapi:`PTflash_twophase_options <CoolProp::SaturationSolvers::PTflash_twophase_options>`.
+
+**5. Single-phase root** (``solve_single_phase``, a lambda inside
+:cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`).  It
 picks the density root for a state that has been judged single phase.
 
 .. mermaid::
@@ -390,6 +401,8 @@ picks the density root for a state that has been judged single phase.
        BL --> Z
        BO --> Z
        Z(["Phase: gas if ρ is below the reducing density, else liquid"])
+
+*In the code:* :cpapi:`solver_rho_Tp_cheb <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb>`, :cpapi:`solver_rho_Tp_SRK <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK>`, :cpapi:`SRK_covolume <CoolProp::HelmholtzEOSMixtureBackend::SRK_covolume>`, :cpapi:`solver_rho_Tp <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp>`.
 
 .. _tpd-stability:
 
