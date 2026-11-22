@@ -642,6 +642,7 @@ Pull requests merged:
 * `#3576 <https://github.com/CoolProp/CoolProp/pull/3576>`__ : fix(flash): imposed two-phase DmolarT update uses the saturation states at T (#3575)
 * `#3578 <https://github.com/CoolProp/CoolProp/pull/3578>`__ : feat(mixtures): Chebyshev all-roots density solver on by default
 * `#3579 <https://github.com/CoolProp/CoolProp/pull/3579>`__ : docs(changelog): 8.1.0 issue/PR lists from the milestone; #3571 entry
+* `#3580 <https://github.com/CoolProp/CoolProp/pull/3580>`__ : docs(changelog): 8.1.0 entries for #3570 and #3576
 
 
 8.0.0
