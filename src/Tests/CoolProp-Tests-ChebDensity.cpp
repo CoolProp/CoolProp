@@ -623,12 +623,15 @@ TEST_CASE("ChebDensity: PT flash with CHEBYSHEV_DENSITY_SOLVER", "[cheb_density]
             const double u1 = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53, u2 = (static_cast<double>(g() >> 11U) + 0.5) * 0x1.0p-53;
             const double T = c.Tlo + (c.Thi - c.Tlo) * u1, p = std::exp(std::log(1e4) + (std::log(3e7) - std::log(1e4)) * u2);
             double rho_off = NAN, Q_off = NAN, rho_on = NAN, Q_on = NAN;
-            try {
-                off->update(PT_INPUTS, p, T);
-                rho_off = off->rhomolar();
-                Q_off = off->Q();
-            } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
-                // a failed flash leaves rho_off NaN: the state is skipped below
+            {
+                ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, false);  // explicit: the default is on
+                try {
+                    off->update(PT_INPUTS, p, T);
+                    rho_off = off->rhomolar();
+                    Q_off = off->Q();
+                } catch (const CoolProp::CoolPropBaseError&) {  // NOLINT(bugprone-empty-catch)
+                    // a failed flash leaves rho_off NaN: the state is skipped below
+                }
             }
             {
                 ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
@@ -666,6 +669,27 @@ TEST_CASE("ChebDensity: PT flash with CHEBYSHEV_DENSITY_SOLVER", "[cheb_density]
         CHECK(phase_differs <= 2);
         CHECK(published > single / 2);  // the flash really uses the solver's root
     }
+}
+
+TEST_CASE("ChebDensity: table cache stays usable past its capacity (parameter fit)", "[cheb_density][flash]") {
+    // Each change of the interaction parameters is a new model key and new tables, as in every iteration of a
+    // parameter fit.  The cache evicts the least recently used beyond its capacity (64); more changes than that must
+    // keep answering, and the original parameters must get correct tables again after their entry was evicted.
+    ConfigBoolScope flag(CHEBYSHEV_DENSITY_SOLVER, true);
+    std::shared_ptr<AbstractState> A(AbstractState::factory("HEOS", "Methane&Ethane"));
+    A->set_mole_fractions(std::vector<double>{0.5, 0.5});
+    auto* h = dynamic_cast<HelmholtzEOSMixtureBackend*>(A.get());
+    const double T = 250, p = 5e6;
+    const double bT0 = A->get_binary_interaction_double(0, 1, "betaT");
+    const double r0 = h->solver_rho_Tp_cheb(T, p);
+    REQUIRE(r0 > 0);
+    for (int k = 1; k <= 70; ++k) {
+        CAPTURE(k);
+        A->set_binary_interaction_double(0, 1, "betaT", bT0 * (1 + 1e-3 * k));
+        REQUIRE(h->solver_rho_Tp_cheb(T, p) > 0);
+    }
+    A->set_binary_interaction_double(0, 1, "betaT", bT0);
+    CHECK(h->solver_rho_Tp_cheb(T, p) == Catch::Approx(r0).epsilon(1e-12));
 }
 
 TEST_CASE("ChebDensity: tables follow changed interaction parameters", "[cheb_density][flash]") {

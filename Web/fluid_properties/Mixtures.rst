@@ -404,6 +404,53 @@ picks the density root for a state that has been judged single phase.
 
 *In the code:* :cpapi:`solver_rho_Tp_cheb <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb>`, :cpapi:`solver_rho_Tp_SRK <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK>`, :cpapi:`SRK_covolume <CoolProp::HelmholtzEOSMixtureBackend::SRK_covolume>`, :cpapi:`solver_rho_Tp <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp>`.
 
+.. _chebyshev-density-solver:
+
+**Chebyshev all-roots density solver.**  Since CoolProp 8.1 the PT flash of
+HEOS and GERG mixtures finds density roots with a Chebyshev all-roots solver:
+for the single-phase root, and for the trial and feed phases of the stability
+analysis and the starting guesses of the phase split.  It is controlled by the
+configuration variable ``CHEBYSHEV_DENSITY_SOLVER`` (default ``true``).  It isolates every density root of the isotherm with certified error
+bounds and takes the stable one by spinodal branch.  Wherever it cannot answer
+(an unsupported model, a state outside its tables, a root it cannot certify),
+the solvers in the chart above answer instead.  For gas mixtures this makes the
+PT flash 10 to 25 times faster: a methane/ethane flash takes 31 µs instead of
+716 µs, and one of the 10-component Amarillo natural gas 0.28 ms instead of
+2.8 ms.
+
+Its tables are built once per set of components, the first time that mixture is
+flashed, and are then shared by every state of that mixture in the process.
+Building them takes a few milliseconds for two components and tens of
+milliseconds for ten.  Mixtures containing water take longer, about 0.3 s.
+Changing the mixture parameters (for instance with
+``set_binary_interaction_double``) makes it a new mixture with new tables.  The
+process keeps the tables of the 64 most recently used mixtures.  A parameter
+fit therefore pays the table build on every evaluation of its objective, and
+may run faster with the solver switched off.
+
+The densities it returns agree with the previous solvers to about 1e-7.  The
+exceptions are states where the previous solvers returned the wrong root, such
+as a liquid-like root for a CO\ :sub:`2`/water gas.
+
+To get the solvers of CoolProp 8.0 and earlier, for instance to reproduce
+earlier results exactly, set it to false.  The setting is read on every flash,
+so it takes effect immediately.  From Python:
+
+.. code-block:: python
+
+    import CoolProp.CoolProp as CP
+    CP.set_config_bool(CP.CHEBYSHEV_DENSITY_SOLVER, False)
+
+From C++:
+
+.. code-block:: c++
+
+    CoolProp::set_config_bool(CoolProp::CHEBYSHEV_DENSITY_SOLVER, false);
+
+From any language, set the environment variable
+``COOLPROP_CHEBYSHEV_DENSITY_SOLVER`` to ``false`` before the program starts
+(see :ref:`configuration`).
+
 .. _tpd-stability:
 
 Stage 1: Phase stability analysis
