@@ -740,6 +740,7 @@ class StabilityEvaluationClass
     bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
     bool _flash_first;           ///< the instability was found by the flash-first successive substitution
     bool _flash_first_enabled;   ///< run the flash-first successive substitution (on by default)
+    bool _opposite_branch;       ///< the instability was found by an opposite-branch trial (COO-193)
     bool debug;
     bool use_michelsen;
 
@@ -763,6 +764,7 @@ class StabilityEvaluationClass
         _trial_guard_replaced(false),
         _flash_first(false),
         _flash_first_enabled(true),
+        _opposite_branch(false),
         debug(false),
         use_michelsen(get_config_int(MIXTURE_STABILITY_ALGORITHM) != 0) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
@@ -857,12 +859,13 @@ class StabilityEvaluationClass
         _flash_first_enabled = enabled;
     }
     /// True when an instability was found that the stability test would not have reached before the
-    /// near-pure trials and the #3448 density guard existed: found by a near-pure trial, or relying on a
+    /// near-pure trials, the opposite-branch trials and the #3448 density guard existed: found by a near-pure or an
+    /// opposite-branch trial, or relying on a
     /// density root the guard replaced -- the feed's, or one of the trial that found the instability
     /// (a replacement in another trial does not count).  The flash treats a split-solver failure on such
     /// an EXTRA verdict softly (recover, else single phase) instead of throwing where it used to answer.
     bool unstable_beyond_baseline() const {
-        return !_stable && (_near_pure || _guard_replaced);
+        return !_stable && (_near_pure || _guard_replaced || _opposite_branch);
     }
     /// Accessor for liquid-phase composition and density
     void get_liq(std::vector<double>& x, double& rhomolar) {

@@ -1079,6 +1079,14 @@ struct Candidate
 }  // namespace
 
 double Tables::stable_root(const State& S, double p) const {
+    return root_on(S, p, Select::stable);
+}
+
+double Tables::branch_root(const State& S, double p, bool vapor_branch) const {
+    return root_on(S, p, vapor_branch ? Select::vapor_branch : Select::liquid_branch);
+}
+
+double Tables::root_on(const State& S, double p, Select sel) const {
     if (!(p > 0) || !std::isfinite(p)) return -1;
     const double t = p * S.t_scale;
     const int P = n_pieces();
@@ -1105,9 +1113,9 @@ double Tables::stable_root(const State& S, double p) const {
         }
     }
     if (roots.empty()) return -1;
-    // selection by spinodal branches
+    // selection by spinodal branches (a single root is the stable one; a branch query still needs its branch)
     int k = 0;
-    if (roots.size() > 1) {
+    if (roots.size() > 1 || sel != Select::stable) {
         // the extrema of delta Z: the first local maximum and the last local minimum, classified by the TRUE slope on
         // either side (the table's derivative root can sit well off the true one where delta Z is flat, so the probe
         // widens geometrically within the piece until the two sides differ)
@@ -1153,8 +1161,15 @@ double Tables::stable_root(const State& S, double p) const {
             if (roots[j].D < dmax1) vap = j;
             if (roots[j].D > dminL && liq < 0) liq = j;
         }
-        if (vap < 0 && liq < 0) return -1;
-        if (vap < 0)
+        if (sel == Select::vapor_branch) {
+            if (vap < 0) return NO_ROOT_ON_BRANCH;
+            k = vap;
+        } else if (sel == Select::liquid_branch) {
+            if (liq < 0) return NO_ROOT_ON_BRANCH;
+            k = liq;
+        } else if (vap < 0 && liq < 0)
+            return -1;
+        else if (vap < 0)
             k = liq;
         else if (liq < 0 || liq == vap)
             k = vap;
