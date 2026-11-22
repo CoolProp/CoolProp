@@ -48,6 +48,8 @@ struct ChebyshevSolverOn
     }
     ChebyshevSolverOn(const ChebyshevSolverOn&) = delete;
     ChebyshevSolverOn& operator=(const ChebyshevSolverOn&) = delete;
+    ChebyshevSolverOn(ChebyshevSolverOn&&) = delete;
+    ChebyshevSolverOn& operator=(ChebyshevSolverOn&&) = delete;
 };
 
 struct DomeIsotherms

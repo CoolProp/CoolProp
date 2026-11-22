@@ -58,6 +58,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <cstdint>
 #include <vector>
 
 #include "CoolProp/numerics/ChebyshevBernstein.h"
@@ -223,7 +224,7 @@ class Tables
    private:
     Tables() = default;
     /// Which root root_on() selects: the stable one (lower Gibbs energy of the two branches), or one branch's
-    enum class Select
+    enum class Select : std::uint8_t
     {
         stable,
         vapor_branch,
