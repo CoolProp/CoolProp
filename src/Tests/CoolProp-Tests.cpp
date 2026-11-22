@@ -10189,6 +10189,50 @@ TEST_CASE("Saturation flashes do not leave a phase imposed", "[3468]") {
     CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101000, 373.15));
 }
 
+// With the two-phase phase imposed, DmolarT_INPUTS computed the mixture density from
+// SatL/SatV without updating them: a fresh AbstractState threw "rhomolar is less than
+// zero", a reused one silently used the saturation states of an earlier update.
+// TabularBackend::calc_first_two_phase_deriv_splined (rho_smoothing) relies on this path.
+// The saturation states come from the superancillary if there is one, otherwise from the
+// saturation solve; both are covered.
+TEST_CASE("Imposed two-phase DmolarT update uses the saturation states at T", "[flash]") {
+    struct SuperancFlag
+    {
+        bool saved;
+        explicit SuperancFlag(bool on) : saved(CoolProp::get_config_bool(ENABLE_SUPERANCILLARIES)) {
+            CoolProp::set_config_bool(ENABLE_SUPERANCILLARIES, on);
+        }
+        ~SuperancFlag() {
+            CoolProp::set_config_bool(ENABLE_SUPERANCILLARIES, saved);
+        }
+    };
+    const bool superanc = GENERATE(true, false);
+    CAPTURE(superanc);
+    SuperancFlag flag(superanc);
+
+    const double T = 450.0, Q = 0.1;
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("HEOS", "Water"));
+    ref->update(CoolProp::QT_INPUTS, Q, T);
+    const double rho = ref->rhomolar(), p = ref->p(), h = ref->hmolar();
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    SECTION("fresh state") {}
+    SECTION("state reused after a saturation update at another temperature") {
+        AS->update(CoolProp::QT_INPUTS, 0.5, 400.0);
+    }
+    AS->specify_phase(CoolProp::iphase_twophase);
+    CHECK_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    CHECK(AS->Q() == Catch::Approx(Q).epsilon(1e-9));
+    CHECK(AS->p() == Catch::Approx(p).epsilon(1e-9));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-12));
+    CHECK(AS->saturated_liquid_keyed_output(CoolProp::iT) == Catch::Approx(T).epsilon(1e-12));
+    CHECK_NOTHROW(AS->update(CoolProp::HmolarT_INPUTS, h, T));
+    CHECK(AS->Q() == Catch::Approx(Q).epsilon(1e-9));
+    CHECK(AS->p() == Catch::Approx(p).epsilon(1e-9));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-9));
+    AS->unspecify_phase();
+}
+
 TEST_CASE("Saturation flashes keep a phase the caller imposed", "[3468]") {
     // The fix must not clear a phase the user set themselves (#1027 semantics)
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));

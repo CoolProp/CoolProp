@@ -4274,44 +4274,59 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
             } else if (HEOS._phase == iphase_gas) {
                 HEOS._Q = 1000;
             } else if (HEOS._phase == iphase_twophase) {
-                // The ancillary rhoL/rhoV densities are only needed by the twophase
-                // sub-branch (and only when other != iDmolar — they seed SatL/SatV
-                // updates). Keep the evaluation localized so the cheaper single-phase
-                // imposed-phase paths (liquid, gas, supercritical_liquid) avoid the
-                // two polynomial evaluations on every update() (#2718).
                 // TODO: is it a bug that this branch can be accessed for mixtures?
-                HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
-                HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
-                // Actually have to use saturation information sadly
-                // For the given temperature, find the saturation state
-                // Run the saturation routines to determine the saturation densities and pressures
-                HelmholtzEOSMixtureBackend HEOS1(HEOS.components);
-                SaturationSolvers::saturation_T_pure_options options;
-                SaturationSolvers::saturation_T_pure(HEOS1, HEOS._T, options);
-
-                if (other != iDmolar) {
-                    // Update the states
-                    if (HEOS.SatL) HEOS.SatL->update(DmolarT_INPUTS, HEOS._rhoLanc, HEOS._T);
-                    if (HEOS.SatV) HEOS.SatV->update(DmolarT_INPUTS, HEOS._rhoVanc, HEOS._T);
-                    // Update the two-Phase variables
-                    HEOS._rhoLmolar = HEOS.SatL->rhomolar();
-                    HEOS._rhoVmolar = HEOS.SatV->rhomolar();
+                if (!HEOS.SatL || !HEOS.SatV) {
+                    throw ValueError(format("An imposed two-phase T-input flash requires the saturation states"));
                 }
+                // Saturation densities and pressures at T: from the superancillary when there is
+                // one (as T_phase_determination_pure_or_pseudopure does without an imposed phase),
+                // otherwise from the full saturation solve.
+                CoolPropDbl rhoL = NAN, rhoV = NAN, pL = NAN, pV = NAN;
+                std::optional<HelmholtzEOSMixtureBackend::SuperancSatPoint> sat;
+                try {
+                    sat = HEOS.superanc_saturation_at_T(HEOS._T);
+                } catch (...) {
+                    // Above the numerical critical point of the superancillary: use the saturation solve
+                    sat.reset();
+                }
+                if (sat) {
+                    rhoL = sat->rhomolarL;
+                    rhoV = sat->rhomolarV;
+                    pL = sat->p;
+                    pV = sat->p;
+                } else {
+                    HelmholtzEOSMixtureBackend HEOS1(HEOS.components);
+                    SaturationSolvers::saturation_T_pure_options options;
+                    SaturationSolvers::saturation_T_pure(HEOS1, HEOS._T, options);
+                    rhoL = HEOS1.SatL->rhomolar();
+                    rhoV = HEOS1.SatV->rhomolar();
+                    pL = HEOS1.SatL->p();
+                    pV = HEOS1.SatV->p();
+                }
+
+                // Update the saturation states and the two-phase variables for all inputs:
+                // the quality and the lever rule below read them.
+                HEOS.SatL->update(DmolarT_INPUTS, rhoL, HEOS._T);
+                HEOS.SatV->update(DmolarT_INPUTS, rhoV, HEOS._T);
+                HEOS._rhoLanc = rhoL;
+                HEOS._rhoVanc = rhoV;
+                HEOS._rhoLmolar = rhoL;
+                HEOS._rhoVmolar = rhoV;
 
                 CoolPropDbl Q = NAN;
 
                 switch (other) {
                     case iDmolar:
-                        Q = (1 / HEOS.rhomolar() - 1 / HEOS1.SatL->rhomolar()) / (1 / HEOS1.SatV->rhomolar() - 1 / HEOS1.SatL->rhomolar());
+                        Q = (1 / HEOS.rhomolar() - 1 / rhoL) / (1 / rhoV - 1 / rhoL);
                         break;
                     case iSmolar:
-                        Q = (HEOS.smolar() - HEOS1.SatL->smolar()) / (HEOS1.SatV->smolar() - HEOS1.SatL->smolar());
+                        Q = (HEOS.smolar() - HEOS.SatL->smolar()) / (HEOS.SatV->smolar() - HEOS.SatL->smolar());
                         break;
                     case iHmolar:
-                        Q = (HEOS.hmolar() - HEOS1.SatL->hmolar()) / (HEOS1.SatV->hmolar() - HEOS1.SatL->hmolar());
+                        Q = (HEOS.hmolar() - HEOS.SatL->hmolar()) / (HEOS.SatV->hmolar() - HEOS.SatL->hmolar());
                         break;
                     case iUmolar:
-                        Q = (HEOS.umolar() - HEOS1.SatL->umolar()) / (HEOS1.SatV->umolar() - HEOS1.SatL->umolar());
+                        Q = (HEOS.umolar() - HEOS.SatL->umolar()) / (HEOS.SatV->umolar() - HEOS.SatL->umolar());
                         break;
                     default:
                         throw ValueError(format("bad input for other"));
@@ -4323,8 +4338,8 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 } else {
                     HEOS._Q = Q;
                     // Load the outputs
-                    HEOS._p = HEOS._Q * HEOS1.SatV->p() + (1 - HEOS._Q) * HEOS1.SatL->p();
-                    HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+                    HEOS._p = HEOS._Q * pV + (1 - HEOS._Q) * pL;
+                    HEOS._rhomolar = 1 / (HEOS._Q / rhoV + (1 - HEOS._Q) / rhoL);
                 }
             } else if (HEOS._phase == iphase_supercritical_liquid) {
                 HEOS._Q = -1000;
