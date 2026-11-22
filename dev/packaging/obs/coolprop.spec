@@ -46,8 +46,8 @@ Name:           coolprop
 # ordering rules.  On a release tag COOLPROP_VERSION_REVISION is empty and both
 # become plain 8.0.1.  dev/packaging/check-build-deps.py checks they agree with
 # CMakeLists.txt and with the Debian files.
-%global upstream_version 8.1.0dev
-Version:        8.1.0~dev
+%global upstream_version 8.1.0
+Version:        8.1.0
 Release:        0%{?dist}
 Summary:        Thermophysical property library for pure fluids, mixtures and humid air
 License:        MIT
@@ -223,6 +223,9 @@ include root) are not shipped here: their names are too generic to put into
 %{_libdir}/cmake/CoolProp/
 
 %changelog
+* Sun Nov 22 2026 CoolProp developers <coolprop@coolprop.org> - 8.1.0-0
+- Release 8.1.0.
+
 * Fri Oct 02 2026 CoolProp developers <coolprop@coolprop.org> - 8.1.0~dev-0
 - Open the 8.1.0 development cycle.
 

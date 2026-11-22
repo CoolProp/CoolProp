@@ -1,3 +1,9 @@
+coolprop (8.1.0-1) unstable; urgency=medium
+
+  * Release 8.1.0.
+
+ -- CoolProp developers <coolprop@coolprop.org>  Sun, 22 Nov 2026 12:00:00 +0000
+
 coolprop (8.1.0~dev-1) unstable; urgency=medium
 
   * Open the 8.1.0 development cycle.
