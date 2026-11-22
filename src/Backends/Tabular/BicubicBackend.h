@@ -70,11 +70,7 @@ class BicubicBackend : public TabularBackend
         imposed_phase_index = iphase_not_imposed;
         // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
         if (!this->AS->get_mole_fractions().empty()) {
-            check_tables();
-            SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
-            SinglePhaseGriddedTableData& single_phase_logpT = dataset->single_phase_logpT;
-            dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
-            dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
+            check_tables();  // loads or builds the tables and their coefficients
             is_mixture = (this->AS->get_mole_fractions().size() > 1);
         }
     };

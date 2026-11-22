@@ -1214,6 +1214,25 @@ class TabularBackend : public AbstractState
         }
     }
     TabularDataSet* dataset;
+    /// The mole fractions as path_to_tables() writes them (10 decimals): two compositions
+    /// with the same key share one set of tables
+    static std::string composition_key(const std::vector<CoolPropDbl>& z) {
+        std::string key;
+        for (CoolPropDbl zi : z) {
+            key += format("%0.10Lf;", zi);
+        }
+        return key;
+    }
+    /// Forget the last state: flush the cached table indices, deselect the table and
+    /// put Q at the impossible value the saturation accessors refuse
+    void invalidate_state() {
+        cached_single_phase_i = std::numeric_limits<std::size_t>::max();
+        cached_single_phase_j = std::numeric_limits<std::size_t>::max();
+        cached_saturation_iL = std::numeric_limits<std::size_t>::max();
+        cached_saturation_iV = std::numeric_limits<std::size_t>::max();
+        selected_table = SELECTED_NO_TABLE;
+        _Q = -1000;
+    }
 
     void recalculate_singlephase_phase() {
         if (p() > p_critical()) {
@@ -1313,25 +1332,37 @@ class TabularBackend : public AbstractState
     }
     void update(CoolProp::input_pairs input_pair, double Value1, double Value2) override;
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
+        // The tables belong to one composition (path_to_tables is keyed on it), and
+        // building a new set costs a phase envelope plus every table, kept on disk and
+        // in memory for the life of the process.  So once the tables are loaded the
+        // composition is fixed: setting it again to the same values is harmless, any
+        // other composition needs a new AbstractState (COO-186).  Checked before the
+        // inner backend is touched, so a refused call leaves this one unchanged.
+        if (tables_loaded) {
+            if (composition_key(mole_fractions) != composition_key(this->AS->get_mole_fractions())) {
+                throw ValueError(format("The composition of a %s backend is fixed once its tables are loaded (%s); "
+                                        "create a new AbstractState for another composition",
+                                        backend_name().c_str(), path_to_tables().c_str()));
+            }
+            return;
+        }
         this->AS->set_mole_fractions(mole_fractions);
         is_mixture = (this->AS->get_mole_fractions().size() > 1);
-        // Check the tables and build if necessary
+        // Check the tables and build if necessary (check_tables also builds the coefficients)
         check_tables();
-        // For mixtures, the construction of the coefficients is delayed until this
-        // function so that the set_mole_fractions function can be called; this is
-        // done here for every tabular backend (BICUBIC and TTSE) since update()
-        // indexes coeffs_pT/coeffs_ph regardless of the derived class
-        SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
-        SinglePhaseGriddedTableData& single_phase_logpT = dataset->single_phase_logpT;
-        dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
-        dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
     };
     void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) override {
         // Let the inner backend do the mass→mole conversion, then forward the
         // resulting mole fractions through set_mole_fractions so that the
-        // tables and coefficients get built.
+        // tables and coefficients get built, or the latch refuses them.  A
+        // refusal puts the inner backend's mole fractions back as they were.
+        const std::vector<CoolPropDbl> previous = this->AS->get_mole_fractions();
         this->AS->set_mass_fractions(mass_fractions);
-        this->set_mole_fractions(this->AS->get_mole_fractions());
+        const std::vector<CoolPropDbl> converted = this->AS->get_mole_fractions();
+        if (tables_loaded) {
+            this->AS->set_mole_fractions(previous);
+        }
+        this->set_mole_fractions(converted);
     };
     const std::vector<CoolPropDbl>& get_mole_fractions() override {
         return AS->get_mole_fractions();
@@ -1412,8 +1443,6 @@ class TabularBackend : public AbstractState
             try {
                 /// Try to load the tables if you can.
                 load_tables();
-                // Set the flag saying tables have been successfully loaded
-                tables_loaded = true;
             } catch (CoolProp::UnableToLoadError& e) {
                 if (get_debug_level() > 0) {
                     std::cout << format("Table loading failed with error: %s\n", e.what());
@@ -1447,9 +1476,17 @@ class TabularBackend : public AbstractState
                 }
                 /// Load the tables back into memory as a consistency check
                 load_tables();
-                // Set the flag saying tables have been successfully loaded
-                tables_loaded = true;
             }
+            // update() indexes coeffs_pT/coeffs_ph for every tabular backend.  Build them
+            // whenever tables are (re)loaded, so no path (constructor, set_mole_fractions,
+            // or an update() after an earlier failed load) reaches update() without them.
+            // Only here, not on every call: build_coeffs takes the dataset lock, and it
+            // returns at once when another backend has already built them.
+            dataset->build_coeffs(dataset->single_phase_logph, dataset->coeffs_ph);
+            dataset->build_coeffs(dataset->single_phase_logpT, dataset->coeffs_pT);
+            // Ready only now: if a build throws, the next call loads (from the
+            // in-memory cache) and builds again instead of indexing empty coefficients
+            tables_loaded = true;
         }
     };
 };
