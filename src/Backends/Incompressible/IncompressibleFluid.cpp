@@ -862,6 +862,9 @@ void IncompressibleFluid::fixComposition(double x, bool chebyshev, CompositionFi
     const auto is = [](const IncompressibleData& fit, IncompressibleData::IncompressibleTypeEnum a, IncompressibleData::IncompressibleTypeEnum b) {
         return fit.type == a || fit.type == b;
     };
+    // Density itself also accepts exppolynomial, but its derivative matrices
+    // are built (by validate) only for polynomial and Chebyshev fits
+    const bool d_ok = is(d, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV);
     const bool c_ok = is(c, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV);
     const bool visc_ok = is(viscosity, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
     const bool cond_ok = is(conductivity, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
@@ -872,8 +875,10 @@ void IncompressibleFluid::fixComposition(double x, bool chebyshev, CompositionFi
     fits.chebyshev = chebyshev;
     fits.data_version = data_version;
     fits.rho = reduceAtComposition(d, d.coeffs, x, Tbase, xbase);
-    fits.drhodT = reduceAtComposition(d, d.ddT, x, Tbase, xbase);
-    fits.d2rhodT2 = reduceAtComposition(d, d.ddT2, x, Tbase, xbase);
+    if (d_ok) {
+        fits.drhodT = reduceAtComposition(d, d.ddT, x, Tbase, xbase);
+        fits.d2rhodT2 = reduceAtComposition(d, d.ddT2, x, Tbase, xbase);
+    }
     if (c_ok) {
         fits.c = reduceAtComposition(c, c.coeffs, x, Tbase, xbase);
         fits.int_c = reduceAtComposition(c, c.int_dT, x, Tbase, xbase);
@@ -911,11 +916,11 @@ double IncompressibleFluid::TmaxAt(double p, double x) {
             return fluid->psat(T, x) - p;
         }
     } res(this, p, x);
-    const double tol = 1e-9 * Tmax;
+    const double tol = 0.5 * saturationMargin();
     const double T_sat = Brent(&res, T_lo, Tmax, DBL_EPSILON, tol, 100);
     // Brent returns T_sat to within tol, possibly just below the exact value;
     // the margin keeps a state exactly at saturation inside the bracket
-    return std::min(Tmax, T_sat + 2 * tol);
+    return std::min(Tmax, T_sat + saturationMargin());
 }
 
 double IncompressibleFluid::TminAt(double p, double x) {
@@ -1003,6 +1008,9 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
         }
     }
     if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
+    // A state solved for at saturation can land a few ulp above the boiling
+    // point; accept it if it is liquid within the margin TmaxAt() allows
+    if (ps > 0.0 && p < ps && T - saturationMargin() > TminPsat && psat(T - saturationMargin(), x) <= p) ps = 0.0;
     if (ps > 0.0 && p < ps) throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
     return true;
 }

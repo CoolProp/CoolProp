@@ -1237,17 +1237,13 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
     CHECK(water.TmaxAt(2e6, 0.0) == water.getTmax());
     CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
     CHECK(meg.TmaxAt(101325.0, 0.35) == meg.getTmax());
-    // The second pass searches up to TmaxAt, which lies a small margin above
-    // the saturation temperature. A root inside that margin boils, so it is
-    // rejected like a boiling first result. The stand-in solver returns the
-    // upper end of its bracket: Tmax on the first pass, T_boil on the second.
-    if (water.psat(T_boil, 0.0) > 101325.0) {
-        CHECK_THROWS_WITH(water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; }),
-                          Catch::Matchers::ContainsSubstring("boils at"));
-    }
-    // The lower end of the second bracket is a liquid state and is returned
-    CHECK(water.solveInLiquidRange(101325.0, 0.0, [&](double T_lo, double T_hi) { return T_hi < water.getTmax() ? T_lo : T_hi; })
-          == water.TminAt(101325.0, 0.0));
+    // The second pass searches up to TmaxAt, a small margin above the
+    // saturation temperature. A root inside that margin is saturated liquid
+    // to within the solver tolerance and is returned, not rejected as boiling.
+    // The stand-in solver returns the upper end of its bracket: Tmax on the
+    // first pass (a boiling state), T_boil on the second.
+    REQUIRE(water.psat(T_boil, 0.0) > 101325.0);
+    CHECK(water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; }) == T_boil);
 
     // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
     // error says that the liquid boils, not only that there is no bracket
@@ -1273,7 +1269,8 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
         CAPTURE(chebyshev);
         ChebyshevCaloricSetting setting(chebyshev);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
-        for (double T : {300.0, 350.0, 400.0, 450.0}) {
+        // Dense: the flashed root often lands a few ulp above T_sat
+        for (double T = 278.35; T < 470.0; T += 0.37) {
             CAPTURE(T);
             AS->update(CoolProp::QT_INPUTS, 0.0, T);
             const double p = AS->p(), h = AS->hmass(), s = AS->smass();

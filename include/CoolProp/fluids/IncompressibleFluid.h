@@ -305,6 +305,13 @@ class IncompressibleFluid
     /// search up to here, so that a fit extrapolated above the boiling point,
     /// where h or s can fall with T again, cannot hide the liquid solution.
     double TmaxAt(double p, double x);
+    /// Temperature margin at the boiling point, in K. TmaxAt() returns the
+    /// saturation temperature plus this margin, and checkP() accepts a state
+    /// within it, so that a state solved for at saturation, which can land a
+    /// few ulp above it, is still accepted as liquid.
+    [[nodiscard]] double saturationMargin() const {
+        return 2e-9 * Tmax;
+    }
     /// Solve for a temperature inside the valid liquid range at (p, x).
     /** solve(T_lo, T_hi) must return the root on [T_lo, T_hi] or throw. The
      *  search runs on [TminAt(p, x), Tmax] first. When that gives a liquid
@@ -344,23 +351,19 @@ class IncompressibleFluid
             if (first_error) std::rethrow_exception(first_error);
             throw ValueError(format("%s: no liquid state at p = %g Pa", name.c_str(), p));
         }
-        double T = 0.0;
         try {
-            T = solve(T_lo, T_boil);
+            // T_boil lies a small margin (about 1e-9 Tmax) above the saturation
+            // temperature, so that a state exactly at saturation stays inside the
+            // bracket. A root inside that margin is taken as saturated liquid:
+            // rejecting it rejects valid round trips from saturation, whose root
+            // lands a few ulp above T_sat.
+            return solve(T_lo, T_boil);
         } catch (const CoolPropBaseError& e) {
             if (boiling) {
                 throw ValueError(format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (%s)", name.c_str(), p, T_boil, e.what()));
             }
             std::rethrow_exception(first_error);
         }
-        // T_boil sits a small margin above the saturation temperature, so that a
-        // state exactly at saturation stays inside the bracket. A root inside
-        // that margin boils, though, so check the result like the first one.
-        if (T > TminPsat && psat(T, x) > p) {
-            throw ValueError(
-              format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (solution %.17g K)", name.c_str(), p, T_boil, T));
-        }
-        return T;
     }
     /// Reduce every fit a state evaluates to a series in T at composition x
     /// (see FitAtComposition). Fits of other types are left as NONE.
