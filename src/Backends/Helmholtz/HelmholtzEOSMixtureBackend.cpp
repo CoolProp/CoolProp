@@ -3134,12 +3134,20 @@ std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
     if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
     try {
-        return solver_rho_Tp_cheb_impl(T, p);
+        return solver_rho_Tp_cheb_impl(T, p, 0);
     } catch (...) {
         return -1;  // never fail the flash from here: the existing solvers answer instead
     }
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p) {
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_branch(CoolPropDbl T, CoolPropDbl p, bool vapor_branch) {
+    if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
+    try {
+        return solver_rho_Tp_cheb_impl(T, p, vapor_branch ? 1 : 2);
+    } catch (...) {
+        return -1;
+    }
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p, int branch) {
     // the gas-constant configuration is part of the model the tables were built for
     const bool R_norm = get_config_bool(NORMALIZE_GAS_CONSTANTS);
     const double R_u = get_config_double(R_U_CODATA);
@@ -3219,6 +3227,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, C
     thread_local std::vector<double> x;
     x.assign(mf.begin(), mf.end());
     if (!cheb_density->tab->assemble(T, x, S)) return -1;
+    if (branch != 0) {
+        const double r = cheb_density->tab->branch_root(S, p, branch == 1);
+        return (r == ChebDensity::Tables::NO_ROOT_ON_BRANCH) ? CHEB_NO_ROOT_ON_BRANCH : r;
+    }
     return cheb_density->tab->stable_root(S, p);
 }
 

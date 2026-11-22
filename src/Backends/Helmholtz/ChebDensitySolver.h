@@ -58,6 +58,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <cstdint>
 #include <vector>
 
 #include "CoolProp/numerics/ChebyshevBernstein.h"
@@ -182,6 +183,13 @@ class Tables
     /// is taken -- not the lowest Gibbs energy over all roots, which can pick a root in an alphar well between the
     /// branches -- and polished by bracketed Newton on the true equation.
     [[nodiscard]] double stable_root(const State& S, double p) const;
+    /// Returned by branch_root when the tables certify that the requested branch has no mechanically stable root
+    static constexpr double NO_ROOT_ON_BRANCH = -2;
+    /// The mechanically stable root [mol/m^3] at pressure p on ONE spinodal branch -- the vapor branch (below the
+    /// first local maximum of delta Z) or the liquid branch (above the last local minimum) -- polished as in
+    /// stable_root.  NO_ROOT_ON_BRANCH when every root and extremum is certified and none lies on that branch; -1
+    /// when the tables cannot answer.  On a monotonic isotherm the single root belongs to both branches.
+    [[nodiscard]] double branch_root(const State& S, double p, bool vapor_branch) const;
     /// alphar(tau, delta) at the state of S
     [[nodiscard]] double alphar(const State& S, double delta) const;
 
@@ -215,6 +223,14 @@ class Tables
 
    private:
     Tables() = default;
+    /// Which root root_on() selects: the stable one (lower Gibbs energy of the two branches), or one branch's
+    enum class Select : std::uint8_t
+    {
+        stable,
+        vapor_branch,
+        liquid_branch
+    };
+    [[nodiscard]] double root_on(const State& S, double p, Select sel) const;
     [[nodiscard]] std::string verify(HelmholtzEOSMixtureBackend& HEOS) const;
 
     BuildOptions m_opt;

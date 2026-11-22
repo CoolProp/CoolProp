@@ -243,6 +243,31 @@ recorded history of finished or abandoned work were dropped (they remain in
   the test reference.  What remains is per-leaf: the GERG reducing
   derivatives recompute rho_r(x), T_r(x) on every call.  Profile with a
   RelWithDebInfo shared lib and `sample <pid>`: the pip wheel is stripped.
+- **Stability-test shortcuts must be swept on near-azeotropes** (COO-193).
+  #3427 took the SS proximity heuristic ("trial converging to the trivial
+  solution") as proof of stability and skipped the TPD minimizer.  For
+  R410A or R507A the real incipient phase is also close to z with a shallow
+  tm, so the PT flash called most dome states single-phase.  Gas-mixture
+  benchmarks (Amarillo, air) never showed it.  Check any change to the
+  stability test with a QT-to-PT dome sweep over refrigerant blends
+  (`CoolProp-Tests-NearAzeotrope.cpp`), not only with timings.  The same
+  test decides critical-point stability: with the minimizer back, two of
+  R452A's three "stable" critical points (COO-154) became unstable.
+- **Stability trials can sit on the feed's density branch** (COO-193).
+  Trials take the lowest-Gibbs root of their composition.  A Wilson trial
+  that starts close to the feed (all K near or below 1) lands on the feed's
+  own branch, and SS collapses to the trivial solution while the incipient
+  phase, on the other branch, has tpd < 0 (CO2/ethane 20/80 at 207 K:
+  -0.036, reported "stable").  So "close to z in composition" means trivial
+  only on the same branch: the proximity shortcut is gated on the trial's
+  root being within 1.5x of the feed's.  A trial stuck on the feed's branch
+  is re-run on the other one (`opposite_branch_trial`).  Its roots must come
+  from the Chebyshev solver (`solver_rho_Tp_cheb_branch`), never a
+  phase-imposed Newton solve: that finds alpha^r-well roots that pass the
+  pressure and mechanical-stability checks (R454B, 20 MPa: tm = -1e12, then
+  a pure-R32/pure-R1234yf "split").  Measure with a sweep over many
+  mixtures, not the six blends a fix was tuned on: a threshold rule fitted
+  on six blends recovered only half the misses over 203.
 
 ## Fluid data, superancillaries and transport
 

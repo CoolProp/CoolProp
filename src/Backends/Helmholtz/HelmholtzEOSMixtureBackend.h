@@ -192,9 +192,17 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// The stable density root [mol/m^3] at (T, p) for the current composition from the Chebyshev solver, or -1 when
     /// it cannot answer here (disabled, unsupported model, outside its tables, or a root it cannot certify).
     CoolPropDbl solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p);
+    /// Returned by solver_rho_Tp_cheb_branch when the Chebyshev solver certifies that the branch has no root
+    static constexpr CoolPropDbl CHEB_NO_ROOT_ON_BRANCH = -2;
+    /// The mechanically stable density root [mol/m^3] at (T, p) on the vapor (vapor_branch) or the liquid spinodal
+    /// branch of the current composition's isotherm, from the Chebyshev solver; CHEB_NO_ROOT_ON_BRANCH when it
+    /// certifies that branch has none, -1 when it cannot answer (as solver_rho_Tp_cheb).  Used by the stability
+    /// test to evaluate a trial phase on the branch opposite to the feed's (COO-193).
+    CoolPropDbl solver_rho_Tp_cheb_branch(CoolPropDbl T, CoolPropDbl p, bool vapor_branch);
 
    private:
-    CoolPropDbl solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p);
+    /// branch: 0 the stable root, 1 the vapor-branch root, 2 the liquid-branch root
+    CoolPropDbl solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p, int branch);
     bool cheb_R_normalized = true;  ///< gas-constant configuration cheb_density was resolved for
     double cheb_R_u = 0;
 
