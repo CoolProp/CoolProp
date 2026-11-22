@@ -275,7 +275,7 @@ Performance:
 
 * HEOS mixture density solve evaluates only the delta derivatives of alphar it needs, about 3x faster and bit-identical (`#3273 <https://github.com/CoolProp/CoolProp/pull/3273>`__).
 * SVDSBTL keeps built surfaces in a bounded process-wide LRU cache, so a repeat backend for the same surface skips the ~80 ms disk load.  The cache is bounded by ``SVDSBTL_SURFACE_CACHE_MAX_ENTRIES`` and ``SVDSBTL_SURFACE_CACHE_MAX_SIZE_MB`` (default 16 surfaces and 512 MB) (`#3244 <https://github.com/CoolProp/CoolProp/pull/3244>`__).
-* The mixture p,T flash no longer runs the second-order TPD minimizer on a stability trial that successive substitution has already found stable.  On ``HEOS`` and ``GERG2008`` it is 1.7-2.7x faster for the natural-gas type mixtures benchmarked and 1.1-1.2x faster for humid air (a 10-component natural gas: 9267 to 3902 microseconds on ``HEOS``).  In a 20000-state comparison no phase fraction or failure changed and densities agree to 6e-11 relative.  A 7-component natural gas at 211.77 K and 6 MPa, which was returned as single phase, is now two-phase with Q = 0.81 (`#3427 <https://github.com/CoolProp/CoolProp/pull/3427>`__).
+* The mixture p,T flash no longer runs the second-order TPD minimizer on a stability trial that successive substitution has already found stable.  On ``HEOS`` and ``GERG2008`` it is 1.7-2.7x faster for the natural-gas type mixtures benchmarked and 1.1-1.2x faster for humid air (a 10-component natural gas: 9267 to 3902 microseconds on ``HEOS``).  In a 20000-state comparison of those mixtures no phase fraction or failure changed and densities agree to 6e-11 relative.  Most of the near-azeotrope two-phase states this shortcut missed are recovered by the density-branch fix under Bug fixes.  A 7-component natural gas at 211.77 K and 6 MPa, which was returned as single phase, is now two-phase with Q = 0.81 (`#3427 <https://github.com/CoolProp/CoolProp/pull/3427>`__).
 * Mixture critical points (``all_critical_points()``, ``T_critical()``) build the L* and M* matrices from whole derivative arrays instead of per-entry nested sums, which removes the O(N^7) cost: a 10-component natural gas goes from 605 s to 10 s on ``HEOS`` and from 137 s to 3.6 s on ``PR`` (`#3560 <https://github.com/CoolProp/CoolProp/issues/3560>`__, `#3563 <https://github.com/CoolProp/CoolProp/pull/3563>`__).
 * Python property plots trace isolines instead of flashing every point cold: 255 s to 10 s for the R513A case in discussion #3269 (`#3344 <https://github.com/CoolProp/CoolProp/pull/3344>`__).
 
@@ -334,6 +334,7 @@ Bug fixes:
 * Python plots: saturation lines of pure fluids reach the critical point instead of stopping short with NaN when the last flash fails within 1 K (QT lines) or 100 Pa (PQ lines) of it (`#3409 <https://github.com/CoolProp/CoolProp/pull/3409>`__).
 * Python source builds no longer fail after building the same checkout with a different Python version (`#3305 <https://github.com/CoolProp/CoolProp/issues/3305>`__, `#3306 <https://github.com/CoolProp/CoolProp/pull/3306>`__).
 * GUI: About-dialog and Sponsor links open the system browser (`#3230 <https://github.com/CoolProp/CoolProp/issues/3230>`__, `#3231 <https://github.com/CoolProp/CoolProp/pull/3231>`__).
+* Mixture p,T flash: the stability test trusts its trivial-solution shortcut only for a trial on the feed's density branch, and with ``CHEBYSHEV_DENSITY_SOLVER`` (the default) a trial that ended on the feed's branch is retried on the other branch.  This recovers two-phase states that were reported as single phase, mostly in near-azeotropic blends such as R507A below 235 K, R513A and CO2/ethane (`#3571 <https://github.com/CoolProp/CoolProp/pull/3571>`__).
 
 Packaging and documentation:
 
@@ -349,33 +350,57 @@ Packaging and documentation:
 * The development docs are rebuilt on every master push again; they had not been rebuilt since 2026-06-26 because the trigger failed silently (`#3439 <https://github.com/CoolProp/CoolProp/issues/3439>`__, `#3442 <https://github.com/CoolProp/CoolProp/pull/3442>`__).
 
 Contributors to this release (everyone with a merged PR since 8.0.0):
-`ibell <https://github.com/ibell>`_, `VikramGovindarajan <https://github.com/VikramGovindarajan>`_, `fwitte <https://github.com/fwitte>`_, `jowr <https://github.com/jowr>`_, `pkirkham <https://github.com/pkirkham>`_, `jakobreichert <https://github.com/jakobreichert>`_, `andr1976 <https://github.com/andr1976>`_, `mgreminger <https://github.com/mgreminger>`_, `samuha76 <https://github.com/samuha76>`_, `Tobias-Reiter <https://github.com/Tobias-Reiter>`_, `sebastianlivoni <https://github.com/sebastianlivoni>`_, `henningjp <https://github.com/henningjp>`_, `dusanjaglicic <https://github.com/dusanjaglicic>`_
+`ibell <https://github.com/ibell>`_, `VikramGovindarajan <https://github.com/VikramGovindarajan>`_, `fwitte <https://github.com/fwitte>`_, `jowr <https://github.com/jowr>`_, `pkirkham <https://github.com/pkirkham>`_, `jakobreichert <https://github.com/jakobreichert>`_, `andr1976 <https://github.com/andr1976>`_, `mgreminger <https://github.com/mgreminger>`_, `samuha76 <https://github.com/samuha76>`_, `Tobias-Reiter <https://github.com/Tobias-Reiter>`_, `sebastianlivoni <https://github.com/sebastianlivoni>`_, `henningjp <https://github.com/henningjp>`_, `dusanjaglicic <https://github.com/dusanjaglicic>`_, `lucas-santos-f <https://github.com/lucas-santos-f>`_, `charif-hamza <https://github.com/charif-hamza>`_, `luisbedoia <https://github.com/luisbedoia>`_, `ibarapascal <https://github.com/ibarapascal>`_, `kaern <https://github.com/kaern>`_, `ting2025 <https://github.com/ting2025>`_
 
 Issues closed:
 
+* `#1331 <https://github.com/CoolProp/CoolProp/issues/1331>`__ : Add transport properties for LiBr
 * `#2144 <https://github.com/CoolProp/CoolProp/issues/2144>`__ : Provide cmake config files to be used by users via find_package(CoolProp)
 * `#2263 <https://github.com/CoolProp/CoolProp/issues/2263>`__ : new departure functions for H2 + (CH4, N2, CO, CO2)
+* `#2266 <https://github.com/CoolProp/CoolProp/issues/2266>`__ : Error when evaluating saturated states with tabular interpolation (TTSE and BICUBIC)
 * `#2384 <https://github.com/CoolProp/CoolProp/issues/2384>`__ : Adding incompressible fluids during runtime (Python)
+* `#2405 <https://github.com/CoolProp/CoolProp/issues/2405>`__ : How is defined reference enthalpy for a new added fluid in `PureFluid.py`?
+* `#2567 <https://github.com/CoolProp/CoolProp/issues/2567>`__ : Potentially wrong values for T_freeze of MITSW and LiBr
 * `#3024 <https://github.com/CoolProp/CoolProp/issues/3024>`__ : Expose array endpoints for per-component mixture properties (fugacity, fugacity_coefficient, chemical_potential)
+* `#3115 <https://github.com/CoolProp/CoolProp/issues/3115>`__ : [SUGGESTION] Cape-Open interface for CoolProp
 * `#3230 <https://github.com/CoolProp/CoolProp/issues/3230>`__ : GUI: About-dialog and Sponsor links don't open the browser
 * `#3236 <https://github.com/CoolProp/CoolProp/issues/3236>`__ : [ISSUE] The tabular back-end documentation does not mention how to build mixtures
 * `#3237 <https://github.com/CoolProp/CoolProp/issues/3237>`__ : [ISSUE] Calling `.update()` on a mixture with tabular back-end without prior `set_mole_fractions` crashes python
 * `#3241 <https://github.com/CoolProp/CoolProp/issues/3241>`__ : [ISSUE] REFPROP alias resolution fails if a CoolProp fluid.json is available and within there the refprop name is "N/A"
 * `#3243 <https://github.com/CoolProp/CoolProp/issues/3243>`__ : Mixture (HEOS): build_phase_envelope() poisons state cache → specify_phase(iphase_gas)+update(PT_INPUTS) returns liquid root for vapor states
 * `#3247 <https://github.com/CoolProp/CoolProp/issues/3247>`__ : [REQUEST] Incorporate new equation of state for HFO‒1132a
+* `#3256 <https://github.com/CoolProp/CoolProp/issues/3256>`__ : [ISSUE] REFPROP ".mix" files are not detected when folder is called "MIXTURES"
 * `#3258 <https://github.com/CoolProp/CoolProp/issues/3258>`__ : [ISSUE] low level routine that worked in v7 fails in v8
 * `#3260 <https://github.com/CoolProp/CoolProp/issues/3260>`__ : [Request] Analytical derivatives of vapor quality Q/Qmass in the two-phase region
 * `#3271 <https://github.com/CoolProp/CoolProp/issues/3271>`__ : Mixture PT flash misses near-pure phase split in wide-boiling mixtures (CO2/water) just inside the two-phase boundary
 * `#3283 <https://github.com/CoolProp/CoolProp/issues/3283>`__ : HEOS PT flash returns spurious middle-branch root for subcooled-liquid mixture (Methane/Ethane/Propane, knife-edge in T)
 * `#3287 <https://github.com/CoolProp/CoolProp/issues/3287>`__ : [ISSUE] Cubic (PR/SRK) backend: entropy **value** is inconsistent with its own analytical `d(S)/d(T)|P` (Smolar/Smass too steep in T)
+* `#3302 <https://github.com/CoolProp/CoolProp/issues/3302>`__ : 24 incompressible fluids ship an all-zero composition-conversion fit
 * `#3303 <https://github.com/CoolProp/CoolProp/issues/3303>`__ : IceEA/IceNA/IcePG conductivity and viscosity cannot be regenerated — the source CSVs are latin-1 and their loads are commented out
+* `#3304 <https://github.com/CoolProp/CoolProp/issues/3304>`__ : dev_checks.yml: most jobs inherit default GITHUB_TOKEN permissions instead of least privilege
 * `#3305 <https://github.com/CoolProp/CoolProp/issues/3305>`__ : [ISSUE] Python source build fails with ModuleNotFoundError when the checkout was previously built with a different Python version
 * `#3315 <https://github.com/CoolProp/CoolProp/issues/3315>`__ : [ISSUE] Nightly Builds Failing on C# wrapper since July 6, 2026
 * `#3330 <https://github.com/CoolProp/CoolProp/issues/3330>`__ : R1233zd(E) lost its viscosity model in v8.0.0 - TRANSPORT block dropped by #2768
+* `#3345 <https://github.com/CoolProp/CoolProp/issues/3345>`__ : C++ Plot::Isoline::calc_range has the same cold-flash defect the Python plotting just had (#3344)
 * `#3356 <https://github.com/CoolProp/CoolProp/issues/3356>`__ : dln_fugacity_dxj__constT_p_xi applies the XN_DEPENDENT ideal-gas term to the last component under XN_INDEPENDENT
 * `#3372 <https://github.com/CoolProp/CoolProp/issues/3372>`__ : [ISSUE] Mixture PQ flash: interior-Q states are solved with a bubble/dew-point solver that has no mass-balance equation
+* `#3374 <https://github.com/CoolProp/CoolProp/issues/3374>`__ : [ISSUE]
 * `#3384 <https://github.com/CoolProp/CoolProp/issues/3384>`__ : INCOMP::PCL (Paracryol) viscosity is a factor of 100 too high
 * `#3439 <https://github.com/CoolProp/CoolProp/issues/3439>`__ : [ISSUE] Dev Docs failing silently and not deploying
+* `#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__ : [ISSUE] Cubic EOS (SRK/PR): P+{H,S,U,D} flashes throw "type not set" — cubic superancillary not wired into pure-fluid phase determination
+* `#3446 <https://github.com/CoolProp/CoolProp/issues/3446>`__ : Thermal conductivity failure under the saturation dome
+* `#3468 <https://github.com/CoolProp/CoolProp/issues/3468>`__ : DmassQ_INPUTS update leaves a phase imposed: later PT_INPUTS updates on the same AbstractState fail or return wrong states
+* `#3472 <https://github.com/CoolProp/CoolProp/issues/3472>`__ : [DOCS] Python wx GUI (CoolProp/GUI) imports Ph and Ts that were removed in 2015
+* `#3474 <https://github.com/CoolProp/CoolProp/issues/3474>`__ : [DOCS] Nothing in the docs links to phase_envelope.ipynb.
+* `#3479 <https://github.com/CoolProp/CoolProp/issues/3479>`__ : PropertyPlot.calc_isolines(CoolProp.iQ, ...) warns to use calc_sat_range, which it already does
+* `#3483 <https://github.com/CoolProp/CoolProp/issues/3483>`__ : PropertyPlot warns "incomplete phase envelope" on every plot, but stays silent when interior quality lines are actually dropped
+* `#3488 <https://github.com/CoolProp/CoolProp/issues/3488>`__ : Docs CI replaces conda's NumPy with the newest PyPI NumPy, so SciPy warns on import
+* `#3490 <https://github.com/CoolProp/CoolProp/issues/3490>`__ : [ISSUE] IF97 molar H,S inputs overwrite the mass conversion
+* `#3497 <https://github.com/CoolProp/CoolProp/issues/3497>`__ : Drop Python versions that are EOL
+* `#3528 <https://github.com/CoolProp/CoolProp/issues/3528>`__ : [ISSUE] `p_critical()` fails for R454B.mix: spurious unstable critical point not filtered
+* `#3557 <https://github.com/CoolProp/CoolProp/issues/3557>`__ : rhocrit differs by 4.3% between native 'Helium' and 'REFPROP::Helium' backends
+* `#3560 <https://github.com/CoolProp/CoolProp/issues/3560>`__ : [ISSUE] "TypicalNaturalGas.mix" Properties
+* `#3568 <https://github.com/CoolProp/CoolProp/issues/3568>`__ : Feature: derivatives of transport properties, for dynamic simulations
 
 Pull requests merged:
 
@@ -398,6 +423,7 @@ Pull requests merged:
 * `#3252 <https://github.com/CoolProp/CoolProp/pull/3252>`__ : fix(python): regenerate nanobind stub for vector fugacity endpoints [skip ci]
 * `#3254 <https://github.com/CoolProp/CoolProp/pull/3254>`__ : ci(deps)(deps): Bump tauri-apps/tauri-action from 0 to 1
 * `#3255 <https://github.com/CoolProp/CoolProp/pull/3255>`__ : fix(mixtures): third-order ideal-gas Helmholtz derivs for mixtures; unbreak docs CI
+* `#3257 <https://github.com/CoolProp/CoolProp/pull/3257>`__ : Detect both mixtures or MIXTURES folder analogously to fluids and FLUIDS in REFPROP
 * `#3261 <https://github.com/CoolProp/CoolProp/pull/3261>`__ : Add methods for setting Tcrit and pcrit constants in cubic backend.
 * `#3262 <https://github.com/CoolProp/CoolProp/pull/3262>`__ : fix(HEOS): fugacity_coefficient at Q=0/Q=1 returns sat-state value (GH #3258)
 * `#3263 <https://github.com/CoolProp/CoolProp/pull/3263>`__ : feat(derivs): analytical two-phase derivatives of vapor quality Q/Qmass (#3260)
@@ -484,13 +510,16 @@ Pull requests merged:
 * `#3389 <https://github.com/CoolProp/CoolProp/pull/3389>`__ : Retire dead Debian packaging, HTTPS for CoolProp links, refresh developer and supporter lists
 * `#3390 <https://github.com/CoolProp/CoolProp/pull/3390>`__ : Regenerate the incompressible json corpus, and make the rounding contract mechanical
 * `#3393 <https://github.com/CoolProp/CoolProp/pull/3393>`__ : build(packaging): FHS install, offline release tarball and OBS recipes (GH #3388 steps 1, 3, 4)
+* `#3395 <https://github.com/CoolProp/CoolProp/pull/3395>`__ : Retire Beads; move issue tracking to Linear
 * `#3396 <https://github.com/CoolProp/CoolProp/pull/3396>`__ : License compliance: ship THIRD_PARTY_NOTICES.md in the wheel; GUI notices fail closed (COO-31)
 * `#3397 <https://github.com/CoolProp/CoolProp/pull/3397>`__ : perf(ci): make preflight 2-3x faster (sharded tests, parallel clang-tidy)
 * `#3399 <https://github.com/CoolProp/CoolProp/pull/3399>`__ : feat(fluids): thermal conductivity for 12 fluids (Assael/Huber/Perkins correlations) and nitrogen viscosity
+* `#3400 <https://github.com/CoolProp/CoolProp/pull/3400>`__ : feat(spline): tensor-product B-spline evaluator with partials to 2nd order
 * `#3401 <https://github.com/CoolProp/CoolProp/pull/3401>`__ : test(expression): drop toolchain-dependent bit-exact CHECKs from golden transport tests
 * `#3402 <https://github.com/CoolProp/CoolProp/pull/3402>`__ : feat(fluids): ethylene, propylene and cyclohexane thermal conductivity
 * `#3403 <https://github.com/CoolProp/CoolProp/pull/3403>`__ : feat(fluids): R245fa, Novec649, R1233zd(E) thermal conductivity (Perkins et al.)
 * `#3404 <https://github.com/CoolProp/CoolProp/pull/3404>`__ : feat(fluids): ammonia, n-undecane and THF thermal conductivity
+* `#3405 <https://github.com/CoolProp/CoolProp/pull/3405>`__ : fix(ci): close preflight's fail-open gates and scope lint to changed lines
 * `#3406 <https://github.com/CoolProp/CoolProp/pull/3406>`__ : feat(fluids): xenon and nitrogen thermal conductivity, nitrogen viscosity
 * `#3408 <https://github.com/CoolProp/CoolProp/pull/3408>`__ : fix(transport): throw on empty TRANSPORT.viscosity list instead of UB
 * `#3409 <https://github.com/CoolProp/CoolProp/pull/3409>`__ : Plots: let calc_sat_range's near-critical rescue take effect
@@ -508,16 +537,104 @@ Pull requests merged:
 * `#3422 <https://github.com/CoolProp/CoolProp/pull/3422>`__ : Initialize Configuration and DataStructures lookup tables under call_once
 * `#3423 <https://github.com/CoolProp/CoolProp/pull/3423>`__ : Make TabularDataLibrary and per-dataset table builds thread-safe
 * `#3424 <https://github.com/CoolProp/CoolProp/pull/3424>`__ : Serialize all REFPROP access behind one process-wide lock
+* `#3426 <https://github.com/CoolProp/CoolProp/pull/3426>`__ : feat(bollengier): Gibbs-explicit liquid-water backend (PT inputs only)
 * `#3427 <https://github.com/CoolProp/CoolProp/pull/3427>`__ : perf(flash): skip the TPD Newton minimizer when successive substitution already decided a trial is stable
 * `#3428 <https://github.com/CoolProp/CoolProp/pull/3428>`__ : chore(fluids): remove ECS viscosity entries that cannot be independently checked
+* `#3430 <https://github.com/CoolProp/CoolProp/pull/3430>`__ : Changelog for 8.1.0; open the 8.1.0dev cycle
 * `#3431 <https://github.com/CoolProp/CoolProp/pull/3431>`__ : docs: document the transport-property expression language
+* `#3432 <https://github.com/CoolProp/CoolProp/pull/3432>`__ : expression: parse number literals independently of the C locale
 * `#3433 <https://github.com/CoolProp/CoolProp/pull/3433>`__ : fix(fluids): cite the published EOS for ammonia, helium, n-octane, D4 and dichloroethane
 * `#3434 <https://github.com/CoolProp/CoolProp/pull/3434>`__ : ci: check that the C-ABI headers compile as C99 (COO-106)
 * `#3435 <https://github.com/CoolProp/CoolProp/pull/3435>`__ : ci(deps)(deps): Bump dawidd6/action-download-artifact from 24 to 25
 * `#3436 <https://github.com/CoolProp/CoolProp/pull/3436>`__ : fix(superanc): restamp source_eos_hash after the citation-only EOS edit in #3433
+* `#3437 <https://github.com/CoolProp/CoolProp/pull/3437>`__ : Changelog 8.1.0: add the missing entries and correct the Java entry (into #3430)
 * `#3440 <https://github.com/CoolProp/CoolProp/pull/3440>`__ : Fix stale GERG Tmin comments and drop an unused Java 11 CMake flag
 * `#3442 <https://github.com/CoolProp/CoolProp/pull/3442>`__ : ci(docs): trigger devdocs with a GitHub App token and fail on HTTP errors
 * `#3443 <https://github.com/CoolProp/CoolProp/pull/3443>`__ : Add CoolProp Configuration get/set functions to the Mathcad wrapper
+* `#3444 <https://github.com/CoolProp/CoolProp/pull/3444>`__ : fix(ci): make clang-tidy actually check project headers
+* `#3447 <https://github.com/CoolProp/CoolProp/pull/3447>`__ : Throw for viscosity/conductivity of two-phase states (#3446)
+* `#3450 <https://github.com/CoolProp/CoolProp/pull/3450>`__ : fix(packaging): bump OBS recipes to 8.1.0 to match the opened dev cycle
+* `#3451 <https://github.com/CoolProp/CoolProp/pull/3451>`__ : perf(flash): restore mixture PT-flash speed after #3272 — near-pure trials in the stability test, flash-first SS (COO-120)
+* `#3452 <https://github.com/CoolProp/CoolProp/pull/3452>`__ : docs(changelog): add the mixture-flash and HAPropsSI PRs that shipped in 8.0.0
+* `#3454 <https://github.com/CoolProp/CoolProp/pull/3454>`__ : ci(deps-dev): Bump brace-expansion from 1.1.16 to 1.1.21 in /wrappers/GUI
+* `#3455 <https://github.com/CoolProp/CoolProp/pull/3455>`__ : Parse numbers independently of the C locale outside the expression DSL
+* `#3457 <https://github.com/CoolProp/CoolProp/pull/3457>`__ : feat(numerics): certified real-root isolation for Chebyshev series via Bernstein subdivision (COO-68)
+* `#3459 <https://github.com/CoolProp/CoolProp/pull/3459>`__ : PC-SAFT: read kij/kijT as doubles, not through atof
+* `#3460 <https://github.com/CoolProp/CoolProp/pull/3460>`__ : Chebyshev tables of the pressure equation for multi-fluid models (COO-69, stacked on #3457)
+* `#3461 <https://github.com/CoolProp/CoolProp/pull/3461>`__ : Non-analytic critical-region terms in the Chebyshev tables (COO-70, stacked on #3460)
+* `#3462 <https://github.com/CoolProp/CoolProp/pull/3462>`__ : Chebyshev density solver in the mixture PT flash, behind CHEBYSHEV_DENSITY_SOLVER (COO-71, stacked on #3461)
+* `#3463 <https://github.com/CoolProp/CoolProp/pull/3463>`__ : ci(deps)(deps): Bump dawidd6/action-download-artifact from 25 to 27
+* `#3465 <https://github.com/CoolProp/CoolProp/pull/3465>`__ : docs: clean up conf.py for linkcheck noise (Part 1)
+* `#3466 <https://github.com/CoolProp/CoolProp/pull/3466>`__ : docs: reduce linkcheck false positives and list only broken links (Part 2)
+* `#3469 <https://github.com/CoolProp/CoolProp/pull/3469>`__ : ci(deps): Bump source-map-js from 1.2.1 to 1.2.2 in /wrappers/GUI
+* `#3470 <https://github.com/CoolProp/CoolProp/pull/3470>`__ : docs: fix dead bibliography links (Part 3)
+* `#3471 <https://github.com/CoolProp/CoolProp/pull/3471>`__ : docs: fix unreadable downloads and images in the docs build (Part 4)
+* `#3475 <https://github.com/CoolProp/CoolProp/pull/3475>`__ : docs: cache the Incompressibles consistency figure and PDF (Part 5)
+* `#3476 <https://github.com/CoolProp/CoolProp/pull/3476>`__ : docs: remove warning noise from the docs build so real issues stand out (Part 6)
+* `#3477 <https://github.com/CoolProp/CoolProp/pull/3477>`__ : docs: remove config and tag-file warning noise from the docs build (Part 7)
+* `#3480 <https://github.com/CoolProp/CoolProp/pull/3480>`__ : fix(plots): stop calc_isolines from warning about calc_sat_range for iQ lines
+* `#3481 <https://github.com/CoolProp/CoolProp/pull/3481>`__ : ci(deps)(deps): Bump pypa/cibuildwheel from 4.2.1 to 4.3.0 in the actions group
+* `#3482 <https://github.com/CoolProp/CoolProp/pull/3482>`__ : fix(docs): quiet intentional isoline-sweep warnings in first R290 ph example
+* `#3484 <https://github.com/CoolProp/CoolProp/pull/3484>`__ : fix(plots): warn when quality lines are not drawn, not when the envelope is closed
+* `#3485 <https://github.com/CoolProp/CoolProp/pull/3485>`__ : fix(plots): drop the "not tested" warning from draw_process and add a test
+* `#3487 <https://github.com/CoolProp/CoolProp/pull/3487>`__ : fix(pcsaft): replace fluids in place on OVERWRITE_FLUIDS collisions
+* `#3489 <https://github.com/CoolProp/CoolProp/pull/3489>`__ : ci(docs): stop pip from replacing the conda NumPy when installing the wheel
+* `#3491 <https://github.com/CoolProp/CoolProp/pull/3491>`__ : fix(IF97) Add HmassSmass switch check for HmolarSmolar input fallthrough
+* `#3492 <https://github.com/CoolProp/CoolProp/pull/3492>`__ : Add Thermoprops to projects list
+* `#3493 <https://github.com/CoolProp/CoolProp/pull/3493>`__ : fix(flash): DQ/HQ/QS flashes no longer leave the two-phase phase imposed
+* `#3494 <https://github.com/CoolProp/CoolProp/pull/3494>`__ : ci(dev_checks): least-privilege GITHUB_TOKEN for every job
+* `#3496 <https://github.com/CoolProp/CoolProp/pull/3496>`__ : chore(python): remove the dead wxPython CoolProp.GUI package
+* `#3509 <https://github.com/CoolProp/CoolProp/pull/3509>`__ : fix(transport): reject a non-positive rhosr-CS x_crossover
+* `#3510 <https://github.com/CoolProp/CoolProp/pull/3510>`__ : Moved phase_envelop notebook out of toctree
+* `#3511 <https://github.com/CoolProp/CoolProp/pull/3511>`__ : ci(deps)(deps): Bump the actions group with 2 updates
+* `#3512 <https://github.com/CoolProp/CoolProp/pull/3512>`__ : CoolProp::Plot: port CoolPlot's isoline numerics, Python CoolProp.CoolProp.Plot
+* `#3513 <https://github.com/CoolProp/CoolProp/pull/3513>`__ : ci(deps-dev): Bump vite from 8.0.16 to 8.3.5 in /wrappers/GUI
+* `#3514 <https://github.com/CoolProp/CoolProp/pull/3514>`__ : Add entry for TESPy
+* `#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__ : Cubic: generate the SRK/PR Omega constants from their closed forms
+* `#3516 <https://github.com/CoolProp/CoolProp/pull/3516>`__ : docs: add SECURITY.md with a private vulnerability-reporting contact
+* `#3518 <https://github.com/CoolProp/CoolProp/pull/3518>`__ : fix(testpypi_delete): tick Warehouse's delete-release acknowledgments
+* `#3519 <https://github.com/CoolProp/CoolProp/pull/3519>`__ : Plot: interpolate envelope crossings with a cubic, not linearly
+* `#3520 <https://github.com/CoolProp/CoolProp/pull/3520>`__ : fix(IF97): reverse-input phase labels, state reset on throw, HmassSmass in the dome, fast_evaluate edge cases
+* `#3521 <https://github.com/CoolProp/CoolProp/pull/3521>`__ : Cubic: pure SRK/PR flashes through the superancillary (P- and T-input, Q,T/P,Q, T,P roots)
+* `#3522 <https://github.com/CoolProp/CoolProp/pull/3522>`__ : docs: ignore the last UserWarning in the docs build so real problems stand out (Part 8)
+* `#3523 <https://github.com/CoolProp/CoolProp/pull/3523>`__ : Clean up URL redirect messages in Doc Builds output log
+* `#3524 <https://github.com/CoolProp/CoolProp/pull/3524>`__ : ci(deps)(deps): Bump pypa/cibuildwheel from 4.3.1 to 4.3.4 in the actions group
+* `#3525 <https://github.com/CoolProp/CoolProp/pull/3525>`__ : fix(docs) Add brief Modelica page and ref-link in wrappers table
+* `#3526 <https://github.com/CoolProp/CoolProp/pull/3526>`__ : ci(docs): print a link check summary and group output.txt by type
+* `#3527 <https://github.com/CoolProp/CoolProp/pull/3527>`__ : fix(docs) Cleanup REFPROP comparison plots for fluid limits and missing models
+* `#3529 <https://github.com/CoolProp/CoolProp/pull/3529>`__ : ci(release): keep the linkcheck artifact off SourceForge
+* `#3532 <https://github.com/CoolProp/CoolProp/pull/3532>`__ : fix(mixtures): critical-point getters skip unstable points (#3528)
+* `#3533 <https://github.com/CoolProp/CoolProp/pull/3533>`__ : (docs) Update Julia wrapper documentation
+* `#3534 <https://github.com/CoolProp/CoolProp/pull/3534>`__ : Speed enhancements incompressibles
+* `#3536 <https://github.com/CoolProp/CoolProp/pull/3536>`__ : perf(flash): solve warm density roots on the delta-only residual (COO-126)
+* `#3537 <https://github.com/CoolProp/CoolProp/pull/3537>`__ : perf(mixtures): compute the reducing-function composition derivatives once per state (COO-124)
+* `#3538 <https://github.com/CoolProp/CoolProp/pull/3538>`__ : perf(mixtures): one-pass reducing-function composition derivatives, Hessians included (COO-124)
+* `#3540 <https://github.com/CoolProp/CoolProp/pull/3540>`__ : Document the enthalpy/entropy reference state of incompressibles
+* `#3541 <https://github.com/CoolProp/CoolProp/pull/3541>`__ : Mark unfitted incompressible composition conversions as not defined
+* `#3542 <https://github.com/CoolProp/CoolProp/pull/3542>`__ : Add LiBr viscosity and thermal conductivity
+* `#3543 <https://github.com/CoolProp/CoolProp/pull/3543>`__ : Document which inputs work for pseudo-pure fluids in the two-phase region
+* `#3544 <https://github.com/CoolProp/CoolProp/pull/3544>`__ : Fix ancillary typos for R1234yf, n-octane and propylene glycol
+* `#3545 <https://github.com/CoolProp/CoolProp/pull/3545>`__ : fix(fluids): correct Z-isomer SMILES for R1336mzz and R1234ze
+* `#3546 <https://github.com/CoolProp/CoolProp/pull/3546>`__ : fix(fluids): correct InChIKey/InChI errors and fill missing SMILES
+* `#3547 <https://github.com/CoolProp/CoolProp/pull/3547>`__ : C API: check buffer and array lengths before every copy
+* `#3548 <https://github.com/CoolProp/CoolProp/pull/3548>`__ : Tabular backends: keep table indices inside the grid
+* `#3549 <https://github.com/CoolProp/CoolProp/pull/3549>`__ : Factory: bound fluid-string inputs before allocating
+* `#3550 <https://github.com/CoolProp/CoolProp/pull/3550>`__ : ci(deps)(deps): Bump the actions group across 1 directory with 2 updates
+* `#3552 <https://github.com/CoolProp/CoolProp/pull/3552>`__ : fix(docs) Update SMath Wrapper Docs [ci skip]
+* `#3558 <https://github.com/CoolProp/CoolProp/pull/3558>`__ : fix(fluids): correct wrong or missing ChemSpider IDs (COO-171)
+* `#3559 <https://github.com/CoolProp/CoolProp/pull/3559>`__ : fix(ci): unbreak Linux CI on ubuntu-26.04 (DeltaOnly bit-exact checks, miniz ftello)
+* `#3561 <https://github.com/CoolProp/CoolProp/pull/3561>`__ : ci(deps)(deps): Bump dawidd6/action-download-artifact from 27 to 28
+* `#3562 <https://github.com/CoolProp/CoolProp/pull/3562>`__ : Remove the 2DPNG_URL fluid parameter
+* `#3563 <https://github.com/CoolProp/CoolProp/pull/3563>`__ : perf(mixtures): build Lstar/Mstar from whole arrays, not O(N^7) scalar chains (#3560)
+* `#3564 <https://github.com/CoolProp/CoolProp/pull/3564>`__ : fix(ci): make cppcheck parse CoolProp-Tests.cpp (COO-137)
+* `#3565 <https://github.com/CoolProp/CoolProp/pull/3565>`__ : ci: run all PR workflows regardless of base branch
+* `#3566 <https://github.com/CoolProp/CoolProp/pull/3566>`__ : ci: publish to (Test)PyPI only from master pushes and v\* tags
+* `#3569 <https://github.com/CoolProp/CoolProp/pull/3569>`__ : Fix three reads of uninitialised data that feed property results
+* `#3571 <https://github.com/CoolProp/CoolProp/pull/3571>`__ : fix(flash): stability trials on the feed's density branch miss splits (COO-193, COO-195)
+* `#3572 <https://github.com/CoolProp/CoolProp/pull/3572>`__ : Octave wrapper: register with ~/.octaverc on install, and doc refresh (COO-165)
+* `#3573 <https://github.com/CoolProp/CoolProp/pull/3573>`__ : Octave install: run ~/.octaverc append in a checked subprocess (COO-196)
+* `#3574 <https://github.com/CoolProp/CoolProp/pull/3574>`__ : docs(mixtures): Mermaid flowcharts of the mixture PT flash
+* `#3578 <https://github.com/CoolProp/CoolProp/pull/3578>`__ : feat(mixtures): Chebyshev all-roots density solver on by default
 
 
 8.0.0
