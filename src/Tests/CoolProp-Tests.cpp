@@ -9003,6 +9003,20 @@ TEST_CASE("INCOMP liquid limit at the boiling point is consistent", "[INCOMP]") 
         CHECK(T_hi - 1000.0 * p < m);
         CHECK_NOTHROW(f.checkTPX(T_hi, p, 0.0));
     }
+    SECTION("TmaxAt at zero pressure, with a psat fit that crosses zero") {
+        // psat = 0.001 (T - 310) Pa: boils at 310 K at p = 0
+        const std::string crossing = R"([{"name": "CatchRuntimeZeroPsatFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+            "saturation_pressure": {"type": "polynomial", "coeffs": [[-0.31], [0.001]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", crossing));
+        CoolProp::IncompressibleFluid& z = CoolProp::get_incompressible_fluid("CatchRuntimeZeroPsatFluid");
+        double T_hi = NAN;
+        CHECK_NOTHROW(T_hi = z.TmaxAt(0.0, 0.0));
+        CHECK(T_hi == Catch::Approx(310.0).margin(1e-5));
+    }
     SECTION("A boiling point less than one margin above TminPsat") {
         const double p = 0.001 * (300.0 + 0.3 * m);
         CHECK_NOTHROW(f.checkTPX(f.TmaxAt(p, 0.0), p, 0.0));

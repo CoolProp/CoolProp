@@ -899,7 +899,8 @@ double IncompressibleFluid::TmaxAt(double p, double x) {
     // checkP() compares p with psat only above TminPsat, so without a
     // saturation curve inside the range every temperature up to Tmax is valid
     if (p_sat.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET || !(TminPsat < Tmax)) return Tmax;
-    if (psat(Tmax, x) <= p) return Tmax;  // still liquid at Tmax
+    const double p_sat_Tmax = psat(Tmax, x);
+    if (p_sat_Tmax <= p) return Tmax;  // still liquid at Tmax
     // psat() is defined only above TminPsat. If the liquid already boils just
     // above it, the valid temperatures end at TminPsat.
     const double T_lo = std::nextafter(TminPsat, Tmax);
@@ -910,17 +911,17 @@ double IncompressibleFluid::TmaxAt(double p, double x) {
     {
        public:
         IncompressibleFluid* fluid;
-        double p, x;
-        Residual(IncompressibleFluid* fluid, double p, double x) : fluid(fluid), p(p), x(x) {}
+        double p, x, scale;
+        Residual(IncompressibleFluid* fluid, double p, double x, double scale) : fluid(fluid), p(p), x(x), scale(scale) {}
         // In units of one ulp of p: Brent returns an end of its interval as
         // soon as |f| there is below its tolerance, which would otherwise
         // stop it on a small pressure difference rather than a temperature
         // accurate to the margin. Scaled like this, that only happens when
         // psat equals p to rounding, and the iteration ends on temperature.
         double call(double T) override {
-            return (fluid->psat(T, x) - p) / (DBL_EPSILON * std::max(p, DBL_MIN));
+            return (fluid->psat(T, x) - p) / scale;
         }
-    } res(this, p, x);
+    } res(this, p, x, DBL_EPSILON * std::max(p, DBL_EPSILON * p_sat_Tmax));  // p_sat_Tmax > p, floor for p at or near 0
     // Brent stops once half the bracket is below tol, so T_sat is good to
     // 2 tol = 0.2 margin either way. Adding half the margin puts the result
     // 0.3 to 0.7 margin above the exact saturation temperature: a state
