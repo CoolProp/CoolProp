@@ -254,6 +254,8 @@ New features:
 
 Performance:
 
+* **The mixture PT flash uses the Chebyshev all-roots density solver by default** (``CHEBYSHEV_DENSITY_SOLVER``, now ``true``): 10-25x faster for gas mixtures, built once per component set on first use; set it to ``false`` for the previous solvers (:ref:`chebyshev-density-solver`).
+
 * **The p,T flash stops recomputing derivatives it already has**, and the
   supercritical-liquid branch, which solved without derivatives at all, now tries a
   derivative method before its bracketed fallback.  ``Householder4`` was doing six
