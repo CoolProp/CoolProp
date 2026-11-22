@@ -164,8 +164,8 @@ jobs:
         pip -vv wheel --no-deps .
         # The install below takes every *.whl, so fail unless exactly one was built
         test "$(ls *.whl | wc -l)" = 1
-        pip install -vvv --no-deps --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
-        # sphinx-design, plotly and joblib are in conda_environment.yml, but that
+        pip install -vvv --no-deps --force-reinstall --ignore-installed --upgrade --no-index ./*.whl
+        # sphinx-design, sphinxcontrib-mermaid, plotly and joblib are in conda_environment.yml, but that
         # env is baked into the prebuilt docs container; the image isn't rebuilt
         # for PRs, so install them at runtime here (same escape hatch as the
         # packages above) to unblock the build until the next docs image rebuild
@@ -173,7 +173,7 @@ jobs:
         # notebooks (SVDSBTLValidation, SVDSBTLHeatExchangerDemo); without them
         # nbconvert --allow-errors silently renders those pages as import-error
         # tracebacks.
-        pip install pydata-sphinx-theme tqdm ninja sphinx-design plotly joblib
+        pip install pydata-sphinx-theme tqdm ninja sphinx-design sphinxcontrib-mermaid plotly joblib
         
     - name: Test the installed CoolProp version
       shell: bash

@@ -70,25 +70,9 @@ class BicubicBackend : public TabularBackend
         imposed_phase_index = iphase_not_imposed;
         // If a pure fluid or a predefined mixture, don't need to set fractions, go ahead and build
         if (!this->AS->get_mole_fractions().empty()) {
-            check_tables();
-            SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
-            SinglePhaseGriddedTableData& single_phase_logpT = dataset->single_phase_logpT;
-            dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
-            dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
+            check_tables();  // loads or builds the tables and their coefficients
             is_mixture = (this->AS->get_mole_fractions().size() > 1);
         }
-    };
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) override {
-        this->AS->set_mole_fractions(mole_fractions);
-        is_mixture = true;
-        // Check the tables and build if necessary
-        check_tables();
-        // For mixtures, the construction of the coefficients is delayed until this
-        // function so that the set_mole_fractions function can be called
-        SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
-        SinglePhaseGriddedTableData& single_phase_logpT = dataset->single_phase_logpT;
-        dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
-        dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
     };
     std::string backend_name() override {
         return get_backend_string(BICUBIC_BACKEND);

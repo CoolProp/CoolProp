@@ -43,6 +43,7 @@
 #include "ChebDensitySolver.h"
 #include <atomic>
 #include <cstdlib>
+#include <list>
 #include <map>
 #include <mutex>
 #include <random>
@@ -449,26 +450,27 @@ void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::si
         throw ValueError(format("mixing rule [%s] is not understood", model.c_str()));
     }
 }
-const HelmholtzEOSMixtureBackend::ReducingNDerivs& HelmholtzEOSMixtureBackend::get_reducing_nderivs(x_N_dependency_flag xN_flag) {
-    ReducingNDerivs& c = reducing_nderivs[xN_flag == XN_DEPENDENT ? 1 : 0];
+const ReducingFunction::CompositionDerivatives& HelmholtzEOSMixtureBackend::get_reducing_derivs(x_N_dependency_flag xN_flag, bool with_hessian) {
+    ReducingDerivsCache& c = reducing_derivs[xN_flag == XN_DEPENDENT ? 1 : 0];
     const std::vector<CoolPropDbl>& x = mole_fractions;
-    if (c.version == Reducing->get_version() && c.flag == static_cast<int>(xN_flag) && c.x == x) return c;
-    c.version = 0;  // the slot is invalid until the refill below completes, so a throw part-way cannot leave a valid-looking key
-    const std::size_t N = x.size();
-    // Each entry from the reducing function's own n*dY_r/dn_i, so results are bit-identical to the
-    // per-call evaluation.  (A one-pass form, dY_r/dx_i minus one shared sum, is another factor N
-    // cheaper but differs in the last bits -- amplified by the cancellation in that difference -- so it
-    // is left for a separate change that can be checked on its own.)
-    c.ndrhor.resize(N);
-    c.ndTr.resize(N);
-    for (std::size_t i = 0; i < N; ++i) {
-        c.ndrhor[i] = Reducing->ndrhorbardni__constnj(x, i, xN_flag);
-        c.ndTr[i] = Reducing->ndTrdni__constnj(x, i, xN_flag);
+    if (c.version == Reducing->get_version() && c.flag == static_cast<int>(xN_flag) && c.x == x) {
+        if (with_hessian && !c.has_hessian) {
+            // The first-derivative half is valid; add the Hessians.  Invalid while that runs, as below.
+            const std::uint64_t v = c.version;
+            c.version = 0;
+            Reducing->composition_derivatives(x, xN_flag, true, c.d);
+            c.has_hessian = true;
+            c.version = v;
+        }
+        return c.d;
     }
+    c.version = 0;  // the slot is invalid until the refill below completes, so a throw part-way cannot leave a valid-looking key
+    Reducing->composition_derivatives(x, xN_flag, with_hessian, c.d);
+    c.has_hessian = with_hessian;
     c.flag = static_cast<int>(xN_flag);
     c.x = x;
     c.version = Reducing->get_version();  // last: the key is valid only once every field is
-    return c;
+    return c.d;
 }
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
@@ -3071,7 +3073,17 @@ struct ChebDensityEntry
 };
 namespace {
 std::mutex cheb_cache_mtx;
-std::map<std::string, std::shared_ptr<const ChebDensityEntry>> cheb_cache;  // by model key, see cheb_model_key
+// Tables by model key (see cheb_model_key), least recently used evicted beyond cheb_cache_max_entries: every change of
+// the mixture parameters (set_binary_interaction_double, e.g. in a parameter fit) is a new key, so an unbounded cache
+// would grow by one set of tables per change.  An evicted entry stays alive in the backends that hold it.
+constexpr std::size_t cheb_cache_max_entries = 64;
+std::list<std::string> cheb_cache_lru;  // most recently used first
+struct ChebCacheSlot
+{
+    std::shared_ptr<const ChebDensityEntry> entry;  // null: the model is declined
+    std::list<std::string>::iterator lru;
+};
+std::map<std::string, ChebCacheSlot> cheb_cache;
 
 // Key of the model the tables are built from: backend, components, gas-constant configuration, and a fingerprint of
 // the mixture parameters -- the reducing temperature and density and alphar at fixed points, as exact hex floats, at
@@ -3122,12 +3134,20 @@ std::string cheb_model_key(HelmholtzEOSMixtureBackend& HEOS) {
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb(CoolPropDbl T, CoolPropDbl p) {
     if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
     try {
-        return solver_rho_Tp_cheb_impl(T, p);
+        return solver_rho_Tp_cheb_impl(T, p, 0);
     } catch (...) {
         return -1;  // never fail the flash from here: the existing solvers answer instead
     }
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p) {
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_branch(CoolPropDbl T, CoolPropDbl p, bool vapor_branch) {
+    if (!get_config_bool(CHEBYSHEV_DENSITY_SOLVER)) return -1;
+    try {
+        return solver_rho_Tp_cheb_impl(T, p, vapor_branch ? 1 : 2);
+    } catch (...) {
+        return -1;
+    }
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, CoolPropDbl p, int branch) {
     // the gas-constant configuration is part of the model the tables were built for
     const bool R_norm = get_config_bool(NORMALIZE_GAS_CONSTANTS);
     const double R_u = get_config_double(R_U_CODATA);
@@ -3148,7 +3168,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, C
                 std::scoped_lock lk(cheb_cache_mtx);
                 const auto it = cheb_cache.find(key);
                 if (it != cheb_cache.end()) {
-                    cheb_density = it->second;
+                    cheb_density = it->second.entry;
+                    cheb_cache_lru.splice(cheb_cache_lru.begin(), cheb_cache_lru, it->second.lru);
                 } else {
                     auto e = std::make_shared<ChebDensityEntry>();
                     double Tcmax = 0;
@@ -3185,7 +3206,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, C
                         e->tab.reset();  // cached as declined below, so later backends do not retry
                     }
                     if (e->tab) cheb_density = e;
-                    cheb_cache[key] = cheb_density;  // null too: the model is declined, do not try again
+                    // null too: the model is declined, do not try again
+                    cheb_cache_lru.push_front(key);
+                    cheb_cache[key] = ChebCacheSlot{cheb_density, cheb_cache_lru.begin()};
+                    while (cheb_cache.size() > cheb_cache_max_entries) {
+                        cheb_cache.erase(cheb_cache_lru.back());
+                        cheb_cache_lru.pop_back();
+                    }
                 }
             } catch (...) {
                 cheb_density.reset();  // e.g. a component without a multiparameter EOS: the existing solvers
@@ -3200,6 +3227,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb_impl(CoolPropDbl T, C
     thread_local std::vector<double> x;
     x.assign(mf.begin(), mf.end());
     if (!cheb_density->tab->assemble(T, x, S)) return -1;
+    if (branch != 0) {
+        const double r = cheb_density->tab->branch_root(S, p, branch == 1);
+        return (r == ChebDensity::Tables::NO_ROOT_ON_BRANCH) ? CHEB_NO_ROOT_ON_BRANCH : r;
+    }
     return cheb_density->tab->stable_root(S, p);
 }
 

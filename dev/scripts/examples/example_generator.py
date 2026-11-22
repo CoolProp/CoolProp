@@ -745,6 +745,45 @@ class Octave(BaseParser):
     def header(self):
         return '\n'.join(['CoolProp\n'])
 
+    def parse(self):
+        # high_level_interface and low_level_interface_with_mixtures each end
+        # with a REFPROP-dependent block that the shared spec only flags with
+        # a comment ("If you don't have REFPROP installed, disable the
+        # following ..."); nothing actually skips it on a REFPROP-less box,
+        # so Example.m would otherwise abort partway through for a reader
+        # who doesn't have REFPROP. Wrap just those two blocks in a
+        # try/catch, Octave-only: SWIG already turns a C++ exception into an
+        # Octave error() (NO_ERROR_CATCHING in CMakeLists.txt), which
+        # try/catch can catch, so this needs no change on the C++ side.
+        refprop_markers = (
+            "If you don't have REFPROP installed, disable the following lines",
+            "If you don't have REFPROP installed, disable the following block",
+        )
+
+        def render_section(section):
+            lines = []
+            guarded = None
+            for item in section:
+                if (isinstance(item, dict) and item.get('type') == 'comment'
+                        and item.get('comment') in refprop_markers):
+                    guarded = []
+                    continue
+                line = item if isinstance(item, str) else self.dict2string(item)
+                (guarded if guarded is not None else lines).append(line)
+            if guarded:
+                body = '\n'.join('  ' + l for l in guarded if l)
+                lines.append(
+                    'try\n' + body + '\n'
+                    "catch err\n  disp(['REFPROP example skipped: ', err.message])\n"
+                    'end_try_catch'
+                )
+            return lines
+
+        lines = (render_section(high_level_interface)
+                 + render_section(low_level_interface)
+                 + render_section(low_level_interface_with_mixtures))
+        return ''.join(self.header()) + '\n'.join([self.indentation + line for line in lines if line]) + ''.join(self.footer())
+
 
 class R(BaseParser):
 

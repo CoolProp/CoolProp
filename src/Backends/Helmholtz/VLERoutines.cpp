@@ -236,9 +236,13 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
         } else if (options.specified_variable == saturation_PHSU_pure_options::IMPOSED_SL) {
             CoolPropFluid& component = HEOS.get_components()[0];
             CoolProp::SaturationAncillaryFunction& anc = component.ancillaries.sL;
+            // GERG fluids carry no sL ancillary; its error band below would be meaningless
+            if (!anc.enabled()) {
+                throw ValueError("No sL ancillary is available for this fluid, so an imposed saturated-liquid entropy cannot be solved");
+            }
             CoolProp::SimpleState hs_anchor = HEOS.get_state("hs_anchor");
             // If near the critical point, use a near critical guess value for T
-            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(component.ancillaries.sL.get_max_abs_error())) {
+            if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(anc.get_max_abs_error())) {
                 T = std::max(0.99 * crit.T, crit.T - 0.1);
             } else {
                 CoolPropDbl Tmin = NAN, Tmax = NAN, Tmin_satV = NAN;
@@ -2302,6 +2306,110 @@ static bool trial_moles_finite(const std::vector<CoolPropDbl>& Y) {
     return ValidNumber(sumY) && sumY > 0;
 }
 
+// True if density root r lies on the same branch as root rho_ref: within the factor the flash-first successive
+// substitution and the phase-split solver use as their same-branch window (near the critical point the branches
+// merge and every root counts as the same branch).  A non-positive r (no root recorded) counts as the same branch.
+static bool on_same_branch(CoolPropDbl r, CoolPropDbl rho_ref) {
+    constexpr double same_branch_ratio = 1.5;
+    return !(r > 0) || (r < same_branch_ratio * rho_ref && r > rho_ref / same_branch_ratio);
+}
+
+// A Wilson trial phase evaluated on the density branch OPPOSITE to the feed's (COO-193).  The trials of
+// check_stability_michelsen take the lowest-Gibbs root of the trial composition, which is the true tpd; but a
+// trial that starts close to the feed then sits on the feed's own branch, where successive substitution
+// collapses to the trivial solution, while the incipient phase is on the other branch.  Seen for CO2/ethane and
+// R440A liquids, whose Wilson vapor trial (all K < 1, or nearly) starts on the liquid branch: at CO2/ethane
+// 20/80, 207.3 K, 0.395 MPa the vapor-branch tpd of the equilibrium vapor is -0.036 while the trial reports
+// "stable"; and for R507A vapor the mirror image.  Here the trial phase takes the root on the requested branch
+// at every step.  A root other than the lowest-Gibbs one can only RAISE tm, so a negative tm on that branch
+// still proves instability.
+//
+// The roots come from the Chebyshev all-roots solver only, never from a phase-imposed Newton solve: that can
+// return a mechanically stable root in an alpha^r well that passes the pressure and stability checks below (R454B
+// compressed liquid, 246 K, 20.4 MPa: tm = -1e12, then a published split into pure R32 and pure R1234yf).  When
+// the solver cannot answer (disabled, outside its tables) the trial gives no evidence.  Successive substitution
+// with one GDEM step, at most three tm evaluations: with no cap (and phase-imposed Newton roots as fallback), 231 of the
+// 250 detections over 203 mixtures came within three.
+// Returns true when tm < -tol; y_out is then the updated trial composition and rho_out the root of the last
+// evaluated composition (a seed, as in the trial search).  `trial` is left with the last evaluated state.
+static bool opposite_branch_trial(HelmholtzEOSMixtureBackend& trial, CoolPropDbl T, CoolPropDbl p, bool vapor_branch, CoolPropDbl rho_feed,
+                                  const std::vector<CoolPropDbl>& ln_f_z, std::vector<CoolPropDbl> Y, std::vector<CoolPropDbl>& y_out,
+                                  CoolPropDbl& rho_out) {
+    constexpr int max_evaluations = 3;
+    constexpr double tol = 1e-7;  // as the trial search's cntol
+    const std::size_t N = Y.size();
+    // the roots below come from the Chebyshev solver; the imposed phase only labels the state for the fugacity
+    // evaluation (which needs a phase set) and is restored on every exit
+    const ScopedImposedPhase imposed(trial, vapor_branch ? iphase_gas : iphase_liquid);
+    std::vector<CoolPropDbl> y_norm(N), err(N);
+    std::array<double, 2> esq_pair = {0, 0};
+    int n_eval = 0;
+    while (n_eval < max_evaluations) {
+        for (int kk = 0; kk < 2 && n_eval < max_evaluations; ++kk) {
+            if (!trial_moles_finite(Y)) return false;
+            CoolPropDbl sumY = 0;
+            for (std::size_t i = 0; i < N; ++i)
+                sumY += Y[i];
+            for (std::size_t i = 0; i < N; ++i)
+                y_norm[i] = Y[i] / sumY;
+            trial.set_mole_fractions(y_norm);
+            const CoolPropDbl r = trial.solver_rho_Tp_cheb_branch(T, p, vapor_branch);
+            // no certified root on that branch, or one not distinct from the feed's branch: no evidence
+            if (!(r > 0) || !ValidNumber(r) || on_same_branch(r, rho_feed)) return false;
+            try {
+                trial.update_DmolarT_direct(r, T);
+                if (!mechanically_stable(trial) || std::abs(trial.p() / p - 1.0) > 1e-6 || !finite_fugacity_coefficients(trial)) return false;
+            } catch (const CoolProp::CoolPropBaseError&) {
+                return false;
+            }
+            ++n_eval;
+            CoolPropDbl tm = 1.0;  // modified TPD, as in the trial search
+            double esq = 0;
+            for (std::size_t i = 0; i < N; ++i) {
+                const double ln_phi_y = std::log(trial.fugacity_coefficient(i));
+                const double ln_Y_new = ln_f_z[i] - ln_phi_y;
+                const double ln_Y_old = std::log(std::max(Y[i], 1e-300));
+                const double diff = ln_Y_new - ln_Y_old;
+                if (!ValidNumber(diff)) return false;
+                err[i] = diff;
+                esq += Y[i] * diff * diff;
+                tm += Y[i] * (ln_Y_old + ln_phi_y - ln_f_z[i] - 1.0);
+                Y[i] = std::exp(ln_Y_new);
+            }
+            if (!ValidNumber(tm)) return false;
+            // These trials run only where the Wilson trials saw no instability, so the instabilities they find are
+            // shallow: tm >= -0.22 for all 277 detections of this code over 203 mixtures (Chebyshev solver on).  A tm far below that comes from a root in
+            // an alpha^r artifact region, not from an incipient phase: with phase-imposed Newton roots (before they
+            // were dropped for certified ones) the detections below -1 -- tm -1.9 to -11 -- were all compressed
+            // liquids or gases far from the dome.  Kept as a guard should a certified branch root ever land in such a
+            // region (a high-density extremum pair inside the tables): no evidence.
+            constexpr double tm_artifact = -1.0;
+            if (tm < tm_artifact) return false;
+            if (tm < -tol) {
+                if (!trial_moles_finite(Y)) return false;
+                CoolPropDbl sY = 0;
+                for (std::size_t i = 0; i < N; ++i)
+                    sY += Y[i];
+                y_out.resize(N);
+                for (std::size_t i = 0; i < N; ++i)
+                    y_out[i] = Y[i] / sY;
+                rho_out = r;
+                return true;
+            }
+            esq_pair[kk] = esq;
+        }
+        // GDEM extrapolation, as in the trial search
+        if (n_eval < max_evaluations && esq_pair[0] > 0) {
+            double ratio = std::sqrt(esq_pair[1] / esq_pair[0]);
+            if (!ValidNumber(ratio) || ratio < 0 || ratio >= 0.95) ratio = 0.95;
+            const double factor = ratio / (1.0 - ratio);
+            for (std::size_t i = 0; i < N; ++i)
+                Y[i] = std::exp(std::log(std::max(Y[i], 1e-300)) + factor * err[i]);
+        }
+    }
+    return false;
+}
+
 void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     const std::size_t N = z.size();
     CoolPropDbl the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
@@ -2312,6 +2420,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
     _guard_replaced = false;
     _feed_guard_replaced = false;
     _flash_first = false;
+    _opposite_branch = false;
     // The recorded split densities and vapor fraction belong to the verdict of THIS call only: the flash
     // re-runs the test on the same tester (the trial-search retry after a flash-first split failed), and
     // exits that do not record them (the minimizer exit) must not hand back the previous call's values.
@@ -2322,6 +2431,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
 
     // Evaluate feed fugacities: d_i = ln(z_i) + ln(phi_i(z))
     HEOS.SatL->set_mole_fractions(z);
+    const CoolPropDbl rhomolar_reducing_feed = HEOS.SatL->rhomolar_reducing();  // SatL is reused for other compositions below
     CoolPropDbl rho_b;
     try {
         rho_b = SaturationSolvers::solve_rho_Tp_global_stable(*HEOS.SatL, the_T, the_p, &_feed_guard_replaced);
@@ -2473,6 +2583,12 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         }
     }
 
+    // Each Wilson trial's starting composition and the density root its successive substitution ended on, for the
+    // opposite-branch trials after the search (COO-193)
+    const bool opposite_branch_enabled = get_config_bool(CHEBYSHEV_DENSITY_SOLVER);  // the trials need its certified roots
+    std::array<std::vector<CoolPropDbl>, 2> wilson_start;
+    if (opposite_branch_enabled) wilson_start = {trials[0].Y, trials[1].Y};
+    std::array<CoolPropDbl, 2> wilson_ss_rho = {-1, -1};
     for (std::size_t t = 0; t < trials.size(); ++t) {
         auto& Y = trials[t].Y;
         _trial_guard_replaced = false;  // per trial: only the trial that finds an instability counts
@@ -2611,8 +2727,14 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                     curvature -= (Y[i] - zysq) * err[i];
                 }
                 if (distance_sq < 0) distance_sq = -distance_sq;
-                if (std::sqrt(distance_sq) < 0.1 && curvature > 0 && tm / curvature > 0.8) {
-                    ss_decided = ss_stable = true;
+                // The test measures closeness to z in composition only, so it identifies the trivial solution
+                // only for a trial on the FEED's density branch.  A trial on the other branch with a
+                // composition near z is a candidate incipient phase, not the feed -- for a near-azeotrope
+                // (R410A, R507A, R404A, R454B) the real incipient phase is exactly that, and trusting the test
+                // there skipped genuine splits (COO-193).  Such a trial continues (SS, then the minimizer).
+                if (on_same_branch(rho_warm, rho_b) && std::sqrt(distance_sq) < 0.1 && curvature > 0 && tm / curvature > 0.8) {
+                    ss_decided = true;
+                    ss_stable = diffs_finite && ValidNumber(tm);
                     break;
                 }
 
@@ -2635,6 +2757,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
                 }
             }
         }  // end SS+GDEM loops
+        if (t < 2) wilson_ss_rho[t] = rho_warm;
 
         // --- Phase 2: Second-order TPD minimization ---
         // If SS did not conclusively decide stability, use quasi-Newton
@@ -2647,9 +2770,10 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
         }
         // When SS did decide, the trial is stable and the minimizer is skipped.  Either SS reached
         // a stationary point with tm >= 0, which the minimizer would only re-confirm, or the
-        // proximity test found the trial converging to the trivial solution ([M&M2007] Ch. 12);
-        // that test is a heuristic, but a descent method started there typically converges to
-        // the same trivial minimum.  Previously the minimizer ran regardless: ~3 Newton
+        // proximity test found the trial, on the feed's density branch, converging to the trivial
+        // solution ([M&M2007] Ch. 12); that test is a heuristic, but a descent method started there
+        // typically converges to the same trivial minimum (see above for the branch condition, COO-193).
+        // Previously the minimizer ran regardless: ~3 Newton
         // iterations (each an N x N Hessian of composition derivatives) and ~5 trial-density
         // solves per trial, most of the cost of a PT flash.
         if (ss_stable) continue;
@@ -2684,6 +2808,44 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen() {
             }
         }
         // If minimize_tpd fails or finds tm >= 0, try the other trial direction
+    }
+    // Opposite-branch trials (COO-193; see opposite_branch_trial).  A Wilson trial whose successive substitution
+    // ran on the feed's own density branch probed only that branch.  If it is the trial that stands for the OTHER
+    // phase -- the vapor trial for a liquid-like feed, the liquid trial for a vapor-like one -- and the feed's own
+    // isotherm has a root on that other branch, re-run it there.  The feed check is one Chebyshev root search;
+    // without it the trial would run on every stable supercritical gas (C1/C2: 31 -> 53 us per flash), where the
+    // other branch does not exist.  It is a cost gate, not a proof: the incipient phase's composition can have a root
+    // on that branch when the feed's does not, and such a split is then missed.  Over 203 mixtures it never skipped a
+    // detection.  Off (no opposite-branch trials) without the Chebyshev solver.
+    if (opposite_branch_enabled) {
+        const bool feed_liquid_like = rho_b > rhomolar_reducing_feed;
+        const std::size_t t = feed_liquid_like ? 0 : 1;  // trials[0] is the vapor-like Wilson trial, trials[1] the liquid-like
+        if (on_same_branch(wilson_ss_rho[t], rho_b)) {
+            const bool vapor_branch = feed_liquid_like;
+            HEOS.SatV->set_mole_fractions(z);
+            const CoolPropDbl r_feed_other = HEOS.SatV->solver_rho_Tp_cheb_branch(the_T, the_p, vapor_branch);
+            if (r_feed_other != HelmholtzEOSMixtureBackend::CHEB_NO_ROOT_ON_BRANCH && !(r_feed_other > 0 && on_same_branch(r_feed_other, rho_b))) {
+                std::vector<CoolPropDbl> y_trial;
+                CoolPropDbl rho_trial = -1;
+                if (opposite_branch_trial(*HEOS.SatV, the_T, the_p, vapor_branch, rho_b, ln_f_z, wilson_start[t], y_trial, rho_trial)) {
+                    _stable = false;
+                    _opposite_branch = true;
+                    _guard_replaced = _feed_guard_replaced;
+                    if (vapor_branch) {
+                        this->y = y_trial;
+                        this->x = z;
+                        rhomolar_vap = rho_trial;
+                        rhomolar_liq = rho_b;
+                    } else {
+                        this->x = y_trial;
+                        this->y = z;
+                        rhomolar_liq = rho_trial;
+                        rhomolar_vap = rho_b;
+                    }
+                    return;
+                }
+            }
+        }
     }
     // Both trials indicate stability -- but flag a non-conclusive verdict so the caller
     // attempts a verified split instead of trusting a fail-open (CoolProp-zgpy).

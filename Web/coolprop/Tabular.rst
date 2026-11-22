@@ -239,7 +239,9 @@ Mixtures
 Tabular backends (``BICUBIC`` and ``TTSE``) work with multi-component mixtures.
 Table construction (built, or loaded from the cache) is triggered by calling
 ``set_mass_fractions`` or ``set_mole_fractions`` . Call one of the two before
-the first ``update``.
+the first ``update``.  The tables belong to that composition, so it is then
+fixed: setting the same fractions again is accepted, but any other composition
+raises an error.  Create a new ``AbstractState`` for each composition.
 
 Example for a 50 % / 50 % mass-fraction mixture of Isopentane and n-Butane.
 Mixture tables are much more expensive to construct than pure-fluid tables

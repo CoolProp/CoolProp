@@ -155,7 +155,13 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               # 'breathe'
               "nbsphinx",
               "sphinx_design",
+              "sphinxcontrib.mermaid",  # flowcharts, e.g. the mixture PT flash in fluid_properties/Mixtures.rst
               ]
+
+# sphinxcontrib-mermaid defaults to a fixed 500px box, which shrinks a tall
+# flowchart to illegibility; let each diagram take its natural height (the
+# extension's full-screen button still works).
+mermaid_height = "auto"
 
 # set path to issue tracker:
 issue_tracker_url = "gh:CoolProp/CoolProp"

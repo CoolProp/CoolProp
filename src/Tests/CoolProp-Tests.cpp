@@ -5,6 +5,7 @@
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
+#include "ScopedTablesDirectory.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "../Backends/Cubics/UNIFACLibrary.h"
 #include "../Backends/Incompressible/IncompressibleLibrary.h"
@@ -16,11 +17,13 @@
 #include "CoolProp/superancillary/superancillary.h"
 #include "CoolProp/detail/json.h"
 #include "TestUtils.h"
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <chrono>
 #include <filesystem>
 #include <map>
+#include <new>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -7908,6 +7911,63 @@ TEST_CASE("Cubic-library-only fluids report a real molar mass", "[cubic][uniniti
     CHECK(M == Catch::Approx(0.1304944).epsilon(1e-9));
 }
 
+TEST_CASE("Cubic-library-only fluids have real EOS limits", "[cubic][uninitialized]") {
+    // The same FluidLibrary branch never assigned EquationOfState::limits, so
+    // Tmin(), Tmax() and pmax() on HEOS::R1233ZD(E)-SRK read whatever the stack
+    // held, and every range check on the fluid compared against it.  The
+    // limits now follow CubicBackend: 0.3*Tc, 10*Tc and 100*pc.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-BEY35K4J.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1233ZD(E)-SRK"));
+    const double Tc = AS->T_critical(), pc = AS->p_critical();
+    CAPTURE(Tc, pc, AS->Tmin(), AS->Tmax(), AS->pmax());
+    CHECK(AS->Tmin() == Catch::Approx(0.3 * Tc).epsilon(1e-12));
+    CHECK(AS->Tmax() == Catch::Approx(10.0 * Tc).epsilon(1e-12));
+    CHECK(AS->pmax() == Catch::Approx(100.0 * pc).epsilon(1e-12));
+    // A supercritical state inside those limits works.  (Subcritical flashes
+    // still fail with "type not set": this fluid carries no saturation
+    // ancillaries.  That is a clean error, not a wrong number.)
+    REQUIRE_NOTHROW(AS->update(CoolProp::PT_INPUTS, 1e5, 600.0));
+    CHECK(AS->rhomolar() == Catch::Approx(1e5 / (8.314462618 * 600.0)).epsilon(0.02));
+}
+
+TEST_CASE("An unset saturation ancillary reports no error band", "[ancillary][uninitialized]") {
+    // get_max_abs_error() read the union member of a default-constructed
+    // ancillary, which nothing had written.  GERG fluids carry no sL
+    // ancillary, and saturation_PHSU_pure compared |s - s_crit| against that
+    // value to pick its starting temperature for a Q,S flash.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-LPPFYEJC.
+    // Construct over 0xFF-filled storage so a member the constructor skips
+    // shows up as garbage rather than as whatever zeros the stack held
+    alignas(CoolProp::SaturationAncillaryFunction) unsigned char storage[sizeof(CoolProp::SaturationAncillaryFunction)];
+    std::fill(std::begin(storage), std::end(storage), static_cast<unsigned char>(0xFF));
+    // Default-initialisation (no parentheses): value-initialisation would zero the
+    // object first, since the constructor is defaulted, and hide a missing initialiser
+    auto* anc = new (storage) CoolProp::SaturationAncillaryFunction;
+    CHECK_FALSE(anc->enabled());
+    CHECK(anc->get_max_abs_error() == 0.0);
+    anc->~SaturationAncillaryFunction();
+
+    // A Q=0,S flash on a GERG fluid says it has no sL ancillary rather than
+    // starting from a guess built on that value
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
+    ref->update(CoolProp::QT_INPUTS, 0, 150.0);
+    const double s = ref->smolar();
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("GERG2008", std::vector<std::string>{"Methane"}));
+    CHECK_THROWS_WITH(AS->update(CoolProp::QSmolar_INPUTS, 0, s), Catch::Matchers::ContainsSubstring("sL ancillary"));
+}
+
+TEST_CASE("PC-SAFT rejects charged species without water", "[pcsaft][uninitialized]") {
+    // The ionic term divides by the solvent dielectric constant, and only
+    // water sets one (dielc_water).  With ions but no water, dielc was never
+    // written, so every property came from whatever the member held.
+    // Discovered by Anthropic's OSS Scanner, as vulnerability ANT-2026-X3963FK5.
+    // Na+ and the other shipped ions are only parameterised for aqueous solutions
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "Na+&METHANE"), Catch::Matchers::ContainsSubstring("water"));
+    CHECK_THROWS_WITH(CoolProp::AbstractState::factory("PCSAFT", "Na+"), Catch::Matchers::ContainsSubstring("water"));
+    // With water the ionic term has its solvent and the mixture builds
+    CHECK_NOTHROW(std::unique_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "Na+&Cl-&WATER")));
+}
+
 TEST_CASE("User-fluid schema validation rejects malformed PCSAFT/cubic payloads", "[json_validation]") {
     // --- Cubic (SRK) ---
     // 1. Structurally invalid JSON must throw unconditionally.
@@ -10134,6 +10194,50 @@ TEST_CASE("Saturation flashes do not leave a phase imposed", "[3468]") {
     CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101000, 373.15));
 }
 
+// With the two-phase phase imposed, DmolarT_INPUTS computed the mixture density from
+// SatL/SatV without updating them: a fresh AbstractState threw "rhomolar is less than
+// zero", a reused one silently used the saturation states of an earlier update.
+// TabularBackend::calc_first_two_phase_deriv_splined (rho_smoothing) relies on this path.
+// The saturation states come from the superancillary if there is one, otherwise from the
+// saturation solve; both are covered.
+TEST_CASE("Imposed two-phase DmolarT update uses the saturation states at T", "[flash]") {
+    struct SuperancFlag
+    {
+        bool saved;
+        explicit SuperancFlag(bool on) : saved(CoolProp::get_config_bool(ENABLE_SUPERANCILLARIES)) {
+            CoolProp::set_config_bool(ENABLE_SUPERANCILLARIES, on);
+        }
+        ~SuperancFlag() {
+            CoolProp::set_config_bool(ENABLE_SUPERANCILLARIES, saved);
+        }
+    };
+    const bool superanc = GENERATE(true, false);
+    CAPTURE(superanc);
+    SuperancFlag flag(superanc);
+
+    const double T = 450.0, Q = 0.1;
+    std::shared_ptr<CoolProp::AbstractState> ref(CoolProp::AbstractState::factory("HEOS", "Water"));
+    ref->update(CoolProp::QT_INPUTS, Q, T);
+    const double rho = ref->rhomolar(), p = ref->p(), h = ref->hmolar();
+
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    SECTION("fresh state") {}
+    SECTION("state reused after a saturation update at another temperature") {
+        AS->update(CoolProp::QT_INPUTS, 0.5, 400.0);
+    }
+    AS->specify_phase(CoolProp::iphase_twophase);
+    CHECK_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    CHECK(AS->Q() == Catch::Approx(Q).epsilon(1e-9));
+    CHECK(AS->p() == Catch::Approx(p).epsilon(1e-9));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-12));
+    CHECK(AS->saturated_liquid_keyed_output(CoolProp::iT) == Catch::Approx(T).epsilon(1e-12));
+    CHECK_NOTHROW(AS->update(CoolProp::HmolarT_INPUTS, h, T));
+    CHECK(AS->Q() == Catch::Approx(Q).epsilon(1e-9));
+    CHECK(AS->p() == Catch::Approx(p).epsilon(1e-9));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-9));
+    AS->unspecify_phase();
+}
+
 TEST_CASE("Saturation flashes keep a phase the caller imposed", "[3468]") {
     // The fix must not clear a phase the user set themselves (#1027 semantics)
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
@@ -10644,6 +10748,156 @@ TEST_CASE("BICUBIC PT below saturation no longer segfaults (#1950)", "[BICUBIC][
     auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen"));
     HEOS->update(CoolProp::PT_INPUTS, 2.0e5, 78.0);
     CHECK(rho == Catch::Approx(HEOS->rhomass()).epsilon(1e-2));  // 1% bicubic tolerance
+}
+
+TEST_CASE("BICUBIC PS input at the hot end of a column does not index past the last cell", "[BICUBIC][tabular]") {
+    // find_nearest_neighbor's closest-node fallback can return the last node Nx-1,
+    // which the bicubic override used as a cell index into the (Nx-1)-row coeffs.
+    // R32 at 1 atm with a low entropy lands there on the default grid.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("BICUBIC&HEOS", "R32"));
+    try {
+        AS->update(CoolProp::PSmolar_INPUTS, 101325, 200);
+        CHECK(ValidNumber(AS->T()));
+    } catch (CoolProp::CoolPropBaseError&) {
+        SUCCEED("clean error instead of an out-of-bounds read");
+    }
+}
+
+TEST_CASE("TTSE PT input with an imposed phase at the hot edge of the table", "[TTSE][tabular]") {
+    // TTSE's nearest-node lookup can return the last node; the imposed-phase walk
+    // then read node i+1 and indexed the (Nx-1) x (Ny-1) coeffs_pT out of bounds.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("TTSE&HEOS", "Water"));
+    for (auto phase : {CoolProp::iphase_gas, CoolProp::iphase_liquid}) {
+        CAPTURE(phase);
+        AS->specify_phase(phase);
+        for (double T : {2991.5, 2995.0, 2997.9}) {
+            CAPTURE(T);
+            try {
+                AS->update(CoolProp::PT_INPUTS, 101325, T);
+                CHECK(ValidNumber(AS->rhomolar()));
+            } catch (CoolProp::CoolPropBaseError&) {
+                SUCCEED("clean error instead of an out-of-bounds read");
+            }
+        }
+    }
+    AS->unspecify_phase();
+}
+
+TEST_CASE("Tabular state does not keep the previous table after a failed update", "[BICUBIC][TTSE][tabular]") {
+    // After a successful single-phase update, a (T, rho) or (p, s) update on a mixture whose
+    // T or p lies outside the phase envelope throws from the phase test, before a cell has
+    // been located.  update() had flushed the cell indices but kept the previous update's
+    // selected_table, so the next property read indexed the table with SIZE_MAX (heap
+    // out-of-bounds read, a segfault in a release build).  It must be a clean error, as on
+    // a state that was never updated.
+    // Small grid in a private table directory: a mixture build at the default resolution
+    // takes minutes, and the on-disk directory name does not encode the grid.
+    const std::string dir =
+      (std::filesystem::temp_directory_path() / ("CoolProp-stale-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())))
+        .string()
+      + "/";
+    struct TableDirGuard
+    {
+        std::string prev, dir;
+        TableDirGuard(std::string p, std::string d) : prev(std::move(p)), dir(std::move(d)) {}
+        TableDirGuard(const TableDirGuard&) = delete;
+        TableDirGuard& operator=(const TableDirGuard&) = delete;
+        TableDirGuard(TableDirGuard&&) = delete;
+        TableDirGuard& operator=(TableDirGuard&&) = delete;
+        ~TableDirGuard() {
+            CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, prev);
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    } guard(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY), dir);
+    CoolProp::set_config_string(ALTERNATIVE_TABLES_DIRECTORY, dir);
+
+    // A predefined mixture, so that both backends treat the state as a mixture
+    const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+    CAPTURE(backend);
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend + R"(?{"grid":{"Nx":6,"Ny":6}})", "R410A.mix"));
+
+    // Single-phase gas, selects the p-T table
+    const double rho = 10, T = 300;
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-6));
+    // 50 K is below the phase envelope: the phase test throws before a cell is located
+    REQUIRE_THROWS_AS(AS->update(CoolProp::DmolarT_INPUTS, rho, 50), CoolProp::ValueError);
+    CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    CHECK_THROWS_WITH(AS->hmolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    CHECK_THROWS_WITH(AS->cpmolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    CHECK_THROWS_WITH(AS->viscosity(), Catch::Matchers::ContainsSubstring("table not selected"));
+
+    // Same through the (p, s) branch, and the state recovers with the next good update
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    const double s = AS->smolar();
+    REQUIRE_THROWS_AS(AS->update(CoolProp::PSmolar_INPUTS, 10, s), CoolProp::ValueError);
+    CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("table not selected"));
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rho, T));
+    CHECK(AS->rhomolar() == Catch::Approx(rho).epsilon(1e-6));
+}
+
+TEST_CASE("ScopedTablesDirectory reserves and then removes its own directory", "[Tabular]") {
+    const std::string before = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+    std::string a, b;
+    {
+        const CoolProp::testing::ScopedTablesDirectory first("helper-test");
+        a = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+        CHECK(a != before);
+        CHECK(std::filesystem::is_directory(a));  // created up front, not on first build
+        {
+            const CoolProp::testing::ScopedTablesDirectory second("helper-test");
+            b = CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY);
+            CHECK(b != a);
+            CHECK(std::filesystem::is_directory(b));
+        }
+        CHECK(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY) == a);
+        CHECK_FALSE(std::filesystem::exists(b));
+        CHECK(std::filesystem::is_directory(a));
+    }
+    CHECK(CoolProp::get_config_string(ALTERNATIVE_TABLES_DIRECTORY) == before);
+    CHECK_FALSE(std::filesystem::exists(a));
+}
+
+TEST_CASE("Tabular backends refuse outputs before a successful update", "[BICUBIC][TTSE][Tabular]") {
+    // Small grids: keep them out of the shared table directory
+    const CoolProp::testing::ScopedTablesDirectory tables_dir("no-update");
+    // The saturation-path accessors read the tables at the cached saturation indices,
+    // which only a normally returning update() sets.  Before that they used to read
+    // out of bounds; a mixture created without fractions does not even have tables
+    // (dataset is null until set_mole_fractions() / the first update() loads them)
+    // and dereferenced that null pointer.  Both must be a clean ValueError.
+    const std::string backend = GENERATE(as<std::string>{}, "BICUBIC&HEOS", "TTSE&HEOS");
+    CAPTURE(backend);
+    SECTION("a mixture created without fractions has no tables yet") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, "Methane&Ethane"));
+        CHECK_THROWS_AS(AS->T(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->rhomolar(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->hmolar(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->saturated_liquid_keyed_output(CoolProp::iHmolar), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->first_two_phase_deriv(CoolProp::iDmolar, CoolProp::iHmolar, CoolProp::iP), CoolProp::ValueError);
+        // A rejected composition leaves it that way, and update() then refuses as before
+        CHECK_THROWS(AS->set_mole_fractions({1.0}));
+        CHECK_THROWS_AS(AS->update(CoolProp::PT_INPUTS, 101325, 300), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->T(), CoolProp::ValueError);
+    }
+    SECTION("a pure fluid with tables but no update has no valid saturation state") {
+        // Small grid: the tables are built on first use
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend + R"(?{"grid":{"Nx":5,"Ny":5}})", "Water"));
+        CHECK_THROWS_WITH(AS->T(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS_AS(AS->rhomolar(), CoolProp::ValueError);
+        CHECK_THROWS_AS(AS->speed_sound(), CoolProp::ValueError);
+        // A saturation update that fails after taking Q from its inputs (p above the
+        // table's saturation range) must not leave that Q behind with unset indices
+        CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 3e7, 0.5));
+        CHECK_THROWS_WITH(AS->rhomolar(), Catch::Matchers::ContainsSubstring("no valid state"));
+        CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 0.5, 700));
+        CHECK_THROWS_WITH(AS->hmolar(), Catch::Matchers::ContainsSubstring("no valid state"));
+        // A successful saturation update still gives values
+        AS->update(CoolProp::PQ_INPUTS, 101325, 0.5);
+        CHECK(AS->T() == Catch::Approx(373.12).epsilon(1e-2));
+        CHECK(ValidNumber(AS->rhomolar()));
+    }
 }
 
 TEST_CASE("REFPROP update_DmolarT_direct matches update(DmolarT)", "[REFPROPsat]") {

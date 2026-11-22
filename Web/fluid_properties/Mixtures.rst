@@ -197,21 +197,259 @@ The following sections describe the Michelsen algorithm as implemented.
 
 .. _flash-logic-diagram:
 
-Logic diagram
-^^^^^^^^^^^^^
+Logic diagrams
+^^^^^^^^^^^^^^
 
-.. figure:: pt-flash-flowchart.png
-   :width: 100%
-   :align: center
-   :alt: Flowchart of the blind PT flash algorithm showing initialisation,
-         Stage 1 (stability analysis) and Stage 2 (phase-split calculation).
+The PT flash for mixtures is a set of nested solvers with several fallback
+paths.  The five diagrams below show how they connect, from the entry point
+down to the individual solvers.  Rounded boxes are entry and exit points,
+diamonds are decisions, and double-bordered boxes refer to another diagram.
+The names are those of the C++ code, and each links to its API documentation:
+:cpapi:`FlashRoutines::PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>` for the flash
+itself, :cpapi:`StabilityEvaluationClass <CoolProp::StabilityRoutines::StabilityEvaluationClass>` for the stability test, and
+:cpapi:`PTflash_twophase <CoolProp::SaturationSolvers::PTflash_twophase>` for the phase-split solver.  An
+*In the code* line under each diagram lists the functions it covers.  Where the diagrams and the code disagree, the code is
+right and the diagram should be updated.
 
-   Overview of the blind PT flash algorithm.  Initialisation checks for
-   pre-computed phase boundaries or caller-imposed phases before entering
-   the Michelsen two-stage procedure.  Stage 1 evaluates the tangent plane
-   distance (TPD) to detect instability; Stage 2 solves the phase split
-   via successive substitution, GDEM acceleration and, if needed, a
-   second-order Gibbs energy minimisation.
+**1. Entry and dispatch.**  The phase envelope is used only if the caller has
+built it (:cpapi:`build_phase_envelope <CoolProp::AbstractState::build_phase_envelope>`) and has not imposed a single phase.  If
+anything on the envelope path throws, the flash continues with the blind
+flash.
+
+.. mermaid::
+
+   flowchart TD
+       A(["PT_flash(T, p, z)"]) --> B{"Pure or<br/>pseudo-pure?"}
+       B -- yes --> B1["Pure-fluid PT path<br/>(not covered here)"]
+       B -- no --> C{"Single phase imposed<br/>by the caller?"}
+       C -- no --> D{"Phase envelope<br/>built and closed?"}
+       C -- yes --> I
+       D -- no --> I{"Phase imposed?"}
+       D -- yes --> E{"(T, p) inside<br/>the envelope?"}
+       E -- no --> F["Gas if T is above the closest envelope point,<br/>else liquid; solve the density on that branch,<br/>the other branch if it throws"]
+       E -- yes --> G[["Two-phase solver (diagram 4),<br/>seeded from the closest envelope point"]]
+       G --> H["β collapse"]
+       F --> Z(["Done"])
+       H --> Z
+       E -. "throws" .-> I
+       F -. "throws" .-> I
+       G -. "throws" .-> I
+       I -- "no" --> J[["Blind flash<br/>(diagram 2)"]]
+       I -- "yes" --> K["Density solve on the imposed branch;<br/>phase = imposed phase"]
+       J --> Z
+       K --> Z
+
+*In the code:* :cpapi:`PT_flash <CoolProp::FlashRoutines::PT_flash>`, :cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`, :cpapi:`build_phase_envelope <CoolProp::AbstractState::build_phase_envelope>`, :cpapi:`PhaseEnvelopeRoutines::is_inside <CoolProp::PhaseEnvelopeRoutines::is_inside>`, :cpapi:`specify_phase <CoolProp::AbstractState::specify_phase>`, :cpapi:`solver_rho_Tp <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp>`.
+
+The *β collapse* step, used on every two-phase path: a split with
+:math:`\beta < 10^{-10}` is published as a single phase at the liquid density,
+one with :math:`\beta > 1 - 10^{-10}` as a single phase at the vapour density,
+and anything in between as a two-phase state with :math:`Q = \beta`.  A
+collapsed state is labelled gas or liquid by comparing its density with the
+reducing density, not by which phase it came from.
+
+**2. Blind flash.**  This is the main path when no phase envelope is available.
+The stability test (diagram 3) gives a verdict.  A "stable" verdict is
+cross-checked against a Wilson K-factor estimate, because the test can
+converge to the trivial solution near a phase boundary.  Every split that does
+not come from a proven instability must pass ``verify_split`` (a lambda inside
+:cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`) before it is
+published.  This requires a composition spread of at least
+:math:`\max(10^{-6}, \mathrm{tol})`, a material balance to :math:`10^{-6}`, both phase
+pressures within 0.1 % of :math:`p`, and equal fugacities to ``tol``.
+
+.. mermaid::
+
+   flowchart TD
+       A(["Blind flash"]) --> S[["Stability test<br/>(diagram 3)"]]
+       S --> U{"Unstable?"}
+       S -- "throws" --> X
+
+       U -- "stable" --> W{"Wilson K-factors give a split?<br/>(bracketing not required<br/>when the verdict was uncertain)"}
+       W -- "no, or it throws" --> SP
+       W -- yes --> WS["Seed: Wilson K + 10 SS steps;<br/>β from the widest-spread component<br/>if in (0, 1), else 0.5"]
+       WS --> WN[["Two-phase solver<br/>(diagram 4)"]]
+       WN --> WV{"Converged and<br/>verify_split(1e-7)?"}
+       WV -- yes --> BC
+       WV -- no --> WR{"Wilson seed passes<br/>verify_split(1e-4)?"}
+       WR -- yes --> BC
+       WR -- no --> SP
+
+       U -- "unstable" --> FF{"Found by<br/>flash-first?"}
+       FF -- yes --> FS["Seed from the flash-first split<br/>(x, y, β and both densities)"]
+       FF -- no --> TS["Seed from the trial phase and the feed;<br/>their densities are warm starts<br/>when the SS stage recorded them"]
+       FS --> N[["Two-phase solver<br/>(diagram 4)"]]
+       TS --> N
+       N -- converged --> BC
+       N -- throws --> R1{"Flash-first verdict?"}
+       R1 -- yes --> R2["Rerun the stability test<br/>with flash-first switched off"]
+       R2 --> R3{"Still unstable?"}
+       R3 -- yes --> R4[["Two-phase solver (diagram 4)<br/>from the trial phase, β = 0.5"]]
+       R4 -- converged --> BC
+       R4 -- throws --> G
+       R3 -- "no: keep the<br/>flash-first split" --> G
+       R1 -- no --> G{"Solver reported non-convergence,<br/>or the verdict is beyond baseline?"}
+       G -- no --> X(["Throw"])
+       G -- yes --> RC["Recovery: refine the stability split by<br/>successive substitution (80 steps, tol 1e-11),<br/>neither phase's branch imposed"]
+       RC --> RV{"0 < β < 1 and<br/>verify_split(1e-4)?"}
+       RV -- yes --> BC
+       RV -- "no, or it throws" --> SP
+
+       BC["β collapse"] --> Z(["Done"])
+       SP[["Single-phase root<br/>(diagram 5)"]] --> Z
+
+*In the code:* :cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`, :cpapi:`StabilityEvaluationClass::is_stable <CoolProp::StabilityRoutines::StabilityEvaluationClass::is_stable>`, :cpapi:`guess_split_from_wilson <CoolProp::SaturationSolvers::guess_split_from_wilson>`, :cpapi:`PTflash_twophase::solve <CoolProp::SaturationSolvers::PTflash_twophase::solve>`, :cpapi:`successive_substitution_guessrho <CoolProp::SaturationSolvers::successive_substitution_guessrho>`, :cpapi:`solve_rho_Tp_global_stable <CoolProp::SaturationSolvers::solve_rho_Tp_global_stable>`.
+
+*Beyond baseline* means the instability was found by a near-pure trial phase,
+or depended on a density root that the stable-root guard replaced (GitHub
+#3448), or came from a flash-first split that the plain trial search cannot
+reproduce.  Before these mechanisms existed the flash returned a single-phase
+answer at such states.  So if the split solver cannot converge there, the flash
+falls back to single phase instead of throwing.
+
+**3. Stability test** (:cpapi:`StabilityEvaluationClass::check_stability_michelsen <CoolProp::StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen>`).
+It decides whether the feed is stable, and if it is not, gives the split or
+trial phase that showed it.  Stage 1 below describes the equations.
+Diagrams 3 and 4 describe the default ``MIXTURE_STABILITY_ALGORITHM = 1``; with
+``0`` the legacy routines run instead (see :ref:`legacy-algorithm`).
+
+.. mermaid::
+
+   flowchart TD
+       A(["is_stable()"]) --> B["Feed density: the stable root<br/>(guarded global solve)<br/>h_i = ln z_i + ln φ_i(z)"]
+       B --> C["Wilson K-factors;<br/>Rachford-Rice residuals g(0), g(1)"]
+       C --> D{"Flash-first enabled and<br/>g(0) > 0 > g(1)?"}
+       D -- yes --> E["Up to 3 SS steps of the two-phase<br/>flash: Rachford-Rice, phase densities,<br/>K = φ_L / φ_V"]
+       E --> F{"ΔG/nRT < 0, or<br/>tpd of either phase < 0?"}
+       F -- yes --> UF(["Unstable, flash-first:<br/>split, β and densities recorded"])
+       F -- no --> T
+       D -- no --> T["Trial phases: vapour-like z·K and liquid-like z/K,<br/>plus one near-pure trial if K_max / K_min > 1000"]
+       T --> L["Next trial: SS + GDEM on ln Y<br/>(4 loops × 2 steps; a near-pure<br/>trial gets a single step)"]
+       L --> M{"tm < 0?"}
+       M -- yes --> UT(["Unstable: trial phase and<br/>feed recorded as x, y"])
+       M -- no --> N{"SS decided stable?<br/>(stationary point, or<br/>converging to the feed)"}
+       N -- yes --> NX
+       N -- no --> AB{"Trial mole numbers<br/>went non-finite?"}
+       AB -- yes --> QU
+       AB -- no --> NP{"Near-pure trial?"}
+       NP -- "yes: skip it" --> NX
+       NP -- no --> Q["Second-order TPD minimisation,<br/>α = 2√Y, trust region"]
+       Q --> QR{"Result"}
+       QR -- "tm < 0" --> UT
+       QR -- "tm ≥ 0" --> NX
+       QR -- "failed" --> QU
+       QU["Mark the verdict uncertain"] --> NX
+       NX{"More trials?"} -- yes --> L
+       NX -- no --> ST(["Stable<br/>(uncertain if any trial failed)"])
+
+*In the code:* :cpapi:`check_stability_michelsen <CoolProp::StabilityRoutines::StabilityEvaluationClass::check_stability_michelsen>`, :cpapi:`minimize_tpd <CoolProp::StabilityRoutines::StabilityEvaluationClass::minimize_tpd>`, :cpapi:`solve_rho_Tp_global_stable <CoolProp::SaturationSolvers::solve_rho_Tp_global_stable>`.
+
+**4. Two-phase solver** (:cpapi:`PTflash_twophase::solve_michelsen <CoolProp::SaturationSolvers::PTflash_twophase::solve_michelsen>`).  It refines a
+seed (x, y, densities, and optionally β) to phase equilibrium.  It throws a
+``SolutionError`` on failure.  For a non-converged or trivial split it also sets
+``nonconvergence``, but not when a phase density solve is lost.  Diagram 2 uses
+that flag to decide between recovery and rethrowing.  In Phase 1 both phase
+densities are solved warm-started from the previous root and guarded to stay on
+the same branch, with the lowest-Gibbs phase-specified root as a fallback; if
+both fail, the density solve is *lost*.  The Phase 2 trial steps use cold
+guarded solves instead, and a failed solve there only rejects the step.
+
+.. mermaid::
+
+   flowchart TD
+       A(["solve()"]) --> B{"Seed finite?"}
+       B -- no --> XN(["Throw, nonconvergence"])
+       B -- yes --> P1["Phase 1: SS + GDEM on ln K<br/>(4 loops × 2 steps, stops at 1e-7)"]
+       P1 -- "density solve lost" --> XD(["Throw"])
+       P1 -- "non-finite K" --> XN
+       P1 --> P2["Phase 2: second-order Gibbs minimisation<br/>in v_i = β y_i (always runs; trust region,<br/>2 passes × 50 iterations)"]
+       P2 --> Q{"max|ln f_V − ln f_L|<br/>< 1e-9?"}
+       Q -- yes --> O
+       Q -- no --> FB["Minority-phase fallback: Newton on the<br/>incipient phase's mole numbers, Armijo search,<br/>reseeded from Wilson if the trial is trivial"]
+       FB --> FG{"Residual ≤ 1e-5, spread ≥ 1e-4,<br/>interior β, Gibbs below the feed,<br/>liquid denser than vapour?"}
+       FG -- yes --> O
+       FG -- "no: restore the<br/>state before the fallback" --> O
+       O["Relabel so the liquid is the denser phase;<br/>recompute the residual on the final split"]
+       O --> G{"Spread > 1e-7, and<br/>converged or residual ≤ 1e-5<br/>with spread ≥ 1e-4?"}
+       G -- yes --> OK(["Return x, y, β, ρ_L, ρ_V"])
+       G -- no --> XN
+
+*In the code:* :cpapi:`PTflash_twophase::solve_michelsen <CoolProp::SaturationSolvers::PTflash_twophase::solve_michelsen>`, :cpapi:`PTflash_twophase_options <CoolProp::SaturationSolvers::PTflash_twophase_options>`.
+
+**5. Single-phase root** (``solve_single_phase``, a lambda inside
+:cpapi:`PT_flash_mixtures <CoolProp::FlashRoutines::PT_flash_mixtures>`).  It
+picks the density root for a state that has been judged single phase.
+
+.. mermaid::
+
+   flowchart TD
+       A(["Single-phase root"]) --> C{"Chebyshev all-roots solver<br/>(CHEBYSHEV_DENSITY_SOLVER)<br/>returns a root?"}
+       C -- yes --> Z
+       C -- "no, or disabled" --> S["SRK cubic: gas and liquid roots"]
+       S --> D{"Two distinct<br/>valid SRK roots?"}
+       D -- yes --> B["Solve the EOS on both branches"]
+       B --> BG{"Both converged?"}
+       BG -- yes --> BL["Take the root with the lower Gibbs energy"]
+       BG -- "one" --> BO["Take that one"]
+       BG -- none --> X(["Throw"])
+       D -- no --> P["Primary branch: liquid if the SRK root is denser<br/>than the SRK critical density 3Ω_b / b, else gas"]
+       P --> PS{"EOS solve on the<br/>primary branch"}
+       PS -- ok --> Z
+       PS -- throws --> PF{"EOS solve on<br/>the other branch"}
+       PF -- ok --> Z
+       PF -- throws --> X
+       BL --> Z
+       BO --> Z
+       Z(["Phase: gas if ρ is below the reducing density, else liquid"])
+
+*In the code:* :cpapi:`solver_rho_Tp_cheb <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp_cheb>`, :cpapi:`solver_rho_Tp_SRK <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK>`, :cpapi:`SRK_covolume <CoolProp::HelmholtzEOSMixtureBackend::SRK_covolume>`, :cpapi:`solver_rho_Tp <CoolProp::HelmholtzEOSMixtureBackend::solver_rho_Tp>`.
+
+.. _chebyshev-density-solver:
+
+**Chebyshev all-roots density solver.**  Since CoolProp 8.1 the PT flash of
+HEOS and GERG mixtures finds density roots with a Chebyshev all-roots solver:
+for the single-phase root, and for the trial and feed phases of the stability
+analysis and the starting guesses of the phase split.  It is controlled by the
+configuration variable ``CHEBYSHEV_DENSITY_SOLVER`` (default ``true``).  It isolates every density root of the isotherm with certified error
+bounds and takes the stable one by spinodal branch.  Wherever it cannot answer
+(an unsupported model, a state outside its tables, a root it cannot certify),
+the solvers in the chart above answer instead.  For gas mixtures this makes the
+PT flash 10 to 25 times faster: a methane/ethane flash takes 31 µs instead of
+716 µs, and one of the 10-component Amarillo natural gas 0.28 ms instead of
+2.8 ms.
+
+Its tables are built once per set of components, the first time that mixture is
+flashed, and are then shared by every state of that mixture in the process.
+Building them takes a few milliseconds for two components and tens of
+milliseconds for ten.  Mixtures containing water take longer, about 0.3 s.
+Changing the mixture parameters (for instance with
+``set_binary_interaction_double``) makes it a new mixture with new tables.  The
+process keeps the tables of the 64 most recently used mixtures.  A parameter
+fit therefore pays the table build on every evaluation of its objective, and
+may run faster with the solver switched off.
+
+The densities it returns agree with the previous solvers to about 1e-7.  The
+exceptions are states where the previous solvers returned the wrong root, such
+as a liquid-like root for a CO\ :sub:`2`/water gas.
+
+To get the solvers of CoolProp 8.0 and earlier, for instance to reproduce
+earlier results exactly, set it to false.  The setting is read on every flash,
+so it takes effect immediately.  From Python:
+
+.. code-block:: python
+
+    import CoolProp.CoolProp as CP
+    CP.set_config_bool(CP.CHEBYSHEV_DENSITY_SOLVER, False)
+
+From C++:
+
+.. code-block:: c++
+
+    CoolProp::set_config_bool(CoolProp::CHEBYSHEV_DENSITY_SOLVER, false);
+
+From any language, set the environment variable
+``COOLPROP_CHEBYSHEV_DENSITY_SOLVER`` to ``false`` before the program starts
+(see :ref:`configuration`).
 
 .. _tpd-stability:
 
@@ -341,8 +579,8 @@ K-factors are stored in log space
 declared when :math:`\max_i |\Delta \ln K_i| < 10^{-7}`.
 
 **Second-order Gibbs energy minimisation.**
-If successive substitution has not converged to the required tolerance, a
-Newton-Raphson minimisation of the Gibbs energy is employed.  The independent
+After successive substitution, a Newton-Raphson minimisation of the Gibbs
+energy always runs, to bring the split to the strict tolerance.  The independent
 variables are the vapour-phase mole numbers :math:`v_i = \beta\,y_i`, from
 which the liquid mole numbers are :math:`l_i = z_i - v_i`.
 
@@ -358,11 +596,33 @@ Appendix B) are:
    + \beta\,\left(\frac{\partial \ln \hat{\varphi}_i^{(L)}}{\partial n_j}\right)_{T,P}
    + (1-\beta)\,\left(\frac{\partial \ln \hat{\varphi}_i^{(V)}}{\partial n_j}\right)_{T,P} - 1
 
-The Newton step :math:`\Delta\mathbf{v} = -\mathbf{H}^{-1}\mathbf{g}` is
-accepted only if the Gibbs energy decreases; otherwise the step is halved
-(backtracking line search).  Feasibility is maintained by scaling the step so
+The step is a Hebden restricted (trust-region) step :cite:`Hebden-1973` on the
+diagonally scaled system: the Hessian is shifted until it is positive definite
+and the step lies inside the trust radius.  The step is accepted only if the
+Gibbs energy decreases; otherwise the trust radius is reduced.  Feasibility is maintained by scaling the step so
 that all mole numbers remain positive.  Convergence requires
-:math:`\max_i |g_i| < 10^{-9}`, with a maximum of 30 iterations.
+:math:`\max_i |\ln f_i^{(V)} - \ln f_i^{(L)}| < 10^{-9}`, with at most 50
+iterations per pass and two passes (the second restarts with a smaller trust
+region).
+
+**Minority-phase fallback.**
+Because the reduced gradient carries a factor :math:`\beta(1-\beta)`, the
+Newton step above stalls when one phase is very small, i.e. near the dew or
+bubble line.  If it has not converged, a second-order Newton
+:cite:`Michelsen-FPE-1982b` is run on the mole numbers of the incipient
+(minority) phase, with an Armijo line search.  Its result is kept only if it
+is a genuine split: equal-fugacity residual :math:`\le 10^{-5}`, composition
+spread :math:`\ge 10^{-4}`, an interior :math:`\beta`, a Gibbs energy below
+that of the feed, and a liquid denser than the vapour.  Otherwise the solver
+goes back to the state it had before the fallback.
+
+**Acceptance.**
+The solver throws, and marks the result as non-converged, if the split is
+trivial (spread :math:`\le 10^{-7}`).  It also throws if the split has not
+reached the strict tolerance and is not near-converged (residual
+:math:`\le 10^{-5}` with a spread :math:`\ge 10^{-4}`).  Diagram 2 of the
+:ref:`logic diagrams <flash-logic-diagram>` shows how the flash handles that
+failure.
 
 .. _legacy-algorithm:
 

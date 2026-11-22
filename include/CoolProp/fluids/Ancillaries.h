@@ -45,8 +45,7 @@ class SurfaceTensionCorrelation
         std::string BibTeX;
     };
 
-    explicit SurfaceTensionCorrelation(const Values& v)
-      : a(v.a), n(v.n), s(v.n), Tc(v.Tc), N(v.n.size()), BibTeX(v.BibTeX) {}
+    explicit SurfaceTensionCorrelation(const Values& v) : a(v.a), n(v.n), s(v.n), Tc(v.Tc), N(v.n.size()), BibTeX(v.BibTeX) {}
 
     /// Actually evaluate the surface tension equation
     CoolPropDbl evaluate(CoolPropDbl T) {
@@ -118,26 +117,20 @@ class SaturationAncillaryFunction
     Eigen::MatrixXd num_coeffs,   ///< Coefficients for numerator in rational polynomial
       den_coeffs;                 ///< Coefficients for denominator in rational polynomial
     std::vector<double> n, t, s;  // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
-    union
-    {
-        CoolPropDbl max_abs_error;  ///< For TYPE_RATIONAL_POLYNOMIAL
-        struct
-        {                                // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
-            bool using_tau_r;            ///< Whether the term \f$ \frac{T_c}{T} \f$ is included in the
-            CoolPropDbl reducing_value,  ///< The value used to reduce the output variable
-              T_r;                       ///< The temperature in K used to reduce the temperature (usually the critical temperature)
-            std::size_t N;               ///< The number of values in the arrays
-        };
-    };
-    CoolPropDbl Tmax,  ///< The maximum temperature in K
-      Tmin;            ///< The minimum temperature in K
-    ancillaryfunctiontypes type;  ///< The type of ancillary curve being used
+    // Plain members rather than the union they used to share: a default-constructed
+    // (unset) ancillary left all of them indeterminate, and get_max_abs_error() on one
+    // read that memory (ANT-2026-LPPFYEJC).  Every member now has a defined value.
+    CoolPropDbl max_abs_error = 0;               ///< For TYPE_RATIONAL_POLYNOMIAL
+    bool using_tau_r = false;                    ///< For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL: whether the term \f$ \frac{T_c}{T} \f$ is included
+    CoolPropDbl reducing_value = 0,              ///< The value used to reduce the output variable
+      T_r = 0;                                   ///< The temperature in K used to reduce the temperature (usually the critical temperature)
+    std::size_t N = 0;                           ///< The number of values in the arrays
+    CoolPropDbl Tmax = _HUGE,                    ///< The maximum temperature in K
+      Tmin = _HUGE;                              ///< The minimum temperature in K
+    ancillaryfunctiontypes type = TYPE_NOT_SET;  ///< The type of ancillary curve being used
 
    public:
-    SaturationAncillaryFunction()
-      : type(TYPE_NOT_SET), Tmin(_HUGE), Tmax(_HUGE) {
-
-        };
+    SaturationAncillaryFunction() = default;
 
     /// Build from a plain-typed Values bundle (defined out-of-line in
     /// Ancillaries.cpp). All JSON parsing happens in the non-installed factory.

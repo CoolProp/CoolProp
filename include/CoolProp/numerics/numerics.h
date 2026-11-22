@@ -311,7 +311,8 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
 template <typename T>
 void bisect_segmented_vector_slice(const std::vector<std::vector<T>>& mat, std::size_t j, T val, std::size_t& i) {
     T rL, rM, rR;
-    std::size_t N = mat[j].size(), L = 0, R = N - 1, M = (L + R) / 2;
+    // The slice runs along the first index (mat[i][j]), so its length is the number of rows
+    std::size_t N = mat.size(), L = 0, R = N - 1, M = (L + R) / 2;
     // Move the right limits in until they are good
     while (!ValidNumber(mat[R][j])) {
         if (R == 1) {

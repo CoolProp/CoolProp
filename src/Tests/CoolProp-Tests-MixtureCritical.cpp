@@ -53,12 +53,17 @@ TEST_CASE("R454B critical point skips the unstable negative-pressure point (#352
     CHECK(CoolProp::PropsSI("Pcrit", "", 0, "", 0, "R454B.mix") == Catch::Approx(AS->p_critical()).epsilon(1e-12));
 }
 
-TEST_CASE("Critical point of a mixture throws when there is more than one stable point", "[mixture_critical]") {
-    // R452A gives three stable points within 1 K of each other (COO-154); the getters
-    // must refuse to pick one rather than silently return the first
+TEST_CASE("R452A has a single stable critical point (COO-154, COO-193)", "[mixture_critical]") {
+    // The tracer finds three points within 1 K of each other.  Before COO-193 the stability test's
+    // proximity shortcut called all three stable; with the TPD minimizer deciding, the two
+    // denser ones (~347.4 K) are unstable and the getters return the remaining one.
+    // Regression values from the tracer itself (not reference data).
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R452A.mix"));
-    REQUIRE(count_stable(AS->all_critical_points()) > 1);
-    CHECK_THROWS_WITH(AS->p_critical(), Catch::Matchers::ContainsSubstring("stable critical points"));
+    const std::vector<CoolProp::CriticalState> pts = AS->all_critical_points();
+    REQUIRE(pts.size() >= 3);
+    REQUIRE(count_stable(pts) == 1);
+    CHECK(AS->T_critical() == Catch::Approx(348.249).epsilon(1e-5));
+    CHECK(AS->p_critical() == Catch::Approx(3.98378e6).epsilon(1e-5));
 }
 
 TEST_CASE("Every predefined refrigerant blend has exactly one stable critical point", "[mixture_critical][slow]") {
@@ -67,8 +72,10 @@ TEST_CASE("Every predefined refrigerant blend has exactly one stable critical po
                                                "R406A.mix", "R408A.mix", "R409A.mix", "R409B.mix", "R412A.mix", "R413A.mix", "R414A.mix", "R414B.mix",
                                                "R416A.mix", "R424A.mix", "R426A.mix", "R429A.mix", "R435A.mix", "R437A.mix", "R438A.mix", "R446A.mix",
                                                "R453A.mix", "R458A.mix", "R461A.mix", "R468A.mix", "R468B.mix", "R468C.mix", "R473A.mix"};
-    // Blends with several stable critical points within 1 K of each other (COO-154)
-    const std::set<std::string> several_stable = {"R452A.mix"};
+    // Blends with several stable critical points within 1 K of each other (COO-154).  None since
+    // COO-193 (R452A's extra points are unstable); the getters' throw on several stable points is
+    // exercised by the marginal_stability blends below that have two, and n_throw_checked guards that.
+    const std::set<std::string> several_stable = {};
     // Blends whose tracer also finds a positive-pressure point at ~70-105 K and liquid-like
     // density, whose TPD verdict differs between builds (COO-155: R470A's is stable in the
     // 8.0.1dev wheel, unstable on master).  The stable count is not portable, so only the
@@ -79,6 +86,9 @@ TEST_CASE("Every predefined refrigerant blend has exactly one stable critical po
     // Blends whose critical-point search throws (COO-156)
     const std::set<std::string> search_throws = {"R452C.mix"};
 
+    // How many blends exercised the getters' throw on several stable points; checked after the sweep so
+    // the contract cannot silently lose all coverage if the marginal verdicts drift (COO-155)
+    std::size_t n_throw_checked = 0;
     std::vector<std::string> names;
     for (const std::string& name : strsplit(CoolProp::get_global_param_string("predefined_mixtures"), ',')) {
         // Each blend is listed as both .MIX and .mix; refrigerants are the R-numbered ones
@@ -124,10 +134,12 @@ TEST_CASE("Every predefined refrigerant blend has exactly one stable critical po
         if (several_stable.count(name) > 0) {
             CHECK(n_stable > 1);  // now unique? remove it from the list
             CHECK_THROWS_WITH(AS->p_critical(), Catch::Matchers::ContainsSubstring("stable critical points"));
+            ++n_throw_checked;
             continue;
         }
         if (marginal_stability.count(name) > 0 && n_stable > 1) {
             CHECK_THROWS_WITH(AS->p_critical(), Catch::Matchers::ContainsSubstring("stable critical points"));
+            ++n_throw_checked;
             continue;
         }
         CHECK(n_stable == 1);
@@ -139,6 +151,8 @@ TEST_CASE("Every predefined refrigerant blend has exactly one stable critical po
         CHECK(AS->p_critical() == Catch::Approx(it->p).epsilon(1e-12));
         CHECK(AS->rhomolar_critical() == Catch::Approx(it->rhomolar).epsilon(1e-12));
     }
+    // No blend left with several stable points?  Then the throw contract needs a test of its own.
+    CHECK(n_throw_checked >= 1);
 }
 
 #endif  // ENABLE_CATCH
