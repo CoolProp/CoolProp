@@ -6,6 +6,7 @@
 #include "IncompressibleLibrary.h"
 #include <atomic>
 #include <cmath>
+#include <utility>
 #include "CoolProp/numerics/MatrixMath.h"
 #include "CoolProp/numerics/PolyMath.h"
 #include "CoolProp/numerics/Solvers.h"
@@ -855,23 +856,38 @@ CoolProp::FitAtComposition reduceAtComposition(const CoolProp::IncompressibleDat
 void IncompressibleFluid::fixComposition(double x, bool chebyshev, CompositionFits& out) const {
     const IncompressibleData& d = densityFit(chebyshev);
     const IncompressibleData& c = specificHeatFit(chebyshev);
-    out.x = x;
-    out.chebyshev = chebyshev;
-    out.data_version = data_version;
-    out.rho = reduceAtComposition(d, d.coeffs, x, Tbase, xbase);
-    out.drhodT = reduceAtComposition(d, d.ddT, x, Tbase, xbase);
-    out.d2rhodT2 = reduceAtComposition(d, d.ddT2, x, Tbase, xbase);
-    out.c = reduceAtComposition(c, c.coeffs, x, Tbase, xbase);
-    out.int_c = reduceAtComposition(c, c.int_dT, x, Tbase, xbase);
-    out.int_c_divT = reduceAtComposition(c, c.int_dTdivT, x, Tbase, xbase);
-    out.int_c_divT_log = reduceAtComposition(c, c.int_dTdivT_log, x, Tbase, xbase);
+    // Reduce a fit only if the full evaluation accepts its type, so that an
+    // unsupported type still raises the full evaluation's error instead of
+    // returning a value through the reduced path.
+    const auto is = [](const IncompressibleData& fit, IncompressibleData::IncompressibleTypeEnum a, IncompressibleData::IncompressibleTypeEnum b) {
+        return fit.type == a || fit.type == b;
+    };
+    const bool c_ok = is(c, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV);
+    const bool visc_ok = is(viscosity, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
+    const bool cond_ok = is(conductivity, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
+    // Built into a temporary and moved into out at the end: if a reduction
+    // throws, out keeps its old key and the next call tries again.
+    CompositionFits fits;
+    fits.x = x;
+    fits.chebyshev = chebyshev;
+    fits.data_version = data_version;
+    fits.rho = reduceAtComposition(d, d.coeffs, x, Tbase, xbase);
+    fits.drhodT = reduceAtComposition(d, d.ddT, x, Tbase, xbase);
+    fits.d2rhodT2 = reduceAtComposition(d, d.ddT2, x, Tbase, xbase);
+    if (c_ok) {
+        fits.c = reduceAtComposition(c, c.coeffs, x, Tbase, xbase);
+        fits.int_c = reduceAtComposition(c, c.int_dT, x, Tbase, xbase);
+        fits.int_c_divT = reduceAtComposition(c, c.int_dTdivT, x, Tbase, xbase);
+        fits.int_c_divT_log = reduceAtComposition(c, c.int_dTdivT_log, x, Tbase, xbase);
+    }
     // Entropy needs both parts of a polynomial fit; use the full evaluation
     // unless both could be reduced
-    if (c.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL && out.int_c_divT_log.kind == FitAtComposition::NONE) {
-        out.int_c_divT.kind = FitAtComposition::NONE;
+    if (c.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL && fits.int_c_divT_log.kind == FitAtComposition::NONE) {
+        fits.int_c_divT.kind = FitAtComposition::NONE;
     }
-    out.visc = reduceAtComposition(viscosity, viscosity.coeffs, x, Tbase, xbase);
-    out.cond = reduceAtComposition(conductivity, conductivity.coeffs, x, Tbase, xbase);
+    if (visc_ok) fits.visc = reduceAtComposition(viscosity, viscosity.coeffs, x, Tbase, xbase);
+    if (cond_ok) fits.cond = reduceAtComposition(conductivity, conductivity.coeffs, x, Tbase, xbase);
+    out = std::move(fits);
 }
 
 double IncompressibleFluid::TmaxAt(double p, double x) {

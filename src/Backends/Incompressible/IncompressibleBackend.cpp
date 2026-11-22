@@ -1237,6 +1237,17 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
     CHECK(water.TmaxAt(2e6, 0.0) == water.getTmax());
     CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
     CHECK(meg.TmaxAt(101325.0, 0.35) == meg.getTmax());
+    // The second pass searches up to TmaxAt, which lies a small margin above
+    // the saturation temperature. A root inside that margin boils, so it is
+    // rejected like a boiling first result. The stand-in solver returns the
+    // upper end of its bracket: Tmax on the first pass, T_boil on the second.
+    if (water.psat(T_boil, 0.0) > 101325.0) {
+        CHECK_THROWS_WITH(water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; }),
+                          Catch::Matchers::ContainsSubstring("boils at"));
+    }
+    // The lower end of the second bracket is a liquid state and is returned
+    CHECK(water.solveInLiquidRange(101325.0, 0.0, [&](double T_lo, double T_hi) { return T_hi < water.getTmax() ? T_lo : T_hi; })
+          == water.TminAt(101325.0, 0.0));
 
     // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
     // error says that the liquid boils, not only that there is no bracket

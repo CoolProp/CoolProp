@@ -344,14 +344,23 @@ class IncompressibleFluid
             if (first_error) std::rethrow_exception(first_error);
             throw ValueError(format("%s: no liquid state at p = %g Pa", name.c_str(), p));
         }
+        double T = 0.0;
         try {
-            return solve(T_lo, T_boil);
+            T = solve(T_lo, T_boil);
         } catch (const CoolPropBaseError& e) {
             if (boiling) {
                 throw ValueError(format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (%s)", name.c_str(), p, T_boil, e.what()));
             }
             std::rethrow_exception(first_error);
         }
+        // T_boil sits a small margin above the saturation temperature, so that a
+        // state exactly at saturation stays inside the bracket. A root inside
+        // that margin boils, though, so check the result like the first one.
+        if (T > TminPsat && psat(T, x) > p) {
+            throw ValueError(
+              format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (solution %.17g K)", name.c_str(), p, T_boil, T));
+        }
+        return T;
     }
     /// Reduce every fit a state evaluates to a series in T at composition x
     /// (see FitAtComposition). Fits of other types are left as NONE.

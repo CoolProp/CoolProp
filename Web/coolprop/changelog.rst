@@ -287,7 +287,7 @@ Performance:
   * For 19 fluids, including ``DowQ``, ``DowJ``, the ``HC`` and ``P*`` series and ``Water`` below 278 K, every update threw and caught an exception in the liquid-phase check below ``TminPsat``; that alone cost about 1.3 microseconds per call, and a single property on ``DowQ`` is now 34 to 41 times faster.
   * The ``h,p``, ``p,s`` and ``D,p`` inversions use Newton's method with the exact derivative inside a bracket (``BoundedNewton``), the same way for both kinds of fit, instead of Brent's method over the whole temperature range (and, for ``D,p`` on the classic fits, ``Polynomial2DFrac::solve_limits``).  The ``h,p`` and ``p,s`` flashes start from a constant-heat-capacity estimate and need about 3.4 iterations at any pressure up to 500 bar.
 
-  Enthalpy, entropy and the other outputs at given ``T,p`` are unchanged, apart from the last bits: Chebyshev values can differ from 8.1 development builds, and on platforms that fuse multiply-adds (aarch64) any fitted value can differ by a few units in the last place.  The ``p,s`` flash also stops failing on ``Water``, where 123 of 100,000 calls hit the Brent iteration limit in 8.0.0.
+  For the same fit data, enthalpy, entropy and the other outputs at given ``T,p`` are unchanged by these optimizations, apart from the last bits (values that differ from 8.0.0 do so because of the new fits above): Chebyshev values can differ from 8.1 development builds, and on platforms that fuse multiply-adds (aarch64) any fitted value can differ by a few units in the last place.  The ``p,s`` flash also stops failing on ``Water``, where 123 of 100,000 calls hit the Brent iteration limit in 8.0.0.
 
 Bug fixes:
 

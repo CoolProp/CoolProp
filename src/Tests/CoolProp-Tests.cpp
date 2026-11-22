@@ -8951,32 +8951,66 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
     }
 }
 
+TEST_CASE("INCOMP fit types the full evaluation rejects are rejected by a state too", "[INCOMP]") {
+    // A state reduces its fits to the composition once. A fit type that the
+    // full evaluation does not support (an exppolynomial heat capacity, a
+    // Chebyshev viscosity or conductivity) must not return a value through
+    // that reduced path; it has to raise the same error as without it.
+    const std::string fluid = R"([{"name": "CatchRuntimeUnsupportedFitTypes", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+        "density":            {"type": "polynomial", "coeffs": [[1000.0]]},
+        "specific_heat":      {"type": "exppolynomial", "coeffs": [[7.6]]},
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+        "viscosity":          {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[0.001]]},
+        "conductivity":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[0.5]]}
+    }])";
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid));
+    {
+        ChebyshevCaloricSetting classic(false);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeUnsupportedFitTypes"));
+        AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+        CHECK(AS->rhomass() == Catch::Approx(1000.0));
+        CHECK_THROWS(AS->cpmass());
+    }
+    ChebyshevCaloricSetting chebyshev(true);
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeUnsupportedFitTypes"));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->cpmass() == Catch::Approx(2000.0));
+    CHECK_THROWS(AS->viscosity());
+    CHECK_THROWS(AS->conductivity());
+}
+
 TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
     // A state keeps the fits of its fluid with the composition put in. When
     // add_fluids_as_JSON replaces that fluid in place, the state must use the
     // new data on its next update, not the reduced fits of the old one.
-    auto definition = [](double rho) {
+    // Both density and heat capacity change, so the reference enthalpy and
+    // the reference entropy both move with the replacement.
+    auto definition = [](double rho, double cp) {
         return std::string(R"([{"name": "CatchRuntimeReplacedFluid", "description": "replaced at runtime", "reference": "none",
             "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
             "density_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[)")
                + std::to_string(rho) + R"(]]},
-            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]}}])";
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[)"
+               + std::to_string(cp) + R"(]]}}])";
     };
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(1000.0)));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(1000.0, 2000.0)));
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeReplacedFluid"));
     AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
     CHECK(AS->rhomass() == Catch::Approx(1000.0).epsilon(1e-14));
     AS->update(CoolProp::PT_INPUTS, 101325.0, 293.15);  // caches the reference values
     CHECK(std::abs(AS->hmass()) < 1e-9);
     CHECK(std::abs(AS->smass()) < 1e-12);
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(900.0)));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(900.0, 2500.0)));
     AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
     CHECK(AS->rhomass() == Catch::Approx(900.0).epsilon(1e-14));
     // The reference values move with the data too: h = s = 0 at 293.15 K and
-    // 1 atm with the new density (its pressure term changed h by about 11 J/kg)
+    // 1 atm with the new data. Entropy is read first: reading enthalpy
+    // refreshes both reference values, which would hide a stale entropy one.
     AS->update(CoolProp::PT_INPUTS, 101325.0, 293.15);
-    CHECK(std::abs(AS->hmass()) < 1e-9);
     CHECK(std::abs(AS->smass()) < 1e-12);
+    CHECK(std::abs(AS->hmass()) < 1e-9);
 }
 
 TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {

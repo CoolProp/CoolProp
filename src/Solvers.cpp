@@ -159,6 +159,11 @@ The stopping tolerance is xtol plus four units in the last place of x, so a
 tolerance below what a double can resolve at large |x| cannot stall the
 iteration between two neighbouring doubles.
 
+A Newton step smaller than the tolerance ends the iteration, as in rtsafe.
+That trusts the derivative: one that is far too steep where f is not small
+makes the step small away from the root and stops the iteration there. Give
+it an exact or at least a reasonable derivative.
+
 @param f A pointer to an instance of the FuncWrapper1DWithDeriv class that implements call() and deriv()
 @param x0 The initial guess. If it is not strictly inside (xmin, xmax), NAN for instance, the
 iteration starts from the false-position point of the two end values instead.
@@ -190,6 +195,9 @@ double BoundedNewton(FuncWrapper1DWithDeriv* f, double x0, double xmin, double x
     double x_neg = (fmin < 0) ? xmin : xmax;
     double x_pos = (fmin < 0) ? xmax : xmin;
     double x = (x0 > xmin && x0 < xmax) ? x0 : xmin - fmin * (xmax - xmin) / (fmax - fmin);
+    // The false-position point can overflow (inf / inf = NaN) for huge end
+    // values, or round onto an end; take the midpoint then
+    if (!(x > xmin && x < xmax)) x = 0.5 * xmin + 0.5 * xmax;
     // Size of the step before last. A Newton step larger than half of it is
     // not converging fast enough (it can bounce around a turning point while
     // staying inside the bracket), so a bisection is taken instead.
@@ -210,7 +218,9 @@ double BoundedNewton(FuncWrapper1DWithDeriv* f, double x0, double xmin, double x
         // Absolute tolerance, but never below what doubles can resolve at x
         const double tol = xtol + 4 * DBL_EPSILON * std::abs(x);
         const double dfdx = f->deriv(x);
-        double x_new = 0.5 * (lo + hi);  // bisection, unless the Newton step is usable
+        // Bisection, unless the Newton step is usable. Halved before adding,
+        // so that lo + hi cannot overflow.
+        double x_new = 0.5 * lo + 0.5 * hi;
         if (ValidNumber(dfdx) && dfdx != 0) {
             const double dx = fval / dfdx;
             if (f->verbosity > 0) {
@@ -818,6 +828,21 @@ TEST_CASE("BoundedNewton finds the root inside its bracket", "[Solvers]") {
     SECTION("A root at an end of the interval is returned") {
         TestResidual r([](double x) { return x - 2.0; }, [](double x) { return 1.0; });
         CHECK(CoolProp::BoundedNewton(&r, NAN, 2.0, 5.0, 1e-14, 100) == 2.0);
+    }
+    SECTION("Huge end values do not turn the first point into NaN") {
+        // fmax - fmin overflows to infinity, and the false-position point to NaN
+        TestResidual r([](double x) { return 1e308 * ((x - 5.0) / 5.0); }, [](double) { return 1e308 / 5.0; });
+        CHECK(CoolProp::BoundedNewton(&r, NAN, 0.0, 10.0, 1e-14, 100) == Catch::Approx(5.0).epsilon(1e-14));
+        CHECK(r.x_lowest >= 0.0);
+        CHECK(r.x_highest <= 10.0);
+    }
+    SECTION("Bisection between huge bounds does not overflow") {
+        // A zero derivative forces bisection; lo + hi would overflow to infinity
+        TestResidual r([](double x) { return x / 1.2e308 - 1.0; }, [](double) { return 0.0; });
+        double x = NAN;
+        CHECK_NOTHROW(x = CoolProp::BoundedNewton(&r, 1.1e308, 1e308, 1.5e308, 1e-14, 2000));
+        CHECK(x == Catch::Approx(1.2e308).epsilon(1e-14));
+        CHECK(r.x_highest <= 1.5e308);
     }
 }
 #endif /* ENABLE_CATCH */

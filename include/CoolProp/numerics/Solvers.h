@@ -89,7 +89,8 @@ class FuncWrapperND
 //   method as the fallback.
 // - Secant, ExtrapolatingSecant, BoundedSecant: a good first guess and no
 //   derivative. BoundedSecant clamps the steps to limits but does not need,
-//   or check, a sign change.
+//   or check, a sign change. It does not clamp its first two points, so keep
+//   both x0 and x0 + dx inside the limits if f fails outside them.
 // - NDNewtonRaphson_Jacobian: several unknowns at once, with a Jacobian.
 //
 // If in doubt, try more than one and measure. Time them on your own function
