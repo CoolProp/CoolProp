@@ -4289,14 +4289,12 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 SaturationSolvers::saturation_T_pure_options options;
                 SaturationSolvers::saturation_T_pure(HEOS1, HEOS._T, options);
 
-                if (other != iDmolar) {
-                    // Update the states
-                    if (HEOS.SatL) HEOS.SatL->update(DmolarT_INPUTS, HEOS._rhoLanc, HEOS._T);
-                    if (HEOS.SatV) HEOS.SatV->update(DmolarT_INPUTS, HEOS._rhoVanc, HEOS._T);
-                    // Update the two-Phase variables
-                    HEOS._rhoLmolar = HEOS.SatL->rhomolar();
-                    HEOS._rhoVmolar = HEOS.SatV->rhomolar();
-                }
+                // Update the saturation states and the two-phase variables from the
+                // saturation solution, for all inputs: the lever rule below reads them.
+                if (HEOS.SatL) HEOS.SatL->update(DmolarT_INPUTS, HEOS1.SatL->rhomolar(), HEOS._T);
+                if (HEOS.SatV) HEOS.SatV->update(DmolarT_INPUTS, HEOS1.SatV->rhomolar(), HEOS._T);
+                HEOS._rhoLmolar = HEOS1.SatL->rhomolar();
+                HEOS._rhoVmolar = HEOS1.SatV->rhomolar();
 
                 CoolPropDbl Q = NAN;
 
@@ -4324,7 +4322,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                     HEOS._Q = Q;
                     // Load the outputs
                     HEOS._p = HEOS._Q * HEOS1.SatV->p() + (1 - HEOS._Q) * HEOS1.SatL->p();
-                    HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+                    HEOS._rhomolar = 1 / (HEOS._Q / HEOS1.SatV->rhomolar() + (1 - HEOS._Q) / HEOS1.SatL->rhomolar());
                 }
             } else if (HEOS._phase == iphase_supercritical_liquid) {
                 HEOS._Q = -1000;
