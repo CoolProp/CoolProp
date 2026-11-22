@@ -2324,7 +2324,8 @@ static bool on_same_branch(CoolPropDbl r, CoolPropDbl rho_ref) {
 // return a mechanically stable root in an alpha^r well that passes the pressure and stability checks below (R454B
 // compressed liquid, 246 K, 20.4 MPa: tm = -1e12, then a published split into pure R32 and pure R1234yf).  When
 // the solver cannot answer (disabled, outside its tables) the trial gives no evidence.  Successive substitution
-// with one GDEM step, at most three tm evaluations: over 203 mixtures 231 of the 250 detections came within three.
+// with one GDEM step, at most three tm evaluations: with no cap (and phase-imposed Newton roots as fallback), 231 of the
+// 250 detections over 203 mixtures came within three.
 // Returns true when tm < -tol; y_out is then the updated trial composition and rho_out the root of the last
 // evaluated composition (a seed, as in the trial search).  `trial` is left with the last evaluated state.
 static bool opposite_branch_trial(HelmholtzEOSMixtureBackend& trial, CoolPropDbl T, CoolPropDbl p, bool vapor_branch, CoolPropDbl rho_feed,
@@ -2373,7 +2374,7 @@ static bool opposite_branch_trial(HelmholtzEOSMixtureBackend& trial, CoolPropDbl
             }
             if (!ValidNumber(tm)) return false;
             // These trials run only where the Wilson trials saw no instability, so the instabilities they find are
-            // shallow: tm >= -0.22 for all 277 detections over 203 mixtures.  A tm far below that comes from a root in
+            // shallow: tm >= -0.22 for all 277 detections of this code over 203 mixtures (Chebyshev solver on).  A tm far below that comes from a root in
             // an alpha^r artifact region, not from an incipient phase: with phase-imposed Newton roots (before they
             // were dropped for certified ones) the detections below -1 -- tm -1.9 to -11 -- were all compressed
             // liquids or gases far from the dome.  Kept as a guard should a certified branch root ever land in such a

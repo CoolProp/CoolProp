@@ -733,14 +733,15 @@ class StabilityEvaluationClass
 
    private:
     bool _stable;
-    bool _uncertain;                ///< stability verdict was non-conclusive (minimize_tpd could not decide)
-    bool _near_pure;                ///< the instability (if any) was found by a near-pure trial phase
-    bool _guard_replaced;           ///< the instability (if any) relied on a root the #3448 guard replaced (feed or that trial)
-    bool _feed_guard_replaced;      ///< the guard replaced the feed's density root in this test
-    bool _trial_guard_replaced;     ///< the guard replaced a density root of the trial currently being evaluated
-    bool _flash_first;              ///< the instability was found by the flash-first successive substitution
-    bool _flash_first_enabled;      ///< run the flash-first successive substitution (on by default)
-    bool _opposite_branch = false;  ///< the instability was found by an opposite-branch trial (COO-193)
+    bool _uncertain;             ///< stability verdict was non-conclusive (minimize_tpd could not decide)
+    bool _near_pure;             ///< the instability (if any) was found by a near-pure trial phase
+    bool _guard_replaced;        ///< the instability (if any) relied on a root the #3448 guard replaced (feed or that trial)
+    bool _feed_guard_replaced;   ///< the guard replaced the feed's density root in this test
+    bool _trial_guard_replaced;  ///< the guard replaced a density root of the trial currently being evaluated
+    bool _flash_first;           ///< the instability was found by the flash-first successive substitution
+    bool _flash_first_enabled;   ///< run the flash-first successive substitution (on by default)
+    /// the instability was found by an opposite-branch trial (COO-193)
+    bool _opposite_branch = false;
     bool debug;
     bool use_michelsen;
 
