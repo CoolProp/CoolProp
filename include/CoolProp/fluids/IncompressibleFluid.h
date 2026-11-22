@@ -312,6 +312,16 @@ class IncompressibleFluid
     [[nodiscard]] double saturationMargin() const {
         return 2e-9 * Tmax;
     }
+    /// True if (T, p) is a liquid state: below TminPsat (no saturation curve
+    /// there), at or above psat(T), or liquid within saturationMargin(), that
+    /// is at T minus the margin. checkP() and solveInLiquidRange() both use it,
+    /// so a state one accepts the other does too.
+    bool isLiquidAt(double T, double p, double x) {
+        if (p_sat.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET || T <= TminPsat) return true;
+        if (psat(T, x) <= p) return true;
+        const double T_lower = T - saturationMargin();
+        return T_lower <= TminPsat || psat(T_lower, x) <= p;
+    }
     /// Solve for a temperature inside the valid liquid range at (p, x).
     /** solve(T_lo, T_hi) must return the root on [T_lo, T_hi] or throw. The
      *  search runs on [TminAt(p, x), Tmax] first. When that gives a liquid
@@ -333,8 +343,8 @@ class IncompressibleFluid
         bool boiling = false;
         try {
             const double T = solve(T_lo, Tmax);
-            if (T <= TminPsat || psat(T, x) <= p) return T;  // a liquid state: done
-            boiling = true;                                  // the solution boils at p
+            if (isLiquidAt(T, p, x)) return T;  // a liquid state: done
+            boiling = true;                     // the solution boils at p
         } catch (const CoolPropBaseError&) {
             first_error = std::current_exception();  // maybe only the extrapolation above boiling
         }

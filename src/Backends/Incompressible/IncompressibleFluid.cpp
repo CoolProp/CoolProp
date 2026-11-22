@@ -912,8 +912,13 @@ double IncompressibleFluid::TmaxAt(double p, double x) {
         IncompressibleFluid* fluid;
         double p, x;
         Residual(IncompressibleFluid* fluid, double p, double x) : fluid(fluid), p(p), x(x) {}
+        // In units of one ulp of p: Brent returns an end of its interval as
+        // soon as |f| there is below its tolerance, which would otherwise
+        // stop it on a small pressure difference rather than a temperature
+        // accurate to the margin. Scaled like this, that only happens when
+        // psat equals p to rounding, and the iteration ends on temperature.
         double call(double T) override {
-            return fluid->psat(T, x) - p;
+            return (fluid->psat(T, x) - p) / (DBL_EPSILON * std::max(p, DBL_MIN));
         }
     } res(this, p, x);
     // Brent stops once half the bracket is below tol, so T_sat is good to
@@ -991,30 +996,19 @@ bool IncompressibleFluid::checkT(double T, double p, double x) {
  *  is not redefined in the subclass.
  *  */
 bool IncompressibleFluid::checkP(double T, double p, double x) {
-    double ps = 0.0;
-    // Below TminPsat there is no saturation curve to compare against. Skip
-    // psat() there instead of letting it throw and catching the exception:
-    // that throw cost about 1.3 microseconds on every state update, more
-    // than all the property evaluations together.
-    if (p_sat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET && T > TminPsat) {
-        // psat() now throws below TminPsat (#2209). For this validation
-        // path, T below TminPsat means the saturation curve is not
-        // available — there is nothing to compare p against, so skip
-        // the p >= psat check rather than propagating the throw to
-        // callers that didn't ask for psat in the first place
-        // (e.g. PropsSI("D","P",101325,"T",300,"INCOMP::DowQ") where
-        // DowQ has TminPsat > 300 K).
-        try {
-            ps = psat(T, x);
-        } catch (const ValueError&) {
-            ps = 0.0;
-        }
-    }
     if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
-    // A state solved for at saturation can land a few ulp above the boiling
-    // point; accept it if it is liquid within the margin TmaxAt() allows
-    if (ps > 0.0 && p < ps && T - saturationMargin() > TminPsat && psat(T - saturationMargin(), x) <= p) ps = 0.0;
-    if (ps > 0.0 && p < ps) throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
+    // isLiquidAt() calls psat() only above TminPsat, where the saturation
+    // curve is defined. Checking TminPsat first instead of letting psat()
+    // throw and catching it matters: that throw cost about 1.3 microseconds
+    // on every state update. Below TminPsat there is nothing to compare p
+    // against (#2209), e.g. PropsSI("D","P",101325,"T",300,"INCOMP::DowQ").
+    bool liquid = true;
+    try {
+        liquid = isLiquidAt(T, p, x);
+    } catch (const ValueError&) {
+        liquid = true;  // no usable saturation curve: nothing to check against
+    }
+    if (!liquid) throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, psat(T, x)));
     return true;
 }
 

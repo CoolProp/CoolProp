@@ -8981,6 +8981,50 @@ TEST_CASE("INCOMP fit types the full evaluation rejects are rejected by a state 
     CHECK_THROWS(AS->conductivity());
 }
 
+TEST_CASE("INCOMP liquid limit at the boiling point is consistent", "[INCOMP]") {
+    // psat = 0.001 T Pa rises slowly, so a pressure difference far below 1 Pa
+    // is still a large temperature difference: T_sat = 1000 p exactly.
+    const std::string fluid = R"([{"name": "CatchRuntimeSlowPsatFluid", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+        "saturation_pressure": {"type": "polynomial", "coeffs": [[0.0], [0.001]]}
+    }])";
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid));
+    CoolProp::IncompressibleFluid& f = CoolProp::get_incompressible_fluid("CatchRuntimeSlowPsatFluid");
+    const double m = f.saturationMargin();
+    REQUIRE(f.psat(350.0, 0.0) == Catch::Approx(0.35).epsilon(1e-14));
+    SECTION("TmaxAt solves for temperature, not for a small pressure difference") {
+        // T_sat = 399.99996 K, but psat(Tmax) - p is only 4e-8 Pa
+        const double p = 0.4 - 4e-8;
+        const double T_hi = f.TmaxAt(p, 0.0);
+        CHECK(T_hi < 400.0);
+        CHECK(T_hi - 1000.0 * p > 0.0);
+        CHECK(T_hi - 1000.0 * p < m);
+        CHECK_NOTHROW(f.checkTPX(T_hi, p, 0.0));
+    }
+    SECTION("A boiling point less than one margin above TminPsat") {
+        const double p = 0.001 * (300.0 + 0.3 * m);
+        CHECK_NOTHROW(f.checkTPX(f.TmaxAt(p, 0.0), p, 0.0));
+    }
+    SECTION("A state accepted within the margin can be flashed back") {
+        const double p = 0.35;  // T_sat = 350 K
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSlowPsatFluid"));
+        for (const double fraction : {0.0, 0.5, 0.9}) {
+            CAPTURE(fraction);
+            const double T = 350.0 + fraction * m;
+            AS->update(CoolProp::PT_INPUTS, p, T);  // accepted by checkP
+            const double h = AS->hmass(), s = AS->smass();
+            CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, p, s));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+        // Beyond the margin the state boils
+        CHECK_THROWS(AS->update(CoolProp::PT_INPUTS, p, 350.0 + 2 * m));
+    }
+}
+
 TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
     // A state keeps the fits of its fluid with the composition put in. When
     // add_fluids_as_JSON replaces that fluid in place, the state must use the
