@@ -306,8 +306,8 @@ class IncompressibleFluid
     /// where h or s can fall with T again, cannot hide the liquid solution.
     double TmaxAt(double p, double x);
     /// Temperature margin at the boiling point, in K. TmaxAt() returns the
-    /// saturation temperature plus this margin, and checkP() accepts a state
-    /// within it, so that a state solved for at saturation, which can land a
+    /// saturation temperature plus 0.3 to 0.7 times this margin, and checkP()
+    /// accepts a state within the full margin, so that a state solved for at saturation, which can land a
     /// few ulp above it, is still accepted as liquid.
     [[nodiscard]] double saturationMargin() const {
         return 2e-9 * Tmax;

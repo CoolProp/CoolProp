@@ -1243,6 +1243,17 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
     // The stand-in solver returns the upper end of its bracket: Tmax on the
     // first pass (a boiling state), T_boil on the second.
     REQUIRE(water.psat(T_boil, 0.0) > 101325.0);
+    // TmaxAt and checkP agree: over a sweep of pressures the upper end of the
+    // bracket lies above the saturation temperature (a saturated state is
+    // inside it) and is still accepted as liquid
+    for (int i = 0; i < 300; ++i) {
+        const double p_sweep = 1000.0 * std::pow(1.025, i);  // 1 kPa to 1.6 MPa
+        CAPTURE(p_sweep);
+        const double T_hi = water.TmaxAt(p_sweep, 0.0);
+        if (!(T_hi < water.getTmax())) continue;
+        CHECK(water.psat(T_hi, 0.0) >= p_sweep);
+        CHECK_NOTHROW(water.checkTPX(T_hi, p_sweep, 0.0));
+    }
     CHECK(water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; }) == T_boil);
 
     // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
@@ -1270,7 +1281,8 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
         ChebyshevCaloricSetting setting(chebyshev);
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
         // Dense: the flashed root often lands a few ulp above T_sat
-        for (double T = 278.35; T < 470.0; T += 0.37) {
+        for (int i = 0; i < 518; ++i) {
+            const double T = 278.35 + 0.37 * i;  // up to 469.6 K
             CAPTURE(T);
             AS->update(CoolProp::QT_INPUTS, 0.0, T);
             const double p = AS->p(), h = AS->hmass(), s = AS->smass();

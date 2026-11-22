@@ -916,11 +916,14 @@ double IncompressibleFluid::TmaxAt(double p, double x) {
             return fluid->psat(T, x) - p;
         }
     } res(this, p, x);
-    const double tol = 0.5 * saturationMargin();
+    // Brent stops once half the bracket is below tol, so T_sat is good to
+    // 2 tol = 0.2 margin either way. Adding half the margin puts the result
+    // 0.3 to 0.7 margin above the exact saturation temperature: a state
+    // exactly at saturation stays inside the bracket, and every temperature
+    // up to the result passes checkP(), which accepts up to one margin above.
+    const double tol = 0.1 * saturationMargin();
     const double T_sat = Brent(&res, T_lo, Tmax, DBL_EPSILON, tol, 100);
-    // Brent returns T_sat to within tol, possibly just below the exact value;
-    // the margin keeps a state exactly at saturation inside the bracket
-    return std::min(Tmax, T_sat + saturationMargin());
+    return std::min(Tmax, T_sat + 0.5 * saturationMargin());
 }
 
 double IncompressibleFluid::TminAt(double p, double x) {
