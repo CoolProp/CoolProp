@@ -464,9 +464,12 @@ the polynomial and the Chebyshev fits:
   within a shrinking bracket. For ``H,P`` and ``P,S`` the derivative includes the
   pressure term, :math:`(\partial h/\partial T)_p = c - p\,T\,\partial^2 v/\partial T^2`
   and :math:`(\partial s/\partial T)_p = c/T - p\,\partial^2 v/\partial T^2`, so
-  the iteration converges in three to four steps at any pressure. It starts
-  from :math:`T_{ref} + (h - h(T_{ref}, p))/c(T_{ref})`, the solution for a
-  constant heat capacity.
+  the iteration converges in three to four steps at any pressure (measured
+  on ``MEG[0.35]`` up to 500 bar). It starts from
+  :math:`T_{ref} + (h - h(T_{ref}, p))/c(T_{ref})`, the solution for a constant
+  heat capacity. For the fluids that are not valid at :math:`T_{ref}` (see
+  :ref:`Reference State<IncompRefState>`), :math:`c(T_{ref})` is extrapolated and
+  can be far off; the solution is the same, but it takes more steps.
 
 For a state, CoolProp also puts the composition into each fit once, when the
 composition is set, so that every later evaluation is a sum over temperature

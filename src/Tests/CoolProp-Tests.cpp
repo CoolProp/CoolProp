@@ -8966,9 +8966,17 @@ TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
     std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeReplacedFluid"));
     AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
     CHECK(AS->rhomass() == Catch::Approx(1000.0).epsilon(1e-14));
+    AS->update(CoolProp::PT_INPUTS, 101325.0, 293.15);  // caches the reference values
+    CHECK(std::abs(AS->hmass()) < 1e-9);
+    CHECK(std::abs(AS->smass()) < 1e-12);
     REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(900.0)));
     AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
     CHECK(AS->rhomass() == Catch::Approx(900.0).epsilon(1e-14));
+    // The reference values move with the data too: h = s = 0 at 293.15 K and
+    // 1 atm with the new density (its pressure term changed h by about 11 J/kg)
+    AS->update(CoolProp::PT_INPUTS, 101325.0, 293.15);
+    CHECK(std::abs(AS->hmass()) < 1e-9);
+    CHECK(std::abs(AS->smass()) < 1e-12);
 }
 
 TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {

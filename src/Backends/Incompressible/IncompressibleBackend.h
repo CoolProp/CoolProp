@@ -22,6 +22,15 @@ class IncompressibleBackend : public AbstractState
     /// Reference values, no need to calculate them each time
     CachedElement _T_ref, _p_ref, _x_ref, _h_ref, _s_ref;
     CachedElement _hmass_ref, _smass_ref;
+    /// data_version of the fluid that _hmass_ref and _smass_ref were computed from
+    unsigned long ref_data_version = 0;
+    void drop_stale_reference_values() {
+        if (ref_data_version != fluid->getDataVersion()) {
+            _hmass_ref.clear();
+            _smass_ref.clear();
+            ref_data_version = fluid->getDataVersion();
+        }
+    }
 
     /// Additional cached elements used for the partial derivatives
     CachedElement _cmass, _hmass, _rhomass, _smass, _umass;

@@ -70,6 +70,34 @@ class FuncWrapperND
 // *****************************************************************************
 // *****************************************************************************
 
+// Which solver to use
+// -------------------
+// Pick by what you know about the problem, not by habit:
+//
+// - Brent: you have an interval where f changes sign and no derivative. Robust,
+//   finds a root inside the interval or raises an error, but needs the most
+//   function calls. The safe default.
+// - TOMS748 (boost::math::tools::toms748_solve, not in this file): the same
+//   situation as Brent, usually with fewer function calls. Used in the HEOS
+//   P+{H,S,U} flash.
+// - BoundedNewton: an interval with a sign change AND a derivative that is
+//   cheap to get. Same guarantees as Brent, a few steps less. Only pays off if
+//   the derivative costs little next to f itself.
+// - Newton, Halley, Householder4: a good first guess and derivatives, but no
+//   interval. Fastest when they work, but they can step out of the range where
+//   your equations are valid. Use with a guess you trust, and keep a bracketed
+//   method as the fallback.
+// - Secant, ExtrapolatingSecant, BoundedSecant: a good first guess and no
+//   derivative. BoundedSecant clamps the steps to limits but does not need,
+//   or check, a sign change.
+// - NDNewtonRaphson_Jacobian: several unknowns at once, with a Jacobian.
+//
+// If in doubt, try more than one and measure. Time them on your own function
+// and count the calls. In the incompressible flashes BoundedNewton was 1.2 to
+// 1.9 times faster than TOMS748, but only because the derivative came almost
+// for free; with a naively computed derivative TOMS748 won. The convergence
+// order on paper does NOT tell you which one is faster for your problem.
+
 // Single-Dimensional solvers, pointer versions
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter);
 double Secant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter);

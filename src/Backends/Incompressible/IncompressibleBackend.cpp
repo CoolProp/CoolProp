@@ -386,11 +386,13 @@ double IncompressibleBackend::s_ref() {
 
 /// Return the mass enthalpy in J/kg
 double IncompressibleBackend::hmass_ref() {
+    drop_stale_reference_values();  // the fluid was replaced or changed since
     if (!_hmass_ref) _hmass_ref = raw_calc_hmass(T_ref(), p_ref(), x_ref());
     return _hmass_ref;
 }
 /// Return the molar entropy in J/mol/K
 double IncompressibleBackend::smass_ref() {
+    drop_stale_reference_values();
     if (!_smass_ref) _smass_ref = raw_calc_smass(T_ref(), p_ref(), x_ref());
     return _smass_ref;
 }
@@ -1268,6 +1270,47 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
             CHECK(std::abs(AS->T() - T) < 1e-9);
             AS->update(CoolProp::PSmass_INPUTS, p, s);
             CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
+}
+
+TEST_CASE("Flashes converge for fluids that are not valid at the reference temperature", "[IncompressibleBackend]") {
+    // The first guess of the flashes comes from cp at T_ref = 293.15 K. For
+    // these fluids that is outside the fit range, so cp(T_ref) is extrapolated
+    // and can be far off or even negative (IcePG). The guess then only costs
+    // iterations: the result must still be the right temperature.
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);
+        for (const char* name : {"LBE", "LiqNa", "NaK", "PBB", "VMA", "IceEA", "IceNA", "IcePG"}) {
+            CAPTURE(name);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
+            CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+            if (!fluid.is_pure()) {
+                const double x = 0.5 * (fluid.getxmin() + fluid.getxmax());
+                AS->set_mass_fractions(std::vector<double>(1, x));
+            }
+            const double p = 1e6;
+            int n_states = 0;
+            for (int i = 1; i <= 9; ++i) {
+                const double T = AS->Tmin() + (AS->Tmax() - AS->Tmin()) * i / 10.0;
+                CAPTURE(T);
+                try {
+                    AS->update(CoolProp::PT_INPUTS, p, T);
+                } catch (const CoolProp::CoolPropBaseError&) {
+                    continue;  // frozen or boiling at this composition and pressure
+                }
+                ++n_states;
+                const double h = AS->hmass(), s = AS->smass();
+                AS->update(CoolProp::HmassP_INPUTS, h, p);
+                CHECK(std::abs(AS->T() - T) < 1e-8);
+                // 1e-7 K: IceNA's entropy is large in magnitude here (its zero is
+                // extrapolated far from the fit range), so one ulp of s is worth
+                // about 5e-8 K; master's Brent gave the same error
+                AS->update(CoolProp::PSmass_INPUTS, p, s);
+                CHECK(std::abs(AS->T() - T) < 1e-7);
+            }
+            CHECK(n_states >= 3);
         }
     }
 }
