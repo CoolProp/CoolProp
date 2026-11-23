@@ -40,6 +40,43 @@ void record_flash_fallback(const char* attempted, const char* fallback, const ch
 /// exact) saturation solver.  Matches the gate in PQ_flash_with_guesses / QT_flash_with_guesses.
 const double Q_saturation_tol = 1e-10;
 
+/// Largest overall mass-balance error a bubble/dew fallback state may carry at interior Q
+/// before the flash refuses it (GH #3585).  States the fallback gets right balance to ~1e-16;
+/// the ones it gets wrong miss by 5e-7 to 0.15 in mole fraction.
+const double fallback_mass_balance_tol = 1e-10;
+
+/// newton_raphson_saturation, the fallback of the blind interior-Q PQ/QT solve, is a
+/// bubble/dew solver: it has no condition z = (1-Q) x + Q y, so when it lands on a split it
+/// is a genuine VLE state of some OTHER overall composition.  Accept its answer only if it
+/// balances; otherwise throw rather than return a state of the wrong mixture (GH #3585).
+void require_fallback_mass_balance(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl Q, const char* flash) {
+    const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions_ref();
+    const std::vector<CoolPropDbl>& x = HEOS.SatL->get_mole_fractions_ref();
+    const std::vector<CoolPropDbl>& y = HEOS.SatV->get_mole_fractions_ref();
+    if (x.size() != z.size() || y.size() != z.size()) {
+        throw ValueError(format("%s: the bubble/dew fallback returned phase compositions of the wrong length", flash));
+    }
+    // The saturation solver can leave the loop without converging (a NaN error_rms ends its
+    // while-condition), so first require a finite state in both phases.
+    for (auto* phase : {HEOS.SatL.get(), HEOS.SatV.get()}) {
+        if (!ValidNumber(phase->T()) || !ValidNumber(phase->p()) || !ValidNumber(phase->rhomolar())) {
+            throw ValueError(format("%s: the two-phase solve failed and the bubble/dew fallback left a non-finite phase state", flash));
+        }
+    }
+    double err = 0;
+    bool finite = true;
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        const double e = std::abs(static_cast<double>((1 - Q) * x[i] + Q * y[i] - z[i]));
+        finite = finite && std::isfinite(e);  // sticky: a later finite e must not mask a NaN
+        if (e > err) err = e;
+    }
+    if (!finite || !(err <= fallback_mass_balance_tol)) {
+        throw ValueError(format("%s: the two-phase solve failed and the bubble/dew fallback does not satisfy the overall mass balance "
+                                "(max |(1-Q)x + Qy - z| = %g at Q = %g); refusing a state of a different mixture",
+                                flash, err, static_cast<double>(Q)));
+    }
+}
+
 }  // namespace
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
@@ -1341,9 +1378,10 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
                     NR2.call(HEOS, IO2);
                     solved_twophase = true;
                 } catch (const std::exception& e) {
-                    record_flash_fallback("two-phase QT solve", "the bubble/dew solver (no mass balance)", e.what());
+                    record_flash_fallback("two-phase QT solve", "the bubble/dew solver (kept only if it satisfies the mass balance)", e.what());
                 } catch (...) {
-                    record_flash_fallback("two-phase QT solve", "the bubble/dew solver (no mass balance)", "unknown exception");
+                    record_flash_fallback("two-phase QT solve", "the bubble/dew solver (kept only if it satisfies the mass balance)",
+                                          "unknown exception");
                 }
             }
 
@@ -1370,6 +1408,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
                     // Compositions are z, z_incipient
                     NR.call(HEOS, IO.y, IO.x, IO);
                 }
+                if (interior_Q) require_fallback_mass_balance(HEOS, HEOS._Q, "QT_flash");
             }
         }
         // Load the outputs.  (An assignment of _p / _rhomolar from the saturation solver's IO
@@ -1702,9 +1741,10 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
                     NR2.call(HEOS, IO2);
                     solved_twophase = true;
                 } catch (const std::exception& e) {
-                    record_flash_fallback("two-phase PQ solve", "the bubble/dew solver (no mass balance)", e.what());
+                    record_flash_fallback("two-phase PQ solve", "the bubble/dew solver (kept only if it satisfies the mass balance)", e.what());
                 } catch (...) {
-                    record_flash_fallback("two-phase PQ solve", "the bubble/dew solver (no mass balance)", "unknown exception");
+                    record_flash_fallback("two-phase PQ solve", "the bubble/dew solver (kept only if it satisfies the mass balance)",
+                                          "unknown exception");
                 }
             }
 
@@ -1729,6 +1769,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
                     // Compositions are z, z_incipient
                     NR.call(HEOS, IO.y, IO.x, IO);
                 }
+                if (interior_Q) require_fallback_mass_balance(HEOS, HEOS._Q, "PQ_flash");
             }
         }
 
