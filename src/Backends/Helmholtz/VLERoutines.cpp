@@ -1827,7 +1827,7 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     // comparably -- unlike the mass-balance form, where the trace-component rows were O(z_i).
     //
     // The iso-fugacity residual is evaluated as ln f_i^V - ln f_i^L, with
-    //     ln f_i = ln(x_i rho R T) + d(n alphar)/dn_i |_{T,V}
+    //     ln f_i = ln(x_i rho R T) + d(n alphar)/dn_i |_{T,V}     (MixtureDerivatives::ln_fugacity_i)
     // taken from each phase's (T, rho) directly.  With both phases at the same p this is
     // identically ln K_i - (ln phi_i^L - ln phi_i^V), so the Jacobian below is unchanged, but it
     // does not go through ln Z.  ln_fugacity_coefficient forms ln Z as log(1 + delta dalphar/ddelta),
@@ -1837,12 +1837,8 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     // of iterations and the QT flash fell back to the bubble/dew solver (GH #3585).  ln f has
     // no such cancellation: its sensitivity to a relative density error is v_i K_T/(RT), O(100).
     CoolPropDbl rachford_rice = 0;
-    const CoolPropDbl ln_rhoRT_liq = log(rSatL.rhomolar() * rSatL.gas_constant() * T);
-    const CoolPropDbl ln_rhoRT_vap = log(rSatV.rhomolar() * rSatV.gas_constant() * T);
     for (std::size_t i = 0; i < N; ++i) {
-        const CoolPropDbl lnf_liq = log(x[i]) + ln_rhoRT_liq + MixtureDerivatives::dnalphar_dni__constT_V_nj(rSatL, i, xN_flag);
-        const CoolPropDbl lnf_vap = log(y[i]) + ln_rhoRT_vap + MixtureDerivatives::dnalphar_dni__constT_V_nj(rSatV, i, xN_flag);
-        r[i] = lnf_vap - lnf_liq;
+        r[i] = MixtureDerivatives::ln_fugacity_i(rSatV, i, xN_flag) - MixtureDerivatives::ln_fugacity_i(rSatL, i, xN_flag);
         const CoolPropDbl D = (1 - beta) + beta * K[i];
         rachford_rice += z[i] * (K[i] - 1) / D;
     }

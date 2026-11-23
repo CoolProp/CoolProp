@@ -21,12 +21,15 @@
 #    include "CoolProp/AbstractState.h"
 #    include "CoolProp/CoolProp.h"
 #    include "CoolProp/DataStructures.h"
+#    include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
+#    include "Backends/Helmholtz/MixtureDerivatives.h"
 
 #    include <algorithm>
 #    include <cmath>
 #    include <limits>
 #    include <memory>
 #    include <string>
+#    include <utility>
 #    include <vector>
 
 using namespace CoolProp;
@@ -56,6 +59,26 @@ std::string take_warning() {
 }
 
 }  // namespace
+
+// ln_fugacity_i is log(fugacity_i) evaluated in log space: it must agree with it wherever the
+// latter is representable, in both phases and for both mole-fraction conventions.
+TEST_CASE("MixtureDerivatives::ln_fugacity_i agrees with log(fugacity_i) (#3585)", "[mixture][fugacity]") {
+    auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "R436A.mix"));
+    auto& HEOS = *static_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    // A low-pressure liquid (the #3585 regime) and a gas.
+    for (const auto& Tp : std::vector<std::pair<double, double>>{{140.0, 1e5}, {300.0, 1e5}}) {
+        AS->update(PT_INPUTS, Tp.second, Tp.first);
+        for (std::size_t i = 0; i < 2; ++i) {
+            for (auto flag : {XN_INDEPENDENT, XN_DEPENDENT}) {
+                CAPTURE(Tp.first, i, static_cast<int>(flag));
+                const double lnf = MixtureDerivatives::ln_fugacity_i(HEOS, i, flag);
+                const double ref = std::log(MixtureDerivatives::fugacity_i(HEOS, i, flag));
+                CHECK(std::isfinite(lnf));
+                CHECK(lnf == Catch::Approx(ref).epsilon(1e-14).margin(1e-14));
+            }
+        }
+    }
+}
 
 // The issue's reproducer: two neighbouring floats of T.  The first used to exhaust the two-phase
 // solver's iterations and return the bubble/dew fallback (mass balance off by 1e-2, p off by
