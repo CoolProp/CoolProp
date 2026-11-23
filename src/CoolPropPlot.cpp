@@ -1292,8 +1292,10 @@ class Walk
         if (turn > 0.0) factor = std::min(factor, 0.8 * MAX_ANGLE_DEG / turn);
         // Floored at MIN_STEP: a line that turns by nearly 180 degrees at every
         // step would otherwise shrink each step to a quarter of the last, down
-        // to the resolution of a double, and spend the whole budget there (#3586)
-        return std::max(std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP), span_ * MIN_STEP);
+        // to the resolution of a double, and spend the whole budget there (#3586).
+        // A line of more than 1/MIN_STEP points asks for finer steps; the floor
+        // then follows its nominal step so the length guard still holds.
+        return std::max(std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP), span_ * std::min(MIN_STEP, 1.0 / points_));
     }
 
     void walk_inside(double& u, bool& inside) {
@@ -2696,6 +2698,23 @@ TEST_CASE("A line that turns back at every step keeps its step above MIN_STEP", 
     CHECK(smallest > 0.5 * MIN_STEP * (1.0 - 1e-12));
     // The walk moves on: about MIN_STEP per evaluation, against a few MIN_STEP in all without the floor
     CHECK(found.u.back() - found.u.front() > 100 * MIN_STEP);
+
+    // A line of more points than 1/MIN_STEP keeps its finer steps: the floor follows the nominal step
+    Evaluate straight = [](double u, bool /*careful*/, Sample& out) {
+        out.valid = true;
+        out.x = u;
+        out.y = u;
+        out.inside = true;
+        return true;
+    };
+    const int many = 50000;
+    Trace fine = trace(straight, metric, many);
+    REQUIRE(fine.u.size() > 2);
+    double largest = 0.0;
+    for (std::size_t i = 2; i < fine.u.size() - 1; ++i)  // the first step and the clamped last one aside
+        largest = std::max(largest, fine.u[i] - fine.u[i - 1]);
+    CHECK(largest < MIN_STEP);
+    CHECK(fine.u.back() == 1.0);
 }
 
 TEST_CASE("A two-phase mixture state must add up to the overall composition", "[Plot]") {
