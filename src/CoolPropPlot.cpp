@@ -1294,7 +1294,8 @@ class Walk
         // step would otherwise shrink each step to a quarter of the last, down
         // to the resolution of a double, and spend the whole budget there (#3586).
         // A line of more than 1/MIN_STEP points asks for finer steps; the floor
-        // then follows its nominal step so the length guard still holds.
+        // then follows its nominal step, so the line keeps its point density
+        // (there is no refinement below that step, as walk_inside's min_du is larger).
         return std::max(std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP), span_ * std::min(MIN_STEP, 1.0 / points_));
     }
 
@@ -2709,11 +2710,11 @@ TEST_CASE("A line that turns back at every step keeps its step above MIN_STEP", 
     };
     const int many = 50000;
     Trace fine = trace(straight, metric, many);
-    REQUIRE(fine.u.size() > 2);
+    REQUIRE(fine.u.size() > many / 2);
     double largest = 0.0;
     for (std::size_t i = 2; i < fine.u.size() - 1; ++i)  // the first step and the clamped last one aside
         largest = std::max(largest, fine.u[i] - fine.u[i - 1]);
-    CHECK(largest < MIN_STEP);
+    CHECK(largest < 0.5 * MIN_STEP);  // the old fixed floor forced every step to MIN_STEP
     CHECK(fine.u.back() == 1.0);
 }
 
