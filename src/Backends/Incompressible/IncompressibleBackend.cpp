@@ -415,11 +415,12 @@ class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
     /// round_off: how far target can be from the exact value through rounding
     /// alone (see HmassP_flash); a residual within it counts as a root.
     CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target, double round_off)
-      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target), round_off(round_off) {}
+      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target), round_off(std::isfinite(round_off) ? round_off : 0.0) {}
     double call(double T) override {
         set_density_terms(T);
         const double r = (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
-        return std::abs(r) <= round_off ? 0.0 : r;
+        // A non-finite r must stay non-finite, so that the solver rejects it
+        return (std::isfinite(r) && std::abs(r) <= round_off) ? 0.0 : r;
     }
     double deriv(double T) override {
         const double c = backend->c_at(T, p, x);
@@ -1342,6 +1343,17 @@ TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBack
                 }
             }
         }
+    }
+}
+
+TEST_CASE("Flashes reject infinite and huge inputs", "[IncompressibleBackend]") {
+    // The round-off band must not turn an infinite residual (inf <= inf) or an
+    // overflowing band into an exact root at the end of the range
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "Water"));
+    for (const double v : {HUGE_VAL, -HUGE_VAL, DBL_MAX, -DBL_MAX}) {
+        CAPTURE(v);
+        CHECK_THROWS(AS->update(CoolProp::HmassP_INPUTS, v, 1e6));
+        CHECK_THROWS(AS->update(CoolProp::PSmass_INPUTS, 1e6, v));
     }
 }
 
