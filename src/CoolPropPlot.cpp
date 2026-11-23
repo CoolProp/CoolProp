@@ -1290,7 +1290,10 @@ class Walk
         if (last_length_ > 0.0) factor = std::min(factor, 0.8 * max_length_ / last_length_);
         double turn = std::acos(std::min(std::max(last_turn_, -1.0), 1.0)) * 180.0 / M_PI;
         if (turn > 0.0) factor = std::min(factor, 0.8 * MAX_ANGLE_DEG / turn);
-        return std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP);
+        // Floored at MIN_STEP: a line that turns by nearly 180 degrees at every
+        // step would otherwise shrink each step to a quarter of the last, down
+        // to the resolution of a double, and spend the whole budget there (#3586)
+        return std::max(std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP), span_ * MIN_STEP);
     }
 
     void walk_inside(double& u, bool& inside) {
@@ -2666,6 +2669,33 @@ TEST_CASE("States computed outside the axes are told apart from failures", "[Plo
     CHECK(short_line_reason(0, 5, 0, 0).rfind("none of the 5 states", 0) == 0);
     CHECK(short_line_reason(1, 5, 1, 0).rfind("only 1 point(s)", 0) == 0);
     CHECK(short_line_reason(2, 5, 2, 0).empty());
+}
+
+TEST_CASE("A line that turns back at every step keeps its step above MIN_STEP", "[Plot]") {
+    using namespace CoolProp::Plot::Detail;
+    // Every evaluation lands on the other of two parallel branches, as a
+    // flash that alternates between a right and a wrong root does (#3586):
+    // each step turns by nearly 180 degrees and shrinks to a quarter of the
+    // last.  Without a floor the steps fall to the resolution of a double and
+    // the whole budget is spent at one u.
+    int calls = 0;
+    Evaluate evaluate = [&calls](double u, bool /*careful*/, Sample& out) {
+        out.valid = true;
+        out.x = u;
+        out.y = (calls++ % 2 == 0) ? 0.4 : 0.6;
+        out.inside = true;
+        return true;
+    };
+    Metric metric = {{0.0, 1.0}, {0.0, 1.0}, false, false};
+    Trace found = trace(evaluate, metric, 20);
+    REQUIRE(found.u.size() > 10);
+    double smallest = 1.0;
+    for (std::size_t i = 1; i < found.u.size(); ++i)
+        smallest = std::min(smallest, found.u[i] - found.u[i - 1]);
+    // walk_inside halves a rejected step only while it exceeds MIN_STEP, so a step ends in (MIN_STEP/2, MIN_STEP] at worst
+    CHECK(smallest > 0.5 * MIN_STEP * (1.0 - 1e-12));
+    // The walk moves on: about MIN_STEP per evaluation, against a few MIN_STEP in all without the floor
+    CHECK(found.u.back() - found.u.front() > 100 * MIN_STEP);
 }
 
 TEST_CASE("A two-phase mixture state must add up to the overall composition", "[Plot]") {
