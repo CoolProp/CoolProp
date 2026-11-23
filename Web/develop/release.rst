@@ -56,10 +56,16 @@ the CoolProp library.
       zipped sources.
     - Bump the version number in the CMake file and commit.
     - Announce the new features if you like.
-    - Remove artifacts from TestPYPI. First with ``pypi-cleanup -t https://test.pypi.org -p coolprop --query-only -r ".*\.dev\d.*"``
-      to determine what will be deleted and then with your username ``-u username --do-it``
-      (and without ``--query-only``) to do it. The ``.dev`` pattern matches the
-      ``X.Y.Z.dev<timestamp>`` nightlies that CI publishes to TestPyPI.
+    - Remove the nightlies from TestPyPI.  Every release there is an
+      ``X.Y.Z.dev<timestamp>`` nightly, so a ``.dev`` regex matches all of them
+      and ``pypi-cleanup`` refuses it, because it would leave the project with
+      no releases.  Keep the newest instead.  Use a current ``pypi-cleanup``:
+      0.1.8 can no longer log in to TestPyPI, while 0.1.11 can.  First run
+      ``uvx pypi-cleanup@0.1.11 -t https://test.pypi.org -p coolprop -u <username> --leave-most-recent-only``,
+      which logs in and lists what would be deleted, and then the same command
+      with ``--do-it`` added to delete.  The login takes your TestPyPI password
+      (separate from PyPI's) and an authenticator-app (TOTP) code; an account
+      with only a security key or passkey cannot log in this way.
 
 That's all folks.
 
