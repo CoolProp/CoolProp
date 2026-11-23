@@ -83,7 +83,10 @@ SWIG is needed inside the Flatpak environment for the CoolProp wrapper build but
 Building CoolProp Inside the Flatpak Shell
 ==========================================
 
-Building with the Flatpak runtime's own ``cmake``, ``g++``, and ``mkoctfile`` avoids any compiler or ``glibc`` mismatch with the RHEL host, and is the recommended way.
+Building with the Flatpak runtime's own ``cmake``, ``g++``, and ``octave-config`` avoids any compiler or ``glibc`` mismatch with the RHEL host, and is the way this page was tested.
+
+.. warning::
+    Do not run the build from the host's own ``cmake``.  CoolProp's CMake finds Octave through ``octave-config`` and then looks for Octave's headers and libraries on the file system it can see, so a host build either fails to find Octave or picks up a different host Octave (such as the older ``dnf`` package).  The host compiler (GCC 11 on RHEL 9) is also older than the Flatpak runtime's (GCC 13/14), which risks C++ ABI mismatches.
 
 1. Clone CoolProp (from a regular RHEL terminal) into the home directory, for example ``~/CoolProp``, so the sandbox can see it.  A source folder elsewhere on the host first needs the ``flatpak override --filesystem=...`` command shown above.
 
@@ -113,26 +116,6 @@ Running the Example
 Flatpak sees the home directory, so the generated example is run the same way as in the generic instructions, from the same Flatpak shell.  Either change to the folder holding ``Example.m`` first, or give the path to it, for example (with the default install prefix)::
 
     octave ~/CoolProp/install_root/Octave/Example.m
-
-Alternative Host Shell Build (Not Recommended)
-==============================================
-
-.. warning::
-    The host compiler (GCC 11 on RHEL 9) is older than the one in the Flatpak runtime (GCC 13/14).  Mixing the two, such as a static library compiled on the host and linked by the Flatpak's ``mkoctfile``, risks C++ ABI mismatches.  Building everything inside the Flatpak shell, as demonstrated above, avoids this problem.
-
-If the build *has* to be driven from the host's own ``cmake``, Flatpak's ``mkoctfile`` can be exposed to the host through a small wrapper script::
-
-    [ -d ~/.local/bin ] || mkdir -p ~/.local/bin
-    cat << 'EOF' > ~/.local/bin/mkoctfile
-    #!/bin/bash
-    exec flatpak run --command=mkoctfile org.octave.Octave "$@"
-    EOF
-    chmod +x ~/.local/bin/mkoctfile
-    case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
-
-The ``mkdir`` and ``export`` lines only act when ``~/.local/bin`` is missing or not yet on the ``PATH``.  ``mkoctfile --version`` from the host shell should now report the Flatpak's Octave.
-
-**Use this method at own risk!**
 
 .. _octave_rhel_refprop:
 

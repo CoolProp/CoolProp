@@ -55,7 +55,7 @@ On **Ubuntu** and friends, GNU Octave and its associated build dependencies are 
 
     The Octave version that comes from ``apt`` depends on which Ubuntu release is used. **Ubuntu 24.04 LTS** ships *Octave 8.4.0* and **26.04 LTS** ships *Octave 11.1.0*, which is much closer to the current upstream version as of this update. Either way, the dev package is version-locked to its matching ``octave`` package, so the GCC compiler version is always in sync.
 
-On **RHEL 9**, see :ref:`RHEL Octave Info <octave_rhel>` for installing a *current* Octave (and SWIG) through Flatpak and building the wrapper inside its sandbox.  *Note that this distro's native version of GNU Octave, installed through ``dnf`` is several releases behind.*
+On **RHEL 9**, see :ref:`RHEL Octave Info <octave_rhel>` for installing a *current* Octave (and SWIG) through Flatpak and building the wrapper inside its sandbox.  **Note:** this distro's native version of GNU Octave, installed through ``dnf``, is several releases behind.
 
 Hopefully, between the instructions for these two flavors of Linux and with a little AI help, it should be easy enough to figure out how to build on other Linux distros.  
 
@@ -140,7 +140,7 @@ Once the dependencies above are in place, the builder is run this way::
     # Use CMake to generate the make file
     #
     # NOTE: On RHEL(Flatpak), add switch -DSWIG_EXECUTABLE=$HOME/swig-build/install/bin/swig
-    #       so that Flatpak can find the compiled SWIG library.
+    #       so that CMake can find the SWIG executable built there.
     #
     cmake .. -DCOOLPROP_OCTAVE_MODULE=ON
     # Build the OCT file (use parallel switch for speed)
@@ -162,7 +162,7 @@ Windows
 The same build is run from whichever shell matches the Octave installation route chosen above with the changes noted below.
 
 .. note::
-    Tthe official installer's own **Bash Shell (Recommended)** doesn't actually bundle **SWIG** or a **CMake-compatible build driver**, even though its CMake reports both ``Ninja`` and ``MinGW Makefiles`` as available generators; that list is just what CMake was compiled to support, not what's installed on this machine. There are two one-time fixes for these, neither require admin rights:
+    The official installer's own **Bash Shell (Recommended)** doesn't actually bundle **SWIG** or a **CMake-compatible build driver**, even though its CMake reports both ``Ninja`` and ``MinGW Makefiles`` as available generators; that list is just what CMake was compiled to support, not what's installed on this machine. There are two one-time fixes for these, neither require admin rights:
 
     * **SWIG:** download ``swigwin-<version>.zip`` from `swig.org <https://www.swig.org/download.html>`__ (a self-contained build, no installer). SWIG only generates wrapper source, so it doesn't need to match the GCC/Octave toolchain the way ``CoolProp.oct`` does. Unzip it anywhere and add that folder to ``PATH`` for this session::
 
@@ -181,8 +181,8 @@ Depending on the Octave installation route, there is only one difference in the 
     # Configure the make system for the Octave wrapper 
     #   >>> In OCTAVE'S BASH SHELL (Recommended) using the "MSYS Makefiles" generator
     cmake .. -G "MSYS Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON
-    #   >>> In MSYS UCRT64 environment using the "Ninja" generator
-    cmake .. -G "Ninja" -DCOOLPROP_OCTAVE_MODULE=ON
+    #   >>> OR, in the MSYS UCRT64 environment, use the "Ninja" generator instead:
+    #   cmake .. -G "Ninja" -DCOOLPROP_OCTAVE_MODULE=ON
     # Build the CoolProp wrapper package
     cmake --build . -j 8
     # (OPTIONAL) Register the package in ~/.octaverc for auto-loading
@@ -191,7 +191,7 @@ Depending on the Octave installation route, there is only one difference in the 
 ``cmake --install .`` works the same way here as on Linux: no administrator shell is needed, since it installs under the build's own prefix and adds that folder to ``~/.octaverc`` automatically.  Of course, the file can be saved in any desired location and the ``~/.octaverc`` file can be updated to point to the package there.
 
 .. note::
-    The ``-j 8`` switch (or ``--parallel 8``) tells the compiler to run in paralle on multi-processor machines.  The default is 8 processes (using ``--parallel``).  On **Ninja** and **MSYS Makefiles**, this parallelizes at the file level and builds *much* faster.
+    The ``-j 8`` switch (or ``--parallel 8``) tells the build tool to run up to 8 jobs at once on multi-processor machines.  On **Ninja** and **MSYS Makefiles**, this parallelizes at the file level and builds *much* faster.
 
 Verifying the CoolProp Build
 ============================
@@ -241,7 +241,7 @@ Loading CoolProp
 
     octave:1> addpath('path-to-the-folder-holding-CoolProp.oct')
 
-  The ``cmake --install .`` step in the scripts above perform thisstep automatically *every time the user launches Octave*
+  The ``cmake --install .`` step in the scripts above performs this step automatically *every time the user launches Octave*
 
 * CoolProp is loaded by simply typing ``CoolProp`` at the Octave prompt.  That first call loads the module and defines ``CoolProp`` (along with CoolProp's classes and constants) in the workspace.
 
@@ -254,7 +254,7 @@ If you have a licensed version of **NIST REFPROP** installed (preferably v10.0 o
 
 * The ``RPPREFIX`` (Linux)/ ``RPprefix`` (Windows) environment variable must be set to the REFPROP installation directory, the one containing REFPROP's ``Fluids`` and ``Mixtures`` folders.  The REFPROP installer on Windows sets this environment variable automatically.
 * The folder holding REFPROP's shared library must be on the system's library search path.  On Windows, the REFPROP installer does this automatically; on Linux and macOS it has to be done by hand.  Alternatively, set the ``COOLPROP_REFPROP_ROOT`` environment variable to the REFPROP directory.
-* A Flatpak-installed Octave (as on :ref:`RHEL <octave_rhel>`) does not see the host shell's environment, so these variables have to be set for the Flatpak itself; see :ref:`REFPROP Under Flatpak <octave_rhel_refprop>`.  However, these environment variable settins appear to be persistent in the Octave flatpak bash shell once set.
+* A Flatpak-installed Octave (as on :ref:`RHEL <octave_rhel>`) does not see the host shell's environment, so these variables have to be set for the Flatpak itself; see :ref:`REFPROP Under Flatpak <octave_rhel_refprop>`.  Settings made with ``flatpak override`` are persistent, so they only have to be made once.
 * See :ref:`REFPROP` for more on usage of the REFPROP backend in CoolProp.
 
 .. raw:: html
