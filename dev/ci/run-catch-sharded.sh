@@ -96,17 +96,26 @@ if [ "$SHARDS" -gt "$EXPECTED" ]; then
     SHARDS="$EXPECTED"
 fi
 
+# Git Bash turns a /path argument into C:/path for a native Windows runner,
+# but not one inside "console::out=/path": the runner could not open its
+# report files and every shard failed.  cygpath exists only under MSYS2 and
+# Cygwin.
+REPORT_DIR="$LOGDIR"
+if command -v cygpath >/dev/null 2>&1; then
+    REPORT_DIR="$(cygpath -m "$LOGDIR")"
+fi
+
 # One child per shard.  Arguments reach the child positionally ("$@"), never
 # through string interpolation, so filter characters such as ~ [ ] , survive
 # unmangled.  The child's own status is always 0 once it has written the .rc
 # file, which keeps xargs' exit status reserved for infrastructure failure.
 # shellcheck disable=SC2016  # $1..$@ are expanded by the child shell
 CHILD='
-    i="$1"; runner="$2"; filter="$3"; shards="$4"; logdir="$5"; shift 5
+    i="$1"; runner="$2"; filter="$3"; shards="$4"; logdir="$5"; reportdir="$6"; shift 6
     "$runner" "$filter" "$@" \
         --shard-count "$shards" --shard-index "$i" \
-        --reporter "console::out=$logdir/$i.log" \
-        --reporter "xml::out=$logdir/$i.xml" \
+        --reporter "console::out=$reportdir/$i.log" \
+        --reporter "xml::out=$reportdir/$i.xml" \
         >"$logdir/$i.stdout" 2>&1 && rc=0 || rc=$?
     echo "$rc" >"$logdir/$i.rc"
 '
@@ -116,7 +125,7 @@ i=0
 while [ "$i" -lt "$SHARDS" ]; do
     printf '%s\n' "$i"
     i=$((i + 1))
-done | xargs -P "$JOBS" -I{} bash -c "$CHILD" _ {} "$RUNNER" "$FILTER" "$SHARDS" "$LOGDIR" "$@" || XARGS_RC=$?
+done | xargs -P "$JOBS" -I{} bash -c "$CHILD" _ {} "$RUNNER" "$FILTER" "$SHARDS" "$LOGDIR" "$REPORT_DIR" "$@" || XARGS_RC=$?
 
 if [ "$XARGS_RC" -ne 0 ]; then
     echo "run-catch-sharded: xargs exited $XARGS_RC -- shard dispatch itself failed" >&2
