@@ -9020,6 +9020,43 @@ TEST_CASE("INCOMP liquid limit at the boiling point is consistent", "[INCOMP]") 
     SECTION("A boiling point less than one margin above TminPsat") {
         const double p = 0.001 * (300.0 + 0.3 * m);
         CHECK_NOTHROW(f.checkTPX(f.TmaxAt(p, 0.0), p, 0.0));
+        // and states there flash back, at saturation and within the margin
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSlowPsatFluid"));
+        for (const double fraction : {0.0, 0.3, 0.9}) {
+            CAPTURE(fraction);
+            const double T = 300.0 + fraction * m;
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double h = AS->hmass(), s = AS->smass();
+            CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, p, s));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
+    SECTION("A density that only a state within the margin reaches") {
+        // The density turns over at 360 K, so over the full range [280, 400]
+        // the residual has the same sign at both ends: only the second pass,
+        // bracketed at the boiling point, can find the root just above 350 K.
+        const std::string turning = R"([{"name": "CatchRuntimeTurningRhoFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[-119600.0], [720.0], [-1.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]},
+            "saturation_pressure": {"type": "polynomial", "coeffs": [[0.0], [0.001]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", turning));
+        CoolProp::IncompressibleFluid& t = CoolProp::get_incompressible_fluid("CatchRuntimeTurningRhoFluid");
+        const double p = 0.35;  // T_sat = 350 K
+        REQUIRE(t.rho(360.0, p, 0.0, false) == Catch::Approx(10000.0));
+        for (const double fraction : {0.0, 0.5, 0.9}) {
+            CAPTURE(fraction);
+            const double T = 350.0 + fraction * m;
+            double T_back = NAN;
+            CHECK_NOTHROW(T_back = t.T_rho(t.rho(T, p, 0.0, false), p, 0.0, false));
+            CHECK(std::abs(T_back - T) < 1e-9);
+        }
+        // Beyond the margin there is no liquid state with that density: no
+        // pass finds a root, so the solver's own error is reported
+        CHECK_THROWS_WITH(t.T_rho(t.rho(350.0 + 3 * m, p, 0.0, false), p, 0.0, false), Catch::Matchers::ContainsSubstring("do not bracket"));
     }
     SECTION("A state accepted within the margin can be flashed back") {
         const double p = 0.35;  // T_sat = 350 K

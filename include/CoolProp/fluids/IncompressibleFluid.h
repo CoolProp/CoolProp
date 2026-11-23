@@ -361,19 +361,27 @@ class IncompressibleFluid
             if (first_error) std::rethrow_exception(first_error);
             throw ValueError(format("%s: no liquid state at p = %g Pa", name.c_str(), p));
         }
+        // T_boil lies 0.3 to 0.7 saturationMargin() above the saturation
+        // temperature, while isLiquidAt() accepts up to one margin above it.
+        // The second pass searches up to half a margin further, so it reaches
+        // every state isLiquidAt() accepts (a fit that turns over can have its
+        // only liquid root there), and a root it finds beyond that band is
+        // rejected as boiling by the same test as in the first pass.
+        const double T_hi = std::min(Tmax, T_boil + 0.5 * saturationMargin());
+        double T = 0.0;
         try {
-            // T_boil lies a small margin (about 1e-9 Tmax) above the saturation
-            // temperature, so that a state exactly at saturation stays inside the
-            // bracket. A root inside that margin is taken as saturated liquid:
-            // rejecting it rejects valid round trips from saturation, whose root
-            // lands a few ulp above T_sat.
-            return solve(T_lo, T_boil);
+            T = solve(T_lo, T_hi);
         } catch (const CoolPropBaseError& e) {
             if (boiling) {
                 throw ValueError(format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (%s)", name.c_str(), p, T_boil, e.what()));
             }
             std::rethrow_exception(first_error);
         }
+        if (!isLiquidAt(T, p, x)) {
+            throw ValueError(
+              format("%s: no liquid state at p = %g Pa, where the liquid boils at %g K (solution %.17g K)", name.c_str(), p, T_boil, T));
+        }
+        return T;
     }
     /// Reduce every fit a state evaluates to a series in T at composition x
     /// (see FitAtComposition). Fits of other types are left as NONE.

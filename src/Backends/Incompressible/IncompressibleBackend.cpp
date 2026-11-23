@@ -1237,15 +1237,15 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
     CHECK(water.TmaxAt(2e6, 0.0) == water.getTmax());
     CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
     CHECK(meg.TmaxAt(101325.0, 0.35) == meg.getTmax());
-    // The second pass searches up to TmaxAt, a small margin above the
-    // saturation temperature. A root inside that margin is saturated liquid
-    // to within the solver tolerance and is returned, not rejected as boiling.
-    // The stand-in solver returns the upper end of its bracket: Tmax on the
-    // first pass (a boiling state), T_boil on the second.
+    // The second pass searches a little beyond TmaxAt, so that it reaches
+    // every state isLiquidAt() accepts (up to one saturationMargin() above
+    // T_sat). The stand-in solver returns the upper end of its bracket: a
+    // boiling state on the first pass, and on the second a temperature that
+    // is either still accepted as liquid, or rejected as boiling.
     REQUIRE(water.psat(T_boil, 0.0) > 101325.0);
-    // TmaxAt and checkP agree: over a sweep of pressures the upper end of the
-    // bracket lies above the saturation temperature (a saturated state is
-    // inside it) and is still accepted as liquid
+    // TmaxAt and checkP agree: over a sweep of pressures TmaxAt lies above the
+    // saturation temperature (a saturated state is inside the bracket) and is
+    // still accepted as liquid
     for (int i = 0; i < 300; ++i) {
         const double p_sweep = 1000.0 * std::pow(1.025, i);  // 1 kPa to 1.6 MPa
         CAPTURE(p_sweep);
@@ -1254,7 +1254,13 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
         CHECK(water.psat(T_hi, 0.0) >= p_sweep);
         CHECK_NOTHROW(water.checkTPX(T_hi, p_sweep, 0.0));
     }
-    CHECK(water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; }) == T_boil);
+    try {
+        const double T_end = water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; });
+        CHECK(T_end > T_boil);
+        CHECK_NOTHROW(water.checkTPX(T_end, 101325.0, 0.0));
+    } catch (const CoolProp::ValueError& e) {
+        CHECK_THAT(std::string(e.what()), Catch::Matchers::ContainsSubstring("boils at"));
+    }
 
     // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
     // error says that the liquid boils, not only that there is no bracket
