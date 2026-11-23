@@ -9047,7 +9047,7 @@ TEST_CASE("INCOMP liquid limit at the boiling point is consistent", "[INCOMP]") 
         CoolProp::IncompressibleFluid& t = CoolProp::get_incompressible_fluid("CatchRuntimeTurningRhoFluid");
         const double p = 0.35;  // T_sat = 350 K
         REQUIRE(t.rho(360.0, p, 0.0, false) == Catch::Approx(10000.0));
-        for (const double fraction : {0.0, 0.5, 0.9}) {
+        for (const double fraction : {0.0, 0.5, 0.9, 0.99}) {
             CAPTURE(fraction);
             const double T = 350.0 + fraction * m;
             double T_back = NAN;

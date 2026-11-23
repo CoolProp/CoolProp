@@ -363,11 +363,12 @@ class IncompressibleFluid
         }
         // T_boil lies 0.3 to 0.7 saturationMargin() above the saturation
         // temperature, while isLiquidAt() accepts up to one margin above it.
-        // The second pass searches up to half a margin further, so it reaches
-        // every state isLiquidAt() accepts (a fit that turns over can have its
-        // only liquid root there), and a root it finds beyond that band is
-        // rejected as boiling by the same test as in the first pass.
-        const double T_hi = std::min(Tmax, T_boil + 0.5 * saturationMargin());
+        // The second pass searches 0.75 margin further, to 1.05 to 1.45
+        // margins above saturation, so it reaches every state isLiquidAt()
+        // accepts (a fit that turns over can have its only liquid root there),
+        // and a root it finds beyond that band is rejected as boiling by the
+        // same test as in the first pass.
+        const double T_hi = std::min(Tmax, T_boil + 0.75 * saturationMargin());
         double T = 0.0;
         try {
             T = solve(T_lo, T_hi);
