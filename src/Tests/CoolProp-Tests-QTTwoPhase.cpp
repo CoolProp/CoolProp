@@ -64,7 +64,9 @@ std::string take_warning() {
 // latter is representable, in both phases and for both mole-fraction conventions.
 TEST_CASE("MixtureDerivatives::ln_fugacity_i agrees with log(fugacity_i) (#3585)", "[mixture][fugacity]") {
     auto AS = std::shared_ptr<AbstractState>(AbstractState::factory("HEOS", "R436A.mix"));
-    auto& HEOS = *static_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    auto* HEOS_ptr = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    REQUIRE(HEOS_ptr != nullptr);
+    auto& HEOS = *HEOS_ptr;
     // A low-pressure liquid (the #3585 regime) and a gas.
     for (const auto& Tp : std::vector<std::pair<double, double>>{{140.0, 1e5}, {300.0, 1e5}}) {
         AS->update(PT_INPUTS, Tp.second, Tp.first);
@@ -75,6 +77,14 @@ TEST_CASE("MixtureDerivatives::ln_fugacity_i agrees with log(fugacity_i) (#3585)
                 const double ref = std::log(MixtureDerivatives::fugacity_i(HEOS, i, flag));
                 CHECK(std::isfinite(lnf));
                 CHECK(lnf == Catch::Approx(ref).epsilon(1e-14).margin(1e-14));
+                // Independent identity ln f_i = ln phi_i + ln(x_i p), through ln Z: shares
+                // neither ln(rho R T) nor the assembly above.  Only where ln Z is well
+                // conditioned (the gas); in the cold liquid it carries the #3585 noise.
+                if (Tp.first > 200) {
+                    const double viaphi =
+                      MixtureDerivatives::ln_fugacity_coefficient(HEOS, i, flag) + std::log(HEOS.get_mole_fractions()[i] * HEOS.p());
+                    CHECK(lnf == Catch::Approx(viaphi).epsilon(1e-12).margin(1e-12));
+                }
             }
         }
     }
