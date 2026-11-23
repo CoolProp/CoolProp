@@ -31,7 +31,8 @@
 #   - shellcheck       : uvx shellcheck-py, changed *.sh only, warning+
 #   - actionlint       : uvx actionlint-py + shellcheck-py, changed
 #                         .github/workflows/*.yml only
-#   - Catch2 tests     : ./build_catch/CatchTestRunner with tag scope
+#   - Catch2 tests     : CatchTestRunner from build_catch/ (or
+#                        build_catch/Release/) with tag scope
 #                        auto-selected from the changed paths, sharded
 #                        across --jobs cores by dev/ci/run-catch-sharded.sh;
 #                        BENCHMARK bodies run once, as in CI
@@ -439,6 +440,7 @@ fi
 # ---------- check 2: build CatchTestRunner ---------------------------
 
 step "build CatchTestRunner"
+CATCH_BUILT=0
 if skip_check build; then
     skip "build" "--skip=build"
 elif ! ensure_build_dir build_catch "$PF_LOGDIR/configure-build_catch.log" \
@@ -455,8 +457,13 @@ else
     # <pipeline>` was false and the gate reported the build as PASSING.
     # Grepping the last 5 lines was independently unreliable -- a link
     # error, an OOM kill or a cmake usage error need not print "error:".
-    if cmake --build build_catch --target CatchTestRunner -j"$JOBS" >"$PF_LOGDIR/build.log" 2>&1; then
+    #
+    # --config Release: multi-config generators (Visual Studio, Ninja
+    # Multi-Config) ignore CMAKE_BUILD_TYPE and build Debug without it.
+    # Single-config generators ignore --config.
+    if cmake --build build_catch --config Release --target CatchTestRunner -j"$JOBS" >"$PF_LOGDIR/build.log" 2>&1; then
         ok "build CatchTestRunner"
+        CATCH_BUILT=1
     else
         tail -20 "$PF_LOGDIR/build.log"
         fail "build (see $PF_LOGDIR/build.log)"
@@ -531,9 +538,26 @@ fi
 # ---------- check 3: Catch2 tests with auto-selected tag scope -------
 
 step "Catch2 tests"
+# The runner lands in build_catch/ with a single-config generator, and in
+# build_catch/Release/ with a multi-config one (Visual Studio, Ninja
+# Multi-Config) or with MinGW under MSYS2, where CMakeLists.txt groups the
+# outputs by build type.  Debug/ is not searched: the build step builds
+# Release, so a runner there would be a stale one.
+CATCH_RUNNER=""
+for _r in ./build_catch/{,Release/}CatchTestRunner{,.exe}; do
+    if [ -f "$_r" ] && [ -x "$_r" ]; then
+        CATCH_RUNNER="$_r"
+        break
+    fi
+done
 if skip_check tests; then
     skip "tests" "--skip=tests"
-elif [ ! -x ./build_catch/CatchTestRunner ]; then
+elif [ -z "$CATCH_RUNNER" ] && [ "$CATCH_BUILT" = 1 ]; then
+    # The build passed, so the runner is somewhere this does not look.  This
+    # used to be a skip, and a skip passes the gate: a Visual Studio build
+    # went green without running a single test (#3556).
+    fail "tests (CatchTestRunner built, but not found in build_catch/ or build_catch/Release/)"
+elif [ -z "$CATCH_RUNNER" ]; then
     skip "tests" "CatchTestRunner not built"
 else
     # Tag scope selection: ~[slow] ALWAYS, plus the tags of EVERY path rule
@@ -627,6 +651,7 @@ else
         add_tags "[melting]"
     fi
     TAG_FILTER="~[slow]${EXTRA_TAGS:+,$EXTRA_TAGS}"
+    echo "  runner: $CATCH_RUNNER"
     echo "  tag filter: $TAG_FILTER"
     echo "  $REFPROP_NOTE"
     # Gate on the runner's EXIT CODE, not on grepping its output.  The old
@@ -655,7 +680,7 @@ else
     # stderr or the status is what lets a gate fail open.
     test_logdir="$PF_LOGDIR/tests"
     mkdir "$test_logdir"
-    if ! listed_tests=$(./build_catch/CatchTestRunner "$TAG_FILTER" \
+    if ! listed_tests=$("$CATCH_RUNNER" "$TAG_FILTER" \
                             --list-tests --verbosity quiet); then
         fail "tests (could not list cases for filter '$TAG_FILTER' -- is the runner intact?)"
     else
@@ -680,7 +705,7 @@ else
         # paths in [caching] run only inside BENCHMARK).  Running each body
         # once costs ~1 s over skipping them once the run is sharded.
         elif mkdir "$test_logdir/shards" \
-             && ./dev/ci/run-catch-sharded.sh ./build_catch/CatchTestRunner "$TAG_FILTER" "$matched" "$JOBS" "$test_logdir/shards" \
+             && ./dev/ci/run-catch-sharded.sh "$CATCH_RUNNER" "$TAG_FILTER" "$matched" "$JOBS" "$test_logdir/shards" \
                  --warn UnmatchedTestSpec \
                  --benchmark-samples 1 --benchmark-no-analysis --benchmark-warmup-time 0 \
                  >"$test_logdir/summary.txt" 2>&1; then
