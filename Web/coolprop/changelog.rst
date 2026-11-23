@@ -299,7 +299,8 @@ Bug fixes:
 
 * ``HEOS::R1233ZD(E)-SRK`` has real temperature and pressure limits; PC-SAFT refuses charged species without water instead of using an unset dielectric constant; a Q=0,S flash on a fluid with no saturated-liquid entropy ancillary (GERG fluids, and HEOS fluids such as Chlorine when superancillaries are off) now raises a clear error instead of starting from uninitialised memory.
 
-* BICUBIC/TTSE mixtures refuse a composition change once their tables are loaded; they kept the first composition's tables and returned its properties.
+* BICUBIC/TTSE mixtures refuse a composition change once their tables are loaded; they kept the first composition's tables and returned its properties (`#3570 <https://github.com/CoolProp/CoolProp/pull/3570>`__).
+* HEOS ``DmolarT_INPUTS`` with the phase imposed as two-phase took the density and saturation states from an earlier update, or threw on a fresh state; this also broke the splined two-phase density (``rho_smoothing``) of TTSE and BICUBIC (`#3575 <https://github.com/CoolProp/CoolProp/issues/3575>`__, `#3576 <https://github.com/CoolProp/CoolProp/pull/3576>`__).
 
 * Cubic EOS (SRK/PR): exact Omega constants (`#3515 <https://github.com/CoolProp/CoolProp/pull/3515>`__); P- and T-input flashes, Q,T/P,Q from the superancillary, robust density roots near the critical point and above Tc, T,P phase labels and fresh-state caloric properties (`#3441 <https://github.com/CoolProp/CoolProp/issues/3441>`__).
 
@@ -364,7 +365,7 @@ Packaging and documentation:
 * The development docs are rebuilt on every master push again; they had not been rebuilt since 2026-06-26 because the trigger failed silently (`#3439 <https://github.com/CoolProp/CoolProp/issues/3439>`__, `#3442 <https://github.com/CoolProp/CoolProp/pull/3442>`__).
 
 Contributors to this release (everyone with a merged PR since 8.0.0):
-`ibell <https://github.com/ibell>`_, `VikramGovindarajan <https://github.com/VikramGovindarajan>`_, `fwitte <https://github.com/fwitte>`_, `jowr <https://github.com/jowr>`_, `pkirkham <https://github.com/pkirkham>`_, `jakobreichert <https://github.com/jakobreichert>`_, `andr1976 <https://github.com/andr1976>`_, `mgreminger <https://github.com/mgreminger>`_, `samuha76 <https://github.com/samuha76>`_, `Tobias-Reiter <https://github.com/Tobias-Reiter>`_, `sebastianlivoni <https://github.com/sebastianlivoni>`_, `henningjp <https://github.com/henningjp>`_, `dusanjaglicic <https://github.com/dusanjaglicic>`_, `lucas-santos-f <https://github.com/lucas-santos-f>`_, `charif-hamza <https://github.com/charif-hamza>`_, `luisbedoia <https://github.com/luisbedoia>`_, `ibarapascal <https://github.com/ibarapascal>`_, `kaern <https://github.com/kaern>`_, `ting2025 <https://github.com/ting2025>`_
+`ibell <https://github.com/ibell>`_, `VikramGovindarajan <https://github.com/VikramGovindarajan>`_, `fwitte <https://github.com/fwitte>`_, `jowr <https://github.com/jowr>`_, `pkirkham <https://github.com/pkirkham>`_, `jakobreichert <https://github.com/jakobreichert>`_, `andr1976 <https://github.com/andr1976>`_, `mgreminger <https://github.com/mgreminger>`_, `samuha76 <https://github.com/samuha76>`_, `Tobias-Reiter <https://github.com/Tobias-Reiter>`_, `sebastianlivoni <https://github.com/sebastianlivoni>`_, `henningjp <https://github.com/henningjp>`_, `dusanjaglicic <https://github.com/dusanjaglicic>`_, `lucas-santos-f <https://github.com/lucas-santos-f>`_, `charif-hamza <https://github.com/charif-hamza>`_, `luisbedoia <https://github.com/luisbedoia>`_, `ibarapascal <https://github.com/ibarapascal>`_, `kaern <https://github.com/kaern>`_, `ting2025 <https://github.com/ting2025>`_, `thorade <https://github.com/thorade>`_
 
 Issues closed:
 
@@ -415,6 +416,7 @@ Issues closed:
 * `#3557 <https://github.com/CoolProp/CoolProp/issues/3557>`__ : rhocrit differs by 4.3% between native 'Helium' and 'REFPROP::Helium' backends
 * `#3560 <https://github.com/CoolProp/CoolProp/issues/3560>`__ : [ISSUE] "TypicalNaturalGas.mix" Properties
 * `#3568 <https://github.com/CoolProp/CoolProp/issues/3568>`__ : Feature: derivatives of transport properties, for dynamic simulations
+* `#3575 <https://github.com/CoolProp/CoolProp/issues/3575>`__ : Imposed two-phase DmolarT_INPUTS update reads stale or uninitialized SatL/SatV (breaks first_two_phase_deriv_splined of the tabular backends)
 
 Pull requests merged:
 
@@ -644,11 +646,15 @@ Pull requests merged:
 * `#3565 <https://github.com/CoolProp/CoolProp/pull/3565>`__ : ci: run all PR workflows regardless of base branch
 * `#3566 <https://github.com/CoolProp/CoolProp/pull/3566>`__ : ci: publish to (Test)PyPI only from master pushes and v\* tags
 * `#3569 <https://github.com/CoolProp/CoolProp/pull/3569>`__ : Fix three reads of uninitialised data that feed property results
+* `#3570 <https://github.com/CoolProp/CoolProp/pull/3570>`__ : Tabular mixtures: fix the composition once the tables are loaded
 * `#3571 <https://github.com/CoolProp/CoolProp/pull/3571>`__ : fix(flash): stability trials on the feed's density branch miss splits (COO-193, COO-195)
 * `#3572 <https://github.com/CoolProp/CoolProp/pull/3572>`__ : Octave wrapper: register with ~/.octaverc on install, and doc refresh (COO-165)
 * `#3573 <https://github.com/CoolProp/CoolProp/pull/3573>`__ : Octave install: run ~/.octaverc append in a checked subprocess (COO-196)
 * `#3574 <https://github.com/CoolProp/CoolProp/pull/3574>`__ : docs(mixtures): Mermaid flowcharts of the mixture PT flash
+* `#3576 <https://github.com/CoolProp/CoolProp/pull/3576>`__ : fix(flash): imposed two-phase DmolarT update uses the saturation states at T (#3575)
 * `#3578 <https://github.com/CoolProp/CoolProp/pull/3578>`__ : feat(mixtures): Chebyshev all-roots density solver on by default
+* `#3579 <https://github.com/CoolProp/CoolProp/pull/3579>`__ : docs(changelog): 8.1.0 issue/PR lists from the milestone; #3571 entry
+* `#3580 <https://github.com/CoolProp/CoolProp/pull/3580>`__ : docs(changelog): 8.1.0 entries for #3570 and #3576
 
 
 8.0.0
