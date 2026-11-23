@@ -113,7 +113,12 @@ Building with the Flatpak runtime's own ``cmake``, ``g++``, and ``octave-config`
 Running the Example
 -------------------
 
-Flatpak sees the home directory, so the generated example is run the same way as in the generic instructions, from the same Flatpak shell.  Either change to the folder holding ``Example.m`` first, or give the path to it, for example (with the default install prefix)::
+Flatpak sees the home directory, so the generated example is run the same way as in the generic instructions, from the same Flatpak shell.  CMake generates ``Example.m`` in the build folder, so it can be run from there without installing::
+
+    cd ~/CoolProp/buildOct
+    octave Example.m
+
+If the optional ``cmake --install .`` step was run, a copy is also placed under the install prefix, and the path to it can be given from any folder, for example (with the default install prefix)::
 
     octave ~/CoolProp/install_root/Octave/Example.m
 
