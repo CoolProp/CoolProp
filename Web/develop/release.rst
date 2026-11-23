@@ -61,11 +61,14 @@ the CoolProp library.
       and ``pypi-cleanup`` refuses it, because it would leave the project with
       no releases.  Keep the newest instead.  Use a current ``pypi-cleanup``:
       0.1.8 can no longer log in to TestPyPI, while 0.1.11 can.  First run
-      ``uvx pypi-cleanup@0.1.11 -t https://test.pypi.org -p coolprop -u <username> --leave-most-recent-only``,
-      which logs in and lists what would be deleted, and then the same command
-      with ``--do-it`` added to delete.  The login takes your TestPyPI password
-      (separate from PyPI's) and an authenticator-app (TOTP) code; an account
-      with only a security key or passkey cannot log in this way.
+      ``uvx pypi-cleanup@0.1.11 -t https://test.pypi.org -p coolprop -u <username> --leave-most-recent-only -y``,
+      a dry run that logs in and lists what would be deleted (without ``-y`` it
+      only prints a warning and exits).  Then run the same command with
+      ``--do-it`` added to delete.  "Most recent" means the newest upload, not
+      the highest version, so first check that TestPyPI holds nothing but
+      nightlies.  The login takes your TestPyPI password (separate from PyPI's)
+      and an authenticator-app (TOTP) code; ``pypi-cleanup`` has no support for
+      security keys or passkeys.
 
 That's all folks.
 
