@@ -902,9 +902,11 @@ double IncompressibleFluid::TmaxAt(double p, double x) {
     const double p_sat_Tmax = psat(Tmax, x);
     if (p_sat_Tmax <= p) return Tmax;  // still liquid at Tmax
     // psat() is defined only above TminPsat. If the liquid already boils just
-    // above it, the valid temperatures end at TminPsat.
+    // above it, the valid temperatures end at TminPsat, and isLiquidAt()
+    // accepts up to one margin above that. Return half a margin above it, as
+    // for a boiling point found below, so the same bracket rules apply.
     const double T_lo = std::nextafter(TminPsat, Tmax);
-    if (psat(T_lo, x) >= p) return TminPsat;
+    if (psat(T_lo, x) >= p) return std::min(Tmax, TminPsat + 0.5 * saturationMargin());
     // Saturation temperature: psat(T) = p, with Brent. (Not on ln p: a
     // polynomial psat fit can reach zero or below near TminPsat.)
     class Residual : public FuncWrapper1D

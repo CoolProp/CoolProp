@@ -306,9 +306,11 @@ class IncompressibleFluid
     /// where h or s can fall with T again, cannot hide the liquid solution.
     double TmaxAt(double p, double x);
     /// Temperature margin at the boiling point, in K. TmaxAt() returns the
-    /// saturation temperature plus 0.3 to 0.7 times this margin, and checkP()
-    /// accepts a state within the full margin, so that a state solved for at saturation, which can land a
-    /// few ulp above it, is still accepted as liquid.
+    /// temperature where the liquid ends (the saturation temperature, or
+    /// TminPsat if the liquid boils just above it) plus 0.3 to 0.7 times this
+    /// margin, and checkP() accepts a state within the full margin, so that a
+    /// state solved for at saturation, which can land a few ulp above it, is
+    /// still accepted as liquid.
     [[nodiscard]] double saturationMargin() const {
         return 2e-9 * Tmax;
     }
@@ -361,8 +363,8 @@ class IncompressibleFluid
             if (first_error) std::rethrow_exception(first_error);
             throw ValueError(format("%s: no liquid state at p = %g Pa", name.c_str(), p));
         }
-        // T_boil lies 0.3 to 0.7 saturationMargin() above the saturation
-        // temperature, while isLiquidAt() accepts up to one margin above it.
+        // T_boil lies 0.3 to 0.7 saturationMargin() above the temperature where
+        // the liquid ends, while isLiquidAt() accepts up to one margin above it.
         // The second pass searches 0.75 margin further, to 1.05 to 1.45
         // margins above saturation, so it reaches every state isLiquidAt()
         // accepts (a fit that turns over can have its only liquid root there),
