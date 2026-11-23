@@ -412,11 +412,14 @@ slope. call() keeps rho and rho' at its T for deriv() at the same T.
 class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
 {
    public:
-    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target)
-      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target) {}
+    /// round_off: how far target can be from the exact value through rounding
+    /// alone (see HmassP_flash); a residual within it counts as a root.
+    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target, double round_off)
+      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target), round_off(round_off) {}
     double call(double T) override {
         set_density_terms(T);
-        return (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
+        const double r = (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
+        return std::abs(r) <= round_off ? 0.0 : r;
     }
     double deriv(double T) override {
         const double c = backend->c_at(T, p, x);
@@ -429,7 +432,7 @@ class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
    private:
     IncompressibleBackend* backend;
     bool enthalpy;
-    double p, x, target;
+    double p, x, target, round_off;
     double T_cached = NAN, rho = NAN, drho = NAN;
     void set_density_terms(double T) {
         if (T == T_cached) return;
@@ -483,7 +486,13 @@ an error when h is outside it, as Brent did.
 */
 CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p) {
     const double raw_target = hmass - h_ref() + hmass_ref();
-    CaloricResidual res(this, true, p, _fractions[0], raw_target);
+    // A state reports h = h_ref + raw - hmass_ref, and raw_target undoes that
+    // shift. The two additions and two subtractions do not cancel exactly: for
+    // a state at Tmax raw_target can lie one ulp beyond raw(Tmax), and the
+    // bracket would show no sign change. Four roundings, each at most half an
+    // ulp of these magnitudes, bound the difference.
+    const double round_off = 2 * DBL_EPSILON * (std::abs(hmass) + std::abs(h_ref()) + std::abs(hmass_ref()) + std::abs(raw_target));
+    CaloricResidual res(this, true, p, _fractions[0], raw_target, round_off);
     const double tol = DBL_EPSILON * 1e3;
     const double T_guess = flash_first_guess(true, p, raw_target);
     return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
@@ -497,7 +506,9 @@ Solved like HmassP_flash, with the exact slope ds/dT at constant p.
 */
 CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass) {
     const double raw_target = smass - s_ref() + smass_ref();
-    CaloricResidual res(this, false, p, _fractions[0], raw_target);
+    // The reference shift rounds as for HmassP_flash
+    const double round_off = 2 * DBL_EPSILON * (std::abs(smass) + std::abs(s_ref()) + std::abs(smass_ref()) + std::abs(raw_target));
+    CaloricResidual res(this, false, p, _fractions[0], raw_target, round_off);
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
     const double tol = 1e-12 * fluid->getTmax();
     const double T_guess = flash_first_guess(false, p, raw_target);
@@ -1296,6 +1307,40 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
             CHECK(std::abs(AS->T() - T) < 1e-9);
             AS->update(CoolProp::PSmass_INPUTS, p, s);
             CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
+}
+
+TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBackend]") {
+    // The flash rebuilds the unshifted h or s from the reported value, which
+    // rounds: for a state at Tmax the target could lie one ulp beyond the value
+    // at Tmax, so the bracket showed no sign change and the flash failed.
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        ChebyshevCaloricSetting setting(chebyshev);
+        for (const char* name : {"Water", "TVP1", "T66", "HC10", "S800", "MEG", "DowQ", "LiqNa"}) {
+            CAPTURE(name);
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
+            CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
+            const double x = fluid.is_pure() ? 0.0 : 0.5 * (fluid.getxmin() + fluid.getxmax());
+            if (!fluid.is_pure()) AS->set_mass_fractions(std::vector<double>(1, x));
+            for (const double p : {1e6, 1e7, 1e8}) {
+                CAPTURE(p);
+                for (const bool upper : {false, true}) {
+                    const double T = upper ? fluid.getTmax() : fluid.TminAt(p, x);
+                    CAPTURE(T);
+                    try {
+                        AS->update(CoolProp::PT_INPUTS, p, T);
+                    } catch (const CoolProp::CoolPropBaseError&) {
+                        continue;  // boils at Tmax at this pressure
+                    }
+                    const double h = AS->hmass(), s = AS->smass();
+                    CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
+                    CHECK(std::abs(AS->T() - T) < 1e-9);
+                    CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, p, s));
+                    CHECK(std::abs(AS->T() - T) < 1e-9);
+                }
+            }
         }
     }
 }
