@@ -335,6 +335,29 @@ recorded history of finished or abandoned work were dropped (they remain in
   alone needs 8 iterations at 500 bar instead of 4.  Round-trip every shipped
   fluid (T -> D, h, s -> T) after touching any of this; `INCOMP::Air` is a
   1-atm gas fit and fails at 10 bar in every version.
+- **Where the liquid ends is one rule, shared by three places.**
+  `isLiquidAt(T, p, x)` decides liquid vs boiling for both `checkP` and the
+  first pass of `solveInLiquidRange`; it accepts a state up to
+  `saturationMargin()` (2e-9 Tmax, about 1 uK) above the boiling point, because
+  a flash from a saturated state lands a few ulp above T_sat.  `TmaxAt` returns
+  0.3 to 0.7 margin above where the liquid ends (T_sat, or TminPsat when the
+  liquid boils just above it), and the second pass searches 0.75 margin
+  beyond that and checks its result with `isLiquidAt`.  Change one of these
+  and the others drift apart: every step of PR #3567 that moved only one of
+  them broke saturated round trips or left a root unreachable.  Two traps:
+  CoolProp's `Brent` stops once half its bracket is below `t`, so its result
+  is good to 2 t, not t; and it also returns an end of its interval when
+  |f| there is below `t`, so scale a residual (here to ulps of p) if `t` is
+  meant for x only.  Test with a slowly rising psat (0.001 T Pa) and a
+  density fit that turns over, and with the 8-fluid saturation sweep
+  (QT_INPUTS Q = 0, then H,P and P,S back, about 2000 temperatures each).
+- **Undoing the reference shift rounds.**  A state reports
+  h = h_ref + raw - hmass_ref, and the flash rebuilds raw_target = h - h_ref
+  + hmass_ref; these cancel only to about 1 ulp.  At an end of the search
+  range that ulp removes the sign change, so `CaloricResidual` treats a
+  residual within the bound of that round-off as an exact root (a finite one
+  only, or +-inf inputs return Tmin).  Any new flash that rebuilds a target
+  from a shifted value needs the same.
 - **Profile incompressibles from C++, not Python.**  The Python wrapper adds
   about 0.12 us per call, as much as a whole property evaluation.  Build a
   static `RelWithDebInfo` library, time `AbstractState` in a small C++
