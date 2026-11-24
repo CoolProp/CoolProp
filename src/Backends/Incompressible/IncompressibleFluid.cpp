@@ -333,6 +333,21 @@ void IncompressibleFluid::validate() {
               format("%s (%d): %s has a Chebyshev %s fit in both the classic and the Chebyshev slot.", __FILE__, __LINE__, name.c_str(), what));
         }
     };
+    // psat() evaluates only these types. Another one (a Chebyshev entry, say)
+    // would load, then fail on every state above TminPsat with an unknown-type
+    // error, and checkP and the inversions would disagree about it; refuse it here.
+    switch (p_sat.type) {
+        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+        case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+        case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+        case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+            break;
+        default:
+            throw ValueError(format("%s (%d): The saturation pressure fit of %s has type [%d], which psat() cannot evaluate.", __FILE__, __LINE__,
+                                    name.c_str(), p_sat.type));
+    }
     require_distinct_kinds(density, density_cheb, "density");
     require_distinct_kinds(specific_heat, specific_heat_cheb, "specific heat");
     for (const CaloricFit& fit : {CaloricFit{&density, "density", false}, CaloricFit{&density_cheb, "density", false},

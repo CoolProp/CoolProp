@@ -461,8 +461,9 @@ the polynomial and the Chebyshev fits:
 * The function has to change sign over that range, as for Brent's method before.
   An input outside the range, or a density that a fit with a turning point (water
   near its density maximum at 277 K) reaches twice, raises an error rather than returning one of the two
-  temperatures. The one exception: a value met exactly at an end of the range
-  returns that end, without a search for a second solution inside.
+  temperatures. Two exceptions: a value met exactly at an end of the range
+  returns that end, without a search for a second solution inside, and a fit
+  that reaches a value three times can return one of the three.
 * Inside the range, a Newton iteration with the exact derivative is used, kept
   within a shrinking bracket. For ``H,P`` and ``P,S`` the derivative includes the
   pressure term, :math:`(\partial h/\partial T)_p = c - p\,T\,\partial^2 v/\partial T^2`

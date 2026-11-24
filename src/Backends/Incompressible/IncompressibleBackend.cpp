@@ -412,15 +412,11 @@ slope. call() keeps rho and rho' at its T for deriv() at the same T.
 class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
 {
    public:
-    /// round_off: how far target can be from the exact value through rounding
-    /// alone (see HmassP_flash); a residual within it counts as a root.
-    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target, double round_off)
-      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target), round_off(std::isfinite(round_off) ? round_off : 0.0) {}
+    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target)
+      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target) {}
     double call(double T) override {
         set_density_terms(T);
-        const double r = (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
-        // A non-finite r must stay non-finite, so that the solver rejects it
-        return (std::isfinite(r) && std::abs(r) <= round_off) ? 0.0 : r;
+        return (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
     }
     double deriv(double T) override {
         const double c = backend->c_at(T, p, x);
@@ -433,7 +429,7 @@ class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
    private:
     IncompressibleBackend* backend;
     bool enthalpy;
-    double p, x, target, round_off;
+    double p, x, target;
     double T_cached = NAN, rho = NAN, drho = NAN;
     void set_density_terms(double T) {
         if (T == T_cached) return;
@@ -474,6 +470,34 @@ double IncompressibleBackend::flash_first_guess(bool enthalpy, double p, double 
     return T_r * std::exp((raw_target - s_r) / c_r);
 }
 
+namespace {
+/// Solve on [T_lo, T_hi] with BoundedNewton, and recover a state that lies
+/// exactly at an end of the range.
+/**
+A state reports h = h_ref + raw(T) - hmass_ref (s likewise), and the flash
+solves raw(T) = h - h_ref + hmass_ref. These additions and subtractions do not
+cancel exactly, so for a state at an end of the range the rebuilt target can
+lie one ulp beyond the value there, and the bracket shows no sign change. When
+the solve fails, an end whose reported value reproduces the input exactly is
+that state and is returned. The residual itself is left unchanged, so this can
+never move a root that the bracket does contain.
+@param solve The bracketed solve on [T_lo, T_hi]
+@param reported The value the backend reports at a temperature (calc_hmass or calc_smass at T)
+@param input The h or s the flash was given
+*/
+template <class Solve, class Reported>
+double solve_or_recover_end(Solve solve, Reported reported, double input, double T_lo, double T_hi) {
+    try {
+        return solve(T_lo, T_hi);
+    } catch (const CoolProp::ValueError&) {
+        for (const double T_end : {T_hi, T_lo}) {
+            if (reported(T_end) == input) return T_end;  // exactly the reported value of that state
+        }
+        throw;
+    }
+}
+}  // namespace
+
 /// Calculate T given pressure and enthalpy
 /**
 Newton on T inside a sign-change bracket over the liquid range at p (BoundedNewton,
@@ -486,17 +510,16 @@ an error when h is outside it, as Brent did.
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p) {
+    const double x = _fractions[0];
     const double raw_target = hmass - h_ref() + hmass_ref();
-    // A state reports h = h_ref + raw - hmass_ref, and raw_target undoes that
-    // shift. The two additions and two subtractions do not cancel exactly: for
-    // a state at Tmax raw_target can lie one ulp beyond raw(Tmax), and the
-    // bracket would show no sign change. Four roundings, each at most half an
-    // ulp of these magnitudes, bound the difference.
-    const double round_off = 2 * DBL_EPSILON * (std::abs(hmass) + std::abs(h_ref()) + std::abs(hmass_ref()) + std::abs(raw_target));
-    CaloricResidual res(this, true, p, _fractions[0], raw_target, round_off);
+    CaloricResidual res(this, true, p, x, raw_target);
     const double tol = DBL_EPSILON * 1e3;
     const double T_guess = flash_first_guess(true, p, raw_target);
-    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
+    // The same expression as calc_hmass, so a state at an end reproduces its h exactly
+    const auto reported = [&](double T) { return h_ref() + raw_calc_hmass(T, p, x) - hmass_ref(); };
+    return fluid->solveInLiquidRange(p, x, [&](double T_lo, double T_hi) {
+        return solve_or_recover_end([&](double a, double b) { return BoundedNewton(&res, T_guess, a, b, tol, 100); }, reported, hmass, T_lo, T_hi);
+    });
 }
 /// Calculate T given pressure and entropy
 /**
@@ -506,14 +529,17 @@ Solved like HmassP_flash, with the exact slope ds/dT at constant p.
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass) {
+    const double x = _fractions[0];
     const double raw_target = smass - s_ref() + smass_ref();
-    // The reference shift rounds as for HmassP_flash
-    const double round_off = 2 * DBL_EPSILON * (std::abs(smass) + std::abs(s_ref()) + std::abs(smass_ref()) + std::abs(raw_target));
-    CaloricResidual res(this, false, p, _fractions[0], raw_target, round_off);
+    CaloricResidual res(this, false, p, x, raw_target);
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
     const double tol = 1e-12 * fluid->getTmax();
     const double T_guess = flash_first_guess(false, p, raw_target);
-    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
+    // The same expression as calc_smass, so a state at an end reproduces its s exactly
+    const auto reported = [&](double T) { return s_ref() + raw_calc_smass(T, p, x) - smass_ref(); };
+    return fluid->solveInLiquidRange(p, x, [&](double T_lo, double T_hi) {
+        return solve_or_recover_end([&](double a, double b) { return BoundedNewton(&res, T_guess, a, b, tol, 100); }, reported, smass, T_lo, T_hi);
+    });
 }
 
 ///// Calculate T given pressure and internal energy

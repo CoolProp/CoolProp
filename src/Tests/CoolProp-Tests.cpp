@@ -8981,6 +8981,18 @@ TEST_CASE("INCOMP fit types the full evaluation rejects are rejected by a state 
     CHECK_THROWS(AS->conductivity());
 }
 
+TEST_CASE("INCOMP rejects a saturation pressure fit psat() cannot evaluate", "[INCOMP]") {
+    // A Chebyshev saturation_pressure parses, but psat() has no Chebyshev case:
+    // the fluid must not load, rather than fail later on every state.
+    const std::string fluid = R"([{"name": "CatchRuntimeChebPsatFluid", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+        "saturation_pressure": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]}
+    }])";
+    CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", fluid), Catch::Matchers::ContainsSubstring("psat() cannot evaluate"));
+}
+
 TEST_CASE("INCOMP liquid limit at the boiling point is consistent", "[INCOMP]") {
     // psat = 0.001 T Pa rises slowly, so a pressure difference far below 1 Pa
     // is still a large temperature difference: T_sat = 1000 p exactly.
