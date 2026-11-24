@@ -28,6 +28,8 @@ There is example code :ref:`at the end of this page <r_example>`
 .. warning::
 
     For OSX users that wish to call REFPROP, you may be required to set the environmental variable ``DYLD_LIBRARY_PATH`` to the folder containing your REFPROP.dylib shared library, which is probably ``/opt/refprop``
+
+    For Linux users that wish to call REFPROP, the environmental variable ``COOLPROP_REFPROP_ROOT`` may need to be set to the REFPROP folder, the one that holds the ``librefprop.so`` shared library and the ``fluids`` folder, which is probably ``/opt/refprop``.  For Windows users, ``COOLPROP_REFPROP_ROOT`` may need to be set to the folder holding ``REFPRP64.dll`` and the ``FLUIDS`` folder, which is probably ``C:\Program Files (x86)\REFPROP``.
     
 .. note::
 
