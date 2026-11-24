@@ -7,6 +7,8 @@
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/Exceptions.h"
 
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace CoolProp {
@@ -24,10 +26,14 @@ class IncompressibleBackend : public AbstractState
     CachedElement _hmass_ref, _smass_ref;
     /// data_version of the fluid that _hmass_ref and _smass_ref were computed from
     unsigned long ref_data_version = 0;
+    /// True while _T_ref is default_T_ref_K(), which depends on the fluid's range
+    bool T_ref_is_default = false;
     void drop_stale_reference_values() {
         if (ref_data_version != fluid->getDataVersion()) {
             _hmass_ref.clear();
             _smass_ref.clear();
+            // a replaced fluid can have another range, which moves the default
+            if (T_ref_is_default) _T_ref = default_T_ref_K();
             ref_data_version = fluid->getDataVersion();
         }
     }
@@ -129,15 +135,25 @@ class IncompressibleBackend : public AbstractState
     /// Clear all the cached values
     bool clear() override;
 
-    /// Update the reference values and clear the state
+    /// Update the reference values and clear the state. An explicit T0 is kept
+    /// as given; the constructors use default_T_ref_K() instead of the 293.15 K
+    /// default argument.
     void set_reference_state(double T0 = 20 + 273.15, double p0 = 101325, double x0 = 0.0, double h0 = 0.0, double s0 = 0.0);
     /// Default reference temperature: 293.15 K, or the nearest end of the
     /// fluid's range when 293.15 K lies outside it. The fits are not valid
     /// outside the range and a Chebyshev fit grows without bound there, so a
     /// reference value taken there is meaningless and costs precision in every
     /// h and s (IceNA's reference entropy was 2.4e11 J/kg/K, COO-203).
-    double default_T_ref_K() const {
-        return std::min(std::max(20 + 273.15, fluid->getTmin()), fluid->getTmax());
+    /// A range that is not set yet (infinite or NaN) keeps 293.15 K.
+    [[nodiscard]] double default_T_ref_K() const {
+        const double T_default_K = 20 + 273.15, T_min_K = fluid->getTmin(), T_max_K = fluid->getTmax();
+        if (!std::isfinite(T_min_K) || !std::isfinite(T_max_K) || T_min_K > T_max_K) return T_default_K;
+        return std::min(std::max(T_default_K, T_min_K), T_max_K);
+    }
+    /// Set the default reference state (see default_T_ref_K)
+    void set_default_reference_state() {
+        set_reference_state(default_T_ref_K());
+        T_ref_is_default = true;
     }
 
     /// Set the mole fractions

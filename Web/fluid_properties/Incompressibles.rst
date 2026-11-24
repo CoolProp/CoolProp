@@ -45,6 +45,9 @@ Technology (`NIST <https://www.nist.gov>`_).
    h_\text{ref} &=  0\:\text{J}\,\text{kg}^{-1} & \\
    s_\text{ref} &=  0\:\text{J}\,\text{kg}^{-1}\,\text{K}^{-1} & \\
 
+A fluid that is not valid at 293.15 K uses the nearest end of its temperature
+range instead, see :ref:`Reference State<IncompRefState>`.
+
 .. note::
   If you use a mixture, the reference state gets updated each time you change
   the composition. Any temperature inside the fluid's validity range may be

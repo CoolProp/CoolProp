@@ -30,7 +30,7 @@ IncompressibleBackend::IncompressibleBackend() {
 IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid)
   : fluid(fluid), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
-    this->set_reference_state(default_T_ref_K());
+    this->set_default_reference_state();
     if (this->fluid->is_pure()) {
         this->set_fractions(std::vector<CoolPropDbl>(1, 1.0));
     } else {
@@ -46,7 +46,7 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid)
 IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name)
   : fluid(&get_incompressible_fluid(fluid_name)), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
-    this->set_reference_state(default_T_ref_K());
+    this->set_default_reference_state();
     if (this->fluid->is_pure()) {
         this->set_fractions(std::vector<CoolPropDbl>(1, 1.0));
     } else {
@@ -184,6 +184,7 @@ void IncompressibleBackend::set_reference_state(double T0, double p0, double x0,
     /// Reference values, no need to calculate them each time
     this->_hmass_ref.clear();
     this->_smass_ref.clear();
+    this->T_ref_is_default = false;  // set_default_reference_state sets it again
     //
     this->_T_ref = T0;
     this->_p_ref = p0;
@@ -207,7 +208,10 @@ void IncompressibleBackend::set_fractions(const std::vector<CoolPropDbl>& fracti
                                 vec_to_string(this->_fractions).c_str(), vec_to_string(fractions).c_str())
                       << '\n';
         this->_fractions = fractions;
+        // keep a default reference temperature default, so that it follows the fluid's range
+        const bool is_default = T_ref_is_default;
         set_reference_state(T_ref(), p_ref(), this->_fractions[0], h_ref(), s_ref());
+        T_ref_is_default = is_default;
     }
 }
 
@@ -360,6 +364,7 @@ double IncompressibleBackend::dhdpatTx() {
 
 /// Return the temperature in K
 double IncompressibleBackend::T_ref() {
+    drop_stale_reference_values();  // the default moves with the fluid's range
     if (!_T_ref) throw ValueError("Reference temperature is not set");
     return _T_ref;
 }
@@ -1384,15 +1389,16 @@ TEST_CASE("Flashes converge for fluids that are not valid at the reference tempe
             REQUIRE(backend != nullptr);
             const double T_ref_K = backend->T_ref();
             CHECK((293.15 < AS->Tmin() ? T_ref_K == AS->Tmin() : T_ref_K == AS->Tmax()));
-            // the reference values come from inside the range: no extrapolation
-            CHECK(std::abs(backend->smass_ref()) < (chebyshev ? 1e4 : 1e8));
-            try {
-                AS->update(CoolProp::PT_INPUTS, backend->p_ref(), T_ref_K);
-                CHECK(std::abs(AS->hmass()) < 1e-9);
-                CHECK(std::abs(AS->smass()) < 1e-9);
-            } catch (const CoolProp::CoolPropBaseError&) {
-                // the end of the range can be frozen or boiling at this composition
-            }
+            // On the Chebyshev fits an extrapolated reference entropy is huge
+            // (IceNA 2.4e11, ExampleSolution -1.2e7 J/kg/K). Classic-fit raw
+            // entropy carries a large ln(T) constant even inside the range,
+            // so it gets no such bound.
+            if (chebyshev) CHECK(std::abs(backend->smass_ref()) < 1e4);
+            // h = s = 0 at the reference state, which every one of these
+            // fluids accepts as a state
+            AS->update(CoolProp::PT_INPUTS, backend->p_ref(), T_ref_K);
+            CHECK(std::abs(AS->hmass()) < 1e-9);
+            CHECK(std::abs(AS->smass()) < 1e-9);
             const double p = 1e6;
             int n_states = 0;
             for (int i = 1; i <= 9; ++i) {
@@ -1413,6 +1419,43 @@ TEST_CASE("Flashes converge for fluids that are not valid at the reference tempe
             CHECK(n_states >= 3);
         }
     }
+}
+
+TEST_CASE("A default reference temperature follows a fluid replaced at runtime", "[IncompressibleBackend]") {
+    // The default reference temperature depends on the fluid's range (COO-203).
+    // When the fluid is replaced with another range, an existing state must
+    // move its reference the same way a new state places it, so both report
+    // the same h and s.
+    auto fluid_json = [](double T_min_K) {
+        return R"([{"name": "CatchRuntimeRefFluid", "description": "x", "reference": "x", "Tmin": )" + std::to_string(T_min_K)
+               + R"(, "Tmax": 420.0, "TminPsat": 420.0, "xid": "pure",
+                    "density": {"type": "polynomial", "coeffs": [[1000.0], [-0.5]]},
+                    "specific_heat": {"type": "polynomial", "coeffs": [[2000.0], [1.0]]}}])";
+    };
+    const ChebyshevCaloricSetting setting(false);
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(320.0)));
+    std::shared_ptr<CoolProp::AbstractState> old_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
+    auto* old_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(old_state.get());
+    REQUIRE(old_backend != nullptr);
+    CHECK(old_backend->T_ref() == 320.0);
+    old_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
+    const double h_before = old_state->hmass();
+
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(350.0)));
+    std::shared_ptr<CoolProp::AbstractState> new_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
+    auto* new_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(new_state.get());
+    REQUIRE(new_backend != nullptr);
+    CHECK(new_backend->T_ref() == 350.0);
+    CHECK(old_backend->T_ref() == 350.0);
+    old_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
+    new_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
+    CHECK(old_state->hmass() == new_state->hmass());
+    CHECK(old_state->smass() == new_state->smass());
+    CHECK(old_state->hmass() != h_before);
+    // a reference temperature set explicitly stays where it was set
+    new_backend->set_reference_state(360.0, 101325.0, 0.0, 0.0, 0.0);
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(355.0)));
+    CHECK(new_backend->T_ref() == 360.0);
 }
 
 TEST_CASE("HmassP and PSmass flashes converge above 2048 K", "[IncompressibleBackend]") {

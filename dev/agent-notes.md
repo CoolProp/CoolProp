@@ -374,6 +374,15 @@ recorded history of finished or abandoned work were dropped (they remain in
   fit and `cvmass` returns it, because v(T) alone has zero compressibility
   and leaves cv undefined.  `C` equals the fit only at 1 atm: a test that
   checks a fitted heat capacity at another pressure must read `O` (Cvmass).
+- **The default incompressible reference temperature depends on the range
+  (COO-203).**  `default_T_ref_K()` clamps 293.15 K into [Tmin, Tmax]: fits
+  extrapolated outside the range gave IceNA a reference entropy of 2.4e11
+  J/kg/K.  A default reference (`T_ref_is_default`) is re-resolved in
+  `drop_stale_reference_values()` when the fluid's `data_version` changes, so
+  a fluid replaced with another range moves it; an explicit
+  `set_reference_state` keeps its T0.  `setTmin`/`setTmax` do not bump
+  `data_version`, only `validate()` does: change a range through the setters
+  and call `validate()`, or existing states keep the old default.
 - **Profile incompressibles from C++, not Python.**  The Python wrapper adds
   about 0.12 us per call, as much as a whole property evaluation.  Build a
   static `RelWithDebInfo` library, time `AbstractState` in a small C++
