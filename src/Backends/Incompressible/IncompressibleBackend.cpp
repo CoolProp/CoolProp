@@ -1452,6 +1452,11 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
     CHECK(old_state->hmass() == new_state->hmass());
     CHECK(old_state->smass() == new_state->smass());
     CHECK(old_state->hmass() != h_before);
+    // A range changed through the setter alone, without validate(), moves the
+    // default reference too
+    CoolProp::get_incompressible_fluid("CatchRuntimeRefFluid").setTmin(365.0);
+    CHECK(old_backend->T_ref() == 365.0);
+    CHECK(new_backend->T_ref() == 365.0);
     // a reference temperature set explicitly stays where it was set
     new_backend->set_reference_state(360.0, 101325.0, 0.0, 0.0, 0.0);
     REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(355.0)));

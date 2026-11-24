@@ -420,11 +420,15 @@ class IncompressibleFluid
     void setReference(const std::string& reference) {
         this->reference = reference;
     }
+    // The range bumps data_version like the fit setters: a backend's default
+    // reference temperature depends on it (IncompressibleBackend::default_T_ref_K)
     void setTmax(double Tmax) {
         this->Tmax = Tmax;
+        data_version = nextDataVersion();
     }
     void setTmin(double Tmin) {
         this->Tmin = Tmin;
+        data_version = nextDataVersion();
     }
     void setxmax(double xmax) {
         this->xmax = xmax;

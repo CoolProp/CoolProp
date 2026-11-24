@@ -380,9 +380,9 @@ recorded history of finished or abandoned work were dropped (they remain in
   J/kg/K.  A default reference (`T_ref_is_default`) is re-resolved in
   `drop_stale_reference_values()` when the fluid's `data_version` changes, so
   a fluid replaced with another range moves it; an explicit
-  `set_reference_state` keeps its T0.  `setTmin`/`setTmax` do not bump
-  `data_version`, only `validate()` does: change a range through the setters
-  and call `validate()`, or existing states keep the old default.
+  `set_reference_state` keeps its T0.  `setTmin`/`setTmax` bump
+  `data_version` for this reason; a new setter of anything the reference or
+  the fits depend on must do the same.
 - **Profile incompressibles from C++, not Python.**  The Python wrapper adds
   about 0.12 us per call, as much as a whole property evaluation.  Build a
   static `RelWithDebInfo` library, time `AbstractState` in a small C++
