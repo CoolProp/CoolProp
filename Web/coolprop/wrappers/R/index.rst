@@ -16,12 +16,17 @@ Pre-compiled R binaries are no longer supplied in CoolProp's SourceForge reposit
 
 Usage
 -----
-The shared library (``CoolPropR.so`` on Linux, ``CoolPropR.dll`` on Windows, ``CoolPropR.so`` on macOS) and the ``CoolProp.R`` file are placed in the same folder (the build folder, or the folder they were installed to).  From that folder, at the R console, run::
+The shared library (``CoolPropR.so`` on Linux, ``CoolPropR.dll`` on Windows, ``CoolPropR.so`` on macOS) and the ``CoolProp.R`` file are used together.  In the build folder on Linux they sit side by side, so, from that folder, at the R console, run::
 
     dyn.load(paste("CoolPropR", .Platform$dynlib.ext, sep=""))
     source("CoolProp.R")
     cacheMetaData(1)
     PropsSI("T","P",101325,"Q",0,"Water")
+
+After ``cmake --install .``, ``CoolProp.R`` is in ``R/`` and the shared library is in ``R/Linux_64bit/`` (``R/Windows_64bit/`` on Windows) under the install prefix.  Either copy the library next to ``CoolProp.R``, or give ``dyn.load()`` and ``source()`` the full paths, for example (tested on Ubuntu 26.04)::
+
+    dyn.load("/path/to/install/R/Linux_64bit/CoolPropR.so")
+    source("/path/to/install/R/CoolProp.R")
 
 There is example code :ref:`at the end of this page <r_example>`
 
@@ -29,7 +34,7 @@ There is example code :ref:`at the end of this page <r_example>`
 
     For OSX users that wish to call REFPROP, you may be required to set the environmental variable ``DYLD_LIBRARY_PATH`` to the folder containing your REFPROP.dylib shared library, which is probably ``/opt/refprop``
 
-    For Linux users that wish to call REFPROP, the environmental variable ``COOLPROP_REFPROP_ROOT`` may need to be set to the REFPROP folder, the one that holds the ``librefprop.so`` shared library and the ``fluids`` folder, which is probably ``/opt/refprop``.  For Windows users, ``COOLPROP_REFPROP_ROOT`` may need to be set to the folder holding ``REFPRP64.dll`` and the ``FLUIDS`` folder, which is probably ``C:\Program Files (x86)\REFPROP``.
+    For Linux users that wish to call REFPROP, in a build from version 6.8.0 or later (the 6.4.1 binaries linked above predate this variable), the environmental variable ``COOLPROP_REFPROP_ROOT`` may need to be set to the REFPROP folder, the one that holds the ``librefprop.so`` shared library and the ``fluids`` folder, which is probably ``/opt/refprop``.  For Windows users of such a build, ``COOLPROP_REFPROP_ROOT`` may need to be set to the folder holding ``REFPRP64.dll`` and the ``FLUIDS`` folder, which is probably ``C:\Program Files (x86)\REFPROP``.  See :ref:`REFPROP` for details.
     
 .. note::
 
@@ -74,13 +79,13 @@ Once the dependencies are installed, the wrapper is built and tested with::
     # Make the R shared library (-j runs the compilers in parallel)
     cmake --build . -j8
     # Optional: run the example script through Rscript
-    ctest
+    ctest -V
 
 The build folder then holds ``CoolPropR.so``, ``CoolProp.R``, and ``Example.R``.  ``cmake --install .`` copies them to ``R/`` and ``R/Linux_64bit`` under the install prefix.
 
 .. note::
 
-    The ``ctest`` example calls REFPROP in its last blocks.  Without REFPROP installed those blocks are skipped with a "REFPROP example skipped" message and the rest of the example still runs.
+    The ``ctest`` example calls REFPROP in its last blocks (``-V`` shows the example's output).  Without REFPROP installed those blocks are skipped with a "REFPROP example skipped" message and the rest of the example still runs.
 
 OSX
 ^^^
