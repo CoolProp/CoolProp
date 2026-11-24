@@ -489,6 +489,39 @@ bool phases_are_distinct(CoolProp::AbstractState& st) {
     return (rho_liq - rho_vap) > TRIVIAL_SOLUTION_RTOL * std::max(rho_liq, rho_vap);
 }
 
+/// The largest |(1 - Q) x_i + Q y_i - z_i| a two-phase state of a mixture may
+/// have and still be taken as a point of a line (#3586).
+const double MASS_BALANCE_ATOL = 1e-6;
+
+/// True if the phases of the two-phase mixture state st, at the molar quality
+/// Q, add up to the overall composition.  A state that misses the mass
+/// balance is a root of the wrong problem; taken as points, such states make
+/// a line zig-zag (#3586).  The check fails closed, as phases_are_distinct does.
+bool phases_are_balanced(CoolProp::AbstractState& st, double Q) {
+    if (!(finite(Q) && Q >= 0.0 && Q <= 1.0)) return false;
+    std::vector<CoolPropDbl> x, y, z;
+    try {
+        x = st.mole_fractions_liquid();
+        y = st.mole_fractions_vapor();
+        z = st.get_mole_fractions();
+    } catch (...) {
+        return false;
+    }
+    if (z.empty() || x.size() != z.size() || y.size() != z.size()) return false;
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        double residual = (1.0 - Q) * static_cast<double>(x[i]) + Q * static_cast<double>(y[i]) - static_cast<double>(z[i]);
+        // Written so that a NaN residual fails the test
+        if (!(std::fabs(residual) <= MASS_BALANCE_ATOL)) return false;
+    }
+    return true;
+}
+
+/// A two-phase mixture state fit to be a point of a line: two distinct phases
+/// that add up to the overall composition.
+bool is_sound_two_phase_mixture_state(CoolProp::AbstractState& st, double Q) {
+    return phases_are_distinct(st) && phases_are_balanced(st, Q);
+}
+
 /**
  * Walk along an isoline, warm-starting every point from the previous one.
  * A single-phase point is a two-by-two Newton iteration in (T, rhomolar)
@@ -1257,7 +1290,13 @@ class Walk
         if (last_length_ > 0.0) factor = std::min(factor, 0.8 * max_length_ / last_length_);
         double turn = std::acos(std::min(std::max(last_turn_, -1.0), 1.0)) * 180.0 / M_PI;
         if (turn > 0.0) factor = std::min(factor, 0.8 * MAX_ANGLE_DEG / turn);
-        return std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP);
+        // Floored at MIN_STEP: a line that turns by nearly 180 degrees at every
+        // step would otherwise shrink each step to a quarter of the last, down
+        // to the resolution of a double, and spend the whole budget there (#3586).
+        // A line of more than 1/MIN_STEP points asks for finer steps; the floor
+        // then follows its nominal step, so the line keeps its point density
+        // (there is no refinement below that step, as walk_inside's min_du is larger).
+        return std::max(std::min(std::max(du * factor, du * 0.25), span_ * MAX_STEP), span_ * std::min(MIN_STEP, 1.0 / points_));
     }
 
     void walk_inside(double& u, bool& inside) {
@@ -1496,7 +1535,7 @@ bool saturation_sample(Fluid& fluid, CoolProp::parameters key, double value, dou
                        const Metric* metric, CoolProp::parameters sweep_key, Sample& out) {
     try {
         CoolProp::AbstractState& st = fluid.update(key, value, CoolProp::iQ, quality);
-        if (!fluid.is_pure() && !phases_are_distinct(st)) return false;
+        if (!fluid.is_pure() && !is_sound_two_phase_mixture_state(st, quality)) return false;
         double x = st.keyed_output(xkey), y = st.keyed_output(ykey), T = st.T(), p = st.p();
         if (!(finite(x) && finite(y) && finite(T) && finite(p))) return false;
         out.valid = true;
@@ -1521,7 +1560,7 @@ bool saturation_state(Fluid& fluid, CoolProp::parameters sat_key, double sat_val
                       CoolProp::parameters ykey, CoolProp::parameters iso_key, std::vector<double>& out) {
     try {
         CoolProp::AbstractState& st = fluid.update(sat_key, sat_value, CoolProp::iQ, quality);
-        if (!fluid.is_pure() && !phases_are_distinct(st)) return false;
+        if (!fluid.is_pure() && !is_sound_two_phase_mixture_state(st, quality)) return false;
         out = {st.keyed_output(iso_key), st.keyed_output(xkey), st.keyed_output(ykey), st.T(), st.p(), st.rhomass()};
         for (double v : out)
             if (!finite(v)) return false;
@@ -2051,7 +2090,8 @@ Isoline compute_quality_line(Fluid& fluid, CoolProp::parameters xkey, CoolProp::
         double T = T_range.min + (T_range.max - T_range.min) * v;
         try {
             CoolProp::AbstractState& st = fluid.update(CoolProp::iT, T, CoolProp::iQ, quality);
-            if (!fluid.is_pure() && !phases_are_distinct(st)) throw CoolProp::ValueError("trivial solution");
+            if (!fluid.is_pure() && !is_sound_two_phase_mixture_state(st, quality))
+                throw CoolProp::ValueError("trivial solution or unbalanced phases");
             out.x.push_back(st.keyed_output(xkey));
             out.y.push_back(st.keyed_output(ykey));
         } catch (...) {
@@ -2632,6 +2672,84 @@ TEST_CASE("States computed outside the axes are told apart from failures", "[Plo
     CHECK(short_line_reason(0, 5, 0, 0).rfind("none of the 5 states", 0) == 0);
     CHECK(short_line_reason(1, 5, 1, 0).rfind("only 1 point(s)", 0) == 0);
     CHECK(short_line_reason(2, 5, 2, 0).empty());
+}
+
+TEST_CASE("A line that turns back at every step keeps its step above MIN_STEP", "[Plot]") {
+    using namespace CoolProp::Plot::Detail;
+    // Every evaluation lands on the other of two parallel branches, as a
+    // flash that alternates between a right and a wrong root does (#3586):
+    // each step turns by nearly 180 degrees and shrinks to a quarter of the
+    // last.  Without a floor the steps fall to the resolution of a double and
+    // the whole budget is spent at one u.
+    int calls = 0;
+    Evaluate evaluate = [&calls](double u, bool /*careful*/, Sample& out) {
+        out.valid = true;
+        out.x = u;
+        out.y = (calls++ % 2 == 0) ? 0.4 : 0.6;
+        out.inside = true;
+        return true;
+    };
+    Metric metric = {{0.0, 1.0}, {0.0, 1.0}, false, false};
+    Trace found = trace(evaluate, metric, 20);
+    REQUIRE(found.u.size() > 10);
+    double smallest = 1.0;
+    for (std::size_t i = 1; i < found.u.size(); ++i)
+        smallest = std::min(smallest, found.u[i] - found.u[i - 1]);
+    // walk_inside halves a rejected step only while it exceeds MIN_STEP, so a step ends in (MIN_STEP/2, MIN_STEP] at worst
+    CHECK(smallest > 0.5 * MIN_STEP * (1.0 - 1e-12));
+    // The walk moves on: about MIN_STEP per evaluation, against a few MIN_STEP in all without the floor
+    CHECK(found.u.back() - found.u.front() > 100 * MIN_STEP);
+
+    // A line of more points than 1/MIN_STEP keeps its finer steps: the floor follows the nominal step
+    Evaluate straight = [](double u, bool /*careful*/, Sample& out) {
+        out.valid = true;
+        out.x = u;
+        out.y = u;
+        out.inside = true;
+        return true;
+    };
+    const int many = 50000;
+    Trace fine = trace(straight, metric, many);
+    REQUIRE(fine.u.size() > many / 2);
+    double largest = 0.0;
+    for (std::size_t i = 2; i < fine.u.size() - 1; ++i)  // the first step and the clamped last one aside
+        largest = std::max(largest, fine.u[i] - fine.u[i - 1]);
+    CHECK(largest < 0.5 * MIN_STEP);  // the old fixed floor forced every step to MIN_STEP
+    CHECK(fine.u.back() == 1.0);
+}
+
+TEST_CASE("A two-phase mixture state must add up to the overall composition", "[Plot]") {
+    using namespace CoolProp::Plot::Detail;
+    Fluid blend("HEOS::R32[0.5]&R125[0.5]");
+    CoolProp::AbstractState& st = blend.update(CoolProp::iT, 250.0, CoolProp::iQ, 0.4);
+    const std::vector<CoolPropDbl> x = st.mole_fractions_liquid(), y = st.mole_fractions_vapor();
+    REQUIRE(x.size() == 2);
+    // The two phases differ, so the balance pins the quality
+    REQUIRE(std::fabs(static_cast<double>(x[0] - y[0])) > 1e-3);
+    CHECK(phases_are_distinct(st));
+    CHECK(phases_are_balanced(st, 0.4));
+    CHECK(is_sound_two_phase_mixture_state(st, 0.4));
+    // Read at another quality the same phases miss the balance by |dQ| |x - y| >> 1e-6
+    CHECK_FALSE(phases_are_balanced(st, 0.6));
+    CHECK_FALSE(is_sound_two_phase_mixture_state(st, 0.6));
+    // Not a quality: fails closed
+    CHECK_FALSE(phases_are_balanced(st, std::nan("")));
+    CHECK_FALSE(phases_are_balanced(st, 1.5));
+    // A backend without phase compositions fails closed as well
+    Fluid liquid("INCOMP::MEG[0.3]");
+    CoolProp::AbstractState& brine = liquid.update(CoolProp::iT, 300.0, CoolProp::iP, 1e5);
+    CHECK_FALSE(phases_are_balanced(brine, 0.5));
+}
+
+TEST_CASE("The quality lines of R436A reach the top of the envelope (#3586)", "[Plot]") {
+    CoolProp::Plot::PropertyPlot plot("HEOS::R436A.mix", CoolProp::iP, CoolProp::iHmass, 173.15, 493.15, 25e3, 9.6137e6);
+    const std::vector<double> qualities = {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
+    for (const CoolProp::Plot::Isoline& line : plot.calc_isolines(CoolProp::iQ, qualities, CoolProp::Plot::CalcSettings())) {
+        CAPTURE(line.value, line.reason, line.n_evaluated, line.x.size());
+        CHECK(line.reason.empty());
+        CHECK(line.n_evaluated < 1000);
+        CHECK(line.x.size() > 100);
+    }
 }
 
 TEST_CASE("Review fixes: limits, sweep values, trivial solutions", "[Plot]") {
