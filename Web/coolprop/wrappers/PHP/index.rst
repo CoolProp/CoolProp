@@ -6,12 +6,12 @@ PHP Wrapper
 
 Pre-compiled Binaries
 =====================
-Pre-compiled PHP binaries are no longer supplied.  The last release with PHP files on SourceForge is 6.1.0 (2016); see `its PHP folder <https://sourceforge.net/projects/coolprop/files/CoolProp/6.1.0/PHP/>`_ for the last known binaries.  Those files were built for PHP 5.x and are not expected to load in current PHP, because a compiled extension is tied to the exact PHP version it was built for.  The wrapper is built from source (see below), which takes a few minutes.
+Pre-compiled PHP binaries are no longer supplied.  The last release with PHP files on SourceForge is 6.1.0 (2016); see `its PHP folder <https://sourceforge.net/projects/coolprop/files/CoolProp/6.1.0/PHP/>`_ for the last known binaries.  Those files were presumably built for PHP 5.x and are not expected to load in current PHP, because a compiled extension is tied to the exact PHP version it was built for.  The wrapper is built from source (see below), which takes a few minutes.
 
 User-Compiled Binaries
 ======================
 
-Since most servers that will serve PHP will be linux, only linux instructions are shown here.  In principle very minor changes should be required to get this working on windows.
+Since most servers that will serve PHP will be Linux, only Linux instructions are shown here.  In principle very minor changes should be required to get this working on Windows.
 
 Common Requirements
 -------------------
@@ -42,20 +42,20 @@ Linux
 
     cmake --build . -j4
 
-  This will generate the file ``CoolPropPHP.so`` in the build folder.  With SWIG 4.4 no ``CoolProp.php`` file is generated.  A single-threaded build (without ``-j4``) takes about 8 minutes.
+   This will generate the file ``CoolPropPHP.so`` in the build folder.  With SWIG 4.4 no ``CoolProp.php`` file is generated.  A single-threaded build (without ``-j4``) takes about 8 minutes.
 
-  .. note::
+   .. note::
 
      With SWIG 4.1 and newer the PHP classes and functions are registered natively and
      the separate ``CoolProp.php`` proxy file is no longer generated.  Code written for
-     older SWIG versions that starts with ``require "CoolProp.php"`` is simply
-     left out.  Builds made with SWIG older than 4.1 are not tested.
+     older SWIG versions that starts with ``require "CoolProp.php"`` needs that
+     line removed, since the file no longer exists.  Builds made with SWIG older than 4.1 are not tested.
 
 5. Check that the module loads and returns a value (the full path to the module is given, so nothing needs to be installed)::
 
     php -d extension=$PWD/CoolPropPHP.so -r 'echo PropsSI("T","P",101325,"Q",1.0,"Water"), "\n";'
 
-  The expected output is ``373.12429584767`` (the normal boiling point of water, in K).
+   The expected output is ``373.12429584767`` (the normal boiling point of water, in K).
 
 Loading the Module
 ------------------
@@ -64,7 +64,7 @@ PHP loads the module through the ``extension`` setting.  Any of the following wo
 
 * **Command line, nothing installed.**  Pass the full path to the module with ``-d`` (as in step 5 above), or from a script, run ``php -d extension=/full/path/to/CoolPropPHP.so script.php``.
 
-* **A user-owned configuration file.**  Create a file ``coolprop.ini`` containing the single line ``extension=/full/path/to/CoolPropPHP.so`` and start PHP with ``php -n -c coolprop.ini script.php``.  Note that this replaces the system ``php.ini`` rather than adding to it, so other extensions enabled there are not loaded unless they are listed in this file as well.
+* **A user-owned configuration file.**  Create a file ``coolprop.ini`` containing the single line ``extension=/full/path/to/CoolPropPHP.so`` and start PHP with ``php -n -c coolprop.ini script.php``.  Note that ``-n`` skips the system ``php.ini`` and its ``conf.d`` folder, so other extensions are not loaded unless they are listed in this file as well.
 
 * **An additional scan directory.**  Put ``coolprop.ini`` (as above) in a folder of the user's choice and set ``PHP_INI_SCAN_DIR`` to that folder followed by the system's own scan directory, so the other extensions stay enabled::
 
