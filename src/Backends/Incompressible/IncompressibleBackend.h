@@ -7,6 +7,8 @@
 #include "CoolProp/AbstractState.h"
 #include "CoolProp/Exceptions.h"
 
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace CoolProp {
@@ -24,10 +26,20 @@ class IncompressibleBackend : public AbstractState
     CachedElement _hmass_ref, _smass_ref;
     /// data_version of the fluid that _hmass_ref and _smass_ref were computed from
     unsigned long ref_data_version = 0;
+    /// True while _T_ref is default_T_ref_K(), which depends on the fluid's range
+    bool T_ref_is_default = false;
+    /// Called before every use of the reference values or of a property this
+    /// backend caches: when the fluid's data changed (replaced, or a setter),
+    /// values cached from the old data are stale. The state keeps its T, p and
+    /// composition. Viscosity and conductivity are cached by AbstractState,
+    /// which does not call this: they stay stale until the next update() (COO-204).
     void drop_stale_reference_values() {
         if (ref_data_version != fluid->getDataVersion()) {
             _hmass_ref.clear();
             _smass_ref.clear();
+            clear_property_caches();
+            // a replaced fluid can have another range, which moves the default
+            if (T_ref_is_default) _T_ref = default_T_ref_K();
             ref_data_version = fluid->getDataVersion();
         }
     }
@@ -128,9 +140,29 @@ class IncompressibleBackend : public AbstractState
 
     /// Clear all the cached values
     bool clear() override;
+    /// Clear the properties this backend caches, but not T, p or the composition
+    void clear_property_caches();
 
-    /// Update the reference values and clear the state
+    /// Update the reference values and clear the state. An explicit T0 is kept
+    /// as given; the constructors use default_T_ref_K() instead of the 293.15 K
+    /// default argument.
     void set_reference_state(double T0 = 20 + 273.15, double p0 = 101325, double x0 = 0.0, double h0 = 0.0, double s0 = 0.0);
+    /// Default reference temperature: 293.15 K, or the nearest end of the
+    /// fluid's range when 293.15 K lies outside it. The fits are not valid
+    /// outside the range and a Chebyshev fit grows without bound there, so a
+    /// reference value taken there is meaningless and costs precision in every
+    /// h and s (IceNA's reference entropy was 2.4e11 J/kg/K, COO-203).
+    /// A range that is not set yet (infinite or NaN) keeps 293.15 K.
+    [[nodiscard]] double default_T_ref_K() const {
+        const double T_default_K = 20 + 273.15, T_min_K = fluid->getTmin(), T_max_K = fluid->getTmax();
+        if (!std::isfinite(T_min_K) || !std::isfinite(T_max_K) || T_min_K > T_max_K) return T_default_K;
+        return std::min(std::max(T_default_K, T_min_K), T_max_K);
+    }
+    /// Set the default reference state (see default_T_ref_K)
+    void set_default_reference_state() {
+        set_reference_state(default_T_ref_K());
+        T_ref_is_default = true;
+    }
 
     /// Set the mole fractions
     /**
@@ -258,9 +290,17 @@ class IncompressibleBackend : public AbstractState
     CoolPropDbl calc_cmass() {
         return c_at(_T, _p, _fractions[0]);
     };
+    /// Specific heat at constant pressure, the slope of h in T at constant p.
+    /// It differs from the fitted heat capacity c by -(p - p_fit) T d2v/dT2, the
+    /// pressure term of h (see calc_dhdTatPx), so it agrees with h and s at any
+    /// pressure and equals c at the pressure of the data.
     CoolPropDbl calc_cpmass() override {
-        return cmass();
+        return dhdTatPx();
     };
+    /// Specific heat at constant volume, returned as the fitted heat capacity c.
+    /// With v a function of T only, the isothermal compressibility is zero and
+    /// cp - cv = T (dv/dT)^2 / (v kappa_T) cannot be evaluated: cv is not defined
+    /// by this model. c is the fitted value, which cp equals at p_fit_Pa.
     CoolPropDbl calc_cvmass() override {
         return cmass();
     };
@@ -284,14 +324,18 @@ class IncompressibleBackend : public AbstractState
     CoolPropDbl calc_hmass() override;
     CoolPropDbl calc_smass() override;
 
+    /// Pressure of the fitted data, 1 atm. The pressure terms of h and s are
+    /// taken from here, so cp equals the fitted c at this pressure (#3577).
+    static constexpr double p_fit_Pa = 101325.0;
     /// h and s without the reference offsets, from rho and drho/dT at T:
-    /// h = Int c dT + p dh/dp|T and s = Int c/T dT + p ds/dp|T. The one place
-    /// these are written; raw_calc_hmass/smass and the flash residual use them.
+    /// h = Int c dT + (p - p_fit) dh/dp|T and s = Int c/T dT + (p - p_fit) ds/dp|T.
+    /// The one place these are written; raw_calc_hmass/smass and the flash
+    /// residual use them.
     double raw_hmass_from(double T, double p, double x, double rho, double drhodT) {
-        return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, rho, drhodT);
+        return calc_dhdTatPxdT(T, p, x) + (p - p_fit_Pa) * calc_dhdpatTx(T, rho, drhodT);
     }
     double raw_smass_from(double T, double p, double x, double rho, double drhodT) {
-        return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(rho, drhodT);
+        return calc_dsdTatPxdT(T, p, x) + (p - p_fit_Pa) * calc_dsdpatTx(rho, drhodT);
     }
     /// Residual of the HmassP and PSmass flashes, see IncompressibleBackend.cpp
     class CaloricResidual;
@@ -321,13 +365,35 @@ class IncompressibleBackend : public AbstractState
         const CompositionFits* f = fits_at(x);
         return (f && f->drhodT.kind != FitAtComposition::NONE) ? f->drhodT.eval(T) : fluid->drhodTatPx(T, p, x, chebyshev_caloric);
     };
-    /// Partial derivative of entropy with respect to temperature at constant pressure and composition
+    /// Second derivative of v = 1/rho in T at constant p, from rho, drho/dT and d2rho/dT2
+    static double d2vdT2_from(double rho, double drhodT, double d2rhodT2) {
+        return 2 * drhodT * drhodT / (rho * rho * rho) - d2rhodT2 / (rho * rho);
+    }
+    /// Slopes of h and s in T at constant p and composition, given d2v/dT2 at T.
+    /// h = Int c dT + (p - p_fit) (v - T dv/dT) and s = Int c/T dT - (p - p_fit) dv/dT, so
+    ///   dh/dT = c - (p - p_fit) T d2v/dT2  and  ds/dT = c/T - (p - p_fit) d2v/dT2.
+    /// The one place these are written; cpmass, the partial derivatives and the
+    /// flash residual all use them.
+    static double dhdT_from(double T, double p, double c, double d2vdT2) {
+        return c - (p - p_fit_Pa) * T * d2vdT2;
+    }
+    static double dsdT_from(double T, double p, double c, double d2vdT2) {
+        return c / T - (p - p_fit_Pa) * d2vdT2;
+    }
+    double d2vdT2_at(double T, double p, double x) {
+        return d2vdT2_from(rho_at(T, p, x), calc_drhodTatPx(T, p, x), d2rhodT2_at(T, p, x));
+    }
+    /// Partial derivative of entropy with respect to temperature at constant pressure and composition.
+    /// At p_fit_Pa the pressure term is zero, so the density derivatives are not
+    /// evaluated: a density fit without them (exppolynomial) still gives cp = c there.
     double calc_dsdTatPx(double T, double p, double x) {
-        return c_at(T, p, x) / T;
+        if (p == p_fit_Pa) return c_at(T, p, x) / T;
+        return dsdT_from(T, p, c_at(T, p, x), d2vdT2_at(T, p, x));
     };
     /// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
     double calc_dhdTatPx(double T, double p, double x) {
-        return c_at(T, p, x);
+        if (p == p_fit_Pa) return c_at(T, p, x);
+        return dhdT_from(T, p, c_at(T, p, x), d2vdT2_at(T, p, x));
     };
     /// Partial derivative of entropy
     ///  with respect to temperature at constant pressure and composition

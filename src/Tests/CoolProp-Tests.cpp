@@ -8813,7 +8813,9 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         // committed MEG.json polynomial coefficients.
         const std::string fluid = "INCOMP::MEG[0.35]";
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 300.0, "P", p, fluid) / 1041.843589 - 1) < 1e-9);
+        // At 1 atm, the pressure of the data, cp equals the fitted c (#3577)
         CHECK(std::abs(CoolProp::PropsSI("C", "T", 300.0, "P", p, fluid) / 3644.159653 - 1) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("O", "T", 300.0, "P", p, fluid) / 3644.159653 - 1) < 1e-9);
     }
     SECTION("dh/dT == cp and ds/dT == cp/T through the public interface") {
         // The h/s integrals are derived from the SAME cp expansion at load
@@ -8838,11 +8840,10 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             CAPTURE(cp);
             CAPTURE(dhdT);
             CAPTURE(dsdT);
-            // dh/dT differs from cp by the pressure term p*d(dh/dp)/dT
-            // (documented model property, see NOTES_thermodynamic_consistency
-            // .md), which is O(0.1 J/kg/K) at 1 atm -- inside this tolerance.
-            CHECK(std::abs(dhdT / cp - 1) < 1e-4);
-            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-4);
+            // cp includes the pressure term of h (#3577), so the match is
+            // limited only by the finite difference.
+            CHECK(std::abs(dhdT / cp - 1) < 1e-7);
+            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-7);
         }
     }
     SECTION("Runtime addition of an incompressible fluid via add_fluids_as_JSON (#2384)") {
@@ -8863,19 +8864,22 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 320.0, "P", p, fluid) - 1000.0) < 1e-9);
         CHECK(std::abs(CoolProp::PropsSI("D", "T", 360.0, "P", p, fluid) - 995.0) < 1e-9);
         CHECK(std::abs(CoolProp::PropsSI("C", "T", 320.0, "P", p, fluid) - 2000.0) < 1e-9);
-        // constant-cp enthalpy difference is exactly cp*dT (pressure terms
-        // cancel only in the T-part; keep p identical between the states)
+        // cp = c - (p - 1 atm) T d2v/dT2 (#3577); at T=320 rho = 1000 and
+        // drho/dT = -5/40, d2rho/dT2 = 0, so d2v/dT2 = 2 (drho/dT)^2 / rho^3
+        const double d2vdT2_m3_kgK2 = 2 * 0.125 * 0.125 / 1e9;
+        const double p_high_Pa = 1e7;
+        CHECK(std::abs(CoolProp::PropsSI("C", "T", 320.0, "P", p_high_Pa, fluid) - (2000.0 - (p_high_Pa - p) * 320.0 * d2vdT2_m3_kgK2)) < 1e-9);
+        CHECK(std::abs(CoolProp::PropsSI("O", "T", 320.0, "P", p_high_Pa, fluid) - 2000.0) < 1e-9);
+        // constant-cp enthalpy difference is exactly cp*dT: at 1 atm, the
+        // pressure of the data, the pressure term of h is zero (#3577)
         const double h1 = CoolProp::PropsSI("Hmass", "T", 300.0, "P", p, fluid);
         const double h2 = CoolProp::PropsSI("Hmass", "T", 340.0, "P", p, fluid);
-        const double drho_term =
-          p * (1.0 / CoolProp::PropsSI("D", "T", 340.0, "P", p, fluid) - 1.0 / CoolProp::PropsSI("D", "T", 300.0, "P", p, fluid));
         CAPTURE(h2 - h1);
-        // T-part: 2000 * 40 = 80000 J/kg; pressure part is small but nonzero
-        CHECK(std::abs((h2 - h1) - 80000.0) < std::abs(drho_term) * 40 + 5.0);
-        // and s(T2)-s(T1) = cp*ln(T2/T1) for constant cp (T-part)
+        CHECK(std::abs((h2 - h1) - 80000.0) < 1e-6);
+        // and s(T2)-s(T1) = cp*ln(T2/T1) for constant cp, again exact at 1 atm
         const double s1 = CoolProp::PropsSI("Smass", "T", 300.0, "P", p, fluid);
         const double s2 = CoolProp::PropsSI("Smass", "T", 340.0, "P", p, fluid);
-        CHECK(std::abs((s2 - s1) - 2000.0 * std::log(340.0 / 300.0)) < 0.5);
+        CHECK(std::abs((s2 - s1) - 2000.0 * std::log(340.0 / 300.0)) < 1e-9);
 
         // Re-adding the same name replaces the fluid in place: the fluid list
         // must not grow a duplicate entry, and the new definition must win.
@@ -8948,6 +8952,78 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
             "specific_heat_cheb": {"type": "chebyshev", "Trange": [270.0, 370.0], "xbase": 0.0, "coeffs": [[2000.0]]}
         }])";
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
+    }
+}
+
+TEST_CASE("INCOMP cp is the slope of h and s at constant p (#3577)", "[INCOMP][3577]") {
+    // h and s carry a pressure term from the density fit, taken from the
+    // pressure of the data (1 atm), so cp = dh/dT|p = c - (p - 1 atm) T d2v/dT2.
+    // cp, T ds/dT|p and the partial derivatives must all agree with finite
+    // differences of h and s, at any pressure and for both kinds of fit.
+    struct Probe
+    {
+        std::string name;
+        double x;  // mass fraction, 0 for a pure fluid
+        double T_K;
+    };
+    for (bool chebyshev : {true, false}) {
+        const ChebyshevCaloricSetting setting(chebyshev);
+        for (const Probe& probe : {Probe{"Water", 0.0, 320.0}, Probe{"MEG", 0.35, 300.0}, Probe{"LiBr", 0.4, 320.0}}) {
+            for (double p_Pa : {101325.0, 1e5, 1e6, 1e7}) {
+                CAPTURE(chebyshev, probe.name, probe.x, probe.T_K, p_Pa);
+                const std::string fluid = "INCOMP::" + probe.name + (probe.x > 0 ? "[" + std::to_string(probe.x) + "]" : "");
+                const double T = probe.T_K;
+                const double dT_K = 0.01;
+                auto prop = [&](const char* out, double T_K) { return CoolProp::PropsSI(out, "T", T_K, "P", p_Pa, fluid); };
+                const double cp = prop("C", T);
+                const double dhdT = (prop("Hmass", T + dT_K) - prop("Hmass", T - dT_K)) / (2 * dT_K);
+                const double dsdT = (prop("Smass", T + dT_K) - prop("Smass", T - dT_K)) / (2 * dT_K);
+                CAPTURE(cp, dhdT, dsdT);
+                CHECK(std::abs(dhdT / cp - 1) < 1e-7);
+                CHECK(std::abs(T * dsdT / cp - 1) < 1e-7);
+
+                // Cvmass stays the fitted c, which does not depend on pressure;
+                // cp - c is the pressure term -(p - 1 atm) T d2v/dT2.
+                const double c = prop("O", T);
+                CHECK(c == CoolProp::PropsSI("O", "T", T, "P", 1e5, fluid));
+                if (p_Pa == 101325.0) CHECK(cp == c);
+                const double dT2_K = 0.5;
+                const double d2vdT2 = (1 / prop("D", T + dT2_K) - 2 / prop("D", T) + 1 / prop("D", T - dT2_K)) / (dT2_K * dT2_K);
+                CAPTURE(c, d2vdT2);
+                const double dcp_expected = -(p_Pa - 101325.0) * T * d2vdT2;
+                CHECK(std::abs((cp - c) - dcp_expected) < 1e-3 * std::abs(dcp_expected) + 1e-9 * cp);
+
+                // The partial derivatives at constant p use the same slope
+                std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", probe.name));
+                if (probe.x > 0) AS->set_mass_fractions(std::vector<CoolPropDbl>(1, probe.x));
+                AS->update(CoolProp::PT_INPUTS, p_Pa, T);
+                CHECK(AS->cpmass() == Catch::Approx(cp).epsilon(1e-14));
+                CHECK(AS->first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP) == Catch::Approx(cp).epsilon(1e-14));
+                CHECK(T * AS->first_partial_deriv(CoolProp::iSmass, CoolProp::iT, CoolProp::iP) == Catch::Approx(cp).epsilon(1e-14));
+                const double drhodT = AS->first_partial_deriv(CoolProp::iDmass, CoolProp::iT, CoolProp::iP);
+                CHECK(AS->first_partial_deriv(CoolProp::iDmass, CoolProp::iHmass, CoolProp::iP) == Catch::Approx(drhodT / cp).epsilon(1e-14));
+                CHECK(AS->first_partial_deriv(CoolProp::iDmass, CoolProp::iSmass, CoolProp::iP) == Catch::Approx(drhodT * T / cp).epsilon(1e-14));
+            }
+        }
+    }
+}
+
+TEST_CASE("INCOMP::Air at 1 atm has cp = c and a monotonic enthalpy (#3577)", "[INCOMP][3577]") {
+    // Air's density fit of a gas has a d2v/dT2 that is fit artefact. Taken from
+    // p = 0, the pressure term made cp negative near Tmax and h non-monotonic
+    // at 1 atm, the pressure of its data. From 1 atm, cp is the fitted c there.
+    const std::string fluid = "INCOMP::Air";
+    const double p_Pa = 101325.0;
+    const double T_min_K = CoolProp::PropsSI("Tmin", "T", 0, "P", 0, fluid);
+    const double T_max_K = CoolProp::PropsSI("Tmax", "T", 0, "P", 0, fluid);
+    for (int i = 0; i <= 50; ++i) {
+        const double T = T_min_K + 0.001 + (T_max_K - T_min_K - 0.002) * i / 50.0;
+        CAPTURE(T);
+        const double cp = CoolProp::PropsSI("C", "T", T, "P", p_Pa, fluid);
+        CHECK(cp == CoolProp::PropsSI("O", "T", T, "P", p_Pa, fluid));
+        CHECK(cp > 900.0);
+        const double h = CoolProp::PropsSI("Hmass", "T", T, "P", p_Pa, fluid);
+        CHECK(CoolProp::PropsSI("T", "Hmass", h, "P", p_Pa, fluid) == Catch::Approx(T).margin(1e-6));
     }
 }
 
@@ -9437,10 +9513,9 @@ TEST_CASE("INCOMP classic and Chebyshev caloric fits are selectable at runtime",
             CAPTURE(dhdT);
             CAPTURE(dsdT);
             REQUIRE(ValidNumber(cp));
-            // Same tolerance and reasoning as the Chebyshev test above: dh/dT
-            // also carries the small pressure term p * d(dh/dp)/dT.
-            CHECK(std::abs(dhdT / cp - 1) < 1e-4);
-            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-4);
+            // Same tolerance and reasoning as the Chebyshev test above.
+            CHECK(std::abs(dhdT / cp - 1) < 1e-7);
+            CHECK(std::abs(dsdT / (cp / probe.T) - 1) < 1e-7);
         }
 
         // MEG's Chebyshev entries are exact basis conversions of its classic
