@@ -1804,10 +1804,9 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     rSatV.update_TP_guessrho(T, p, rhomolar_vap);
     rhomolar_vap = rSatV.rhomolar();
 
-    // For diagnostic purposes calculate the pressures (no derivatives are evaluated)
-    CoolPropDbl p_liq = rSatL.p();
-    CoolPropDbl p_vap = rSatV.p();
-    p = 0.5 * (p_liq + p_vap);
+    // p is left as the Newton iterate: both densities were just solved AT p.  It used to be
+    // overwritten here with the mean of the two phases' EOS pressures, which re-injected the
+    // liquid's pressure noise into the unknown on every iteration (GH #3585, see below).
 
     // Step 2:
     // -------
@@ -1820,18 +1819,26 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays() {
     x_N_dependency_flag xN_flag = XN_INDEPENDENT;
 
     // Residuals:
-    //   [0 .. N-1]  iso-fugacity in ln K form   ln K_i - (ln phi_i^L - ln phi_i^V)
+    //   [0 .. N-1]  iso-fugacity                 ln f_i^V - ln f_i^L  ( = ln K_i - (ln phi_i^L - ln phi_i^V))
     //   [N]         Rachford-Rice               sum_i z_i (K_i - 1) / D_i   ( = sum y - sum x)
     // The overall mass balance is absent by construction (see call()).  Rachford-Rice is the
     // closure condition: combined with (1-beta) sum(x) + beta sum(y) = sum(z) = 1 it forces
     // sum(x) = sum(y) = 1.  Both blocks are dimensionless and O(1), so error_rms weights them
     // comparably -- unlike the mass-balance form, where the trace-component rows were O(z_i).
-    std::vector<CoolPropDbl> lnphi_liq(N), lnphi_vap(N);
+    //
+    // The iso-fugacity residual is evaluated as ln f_i^V - ln f_i^L, with
+    //     ln f_i = ln(x_i rho R T) + d(n alphar)/dn_i |_{T,V}     (MixtureDerivatives::ln_fugacity_i)
+    // taken from each phase's (T, rho) directly.  With both phases at the same p this is
+    // identically ln K_i - (ln phi_i^L - ln phi_i^V), so the Jacobian below is unchanged, but it
+    // does not go through ln Z.  ln_fugacity_coefficient forms ln Z as log(1 + delta dalphar/ddelta),
+    // and in a liquid at low pressure Z is tiny (2.4e-6 for R436A at 140 K, 37 Pa): the sum
+    // cancels and ln Z carries ~1e-8 of noise, the same in every component.  That floored
+    // error_rms above the 1e-9 gate after Newton had already converged, so the solve ran out
+    // of iterations and the QT flash fell back to the bubble/dew solver (GH #3585).  ln f has
+    // no such cancellation: its sensitivity to a relative density error is v_i K_T/(RT), O(100).
     CoolPropDbl rachford_rice = 0;
     for (std::size_t i = 0; i < N; ++i) {
-        lnphi_liq[i] = MixtureDerivatives::ln_fugacity_coefficient(rSatL, i, xN_flag);
-        lnphi_vap[i] = MixtureDerivatives::ln_fugacity_coefficient(rSatV, i, xN_flag);
-        r[i] = log(K[i]) - (lnphi_liq[i] - lnphi_vap[i]);
+        r[i] = MixtureDerivatives::ln_fugacity_i(rSatV, i, xN_flag) - MixtureDerivatives::ln_fugacity_i(rSatL, i, xN_flag);
         const CoolPropDbl D = (1 - beta) + beta * K[i];
         rachford_rice += z[i] * (K[i] - 1) / D;
     }

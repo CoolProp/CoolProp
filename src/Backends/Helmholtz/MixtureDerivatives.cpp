@@ -12,6 +12,9 @@ CoolPropDbl MixtureDerivatives::dln_fugacity_i_dp__constT_n(HelmholtzEOSMixtureB
 CoolPropDbl MixtureDerivatives::fugacity_i(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
     return HEOS.mole_fractions[i] * HEOS.rhomolar() * HEOS.gas_constant() * HEOS.T() * exp(dnalphar_dni__constT_V_nj(HEOS, i, xN_flag));
 }
+CoolPropDbl MixtureDerivatives::ln_fugacity_i(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    return log(HEOS.mole_fractions[i]) + log(HEOS.rhomolar() * HEOS.gas_constant() * HEOS.T()) + dnalphar_dni__constT_V_nj(HEOS, i, xN_flag);
+}
 CoolPropDbl MixtureDerivatives::ln_fugacity_coefficient(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
     return HEOS.alphar() + ndalphar_dni__constT_V_nj(HEOS, i, xN_flag) - log(1 + HEOS._delta.pt() * HEOS.dalphar_dDelta());
 }

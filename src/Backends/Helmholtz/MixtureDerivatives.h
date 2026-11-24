@@ -88,6 +88,22 @@ class MixtureDerivatives
      */
     static CoolPropDbl fugacity_i(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag);
 
+    /** \brief Natural logarithm of the fugacity of the i-th component
+     *
+     * Evaluated in log space,
+     * \f[
+     * \ln f_i(\delta, \tau, \bar x) = \ln x_i + \ln(\rho R T) + \left(\frac{\partial n\alpha^r}{\partial n_i}\right)_{T,V,n_{j \neq i}}
+     * \f]
+     * so it stays finite for a trace component whatever the size of the exponent, and, unlike
+     * ln_fugacity_coefficient, it never forms \f$\ln Z\f$, which cancels in a low-pressure liquid
+     * (GH #3585).
+     *
+     * @param HEOS The HelmholtzEOSMixtureBackend to be used
+     * @param i The index of interest
+     * @param xN_flag A flag specifying whether the all mole fractions are independent or only the first N-1
+     */
+    static CoolPropDbl ln_fugacity_i(HelmholtzEOSMixtureBackend& HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
     /** \brief Natural logarithm of the fugacity coefficient
      *
      * @param HEOS The HelmholtzEOSMixtureBackend to be used

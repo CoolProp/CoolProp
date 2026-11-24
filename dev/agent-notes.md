@@ -268,6 +268,20 @@ recorded history of finished or abandoned work were dropped (they remain in
   a pure-R32/pure-R1234yf "split").  Measure with a sweep over many
   mixtures, not the six blends a fix was tuned on: a threshold rule fitted
   on six blends recovered only half the misses over 203.
+- **Never form ln Z in a low-pressure liquid** (#3585).
+  `MixtureDerivatives::ln_fugacity_coefficient` computes ln Z as
+  `log(1 + delta dalphar/ddelta)`.  For a liquid at tens of Pa Z is ~1e-6,
+  so the sum cancels and ln Z (and the EOS pressure of the root) carries
+  ~1e-8 of noise, the same in every component.  `newton_raphson_twophase`
+  used it in its residual, converged quadratically to that floor in 3-4
+  steps, then wandered above its 1e-9 gate until it ran out of iterations;
+  the blind QT/PQ flash then fell back to the bubble/dew solver, which has
+  no mass balance (382 such states over the predefined blends).  Equal
+  fugacity is ln f^V - ln f^L with ln f_i = ln(x_i rho R T) +
+  d(n alphar)/dn_i, no Z anywhere; and never overwrite a Newton unknown
+  (p) with the phases' re-evaluated pressures.  Tell: two iso-fugacity
+  residuals equal to each other and to ln(p_L/p_V) at the stall.  A blind
+  interior-Q fallback state that does not balance now raises.
 
 ## Fluid data, superancillaries and transport
 
