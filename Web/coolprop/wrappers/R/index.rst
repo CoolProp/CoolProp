@@ -127,3 +127,10 @@ Example Code Output
 ===================
 
 .. literalinclude:: Example.out
+
+.. raw:: html
+
+    <div style="width: 100%; height: 2px; background-color: #72727254; margin-top: 2rem; margin-bottom: 0px; display: block; clear: both;"></div>
+    <p style="margin-top: 4px; margin-bottom: 2rem; font-style: italic;">
+        Page Last Updated and verified: 11-24-2026
+    </p>
