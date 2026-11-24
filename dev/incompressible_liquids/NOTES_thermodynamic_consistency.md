@@ -54,18 +54,13 @@ only and never enters h/s.
    `NOTES_mixing_models.md`. Not fixable inside the current
    five-independent-fits architecture -- needs a Gibbs-energy-based class.
 
-2. **Reported cp is not (dh/dT)_p.** `calc_dhdTatPx` returns the fitted
-   `c(T,x)`, but the model's own enthalpy is `h = H(T,x) + p*g(T,x)` with
-   `g = (dh/dp)_T`, so the true derivative is `c + p * dg/dT`. A finite
-   difference of `hmass()` over T therefore disagrees with `cpmass()` by
-   `p * dg/dT` (small at ambient pressure: g depends on rho and drho/dT
-   only, so the term is of order 0.1-1 J/kg/K against c of 2000-4000, but it
-   grows linearly with p). Same for `calc_dsdTatPx = c/T`.
+2. **Reported cp is not (dh/dT)_p.** Resolved (#3577): the pressure terms
+   of h and s are now taken from p_fit = 1 atm, the pressure of the data,
+   and `cpmass` returns `c - (p - p_fit) T d2v/dT2`, the exact slope of h,
+   so cp equals the fitted c at 1 atm. `cvmass` still returns c.
 
-3. **(dcp/dp)_T = 0 violates the coupled Maxwell relation.** Consistency
-   requires `(dcp/dp)_T = -T (d2v/dT2)_p`, which is nonzero for the fitted
-   rho(T). This is the intrinsic price of fitting rho and c independently
-   instead of deriving both from one potential.
+3. **(dcp/dp)_T = 0 violates the coupled Maxwell relation.** Resolved with
+   (2): `(dcp/dp)_T = -T (d2v/dT2)_p` now holds by construction.
 
 4. **Non-polynomial density fits cannot produce h/s at all**:
    `drhodTatPx` only implements the polynomial case and throws otherwise.
@@ -155,7 +150,7 @@ not expansion arithmetic; products are planned separately in CoolProp-89d).
 
 ## Suggested order, when picked up
 
-1. Decide the cp question (option above) -- small, self-contained, testable
+1. Done (#3577): model-consistent cp, measured from p_fit = 1 atm. Was: decide the cp question (option above) -- small, self-contained, testable
    against finite differences of hmass.
 2. Prototype the `g(T,p,x)` single-potential class for one solution
    (LiBr/H2O per `NOTES_mixing_models.md`), reusing `Polynomial2DFrac`.

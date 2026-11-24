@@ -274,10 +274,31 @@ the limits in terms of concentration as well as the freezing temperature.
 Thermodynamics of Incompressible Fluids
 ---------------------------------------
 
-For an incompressible fluid, the specific at constant volume and at constant
-pressure are the same allowing us to drop the subscripts, :math:`c_p=c_v=c`. Using
-temperature :math:`T` and pressure :math:`p` as state variables, we can simplify
-the normal thermodynamic relation as described below. working with brines and
+The fits give the density :math:`\rho(T,x)` and the specific heat capacity
+:math:`c(T,x)`, both independent of pressure, from data at about atmospheric
+pressure :math:`p_0 = 101325` Pa. With :math:`v=1/\rho`, enthalpy and entropy are
+
+.. math::
+
+    h &= \int c \, dT + (p - p_0) \left( v - T \left( \frac{\partial v}{\partial T} \right)_p \right) \\
+    s &= \int \frac{c}{T} \, dT - (p - p_0) \left( \frac{\partial v}{\partial T} \right)_p
+
+The specific heat at constant pressure is the slope of this enthalpy,
+
+.. math::
+
+    c_p = \left( \frac{\partial h}{\partial T} \right)_p = c - (p - p_0) T \frac{\partial^2 v}{\partial T^2}
+        = T \left( \frac{\partial s}{\partial T} \right)_p
+
+which is what CoolProp returns as ``Cpmass``, and what the partial derivatives at
+constant pressure use. At :math:`p_0` it is the fitted :math:`c`; away from it
+the difference is small for liquids, for water at 320 K about 20 J/kg/K at
+100 bar. ``Cvmass`` returns :math:`c`: a volume that depends on temperature only
+has zero isothermal compressibility, so
+:math:`c_p - c_v = T (\partial v / \partial T)_p^2 / (v \kappa_T)` cannot be
+evaluated and the model does not define :math:`c_v`. The internal energy
+:math:`u = h - p v` depends on pressure through the pressure term of :math:`h`.
+When working with brines and
 mixtures, the concentration :math:`x` has to be considered as well. Following
 the same approach as for the compressible fluids, we regard mixtures with different
 compositions as independent fluids. This should be kept in mind when comparing

@@ -365,6 +365,15 @@ recorded history of finished or abandoned work were dropped (they remain in
   extreme reference state and snaps a bracketed root to an end, and recovering
   only after the solve fails misses the case that keeps a sign change.  Any new
   flash that rebuilds a target from a shifted value needs the same.
+- **Incompressible cp is `dh/dT|p`, not the fitted `c` (#3577).**  h and s
+  carry a pressure term from the density fit, taken from `p_fit_Pa` (1 atm,
+  the pressure of the data), not from 0 Pa: from 0 Pa, `INCOMP::Air`'s fit
+  artefacts in d2v/dT2 made cp negative near Tmax at 1 atm.  `cpmass`,
+  `dhdTatPx`, `dsdTatPx` and the flash slope all go through
+  `dhdT_from`/`dsdT_from` in `IncompressibleBackend.h`; `cmass()` is the raw
+  fit and `cvmass` returns it, because v(T) alone has zero compressibility
+  and leaves cv undefined.  `C` equals the fit only at 1 atm: a test that
+  checks a fitted heat capacity at another pressure must read `O` (Cvmass).
 - **Profile incompressibles from C++, not Python.**  The Python wrapper adds
   about 0.12 us per call, as much as a whole property evaluation.  Build a
   static `RelWithDebInfo` library, time `AbstractState` in a small C++

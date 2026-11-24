@@ -258,9 +258,17 @@ class IncompressibleBackend : public AbstractState
     CoolPropDbl calc_cmass() {
         return c_at(_T, _p, _fractions[0]);
     };
+    /// Specific heat at constant pressure, the slope of h in T at constant p.
+    /// It differs from the fitted heat capacity c by -(p - p_fit) T d2v/dT2, the
+    /// pressure term of h (see calc_dhdTatPx), so it agrees with h and s at any
+    /// pressure and equals c at the pressure of the data.
     CoolPropDbl calc_cpmass() override {
-        return cmass();
+        return dhdTatPx();
     };
+    /// Specific heat at constant volume, returned as the fitted heat capacity c.
+    /// With v a function of T only, the isothermal compressibility is zero and
+    /// cp - cv = T (dv/dT)^2 / (v kappa_T) cannot be evaluated: cv is not defined
+    /// by this model. c is the fitted value, which cp equals at p_fit_Pa.
     CoolPropDbl calc_cvmass() override {
         return cmass();
     };
@@ -284,14 +292,18 @@ class IncompressibleBackend : public AbstractState
     CoolPropDbl calc_hmass() override;
     CoolPropDbl calc_smass() override;
 
+    /// Pressure of the fitted data, 1 atm. The pressure terms of h and s are
+    /// taken from here, so cp equals the fitted c at this pressure (#3577).
+    static constexpr double p_fit_Pa = 101325.0;
     /// h and s without the reference offsets, from rho and drho/dT at T:
-    /// h = Int c dT + p dh/dp|T and s = Int c/T dT + p ds/dp|T. The one place
-    /// these are written; raw_calc_hmass/smass and the flash residual use them.
+    /// h = Int c dT + (p - p_fit) dh/dp|T and s = Int c/T dT + (p - p_fit) ds/dp|T.
+    /// The one place these are written; raw_calc_hmass/smass and the flash
+    /// residual use them.
     double raw_hmass_from(double T, double p, double x, double rho, double drhodT) {
-        return calc_dhdTatPxdT(T, p, x) + p * calc_dhdpatTx(T, rho, drhodT);
+        return calc_dhdTatPxdT(T, p, x) + (p - p_fit_Pa) * calc_dhdpatTx(T, rho, drhodT);
     }
     double raw_smass_from(double T, double p, double x, double rho, double drhodT) {
-        return calc_dsdTatPxdT(T, p, x) + p * calc_dsdpatTx(rho, drhodT);
+        return calc_dsdTatPxdT(T, p, x) + (p - p_fit_Pa) * calc_dsdpatTx(rho, drhodT);
     }
     /// Residual of the HmassP and PSmass flashes, see IncompressibleBackend.cpp
     class CaloricResidual;
@@ -321,13 +333,31 @@ class IncompressibleBackend : public AbstractState
         const CompositionFits* f = fits_at(x);
         return (f && f->drhodT.kind != FitAtComposition::NONE) ? f->drhodT.eval(T) : fluid->drhodTatPx(T, p, x, chebyshev_caloric);
     };
+    /// Second derivative of v = 1/rho in T at constant p, from rho, drho/dT and d2rho/dT2
+    static double d2vdT2_from(double rho, double drhodT, double d2rhodT2) {
+        return 2 * drhodT * drhodT / (rho * rho * rho) - d2rhodT2 / (rho * rho);
+    }
+    /// Slopes of h and s in T at constant p and composition, given d2v/dT2 at T.
+    /// h = Int c dT + (p - p_fit) (v - T dv/dT) and s = Int c/T dT - (p - p_fit) dv/dT, so
+    ///   dh/dT = c - (p - p_fit) T d2v/dT2  and  ds/dT = c/T - (p - p_fit) d2v/dT2.
+    /// The one place these are written; cpmass, the partial derivatives and the
+    /// flash residual all use them.
+    static double dhdT_from(double T, double p, double c, double d2vdT2) {
+        return c - (p - p_fit_Pa) * T * d2vdT2;
+    }
+    static double dsdT_from(double T, double p, double c, double d2vdT2) {
+        return c / T - (p - p_fit_Pa) * d2vdT2;
+    }
+    double d2vdT2_at(double T, double p, double x) {
+        return d2vdT2_from(rho_at(T, p, x), calc_drhodTatPx(T, p, x), d2rhodT2_at(T, p, x));
+    }
     /// Partial derivative of entropy with respect to temperature at constant pressure and composition
     double calc_dsdTatPx(double T, double p, double x) {
-        return c_at(T, p, x) / T;
+        return dsdT_from(T, p, c_at(T, p, x), d2vdT2_at(T, p, x));
     };
     /// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
     double calc_dhdTatPx(double T, double p, double x) {
-        return c_at(T, p, x);
+        return dhdT_from(T, p, c_at(T, p, x), d2vdT2_at(T, p, x));
     };
     /// Partial derivative of entropy
     ///  with respect to temperature at constant pressure and composition

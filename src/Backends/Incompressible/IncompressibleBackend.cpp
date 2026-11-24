@@ -402,12 +402,10 @@ CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl
 }
 /// Residual of the HmassP and PSmass flashes, with its derivative in T.
 /**
-h = Int c dT + p (v - T dv/dT) and s = Int c/T dT - p dv/dT, with v = 1/rho,
-so at constant p the exact slopes are
-    dh/dT = c - p T d2v/dT2,    ds/dT = c/T - p d2v/dT2,
-    d2v/dT2 = 2 rho'^2 / rho^3 - rho'' / rho^2.
-The term with d2v/dT2 grows with p, so at high pressure cp alone is a poor
-slope. call() keeps rho and rho' at its T for deriv() at the same T.
+The slope is the exact dh/dT or ds/dT at constant p (dhdT_from, dsdT_from in
+the header), the same value cpmass returns. Its term with d2v/dT2 grows with p,
+so at high pressure the fitted c alone is a poor slope. call() keeps rho and
+rho' at its T for deriv() at the same T.
 */
 class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
 {
@@ -431,9 +429,8 @@ class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
     double deriv(double T) override {
         const double c = backend->c_at(T, p, x);
         set_density_terms(T);
-        const double d2rho = backend->d2rhodT2_at(T, p, x);
-        const double d2v = 2 * drho * drho / (rho * rho * rho) - d2rho / (rho * rho);
-        return enthalpy ? c - p * T * d2v : c / T - p * d2v;
+        const double d2v = d2vdT2_from(rho, drho, backend->d2rhodT2_at(T, p, x));
+        return enthalpy ? dhdT_from(T, p, c, d2v) : dsdT_from(T, p, c, d2v);
     }
 
    private:
@@ -778,8 +775,9 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
             CHECK(check_abs(val, res, acc));
         }
 
+        // cvmass is the fitted c; cpmass adds the pressure term of h (#3577)
         val = fluid.c(T, p, x);
-        res = backend.cpmass();
+        res = backend.cvmass();
         {
             CAPTURE(T);
             CAPTURE(p);
@@ -981,9 +979,10 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
             CHECK(check_abs(dexpected, dactual, acc));
         }
 
-        // Compare cp
+        // Compare the tabulated heat capacity with the fitted c, which Cvmass
+        // returns; Cpmass adds the pressure term of h (#3577)
         double cpexpected = 3.6304e+03;
-        double cpactual = CoolProp::PropsSImulti(std::vector<std::string>(1, "C"), "T", T_vec, "P", p_vec, backend, fluids, x_vec)[0][0];
+        double cpactual = CoolProp::PropsSImulti(std::vector<std::string>(1, "O"), "T", T_vec, "P", p_vec, backend, fluids, x_vec)[0][0];
         {
             CAPTURE(T);
             CAPTURE(p);
@@ -1188,8 +1187,10 @@ TEST_CASE("Fits with the composition put in give exactly the full evaluation", "
                 CHECK(same_value(backend.viscosity(), fluid.visc(T, p, x)));
                 CHECK(same_value(backend.conductivity(), fluid.cond(T, p, x)));
                 const double rho = fluid.rho(T, p, x, chebyshev), drho = fluid.drhodTatPx(T, p, x, chebyshev);
-                CHECK(same_value(backend.raw_calc_hmass(T, p, x), fluid.dhdTatPxdT(T, p, x, chebyshev) + p * (1 / rho * (1 + T / rho * drho))));
-                CHECK(same_value(backend.raw_calc_smass(T, p, x), fluid.dsdTatPxdT(T, p, x, chebyshev) + p * (1 / rho / rho * drho)));
+                // pressure terms are taken from the data pressure, 1 atm (#3577)
+                const double dp = p - 101325.0;
+                CHECK(same_value(backend.raw_calc_hmass(T, p, x), fluid.dhdTatPxdT(T, p, x, chebyshev) + dp * (1 / rho * (1 + T / rho * drho))));
+                CHECK(same_value(backend.raw_calc_smass(T, p, x), fluid.dsdTatPxdT(T, p, x, chebyshev) + dp * (1 / rho / rho * drho)));
             }
         }
     }
