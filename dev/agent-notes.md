@@ -444,3 +444,11 @@ recorded history of finished or abandoned work were dropped (they remain in
   `CMAKE_ARGS="-DCPM_SOURCE_CACHE=$PWD/.cpm_cache"` (plus the valijson
   source if downloads are blocked) or Eigen is fetched again (gitlab
   returns 429 quickly).
+
+## PHP wrapper
+
+* **Verified on Ubuntu 26.04 (WSL), PHP 8.5.4, SWIG 4.4.0, with the CMake PHP block unchanged.** `cmake .. -DCOOLPROP_PHP_MODULE=ON` plus `cmake --build .` produces `CoolPropPHP.so` (not `libCoolPropPHP.so`) in the build directory; a serial build takes about 8 minutes. There is no CTest for PHP, so the proof is `php -d extension=$PWD/CoolPropPHP.so -r 'echo PropsSI("T","P",101325,"Q",1.0,"Water");'`, which returns 373.12429584767.
+* **SWIG 4.1+ registers PHP classes and functions natively.** No `CoolProp.php` is generated, so `require "CoolProp.php"` fails. `AbstractState::factory(...)` replaces the old `AbstractState_factory` helper, and the config-key enum values are not exported as PHP constants; use `config_string_to_key("ALTERNATIVE_REFPROP_PATH")`. Errors are thrown as PHP `Exception`.
+* **No sudo is needed to load the module.** `php -d extension=/full/path.so`, `php -n -c user.ini`, and `PHP_INI_SCAN_DIR=<dir>:$(php -r 'echo PHP_CONFIG_FILE_SCAN_DIR;')` all work. `-c` replaces the system `php.ini`; the scan-dir route keeps the other extensions. Avoid `-d extension_dir=...`: it breaks the distribution's other extensions.
+* `dev/scripts/examples/example_generator.py` has no PHP code path, so the Octave-era "REFPROP not available" catch label does not apply.
+* The wsl-test.sh `run` stage buffers command output in its log until the stage ends, and it holds a per-worktree lock, so poll for `RESULT:` rather than the log tail.
