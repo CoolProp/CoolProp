@@ -314,16 +314,19 @@ double IncompressibleBackend::rhomass() {
 }
 /// Return the mass enthalpy in J/kg
 double IncompressibleBackend::hmass() {
+    drop_stale_reference_values();  // a value cached at an old reference is stale
     if (!_hmass) _hmass = calc_hmass();
     return _hmass;
 }
 /// Return the molar entropy in J/mol/K
 double IncompressibleBackend::smass() {
+    drop_stale_reference_values();  // a value cached at an old reference is stale
     if (!_smass) _smass = calc_smass();
     return _smass;
 }
 /// Return the molar internal energy in J/mol
 double IncompressibleBackend::umass() {
+    drop_stale_reference_values();  // a value cached at an old reference is stale
     if (!_umass) _umass = calc_umass();
     return _umass;
 }
@@ -1440,15 +1443,24 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
     CHECK(old_backend->T_ref() == 320.0);
     old_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
     const double h_before = old_state->hmass();
+    // cache s and u as well, so the checks below see whether they are refreshed
+    const double s_before = old_state->smass(), u_before = old_state->umass();
 
     REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(350.0)));
     std::shared_ptr<CoolProp::AbstractState> new_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
     auto* new_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(new_state.get());
     REQUIRE(new_backend != nullptr);
     CHECK(new_backend->T_ref() == 350.0);
+    new_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
+    // h, s and u cached before the replacement must not be returned at the
+    // new reference: read them again without an update()
+    CHECK(old_state->hmass() == new_state->hmass());
+    CHECK(old_state->smass() == new_state->smass());
+    CHECK(old_state->umass() == new_state->umass());
+    CHECK(old_state->smass() != s_before);
+    CHECK(old_state->umass() != u_before);
     CHECK(old_backend->T_ref() == 350.0);
     old_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
-    new_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
     CHECK(old_state->hmass() == new_state->hmass());
     CHECK(old_state->smass() == new_state->smass());
     CHECK(old_state->hmass() != h_before);

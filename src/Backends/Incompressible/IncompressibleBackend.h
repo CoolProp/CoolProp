@@ -28,10 +28,15 @@ class IncompressibleBackend : public AbstractState
     unsigned long ref_data_version = 0;
     /// True while _T_ref is default_T_ref_K(), which depends on the fluid's range
     bool T_ref_is_default = false;
+    /// Called before every use of the reference values or of h, s and u: those
+    /// cached at the old reference would be offset from the new one.
     void drop_stale_reference_values() {
         if (ref_data_version != fluid->getDataVersion()) {
             _hmass_ref.clear();
             _smass_ref.clear();
+            _hmass.clear();
+            _smass.clear();
+            _umass.clear();
             // a replaced fluid can have another range, which moves the default
             if (T_ref_is_default) _T_ref = default_T_ref_K();
             ref_data_version = fluid->getDataVersion();
