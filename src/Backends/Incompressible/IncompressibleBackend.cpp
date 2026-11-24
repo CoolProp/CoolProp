@@ -412,11 +412,21 @@ slope. call() keeps rho and rho' at its T for deriv() at the same T.
 class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
 {
    public:
-    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target)
-      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target) {}
+    /// The flash solves raw(T) = target with target = input - ref + raw_ref,
+    /// where the backend reports input = ref + raw(T) - raw_ref.
+    CaloricResidual(IncompressibleBackend* backend, bool enthalpy, double p, double x, double target, double input, double ref, double raw_ref)
+      : backend(backend), enthalpy(enthalpy), p(p), x(x), target(target), input(input), ref(ref), raw_ref(raw_ref) {}
     double call(double T) override {
         set_density_terms(T);
-        return (enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho)) - target;
+        const double raw = enthalpy ? backend->raw_hmass_from(T, p, x, rho, drho) : backend->raw_smass_from(T, p, x, rho, drho);
+        // Undoing the reference shift rounds: for a state at an end of the
+        // range, target can be one ulp of the shifted value away from raw(T)
+        // there, so the bracket loses its sign change, or keeps one and finds
+        // another temperature where a non-monotonic fit reaches the same value.
+        // A temperature whose reported value (the expression of calc_hmass /
+        // calc_smass) equals the input exactly is that state: report a root.
+        if (std::isfinite(input) && ref + raw - raw_ref == input) return 0.0;
+        return raw - target;
     }
     double deriv(double T) override {
         const double c = backend->c_at(T, p, x);
@@ -429,7 +439,7 @@ class IncompressibleBackend::CaloricResidual : public FuncWrapper1DWithDeriv
    private:
     IncompressibleBackend* backend;
     bool enthalpy;
-    double p, x, target;
+    double p, x, target, input, ref, raw_ref;
     double T_cached = NAN, rho = NAN, drho = NAN;
     void set_density_terms(double T) {
         if (T == T_cached) return;
@@ -470,34 +480,6 @@ double IncompressibleBackend::flash_first_guess(bool enthalpy, double p, double 
     return T_r * std::exp((raw_target - s_r) / c_r);
 }
 
-namespace {
-/// Solve on [T_lo, T_hi] with BoundedNewton, and recover a state that lies
-/// exactly at an end of the range.
-/**
-A state reports h = h_ref + raw(T) - hmass_ref (s likewise), and the flash
-solves raw(T) = h - h_ref + hmass_ref. These additions and subtractions do not
-cancel exactly, so for a state at an end of the range the rebuilt target can
-lie one ulp beyond the value there, and the bracket shows no sign change. When
-the solve fails, an end whose reported value reproduces the input exactly is
-that state and is returned. The residual itself is left unchanged, so this can
-never move a root that the bracket does contain.
-@param solve The bracketed solve on [T_lo, T_hi]
-@param reported The value the backend reports at a temperature (calc_hmass or calc_smass at T)
-@param input The h or s the flash was given
-*/
-template <class Solve, class Reported>
-double solve_or_recover_end(Solve solve, Reported reported, double input, double T_lo, double T_hi) {
-    try {
-        return solve(T_lo, T_hi);
-    } catch (const CoolProp::ValueError&) {
-        for (const double T_end : {T_hi, T_lo}) {
-            if (reported(T_end) == input) return T_end;  // exactly the reported value of that state
-        }
-        throw;
-    }
-}
-}  // namespace
-
 /// Calculate T given pressure and enthalpy
 /**
 Newton on T inside a sign-change bracket over the liquid range at p (BoundedNewton,
@@ -510,16 +492,11 @@ an error when h is outside it, as Brent did.
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::HmassP_flash(CoolPropDbl hmass, CoolPropDbl p) {
-    const double x = _fractions[0];
     const double raw_target = hmass - h_ref() + hmass_ref();
-    CaloricResidual res(this, true, p, x, raw_target);
+    CaloricResidual res(this, true, p, _fractions[0], raw_target, hmass, h_ref(), hmass_ref());
     const double tol = DBL_EPSILON * 1e3;
     const double T_guess = flash_first_guess(true, p, raw_target);
-    // The same expression as calc_hmass, so a state at an end reproduces its h exactly
-    const auto reported = [&](double T) { return h_ref() + raw_calc_hmass(T, p, x) - hmass_ref(); };
-    return fluid->solveInLiquidRange(p, x, [&](double T_lo, double T_hi) {
-        return solve_or_recover_end([&](double a, double b) { return BoundedNewton(&res, T_guess, a, b, tol, 100); }, reported, hmass, T_lo, T_hi);
-    });
+    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
 }
 /// Calculate T given pressure and entropy
 /**
@@ -529,17 +506,12 @@ Solved like HmassP_flash, with the exact slope ds/dT at constant p.
 @returns T The temperature in K
 */
 CoolPropDbl IncompressibleBackend::PSmass_flash(CoolPropDbl p, CoolPropDbl smass) {
-    const double x = _fractions[0];
     const double raw_target = smass - s_ref() + smass_ref();
-    CaloricResidual res(this, false, p, x, raw_target);
+    CaloricResidual res(this, false, p, _fractions[0], raw_target, smass, s_ref(), smass_ref());
     // s on the classic fits carries a large ln(T) constant, so one ulp of s exceeds what an absolute 2e-13 K tolerance can resolve.
     const double tol = 1e-12 * fluid->getTmax();
     const double T_guess = flash_first_guess(false, p, raw_target);
-    // The same expression as calc_smass, so a state at an end reproduces its s exactly
-    const auto reported = [&](double T) { return s_ref() + raw_calc_smass(T, p, x) - smass_ref(); };
-    return fluid->solveInLiquidRange(p, x, [&](double T_lo, double T_hi) {
-        return solve_or_recover_end([&](double a, double b) { return BoundedNewton(&res, T_guess, a, b, tol, 100); }, reported, smass, T_lo, T_hi);
-    });
+    return fluid->solveInLiquidRange(p, _fractions[0], [&](double T_lo, double T_hi) { return BoundedNewton(&res, T_guess, T_lo, T_hi, tol, 100); });
 }
 
 ///// Calculate T given pressure and internal energy
@@ -1340,7 +1312,10 @@ TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBack
     for (const bool chebyshev : {false, true}) {
         CAPTURE(chebyshev);
         ChebyshevCaloricSetting setting(chebyshev);
-        for (const char* name : {"Water", "TVP1", "T66", "HC10", "S800", "MEG", "DowQ", "LiqNa"}) {
+        // TX22 and DowJ2 have an entropy that is not monotonic at 100 MPa, so a
+        // one-ulp error at Tmax can leave a sign change and lead to another root;
+        // the ice slurries carry a large shifted entropy.
+        for (const char* name : {"Water", "TVP1", "T66", "HC10", "S800", "MEG", "DowQ", "LiqNa", "TX22", "DowJ2", "IceNA", "IceEA"}) {
             CAPTURE(name);
             std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
             CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);

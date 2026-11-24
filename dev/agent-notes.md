@@ -357,11 +357,13 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **Undoing the reference shift rounds.**  A state reports
   h = h_ref + raw - hmass_ref, and the flash rebuilds raw_target = h - h_ref
   + hmass_ref; these cancel only to about 1 ulp.  At an end of the search
-  range that ulp removes the sign change.  When the bracketed solve fails,
-  `solve_or_recover_end` returns an end whose reported value (the same
-  expression as `calc_hmass`/`calc_smass`) equals the input exactly.  Do not
-  widen the residual instead: a band sized from |hmass_ref| grows with an
-  extreme reference state and can snap a bracketed root to an end.  Any new
+  range that ulp removes the sign change, or (on a fit that is not monotonic,
+  TX22 and DowJ2 entropy at 100 MPa) keeps one and leads to another root.
+  `CaloricResidual` returns exactly 0 where the reported value (the same
+  expression as `calc_hmass`/`calc_smass`) equals the input bit for bit.  Do
+  not use a tolerance band instead: one sized from |hmass_ref| grows with an
+  extreme reference state and snaps a bracketed root to an end, and recovering
+  only after the solve fails misses the case that keeps a sign change.  Any new
   flash that rebuilds a target from a shifted value needs the same.
 - **Profile incompressibles from C++, not Python.**  The Python wrapper adds
   about 0.12 us per call, as much as a whole property evaluation.  Build a
