@@ -1518,6 +1518,26 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
     CHECK(new_backend->T_ref() == 360.0);
 }
 
+TEST_CASE("Cp of a fluid whose density fit has no derivatives", "[IncompressibleBackend]") {
+    // An exppolynomial density can be evaluated but not differentiated. At
+    // 1 atm, the pressure of the data, the pressure term of cp is zero, so cp
+    // is the fitted c there, as before #3577; at another pressure it needs
+    // d2v/dT2 and raises an error, as h and s already do for such a fluid.
+    const std::string json = R"([{"name": "CatchRuntimeExpDensityFluid", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+        "density":       {"type": "exppolynomial", "coeffs": [[6.9]]},
+        "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]}}])";
+    const ChebyshevCaloricSetting setting(false);
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", json));
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeExpDensityFluid"));
+    AS->update(CoolProp::PT_INPUTS, 101325.0, 320.0);
+    CHECK(AS->cpmass() == 2000.0);
+    CHECK(AS->cvmass() == 2000.0);
+    AS->update(CoolProp::PT_INPUTS, 1e6, 320.0);
+    CHECK_THROWS(AS->cpmass());
+    CHECK(AS->cvmass() == 2000.0);
+}
+
 TEST_CASE("HmassP and PSmass flashes converge above 2048 K", "[IncompressibleBackend]") {
     // Above 1024 K neighbouring doubles are at least as far apart as the
     // HmassP tolerance of 2.2e-13 K, so a purely absolute tolerance could not

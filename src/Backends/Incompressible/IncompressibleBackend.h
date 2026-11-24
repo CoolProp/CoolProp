@@ -383,12 +383,16 @@ class IncompressibleBackend : public AbstractState
     double d2vdT2_at(double T, double p, double x) {
         return d2vdT2_from(rho_at(T, p, x), calc_drhodTatPx(T, p, x), d2rhodT2_at(T, p, x));
     }
-    /// Partial derivative of entropy with respect to temperature at constant pressure and composition
+    /// Partial derivative of entropy with respect to temperature at constant pressure and composition.
+    /// At p_fit_Pa the pressure term is zero, so the density derivatives are not
+    /// evaluated: a density fit without them (exppolynomial) still gives cp = c there.
     double calc_dsdTatPx(double T, double p, double x) {
+        if (p == p_fit_Pa) return c_at(T, p, x) / T;
         return dsdT_from(T, p, c_at(T, p, x), d2vdT2_at(T, p, x));
     };
     /// Partial derivative of enthalpy with respect to temperature at constant pressure and composition
     double calc_dhdTatPx(double T, double p, double x) {
+        if (p == p_fit_Pa) return c_at(T, p, x);
         return dhdT_from(T, p, c_at(T, p, x), d2vdT2_at(T, p, x));
     };
     /// Partial derivative of entropy
