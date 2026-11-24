@@ -307,6 +307,70 @@ recorded history of finished or abandoned work were dropped (they remain in
   drops the polynomial entropy matrices (they embed the value of Tbase), so
   call `validate()` again after it.  A Chebyshev fit may sit in a classic slot
   only when the fluid has no separate `_cheb` entry for that property.
+- **Incompressible fits are evaluated in three places that must agree to the
+  last bit.**  The full evaluation (`polyEvalMatrix`, `chebEvalMatrix`) and
+  the per-state `CompositionFits` (`FitAtComposition::eval`, built by
+  `fixComposition` when the composition changes) share `rowAtComposition`,
+  `hornerSum` and `clenshawSum`.  Change the arithmetic only there.  To
+  check, dump rho, cp, h, s, mu, k as `%a` hex floats for every fluid before
+  and after and `diff` them (26485 values per fit kind, zero differences
+  expected on x86-64 with the default flags).  A compiler that contracts
+  multiply-adds (aarch64, `-ffp-contract=fast`) can round the two paths
+  differently by a few ulp; there use the backend test's 8-epsilon check.  A backend rebuilds its `CompositionFits` when
+  `IncompressibleFluid::data_version` changes, which `validate()` and every
+  setter of cached data (fits, `setTbase`, `setxbase`) bump through
+  `nextDataVersion()`; a new setter for cached data must bump it too.
+  `add_fluids_as_JSON` replaces a fluid in place under existing backends.
+- **Incompressible inversions use `BoundedNewton` (src/Solvers.cpp).**
+  `T_rho`, `T_c` and the `HmassP`/`PSmass` flashes search the liquid range
+  through `solveInLiquidRange`: `[TminAt(p, x), Tmax]` first, where
+  `TminAt` is the freezing point when it is above `Tmin` (density fits
+  extrapolated below freezing turn over, and on the full range a valid
+  density was reached twice); and `[TminAt, TmaxAt]` only if that lands on a
+  boiling state or finds no root (fits extrapolated above the boiling point
+  turn over too, COO-190).  `TmaxAt` solves psat(T) = p with Brent, about
+  300 ns: computing it on every flash doubled the cost when p changes with
+  every call, hence the lazy second pass.  `BoundedNewton` needs a
+  sign change over the range and throws otherwise, like Brent; it must never
+  orient its bracket from the sign of f' alone (that silently returned the
+  other root, 77 K off).  The flash slopes are exact (`c - p T d2v/dT2` for h, `c/T - p d2v/dT2`
+  for s): cp
+  alone needs 8 iterations at 500 bar instead of 4.  Round-trip every shipped
+  fluid (T -> D, h, s -> T) after touching any of this; `INCOMP::Air` is a
+  1-atm gas fit and fails at 10 bar in every version.
+- **Where the liquid ends is one rule, shared by three places.**
+  `isLiquidAt(T, p, x)` decides liquid vs boiling for both `checkP` and the
+  first pass of `solveInLiquidRange`; it accepts a state up to
+  `saturationMargin()` (2e-9 Tmax, about 1 uK) above the boiling point, because
+  a flash from a saturated state lands a few ulp above T_sat.  `TmaxAt` returns
+  0.3 to 0.7 margin above where the liquid ends (T_sat, or TminPsat when the
+  liquid boils just above it), and the second pass searches 0.75 margin
+  beyond that and checks its result with `isLiquidAt`.  Change one of these
+  and the others drift apart: every step of PR #3567 that moved only one of
+  them broke saturated round trips or left a root unreachable.  Two traps:
+  CoolProp's `Brent` stops once half its bracket is below `t`, so its result
+  is good to 2 t, not t; and it also returns an end of its interval when
+  |f| there is below `t`, so scale a residual (here to ulps of p) if `t` is
+  meant for x only.  Test with a slowly rising psat (0.001 T Pa) and a
+  density fit that turns over, and with the 8-fluid saturation sweep
+  (QT_INPUTS Q = 0, then H,P and P,S back, about 2000 temperatures each).
+- **Undoing the reference shift rounds.**  A state reports
+  h = h_ref + raw - hmass_ref, and the flash rebuilds raw_target = h - h_ref
+  + hmass_ref; these cancel only to about 1 ulp.  At an end of the search
+  range that ulp removes the sign change, or (on a fit that is not monotonic,
+  TX22 and DowJ2 entropy at 100 MPa) keeps one and leads to another root.
+  `CaloricResidual` returns exactly 0 where the reported value (the same
+  expression as `calc_hmass`/`calc_smass`) equals the input bit for bit.  Do
+  not use a tolerance band instead: one sized from |hmass_ref| grows with an
+  extreme reference state and snaps a bracketed root to an end, and recovering
+  only after the solve fails misses the case that keeps a sign change.  Any new
+  flash that rebuilds a target from a shifted value needs the same.
+- **Profile incompressibles from C++, not Python.**  The Python wrapper adds
+  about 0.12 us per call, as much as a whole property evaluation.  Build a
+  static `RelWithDebInfo` library, time `AbstractState` in a small C++
+  program, and use `valgrind --tool=callgrind` (there is no `perf` in the
+  cloud container).  A thrown and caught exception costs about 1.3 us: one in
+  `checkP` (psat below `TminPsat`) used to dominate every update of 19 fluids.
 - **Config side effects belong in `on_config_changed`** (`src/Configuration.cpp`),
   which every setter calls (the JSON setter only for changed values).  A side
   effect wired into one setter is skipped when the key is set another way.

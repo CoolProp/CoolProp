@@ -39,6 +39,7 @@
 #    include "CoolProp/detail/tools.h"
 #    include "CoolProp/CoolProp.h"
 #    include "CoolProp/HumidAirProp.h"
+#    include "TestObjects.h"  // ChebyshevCaloricSetting
 
 using namespace CoolProp;
 
@@ -8949,22 +8950,198 @@ TEST_CASE("INCOMP Chebyshev caloric fits: values, consistency and integrals", "[
         CHECK_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", wide_range));
     }
 }
-/// Set INCOMP_PREFER_CHEBYSHEV_CALORIC for one scope and restore the previous
-/// value on exit, also when an assertion throws, so no other test inherits it.
-struct ChebyshevCaloricSetting
-{
-    bool saved;
-    explicit ChebyshevCaloricSetting(bool value) : saved(CoolProp::get_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC)) {
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, value);
+
+TEST_CASE("INCOMP fit types the full evaluation rejects are rejected by a state too", "[INCOMP]") {
+    // A state reduces its fits to the composition once. A fit type that the
+    // full evaluation does not support (an exppolynomial heat capacity, a
+    // Chebyshev viscosity or conductivity) must not return a value through
+    // that reduced path; it has to raise the same error as without it.
+    const std::string fluid = R"([{"name": "CatchRuntimeUnsupportedFitTypes", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+        "density":            {"type": "polynomial", "coeffs": [[1000.0]]},
+        "specific_heat":      {"type": "exppolynomial", "coeffs": [[7.6]]},
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+        "viscosity":          {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[0.001]]},
+        "conductivity":       {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[0.5]]}
+    }])";
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid));
+    {
+        ChebyshevCaloricSetting classic(false);
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeUnsupportedFitTypes"));
+        AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+        CHECK(AS->rhomass() == Catch::Approx(1000.0));
+        CHECK_THROWS(AS->cpmass());
     }
-    ~ChebyshevCaloricSetting() {
-        CoolProp::set_config_bool(INCOMP_PREFER_CHEBYSHEV_CALORIC, saved);
+    ChebyshevCaloricSetting chebyshev(true);
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeUnsupportedFitTypes"));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->cpmass() == Catch::Approx(2000.0));
+    CHECK_THROWS(AS->viscosity());
+    CHECK_THROWS(AS->conductivity());
+}
+
+TEST_CASE("INCOMP rejects a saturation pressure fit psat() cannot evaluate", "[INCOMP]") {
+    // A Chebyshev saturation_pressure parses, but psat() has no Chebyshev case:
+    // the fluid must not load, rather than fail later on every state.
+    const std::string fluid = R"([{"name": "CatchRuntimeChebPsatFluid", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+        "saturation_pressure": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]}
+    }])";
+    CHECK_THROWS_WITH(CoolProp::add_fluids_as_JSON("INCOMP", fluid), Catch::Matchers::ContainsSubstring("psat() cannot evaluate"));
+}
+
+TEST_CASE("INCOMP liquid limit at the boiling point is consistent", "[INCOMP]") {
+    // psat = 0.001 T Pa rises slowly, so a pressure difference far below 1 Pa
+    // is still a large temperature difference: T_sat = 1000 p exactly.
+    const std::string fluid = R"([{"name": "CatchRuntimeSlowPsatFluid", "description": "x", "reference": "x",
+        "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+        "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+        "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+        "saturation_pressure": {"type": "polynomial", "coeffs": [[0.0], [0.001]]}
+    }])";
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid));
+    CoolProp::IncompressibleFluid& f = CoolProp::get_incompressible_fluid("CatchRuntimeSlowPsatFluid");
+    const double m = f.saturationMargin();
+    REQUIRE(f.psat(350.0, 0.0) == Catch::Approx(0.35).epsilon(1e-14));
+    SECTION("TmaxAt solves for temperature, not for a small pressure difference") {
+        // T_sat = 399.99996 K, but psat(Tmax) - p is only 4e-8 Pa
+        const double p = 0.4 - 4e-8;
+        const double T_hi = f.TmaxAt(p, 0.0);
+        CHECK(T_hi < 400.0);
+        CHECK(T_hi - 1000.0 * p > 0.0);
+        CHECK(T_hi - 1000.0 * p < m);
+        CHECK_NOTHROW(f.checkTPX(T_hi, p, 0.0));
     }
-    ChebyshevCaloricSetting(const ChebyshevCaloricSetting&) = delete;
-    ChebyshevCaloricSetting& operator=(const ChebyshevCaloricSetting&) = delete;
-    ChebyshevCaloricSetting(ChebyshevCaloricSetting&&) = delete;
-    ChebyshevCaloricSetting& operator=(ChebyshevCaloricSetting&&) = delete;
-};
+    SECTION("TmaxAt at zero pressure, with a psat fit that crosses zero") {
+        // psat = 0.001 (T - 310) Pa: boils at 310 K at p = 0
+        const std::string crossing = R"([{"name": "CatchRuntimeZeroPsatFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+            "density_cheb":       {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[1000.0]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 400.0], "xbase": 0.0, "coeffs": [[2000.0]]},
+            "saturation_pressure": {"type": "polynomial", "coeffs": [[-0.31], [0.001]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", crossing));
+        CoolProp::IncompressibleFluid& z = CoolProp::get_incompressible_fluid("CatchRuntimeZeroPsatFluid");
+        double T_hi = NAN;
+        CHECK_NOTHROW(T_hi = z.TmaxAt(0.0, 0.0));
+        CHECK(T_hi == Catch::Approx(310.0).margin(1e-5));
+    }
+    SECTION("A boiling point less than one margin above TminPsat") {
+        const double p = 0.001 * (300.0 + 0.3 * m);
+        CHECK_NOTHROW(f.checkTPX(f.TmaxAt(p, 0.0), p, 0.0));
+        // and states there flash back, at saturation and within the margin
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSlowPsatFluid"));
+        for (const double fraction : {0.0, 0.3, 0.9}) {
+            CAPTURE(fraction);
+            const double T = 300.0 + fraction * m;
+            AS->update(CoolProp::PT_INPUTS, p, T);
+            const double h = AS->hmass(), s = AS->smass();
+            CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, p, s));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+    }
+    SECTION("A density that only a state within the margin reaches") {
+        // The density turns over at 360 K, so over the full range [280, 400]
+        // the residual has the same sign at both ends: only the second pass,
+        // bracketed at the boiling point, can find the root just above 350 K.
+        const std::string turning = R"([{"name": "CatchRuntimeTurningRhoFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[-119600.0], [720.0], [-1.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]},
+            "saturation_pressure": {"type": "polynomial", "coeffs": [[0.0], [0.001]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", turning));
+        CoolProp::IncompressibleFluid& t = CoolProp::get_incompressible_fluid("CatchRuntimeTurningRhoFluid");
+        const double p = 0.35;  // T_sat = 350 K
+        REQUIRE(t.rho(360.0, p, 0.0, false) == Catch::Approx(10000.0));
+        for (const double fraction : {0.0, 0.5, 0.9, 0.99}) {
+            CAPTURE(fraction);
+            const double T = 350.0 + fraction * m;
+            double T_back = NAN;
+            CHECK_NOTHROW(T_back = t.T_rho(t.rho(T, p, 0.0, false), p, 0.0, false));
+            CHECK(std::abs(T_back - T) < 1e-9);
+        }
+        // Beyond the margin there is no liquid state with that density: no
+        // pass finds a root, so the solver's own error is reported
+        CHECK_THROWS_WITH(t.T_rho(t.rho(350.0 + 3 * m, p, 0.0, false), p, 0.0, false), Catch::Matchers::ContainsSubstring("do not bracket"));
+    }
+    SECTION("A density that only a state within the margin above TminPsat reaches") {
+        // At p = 0.299 Pa the liquid already boils just above TminPsat = 300 K,
+        // and the density turns over at 310 K, so the full range has no sign
+        // change: only the second pass can find a root just above 300 K.
+        const std::string turning = R"([{"name": "CatchRuntimeTurningRhoLowFluid", "description": "x", "reference": "x",
+            "Tmin": 280.0, "Tmax": 400.0, "TminPsat": 300.0, "xid": "pure",
+            "density":       {"type": "polynomial", "coeffs": [[-86100.0], [620.0], [-1.0]]},
+            "specific_heat": {"type": "polynomial", "coeffs": [[2000.0]]},
+            "saturation_pressure": {"type": "polynomial", "coeffs": [[0.0], [0.001]]}
+        }])";
+        REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", turning));
+        CoolProp::IncompressibleFluid& t = CoolProp::get_incompressible_fluid("CatchRuntimeTurningRhoLowFluid");
+        const double p = 0.299;
+        REQUIRE(t.rho(310.0, p, 0.0, false) == Catch::Approx(10000.0));
+        for (const double fraction : {0.3, 0.9, 0.99}) {
+            CAPTURE(fraction);
+            const double T = 300.0 + fraction * m;
+            CHECK_NOTHROW(t.checkTPX(T, p, 0.0));
+            double T_back = NAN;
+            CHECK_NOTHROW(T_back = t.T_rho(t.rho(T, p, 0.0, false), p, 0.0, false));
+            CHECK(std::abs(T_back - T) < 1e-9);
+        }
+    }
+    SECTION("A state accepted within the margin can be flashed back") {
+        const double p = 0.35;  // T_sat = 350 K
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeSlowPsatFluid"));
+        for (const double fraction : {0.0, 0.5, 0.9}) {
+            CAPTURE(fraction);
+            const double T = 350.0 + fraction * m;
+            AS->update(CoolProp::PT_INPUTS, p, T);  // accepted by checkP
+            const double h = AS->hmass(), s = AS->smass();
+            CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+            CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, p, s));
+            CHECK(std::abs(AS->T() - T) < 1e-9);
+        }
+        // Beyond the margin the state boils
+        CHECK_THROWS(AS->update(CoolProp::PT_INPUTS, p, 350.0 + 2 * m));
+    }
+}
+
+TEST_CASE("INCOMP state sees a fluid replaced at runtime", "[INCOMP]") {
+    // A state keeps the fits of its fluid with the composition put in. When
+    // add_fluids_as_JSON replaces that fluid in place, the state must use the
+    // new data on its next update, not the reduced fits of the old one.
+    // Both density and heat capacity change, so the reference enthalpy and
+    // the reference entropy both move with the replacement.
+    auto definition = [](double rho, double cp) {
+        return std::string(R"([{"name": "CatchRuntimeReplacedFluid", "description": "replaced at runtime", "reference": "none",
+            "Tmin": 280.0, "Tmax": 360.0, "TminPsat": 360.0, "xid": "pure",
+            "density_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[)")
+               + std::to_string(rho) + R"(]]},
+            "specific_heat_cheb": {"type": "chebyshev", "Trange": [280.0, 360.0], "xbase": 0.0, "coeffs": [[)"
+               + std::to_string(cp) + R"(]]}}])";
+    };
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(1000.0, 2000.0)));
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeReplacedFluid"));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->rhomass() == Catch::Approx(1000.0).epsilon(1e-14));
+    AS->update(CoolProp::PT_INPUTS, 101325.0, 293.15);  // caches the reference values
+    CHECK(std::abs(AS->hmass()) < 1e-9);
+    CHECK(std::abs(AS->smass()) < 1e-12);
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", definition(900.0, 2500.0)));
+    AS->update(CoolProp::PT_INPUTS, 1e5, 320.0);
+    CHECK(AS->rhomass() == Catch::Approx(900.0).epsilon(1e-14));
+    // The reference values move with the data too: h = s = 0 at 293.15 K and
+    // 1 atm with the new data. Entropy is read first: reading enthalpy
+    // refreshes both reference values, which would hide a stale entropy one.
+    AS->update(CoolProp::PT_INPUTS, 101325.0, 293.15);
+    CHECK(std::abs(AS->smass()) < 1e-12);
+    CHECK(std::abs(AS->hmass()) < 1e-9);
+}
 
 TEST_CASE("INCOMP PS and HP flash round trip on the classic fits", "[INCOMP]") {
     // Smoke test only: grid targets s(T) converge within 15 iterations even with the old absolute Brent tolerance, so it does not guard the 1e-12*Tmax fix.

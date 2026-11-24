@@ -4,7 +4,9 @@
 #include "CoolProp/DataStructures.h"
 #include "CoolProp/fluids/IncompressibleFluid.h"
 #include "IncompressibleLibrary.h"
+#include <atomic>
 #include <cmath>
+#include <utility>
 #include "CoolProp/numerics/MatrixMath.h"
 #include "CoolProp/numerics/PolyMath.h"
 #include "CoolProp/numerics/Solvers.h"
@@ -48,6 +50,53 @@ double evaluateAwayFromPole(double x_den, Func fnc) {
 // coefficient matrices in this same basis, so evaluating them costs no more
 // than evaluating the fit itself.
 
+// ---- The three sums every fit evaluation is made of -------------------------
+//
+// Each is written once and used by the full evaluation (polyEvalMatrix,
+// chebEvalMatrix), the load-time Chebyshev work (chebClenshaw) and the
+// per-composition evaluation (FitAtComposition). Sharing them keeps those
+// results bit for bit identical, which CompositionFits relies on.
+//
+// hornerSum and clenshawSum take the coefficients as a function a(k) rather
+// than an array, so the same code can read them from a matrix row reduced on
+// the fly or from a stored vector. The compiler inlines that function.
+
+/// Row i of M as a polynomial in dx, Horner's scheme from the highest power:
+/// the coefficient of the i-th temperature term at a fixed composition.
+/// Starting from the last coefficient (not 0 * dx) means a single-column
+/// matrix (a pure fluid) never touches dx.
+inline double rowAtComposition(const Eigen::MatrixXd& M, Eigen::Index i, double dx) {
+    double value = M(i, M.cols() - 1);
+    for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
+        value = value * dx + M(i, j);
+    }
+    return value;
+}
+
+/// Sum of a(k) y^k for k = 0 .. n-1, Horner's scheme (n >= 1).
+template <typename Coefficient>
+double hornerSum(Coefficient a, Eigen::Index n, double y) {
+    double result = a(n - 1);
+    for (Eigen::Index k = n - 2; k >= 0; --k) {
+        result = result * y + a(k);
+    }
+    return result;
+}
+
+/// Sum of a(k) T_k(u) for k = 0 .. n-1, Clenshaw's recurrence (n >= 1).
+/// Mirrors superancillary::ChebyshevExpansion::eval.
+template <typename Coefficient>
+double clenshawSum(Coefficient a, Eigen::Index n, double u) {
+    if (n == 1) return a(0);
+    double b_kp1 = a(n - 1), b_kp2 = 0.0;
+    for (Eigen::Index k = n - 2; k > 0; --k) {
+        const double b_k = 2.0 * u * b_kp1 - b_kp2 + a(k);
+        b_kp2 = b_kp1;
+        b_kp1 = b_k;
+    }
+    return a(0) + u * b_kp1 - b_kp2;
+}
+
 /// Evaluate a coefficient matrix in the polynomial basis with Horner's
 /// scheme: first along each row in (x - xbase), then down the rows in
 /// (T - Tbase). The highest coefficient is the starting value rather than
@@ -58,20 +107,8 @@ double polyEvalMatrix(const Eigen::MatrixXd& M, double T, double x, double Tbase
         throw CoolProp::ValueError(
           "Polynomial coefficient matrix is empty: the fit has no coefficients, or the fluid was not loaded through validate().");
     }
-    const double dT = T - Tbase;
     const double dx = x - xbase;
-    auto row_value = [&](Eigen::Index i) {
-        double value = M(i, M.cols() - 1);
-        for (Eigen::Index j = M.cols() - 2; j >= 0; --j) {
-            value = value * dx + M(i, j);
-        }
-        return value;
-    };
-    double result = row_value(M.rows() - 1);
-    for (Eigen::Index i = M.rows() - 2; i >= 0; --i) {
-        result = result * dT + row_value(i);
-    }
-    return result;
+    return hornerSum([&](Eigen::Index i) { return rowAtComposition(M, i, dx); }, M.rows(), T - Tbase);
 }
 
 /// Coefficients of d/dT: the term a_i (T - Tbase)^i becomes
@@ -132,29 +169,11 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> polyDivideByTAntiderivative(const Ei
 // coefficient vector (a linear combination of the columns), then runs
 // Clenshaw -- the same collapse-then-evaluate structure Polynomial2DFrac uses.
 
-/// Effective 1D Chebyshev coefficients at composition x.
-Eigen::VectorXd chebCollapse(const Eigen::MatrixXd& C, double x, double xbase) {
-    Eigen::VectorXd dx(C.cols());
-    double power = 1.0;
-    for (Eigen::Index j = 0; j < C.cols(); ++j) {
-        dx(j) = power;
-        power *= (x - xbase);
-    }
-    return C * dx;
-}
-
 /// Clenshaw evaluation at the mapped argument u in [-1, 1]
 /// (mirrors superancillary::ChebyshevExpansion::eval).
 double chebClenshaw(const Eigen::VectorXd& a, double u) {
-    const int Norder = static_cast<int>(a.size()) - 1;
-    if (Norder < 1) return (Norder == 0) ? a(0) : 0.0;
-    double u_k = 0, u_kp1 = a(Norder), u_kp2 = 0;
-    for (int k = Norder - 1; k > 0; k--) {
-        u_k = 2.0 * u * u_kp1 - u_kp2 + a(k);
-        u_kp2 = u_kp1;
-        u_kp1 = u_k;
-    }
-    return a(0) + u * u_kp1 - u_kp2;
+    if (a.size() < 1) return 0.0;
+    return clenshawSum([&](Eigen::Index k) { return a(k); }, a.size(), u);
 }
 
 /// Evaluate a coefficient matrix that shares data's domain and xbase
@@ -167,7 +186,19 @@ double chebEvalMatrix(const Eigen::MatrixXd& M, const CoolProp::IncompressibleDa
         throw CoolProp::ValueError("Chebyshev coefficient matrix is empty; the fluid was not loaded through validate().");
     }
     const double u = (2.0 * T - (data.cheb_Tmax + data.cheb_Tmin)) / (data.cheb_Tmax - data.cheb_Tmin);
-    return chebClenshaw(chebCollapse(M, x, data.cheb_xbase), u);
+    const double dx = x - data.cheb_xbase;
+    // Each row is reduced to the composition as Clenshaw needs it, so no
+    // temporary vector is allocated on each call
+    return clenshawSum([&](Eigen::Index k) { return rowAtComposition(M, k, dx); }, M.rows(), u);
+}
+
+/// Evaluate a coefficient matrix of a caloric fit, polynomial or Chebyshev:
+/// fit.coeffs itself or one of the matrices validate() derives from it.
+double evalCaloricMatrix(const CoolProp::IncompressibleData& fit, const Eigen::MatrixXd& M, double T, double x, double Tbase, double xbase) {
+    if (fit.type == CoolProp::IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV) {
+        return chebEvalMatrix(M, fit, T, x);
+    }
+    return polyEvalMatrix(M, T, x, Tbase, xbase);
 }
 
 /// Coefficients of d/dT, one column at a time. Standard descending
@@ -268,7 +299,15 @@ and transport properties.
 */
 //IncompressibleFluid::IncompressibleFluid();
 
+unsigned long IncompressibleFluid::nextDataVersion() {
+    static std::atomic<unsigned long> counter{0};
+    return ++counter;
+}
+
 void IncompressibleFluid::validate() {
+    // A new value for every validation, unique across fluids, so that a fluid
+    // replaced in place by one with new data never keeps the old number.
+    data_version = nextDataVersion();
     // Caloric fits: check them and build the derived coefficient matrices
     // exactly once, at load time. Everything h and s need afterwards is a
     // plain evaluation of a stored matrix (see drhodTatPx, dhdTatPxdT and
@@ -294,6 +333,21 @@ void IncompressibleFluid::validate() {
               format("%s (%d): %s has a Chebyshev %s fit in both the classic and the Chebyshev slot.", __FILE__, __LINE__, name.c_str(), what));
         }
     };
+    // psat() evaluates only these types. Another one (a Chebyshev entry, say)
+    // would load, then fail on every state above TminPsat with an unknown-type
+    // error, and checkP and the inversions would disagree about it; refuse it here.
+    switch (p_sat.type) {
+        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
+        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        case IncompressibleData::INCOMPRESSIBLE_EXPONENTIAL:
+        case IncompressibleData::INCOMPRESSIBLE_LOGEXPONENTIAL:
+        case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+        case IncompressibleData::INCOMPRESSIBLE_POLYOFFSET:
+            break;
+        default:
+            throw ValueError(format("%s (%d): The saturation pressure fit of %s has type [%d], which psat() cannot evaluate.", __FILE__, __LINE__,
+                                    name.c_str(), p_sat.type));
+    }
     require_distinct_kinds(density, density_cheb, "density");
     require_distinct_kinds(specific_heat, specific_heat_cheb, "specific heat");
     for (const CaloricFit& fit : {CaloricFit{&density, "density", false}, CaloricFit{&density_cheb, "density", false},
@@ -304,11 +358,11 @@ void IncompressibleFluid::validate() {
                 throw ValueError(
                   format("%s (%d): Polynomial %s fit for %s has an empty coefficient matrix.", __FILE__, __LINE__, fit.what, name.c_str()));
             }
+            data->ddT = polyDerivativeMatrix(data->coeffs);
+            if (!fit.is_specific_heat) data->ddT2 = polyDerivativeMatrix(data->ddT);
             if (fit.is_specific_heat) {
                 data->int_dT = polyAntiderivativeMatrix(data->coeffs);
                 std::tie(data->int_dTdivT, data->int_dTdivT_log) = polyDivideByTAntiderivative(data->coeffs, Tbase);
-            } else {
-                data->ddT = polyDerivativeMatrix(data->coeffs);
             }
             continue;
         }
@@ -341,12 +395,12 @@ void IncompressibleFluid::validate() {
             throw ValueError(format("%s (%d): Chebyshev fit domain [%g, %g] for %s does not cover the fluid range [%g, %g].", __FILE__, __LINE__,
                                     data->cheb_Tmin, data->cheb_Tmax, name.c_str(), Tmin, Tmax));
         }
+        data->ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
+        if (!fit.is_specific_heat) data->ddT2 = chebDerivativeMatrix(data->ddT, data->cheb_Tmin, data->cheb_Tmax);
         if (fit.is_specific_heat) {
             data->int_dT = chebAntiderivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
             data->int_dTdivT =
               chebAntiderivativeMatrix(chebDivideByTMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax), data->cheb_Tmin, data->cheb_Tmax);
-        } else {
-            data->ddT = chebDerivativeMatrix(data->coeffs, data->cheb_Tmin, data->cheb_Tmax);
         }
     }
     // The pure/solution classification comes from the number of density
@@ -576,59 +630,47 @@ double IncompressibleFluid::Tfreeze(double p, double x) {
  * derive the different functions with respect to temperature.
  */
 /// Partial derivative of density with respect to temperature at constant pressure and composition
-double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebyshev) {
-    const IncompressibleData& fit = densityFit(chebyshev);
+double IncompressibleFluid::evalCaloricFit(const IncompressibleData& fit, const Eigen::MatrixXd& M, double T, double x, const char* property,
+                                           const char* quantity) const {
     switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            // d/dT, derived once at load time in validate()
-            return polyEvalMatrix(fit.ddT, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            return chebEvalMatrix(fit.ddT, fit, T, x);
+            return evalCaloricMatrix(fit, M, T, x, Tbase, xbase);
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("density");
+            throw notDefinedError(property);
         default:
             throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for density.", __FILE__, __LINE__, fit.type));
+              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for %s.", __FILE__, __LINE__, fit.type, quantity));
     }
+}
+double IncompressibleFluid::drhodTatPx(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    return evalCaloricFit(fit, fit.ddT, T, x, "density", "density");  // d/dT, built in validate()
+}
+/// Second partial derivative of density with respect to temperature at constant pressure and composition
+double IncompressibleFluid::d2rhodT2atPx(double T, double p, double x, bool chebyshev) {
+    const IncompressibleData& fit = densityFit(chebyshev);
+    return evalCaloricFit(fit, fit.ddT2, T, x, "density", "density");  // d2/dT2, built in validate()
 }
 /// Partial derivative of entropy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
 double IncompressibleFluid::dsdTatPxdT(double T, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = specificHeatFit(chebyshev);
-    switch (fit.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            // Indefinite Int c/T dT, derived once at load time in validate():
-            // a polynomial part plus a ln(T) term, see polyDivideByTAntiderivative
-            return polyEvalMatrix(fit.int_dTdivT, T, x, Tbase, xbase) + std::log(T) * polyEvalMatrix(fit.int_dTdivT_log, T, x, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            // Indefinite Int c/T dT, derived once at load time in validate()
-            return chebEvalMatrix(fit.int_dTdivT, fit, T, x);
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("a specific heat");
-        default:
-            throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
+    // Indefinite Int c/T dT, built in validate(). For a polynomial fit it is
+    // a polynomial part plus a ln(T) term, see polyDivideByTAntiderivative.
+    double value = evalCaloricFit(fit, fit.int_dTdivT, T, x, "a specific heat", "entropy");
+    if (fit.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL) {
+        value += std::log(T) * polyEvalMatrix(fit.int_dTdivT_log, T, x, Tbase, xbase);
     }
+    return value;
 }
 /// Partial derivative of enthalpy
 //  with respect to temperature at constant pressure and composition
 //  integrated in temperature
 double IncompressibleFluid::dhdTatPxdT(double T, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = specificHeatFit(chebyshev);
-    switch (fit.type) {
-        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            // Indefinite Int c dT, derived once at load time in validate()
-            return polyEvalMatrix(fit.int_dT, T, x, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
-            // Indefinite Int c dT, derived once at load time in validate()
-            return chebEvalMatrix(fit.int_dT, fit, T, x);
-        case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
-            throw notDefinedError("a specific heat");
-        default:
-            throw ValueError(
-              format("%s (%d): There is no predefined way to use this function type \"[%d]\" for entropy.", __FILE__, __LINE__, fit.type));
-    }
+    return evalCaloricFit(fit, fit.int_dT, T, x, "a specific heat", "enthalpy");  // Indefinite Int c dT, built in validate()
 }
 
 /// Mass fraction conversion function
@@ -748,31 +790,177 @@ double IncompressibleFluid::inputFromMole(double T, double x) {
  * that involves some more sophisticated processing and is not
  * done here, but in the backend, T(h,p) for example.
  */
+namespace {
+/// Solve fit(T, x) = target for T in [Tmin, Tmax] (the valid liquid range at
+/// this pressure, see TminAt and TmaxAt), the same way for the
+/// polynomial and the Chebyshev fits: Newton on the fit, with its exact
+/// derivative (the ddT matrix built by validate()), kept inside the range.
+/// The fit must change sign over the range, as for Brent before: a target
+/// outside the range, or one that a fit with a turning point (water density
+/// near 4 deg C) reaches twice, raises an error rather than picking a root.
+double invertCaloricFit(const CoolProp::IncompressibleData& fit, double target, double x, double Tmin, double Tmax, double Tbase, double xbase) {
+    class Residual : public CoolProp::FuncWrapper1DWithDeriv
+    {
+       public:
+        const CoolProp::IncompressibleData* fit;
+        double target, x, Tbase, xbase;
+        Residual(const CoolProp::IncompressibleData* fit, double target, double x, double Tbase, double xbase)
+          : fit(fit), target(target), x(x), Tbase(Tbase), xbase(xbase) {}
+        double call(double T) override {
+            return evalCaloricMatrix(*fit, fit->coeffs, T, x, Tbase, xbase) - target;
+        }
+        double deriv(double T) override {
+            return evalCaloricMatrix(*fit, fit->ddT, T, x, Tbase, xbase);
+        }
+    } res(&fit, target, x, Tbase, xbase);
+    // NAN: start from the false-position point of the two end values
+    return CoolProp::BoundedNewton(&res, NAN, Tmin, Tmax, 1e3 * DBL_EPSILON, 100);
+}
+}  // namespace
+
+double FitAtComposition::eval(double T) const {
+    // The same sums, in the same order, as polyEvalMatrix and chebEvalMatrix
+    const auto coefficient = [this](Eigen::Index k) { return a[static_cast<std::size_t>(k)]; };
+    const auto n = static_cast<Eigen::Index>(a.size());
+    double value = 0.0;
+    if (kind == POWER) {
+        value = hornerSum(coefficient, n, T - T_offset);
+    } else if (kind == CHEBYSHEV) {
+        value = clenshawSum(coefficient, n, (2.0 * T - T_offset) / T_span);
+    } else {
+        throw ValueError("FitAtComposition::eval called on a fit that was not reduced");
+    }
+    return exponential ? std::exp(value) : value;
+}
+
+namespace {
+/// Reduce the matrix M of fit to a series in T at composition x (see FitAtComposition)
+CoolProp::FitAtComposition reduceAtComposition(const CoolProp::IncompressibleData& fit, const Eigen::MatrixXd& M, double x, double Tbase,
+                                               double xbase) {
+    using CoolProp::FitAtComposition;
+    using CoolProp::IncompressibleData;
+    FitAtComposition out;
+    if (M.rows() < 1 || M.cols() < 1) return out;  // left as NONE: the full evaluation raises the error
+    double dx = 0.0;
+    switch (fit.type) {
+        case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
+        case IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL:
+            out.kind = FitAtComposition::POWER;
+            out.exponential = (fit.type == IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
+            out.T_offset = Tbase;
+            dx = x - xbase;
+            break;
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            out.kind = FitAtComposition::CHEBYSHEV;
+            out.T_offset = fit.cheb_Tmax + fit.cheb_Tmin;
+            out.T_span = fit.cheb_Tmax - fit.cheb_Tmin;
+            dx = x - fit.cheb_xbase;
+            break;
+        default:
+            return out;  // exponential and other 1D forms: nothing to reduce
+    }
+    // Each row exactly as polyEvalMatrix and chebEvalMatrix reduce it
+    out.a.resize(static_cast<std::size_t>(M.rows()));
+    for (Eigen::Index i = 0; i < M.rows(); ++i) {
+        out.a[static_cast<std::size_t>(i)] = rowAtComposition(M, i, dx);
+    }
+    return out;
+}
+}  // namespace
+
+void IncompressibleFluid::fixComposition(double x, bool chebyshev, CompositionFits& out) const {
+    const IncompressibleData& d = densityFit(chebyshev);
+    const IncompressibleData& c = specificHeatFit(chebyshev);
+    // Reduce a fit only if the full evaluation accepts its type, so that an
+    // unsupported type still raises the full evaluation's error instead of
+    // returning a value through the reduced path.
+    const auto is = [](const IncompressibleData& fit, IncompressibleData::IncompressibleTypeEnum a, IncompressibleData::IncompressibleTypeEnum b) {
+        return fit.type == a || fit.type == b;
+    };
+    // Density itself also accepts exppolynomial, but its derivative matrices
+    // are built (by validate) only for polynomial and Chebyshev fits
+    const bool d_ok = is(d, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV);
+    const bool c_ok = is(c, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV);
+    const bool visc_ok = is(viscosity, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
+    const bool cond_ok = is(conductivity, IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL, IncompressibleData::INCOMPRESSIBLE_EXPPOLYNOMIAL);
+    // Built into a temporary and moved into out at the end: if a reduction
+    // throws, out keeps its old key and the next call tries again.
+    CompositionFits fits;
+    fits.x = x;
+    fits.chebyshev = chebyshev;
+    fits.data_version = data_version;
+    fits.rho = reduceAtComposition(d, d.coeffs, x, Tbase, xbase);
+    if (d_ok) {
+        fits.drhodT = reduceAtComposition(d, d.ddT, x, Tbase, xbase);
+        fits.d2rhodT2 = reduceAtComposition(d, d.ddT2, x, Tbase, xbase);
+    }
+    if (c_ok) {
+        fits.c = reduceAtComposition(c, c.coeffs, x, Tbase, xbase);
+        fits.int_c = reduceAtComposition(c, c.int_dT, x, Tbase, xbase);
+        fits.int_c_divT = reduceAtComposition(c, c.int_dTdivT, x, Tbase, xbase);
+        fits.int_c_divT_log = reduceAtComposition(c, c.int_dTdivT_log, x, Tbase, xbase);
+    }
+    // Entropy needs both parts of a polynomial fit; use the full evaluation
+    // unless both could be reduced
+    if (c.type == IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL && fits.int_c_divT_log.kind == FitAtComposition::NONE) {
+        fits.int_c_divT.kind = FitAtComposition::NONE;
+    }
+    if (visc_ok) fits.visc = reduceAtComposition(viscosity, viscosity.coeffs, x, Tbase, xbase);
+    if (cond_ok) fits.cond = reduceAtComposition(conductivity, conductivity.coeffs, x, Tbase, xbase);
+    out = std::move(fits);
+}
+
+double IncompressibleFluid::TmaxAt(double p, double x) {
+    // checkP() compares p with psat only above TminPsat, so without a
+    // saturation curve inside the range every temperature up to Tmax is valid
+    if (p_sat.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET || !(TminPsat < Tmax)) return Tmax;
+    const double p_sat_Tmax = psat(Tmax, x);
+    if (p_sat_Tmax <= p) return Tmax;  // still liquid at Tmax
+    // psat() is defined only above TminPsat. If the liquid already boils just
+    // above it, the valid temperatures end at TminPsat, and isLiquidAt()
+    // accepts up to one margin above that. Return half a margin above it, as
+    // for a boiling point found below, so the same bracket rules apply.
+    const double T_lo = std::nextafter(TminPsat, Tmax);
+    if (psat(T_lo, x) >= p) return std::min(Tmax, TminPsat + 0.5 * saturationMargin());
+    // Saturation temperature: psat(T) = p, with Brent. (Not on ln p: a
+    // polynomial psat fit can reach zero or below near TminPsat.)
+    class Residual : public FuncWrapper1D
+    {
+       public:
+        IncompressibleFluid* fluid;
+        double p, x, scale;
+        Residual(IncompressibleFluid* fluid, double p, double x, double scale) : fluid(fluid), p(p), x(x), scale(scale) {}
+        // In units of one ulp of p: Brent returns an end of its interval as
+        // soon as |f| there is below its tolerance, which would otherwise
+        // stop it on a small pressure difference rather than a temperature
+        // accurate to the margin. Scaled like this, that only happens when
+        // psat equals p to rounding, and the iteration ends on temperature.
+        double call(double T) override {
+            return (fluid->psat(T, x) - p) / scale;
+        }
+    } res(this, p, x, DBL_EPSILON * std::max(p, DBL_EPSILON * p_sat_Tmax));  // p_sat_Tmax > p, floor for p at or near 0
+    // Brent stops once half the bracket is below tol, so T_sat is good to
+    // 2 tol = 0.2 margin either way. Adding half the margin puts the result
+    // 0.3 to 0.7 margin above the exact saturation temperature: a state
+    // exactly at saturation stays inside the bracket, and every temperature
+    // up to the result passes checkP(), which accepts up to one margin above.
+    const double tol = 0.1 * saturationMargin();
+    const double T_sat = Brent(&res, T_lo, Tmax, DBL_EPSILON, tol, 100);
+    return std::min(Tmax, T_sat + 0.5 * saturationMargin());
+}
+
+double IncompressibleFluid::TminAt(double p, double x) {
+    if (T_freeze.type == IncompressibleData::INCOMPRESSIBLE_NOT_SET) return Tmin;
+    return std::max(Tmin, Tfreeze(p, x));
+}
+
 /// Temperature as a function of density, pressure and composition.
 double IncompressibleFluid::T_rho(double Dmass, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = densityFit(chebyshev);
-    double d_raw = Dmass;  // No changes needed, no reference values...
     switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limits(fit.coeffs, x, d_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
-            // Brent on the forward evaluation over the fluid's range,
-            // mirroring the backend's HmassP/PSmass flashes; the Chebyshev
-            // basis has no (and needs no) direct polynomial root-solve.
-            class Residual : public FuncWrapper1D
-            {
-               public:
-                IncompressibleFluid* fluid;
-                double p, x, target;
-                bool chebyshev;
-                Residual(IncompressibleFluid* fluid, double p, double x, double target, bool chebyshev)
-                  : fluid(fluid), p(p), x(x), target(target), chebyshev(chebyshev) {}
-                double call(double T) override {
-                    return fluid->rho(T, p, x, chebyshev) - target;
-                }
-            } res(this, p, x, d_raw, chebyshev);
-            return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
-        }
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            return solveInLiquidRange(p, x, [&](double T_lo, double T_hi) { return invertCaloricFit(fit, Dmass, x, T_lo, T_hi, Tbase, xbase); });
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("density");
         default:
@@ -786,26 +974,10 @@ double IncompressibleFluid::T_rho(double Dmass, double p, double x, bool chebysh
 /// Temperature as a function of heat capacities as a function of temperature, pressure and composition.
 double IncompressibleFluid::T_c(double Cmass, double p, double x, bool chebyshev) {
     const IncompressibleData& fit = specificHeatFit(chebyshev);
-    double c_raw = Cmass;  // No changes needed, no reference values...
     switch (fit.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
-            return poly.solve_limits(fit.coeffs, x, c_raw, Tmin, Tmax, 0, 0, 0, Tbase, xbase);
-        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV: {
-            // See the matching comment in T_rho above.
-            class Residual : public FuncWrapper1D
-            {
-               public:
-                IncompressibleFluid* fluid;
-                double p, x, target;
-                bool chebyshev;
-                Residual(IncompressibleFluid* fluid, double p, double x, double target, bool chebyshev)
-                  : fluid(fluid), p(p), x(x), target(target), chebyshev(chebyshev) {}
-                double call(double T) override {
-                    return fluid->c(T, p, x, chebyshev) - target;
-                }
-            } res(this, p, x, c_raw, chebyshev);
-            return Brent(&res, Tmin, Tmax, DBL_EPSILON, 1e3 * DBL_EPSILON, 100);
-        }
+        case IncompressibleData::INCOMPRESSIBLE_CHEBYSHEV:
+            return solveInLiquidRange(p, x, [&](double T_lo, double T_hi) { return invertCaloricFit(fit, Cmass, x, T_lo, T_hi, Tbase, xbase); });
         case IncompressibleData::INCOMPRESSIBLE_NOT_SET:
             throw notDefinedError("a specific heat");
         default:
@@ -842,23 +1014,19 @@ bool IncompressibleFluid::checkT(double T, double p, double x) {
  *  is not redefined in the subclass.
  *  */
 bool IncompressibleFluid::checkP(double T, double p, double x) {
-    double ps = 0.0;
-    if (p_sat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
-        // psat() now throws below TminPsat (#2209). For this validation
-        // path, T below TminPsat means the saturation curve is not
-        // available — there is nothing to compare p against, so skip
-        // the p >= psat check rather than propagating the throw to
-        // callers that didn't ask for psat in the first place
-        // (e.g. PropsSI("D","P",101325,"T",300,"INCOMP::DowQ") where
-        // DowQ has TminPsat > 300 K).
-        try {
-            ps = psat(T, x);
-        } catch (const ValueError&) {
-            ps = 0.0;
-        }
-    }
     if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
-    if (ps > 0.0 && p < ps) throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
+    // isLiquidAt() calls psat() only above TminPsat, where the saturation
+    // curve is defined. Checking TminPsat first instead of letting psat()
+    // throw and catching it matters: that throw cost about 1.3 microseconds
+    // on every state update. Below TminPsat there is nothing to compare p
+    // against (#2209), e.g. PropsSI("D","P",101325,"T",300,"INCOMP::DowQ").
+    bool liquid = true;
+    try {
+        liquid = isLiquidAt(T, p, x);
+    } catch (const ValueError&) {
+        liquid = true;  // no usable saturation curve: nothing to check against
+    }
+    if (!liquid) throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, psat(T, x)));
     return true;
 }
 
@@ -891,6 +1059,8 @@ bool IncompressibleFluid::checkX(double x) {
 #    include <iostream>
 #    include <catch2/catch_all.hpp>
 #    include "Tests/TestObjects.h"
+#    include <memory>
+#    include "CoolProp/AbstractState.h"
 
 Eigen::MatrixXd makeMatrix(const std::vector<double>& coefficients) {
     //IncompressibleClass::checkCoefficients(coefficients,18);
@@ -1317,6 +1487,53 @@ TEST_CASE("Malformed incompressible fits keep their error messages", "[Incompres
     // validate() never looks at viscosity, so the message must not blame it alone.
     CHECK_THROWS_WITH(fluid_with_viscosity(Data::INCOMPRESSIBLE_POLYNOMIAL, Eigen::MatrixXd(0, 0)).visc(300.0, 1e5, 0.2),
                       ContainsSubstring("the fit has no coefficients"));
+}
+
+TEST_CASE("Both kinds of caloric fit invert the same way", "[IncompressibleFluids]") {
+    // T_rho and T_c use one solver for the polynomial and the Chebyshev fits,
+    // and the HmassP / PSmass flashes give back the temperature they came from.
+    for (const bool chebyshev : {false, true}) {
+        CAPTURE(chebyshev);
+        CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
+        const double x = 0.35;
+        for (double T : {260.0, 300.0, 350.0}) {
+            CAPTURE(T);
+            CHECK(meg.T_rho(meg.rho(T, 1e5, x, chebyshev), 1e5, x, chebyshev) == Catch::Approx(T).epsilon(1e-12));
+            CHECK(meg.T_c(meg.c(T, 1e5, x, chebyshev), 1e5, x, chebyshev) == Catch::Approx(T).epsilon(1e-12));
+        }
+        // Water density has its maximum near 277 K, so a density just below
+        // the maximum belongs to two temperatures. Both kinds of fit refuse to
+        // choose one instead of returning whichever root the solver met first.
+        // The classic water fit is a cubic without that maximum, so for it the
+        // density is unique and must come back as 275 K. Which case applies is
+        // asserted, so the test cannot quietly change branch with the data.
+        CoolProp::IncompressibleFluid& water = CoolProp::get_incompressible_fluid("Water");
+        const double rho_275 = water.rho(275.0, 1e5, 0.0, chebyshev);
+        const bool density_maximum = water.rho(water.getTmin(), 1e5, 0.0, chebyshev) < rho_275;
+        CHECK(density_maximum == chebyshev);
+        if (chebyshev) {
+            CHECK_THROWS_WITH(water.T_rho(rho_275, 1e5, 0.0, chebyshev), Catch::Matchers::ContainsSubstring("do not bracket the root"));
+        } else {
+            CHECK(water.T_rho(rho_275, 1e5, 0.0, chebyshev) == Catch::Approx(275.0).epsilon(1e-12));
+        }
+
+        ChebyshevCaloricSetting setting(chebyshev);  // restored on leaving the scope, also on a failure
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", "MEG"));
+        AS->set_mass_fractions(std::vector<double>(1, x));
+        // Up to 500 bar, where the pressure terms of h and s make cp alone a
+        // poor Newton slope (the flashes use the exact one)
+        for (double p : {1e5, 1e7, 5e7}) {
+            for (double T : {260.0, 300.0, 350.0}) {
+                CAPTURE(p, T);
+                AS->update(CoolProp::PT_INPUTS, p, T);
+                const double h = AS->hmass(), s = AS->smass();
+                AS->update(CoolProp::HmassP_INPUTS, h, p);
+                CHECK(std::abs(AS->T() - T) < 1e-10);
+                AS->update(CoolProp::PSmass_INPUTS, p, s);
+                CHECK(std::abs(AS->T() - T) < 1e-9);
+            }
+        }
+    }
 }
 
 #endif /* ENABLE_CATCH */

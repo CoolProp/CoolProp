@@ -6,6 +6,32 @@ Changelog for CoolProp
    space, so a number linked twice with the named form (one underscore) triggers
    a duplicate target name warning in the docs build.
 
+8.2.0
+-----
+
+Breaking Changes:
+
+* C++ ``IncompressibleFluid``: ``T_rho`` and ``T_c`` (and so the ``D,P``, ``H,P`` and ``P,S`` inputs) now also need ``IncompressibleFluid::validate()`` on a fluid assembled in C++, as the derivatives and integrals already did in 8.1.0.  Fluids loaded from JSON, including through ``add_fluids_as_JSON``, are unaffected.  ``IncompressibleData`` (new ``ddT2``) and ``IncompressibleFluid`` (new ``data_version``) change their layout, so C++ code that uses them must be rebuilt.  ``add_fluids_as_JSON("INCOMP", ...)`` now rejects a ``saturation_pressure`` fit of a type ``psat()`` cannot evaluate, such as a Chebyshev entry; such a fluid used to load and then fail on every state above ``TminPsat``.
+
+New features:
+
+* ``BoundedNewton`` in the C++ solver library (``CoolProp/numerics/Solvers.h``): Newton's method kept inside a sign-change bracket, which bisects whenever a step would leave the bracket or does not shrink fast enough.  Like ``Brent`` it needs opposite signs at the two ends, unless an end is already a root, and raises an error otherwise; it never evaluates the function outside the interval.
+
+Performance:
+
+* **Incompressible fluids are about 3 times faster than in 8.1.0 on the default fits.**  Measured from C++ on ``INCOMP::MEG[0.35]`` with the default Chebyshev fits, a ``T,p`` update with density, heat capacity, enthalpy, entropy, viscosity and conductivity takes 0.61 microseconds in 8.1.0 and 0.19 now, an ``h,p`` flash 1.31 and 0.29, and a ``p,s`` flash 2.14 and 0.61.  The classic polynomial fits (``INCOMP_PREFER_CHEBYSHEV_CALORIC`` false) gain 1.6 times on the full set and 2 times on the flashes.  Where the time went:
+
+  * A state puts its composition into each fit once, when the composition is set, so every later evaluation is a sum over temperature only.
+  * For 19 fluids, including ``DowQ``, ``DowJ``, the ``HC`` and ``P*`` series and ``Water`` below 278 K, every update threw and caught an exception in the liquid-phase check below ``TminPsat``; that alone cost about 1.3 microseconds per call, and a single property on ``DowQ`` is now 29 to 41 times faster.
+  * The ``h,p``, ``p,s`` and ``D,p`` inversions use Newton's method with the exact derivative inside a bracket (``BoundedNewton``), the same way for both kinds of fit, instead of Brent's method over the whole temperature range (and, for ``D,p`` on the classic fits, ``Polynomial2DFrac::solve_limits``).  The ``h,p`` and ``p,s`` flashes start from a constant-heat-capacity estimate and need about 3.4 iterations at any pressure up to 500 bar.
+
+  Enthalpy, entropy and the other outputs at given ``T,p`` are unchanged from 8.1.0 apart from the last bits: Chebyshev values can differ in the last bit, and on platforms that fuse multiply-adds (aarch64) any fitted value can differ by a few units in the last place.
+
+Bug fixes:
+
+* Incompressible ``D,P``, ``H,P`` and ``P,S`` inputs (and ``T_c`` in C++) return only a liquid state at the given pressure, above the freezing point and below the boiling point, which are the limits ``checkT`` and ``checkP`` apply.  The first search runs from the freezing point to ``Tmax``; if its result boils, or it finds none, it is repeated up to the boiling point.  Density fits extrapolated below the freezing point turn over, so a valid density used to be reached twice over ``[Tmin, Tmax]`` and the solve failed: over a round trip of every shipped fluid, failures drop from 1114 to 214 of 22099 states on the classic fits and from 1189 to 281 on the Chebyshev fits.  A density reached twice inside the valid range (water near its density maximum) still raises an error rather than returning one of the two temperatures, unless one of them lies exactly at an end of the range, which is then returned; a fit that reaches a value three times can return one of them, as with Brent.  Above the boiling point the fits are extrapolated and enthalpy can fall with temperature again, so a valid liquid state could fail with ``do not bracket the root``: for ``INCOMP::LiqNa`` at 200 bar, every state above about 2080 K failed although the liquid range reaches 2360 K (COO-190).  An enthalpy, entropy or density that belongs to a boiling state at that pressure now raises ``no liquid state at p = ... Pa, where the liquid boils at ... K``.  Other ``H,P`` and ``P,S`` inputs outside the range report ``Inputs in BoundedNewton [...] do not bracket the root`` instead of the same message from ``Brent``; this now includes an enthalpy or entropy that belongs to a temperature between ``Tmin`` and the freezing point, which used to be rejected afterwards with ``below the freezing point``.
+* Incompressible ``H,P`` and ``P,S`` inputs taken from a state at exactly ``Tmax`` or the lower end of the range no longer fail with ``do not bracket the root``.  Undoing the reference shift of the enthalpy or entropy rounds, and the rebuilt value could lie one unit in the last place beyond the value at the end of the range; on a fit where entropy is not monotonic the error could instead lead to another temperature with the same entropy.  A temperature whose reported enthalpy or entropy equals the input exactly now counts as the solution.  Of 48 states at ``Tmax`` on 8 fluids, 9 failed before.
+
 8.1.0
 -----
 
