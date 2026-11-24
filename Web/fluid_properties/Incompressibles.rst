@@ -159,7 +159,8 @@ Reference State
 
 The reference state given in the introduction is set by the incompressible
 backend, not by the fluid data: :math:`h = s = 0` at 293.15 K and 101325 Pa, at
-the current composition of the state. There is no reference state entry
+the current composition of the state, or at the nearest end of the fluid's
+temperature range when 293.15 K lies outside it. There is no reference state entry
 in the fluid's JSON file, so a fluid added through ``PureFluids.py`` or
 ``SolutionFluids.py`` gets the same reference as all the others.
 
@@ -170,12 +171,13 @@ only covers the HEOS and REFPROP backends: CoolProp 5.1 to 8.0.0 return from
 versions raise a ``ValueError``.
 
 A few fluids are not valid at 293.15 K: ``LBE``, ``LiqNa``, ``NaK``, ``PBB``,
-``VMA`` and the slurries ``IceEA``, ``IceNA`` and ``IcePG``. Their zero is still
-placed at 293.15 K by extrapolating the heat capacity and density fits, so
-:math:`h` is not zero anywhere in their valid range at 1 atm, the absolute
-values can be several MJ/kg away from zero for the slurries, and they can change
-when the fits are regenerated.
-Only differences between two states are meaningful for these fluids.
+``VMA``, the slurries ``IceEA``, ``IceNA`` and ``IcePG``, and the examples
+``ExamplePure`` and ``ExampleSolution``. Their reference temperature is the end
+of their range nearest to 293.15 K: :math:`T_\text{min}` for the high-temperature
+fluids, :math:`T_\text{max}` for the others (``IceNA``: 270 K, ``LiqNa``: 400 K).
+Up to CoolProp 8.1, their zero was placed at 293.15 K by extrapolating the fits,
+which gave values far from zero everywhere in the valid range (for ``IceNA`` a
+reference entropy of 2.4e11 J/kg/K with the default fits).
 
 To use a different reference state, take the enthalpy and entropy at your own
 reference conditions, subtract them from every result, and add them back before

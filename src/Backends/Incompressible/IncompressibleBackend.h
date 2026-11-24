@@ -131,6 +131,14 @@ class IncompressibleBackend : public AbstractState
 
     /// Update the reference values and clear the state
     void set_reference_state(double T0 = 20 + 273.15, double p0 = 101325, double x0 = 0.0, double h0 = 0.0, double s0 = 0.0);
+    /// Default reference temperature: 293.15 K, or the nearest end of the
+    /// fluid's range when 293.15 K lies outside it. The fits are not valid
+    /// outside the range and a Chebyshev fit grows without bound there, so a
+    /// reference value taken there is meaningless and costs precision in every
+    /// h and s (IceNA's reference entropy was 2.4e11 J/kg/K, COO-203).
+    double default_T_ref_K() const {
+        return std::min(std::max(20 + 273.15, fluid->getTmin()), fluid->getTmax());
+    }
 
     /// Set the mole fractions
     /**

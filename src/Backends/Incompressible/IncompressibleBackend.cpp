@@ -30,7 +30,7 @@ IncompressibleBackend::IncompressibleBackend() {
 IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid)
   : fluid(fluid), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
-    this->set_reference_state();
+    this->set_reference_state(default_T_ref_K());
     if (this->fluid->is_pure()) {
         this->set_fractions(std::vector<CoolPropDbl>(1, 1.0));
     } else {
@@ -46,7 +46,7 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid)
 IncompressibleBackend::IncompressibleBackend(const std::string& fluid_name)
   : fluid(&get_incompressible_fluid(fluid_name)), chebyshev_caloric(IncompressibleFluid::chebyshevCaloricPreferred()) {
 
-    this->set_reference_state();
+    this->set_reference_state(default_T_ref_K());
     if (this->fluid->is_pure()) {
         this->set_fractions(std::vector<CoolPropDbl>(1, 1.0));
     } else {
@@ -1363,20 +1363,35 @@ TEST_CASE("Flashes reject infinite and huge inputs", "[IncompressibleBackend]") 
 }
 
 TEST_CASE("Flashes converge for fluids that are not valid at the reference temperature", "[IncompressibleBackend]") {
-    // The first guess of the flashes comes from cp at T_ref = 293.15 K. For
-    // these fluids that is outside the fit range, so cp(T_ref) is extrapolated
-    // and can be far off or even negative (IcePG). The guess then only costs
-    // iterations: the result must still be the right temperature.
+    // These fluids are not valid at 293.15 K, so their reference state sits at
+    // the nearest end of their range (COO-203). Before, the reference values
+    // and the first guess of the flashes (from cp at T_ref) were extrapolated:
+    // IceNA's reference entropy was 2.4e11 J/kg/K on the Chebyshev fits, which
+    // limited P,S to 1e-7 K. The reference must now be in the range, h = s = 0
+    // there, and both flashes must reach round-off.
     for (const bool chebyshev : {false, true}) {
         CAPTURE(chebyshev);
         ChebyshevCaloricSetting setting(chebyshev);
-        for (const char* name : {"LBE", "LiqNa", "NaK", "PBB", "VMA", "IceEA", "IceNA", "IcePG"}) {
+        for (const char* name : {"LBE", "LiqNa", "NaK", "PBB", "VMA", "IceEA", "IceNA", "IcePG", "ExamplePure", "ExampleSolution"}) {
             CAPTURE(name);
             std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("INCOMP", name));
             CoolProp::IncompressibleFluid& fluid = CoolProp::get_incompressible_fluid(name);
             if (!fluid.is_pure()) {
                 const double x = 0.5 * (fluid.getxmin() + fluid.getxmax());
                 AS->set_mass_fractions(std::vector<double>(1, x));
+            }
+            auto* backend = dynamic_cast<CoolProp::IncompressibleBackend*>(AS.get());
+            REQUIRE(backend != nullptr);
+            const double T_ref_K = backend->T_ref();
+            CHECK((293.15 < AS->Tmin() ? T_ref_K == AS->Tmin() : T_ref_K == AS->Tmax()));
+            // the reference values come from inside the range: no extrapolation
+            CHECK(std::abs(backend->smass_ref()) < (chebyshev ? 1e4 : 1e8));
+            try {
+                AS->update(CoolProp::PT_INPUTS, backend->p_ref(), T_ref_K);
+                CHECK(std::abs(AS->hmass()) < 1e-9);
+                CHECK(std::abs(AS->smass()) < 1e-9);
+            } catch (const CoolProp::CoolPropBaseError&) {
+                // the end of the range can be frozen or boiling at this composition
             }
             const double p = 1e6;
             int n_states = 0;
@@ -1391,12 +1406,9 @@ TEST_CASE("Flashes converge for fluids that are not valid at the reference tempe
                 ++n_states;
                 const double h = AS->hmass(), s = AS->smass();
                 AS->update(CoolProp::HmassP_INPUTS, h, p);
-                CHECK(std::abs(AS->T() - T) < 1e-8);
-                // 1e-7 K: IceNA's entropy is large in magnitude here (its zero is
-                // extrapolated far from the fit range), so one ulp of s is worth
-                // about 5e-8 K; master's Brent gave the same error
+                CHECK(std::abs(AS->T() - T) < 1e-9);
                 AS->update(CoolProp::PSmass_INPUTS, p, s);
-                CHECK(std::abs(AS->T() - T) < 1e-7);
+                CHECK(std::abs(AS->T() - T) < 1e-9);
             }
             CHECK(n_states >= 3);
         }
