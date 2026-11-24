@@ -28,9 +28,11 @@ class IncompressibleBackend : public AbstractState
     unsigned long ref_data_version = 0;
     /// True while _T_ref is default_T_ref_K(), which depends on the fluid's range
     bool T_ref_is_default = false;
-    /// Called before every use of the reference values or of a cached property:
-    /// when the fluid's data changed (replaced, or a setter), values cached from
-    /// the old data are stale. The state keeps its T, p and composition.
+    /// Called before every use of the reference values or of a property this
+    /// backend caches: when the fluid's data changed (replaced, or a setter),
+    /// values cached from the old data are stale. The state keeps its T, p and
+    /// composition. Viscosity and conductivity are cached by AbstractState,
+    /// which does not call this: they stay stale until the next update() (COO-204).
     void drop_stale_reference_values() {
         if (ref_data_version != fluid->getDataVersion()) {
             _hmass_ref.clear();

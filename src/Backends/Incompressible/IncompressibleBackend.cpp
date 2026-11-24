@@ -600,7 +600,6 @@ CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) 
 
 /// Calculate the first partial derivative for the desired derivative
 CoolPropDbl IncompressibleBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) {
-    drop_stale_reference_values();  // the derivatives below are cached
     // TODO: Can this be accelerated?
     if ((Of == iDmass) && (Wrt == iP)) return 0.0;  // incompressible!
     if ((Of == iDmass) && (Wrt == iHmass) && (Constant == iP)) return drhodTatPx() / dhdTatPx();
@@ -1443,16 +1442,17 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
     // When the fluid is replaced with another range, an existing state must
     // move its reference the same way a new state places it, and drop every
     // property it cached from the old data, so both report the same values.
-    auto fluid_json = [](double T_min_K, double rho0_kg_m3) {
+    auto fluid_json = [](double T_min_K, double rho0_kg_m3, double c0_J_kgK) {
         return R"([{"name": "CatchRuntimeRefFluid", "description": "x", "reference": "x", "Tmin": )" + std::to_string(T_min_K)
                + R"(, "Tmax": 420.0, "TminPsat": 420.0, "xid": "pure",
                     "density": {"type": "polynomial", "coeffs": [[)"
                + std::to_string(rho0_kg_m3) + R"(], [-0.5]]},
-                    "specific_heat": {"type": "polynomial", "coeffs": [[2000.0], [1.0]]}}])";
+                    "specific_heat": {"type": "polynomial", "coeffs": [[)"
+               + std::to_string(c0_J_kgK) + R"(], [1.0]]}}])";
     };
     const ChebyshevCaloricSetting setting(false);
     const double p_Pa = 1e6, T_K = 380.0;
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(320.0, 1000.0)));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(320.0, 1000.0, 2000.0)));
     std::shared_ptr<CoolProp::AbstractState> old_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
     auto* old_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(old_state.get());
     REQUIRE(old_backend != nullptr);
@@ -1474,6 +1474,7 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
       {"umass", [&](CoolProp::AbstractState& AS) { return backend_of(AS).umass(); }},
       {"rhomass", [&](CoolProp::AbstractState& AS) { return backend_of(AS).rhomass(); }},
       {"cpmass", [](CoolProp::AbstractState& AS) { return AS.cpmass(); }},
+      {"cvmass", [](CoolProp::AbstractState& AS) { return AS.cvmass(); }},
       {"dH/dT|P", [](CoolProp::AbstractState& AS) { return AS.first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP); }},
       {"dS/dT|P", [](CoolProp::AbstractState& AS) { return AS.first_partial_deriv(CoolProp::iSmass, CoolProp::iT, CoolProp::iP); }},
     };
@@ -1485,8 +1486,8 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
         values_before.push_back(reader.second(*cached_states.back()));
     }
 
-    // Replace it with another range and another density
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(350.0, 1100.0)));
+    // Replace it with another range, density and heat capacity
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(350.0, 1100.0, 2100.0)));
     std::shared_ptr<CoolProp::AbstractState> new_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
     auto* new_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(new_state.get());
     REQUIRE(new_backend != nullptr);
@@ -1513,7 +1514,7 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
     CHECK(new_backend->T_ref() == 365.0);
     // a reference temperature set explicitly stays where it was set
     new_backend->set_reference_state(360.0, 101325.0, 0.0, 0.0, 0.0);
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(355.0, 1100.0)));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(355.0, 1100.0, 2100.0)));
     CHECK(new_backend->T_ref() == 360.0);
 }
 

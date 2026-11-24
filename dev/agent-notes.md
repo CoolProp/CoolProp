@@ -382,7 +382,11 @@ recorded history of finished or abandoned work were dropped (they remain in
   a fluid replaced with another range moves it; an explicit
   `set_reference_state` keeps its T0.  `setTmin`/`setTmax` bump
   `data_version` for this reason; a new setter of anything the reference or
-  the fits depend on must do the same.
+  the fits depend on must do the same.  The same check drops every property
+  the backend caches (`clear_property_caches`), and every cached accessor
+  calls it first.  Viscosity and conductivity are cached in `AbstractState`
+  itself and are not covered: after a replacement they stay stale until
+  `update()` (COO-204).
 - **Profile incompressibles from C++, not Python.**  The Python wrapper adds
   about 0.12 us per call, as much as a whole property evaluation.  Build a
   static `RelWithDebInfo` library, time `AbstractState` in a small C++
