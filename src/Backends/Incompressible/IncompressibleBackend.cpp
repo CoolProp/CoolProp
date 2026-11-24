@@ -1275,11 +1275,11 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
     CHECK(water.TmaxAt(2e6, 0.0) == water.getTmax());
     CoolProp::IncompressibleFluid& meg = CoolProp::get_incompressible_fluid("MEG");
     CHECK(meg.TmaxAt(101325.0, 0.35) == meg.getTmax());
-    // The second pass searches a little beyond TmaxAt, so that it reaches
+    // The second pass searches 0.75 margin beyond TmaxAt, so that it reaches
     // every state isLiquidAt() accepts (up to one saturationMargin() above
     // T_sat). The stand-in solver returns the upper end of its bracket: a
-    // boiling state on the first pass, and on the second a temperature that
-    // is either still accepted as liquid, or rejected as boiling.
+    // boiling state on the first pass, and on the second 1.05 to 1.45 margins
+    // above T_sat, which isLiquidAt() rejects, so the result is the boiling error.
     REQUIRE(water.psat(T_boil, 0.0) > 101325.0);
     // TmaxAt and checkP agree: over a sweep of pressures TmaxAt lies above the
     // saturation temperature (a saturated state is inside the bracket) and is
@@ -1292,13 +1292,8 @@ TEST_CASE("The flashes search only the liquid range at the given pressure", "[In
         CHECK(water.psat(T_hi, 0.0) >= p_sweep);
         CHECK_NOTHROW(water.checkTPX(T_hi, p_sweep, 0.0));
     }
-    try {
-        const double T_end = water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; });
-        CHECK(T_end > T_boil);
-        CHECK_NOTHROW(water.checkTPX(T_end, 101325.0, 0.0));
-    } catch (const CoolProp::ValueError& e) {
-        CHECK_THAT(std::string(e.what()), Catch::Matchers::ContainsSubstring("boils at"));
-    }
+    CHECK_THROWS_WITH(water.solveInLiquidRange(101325.0, 0.0, [](double, double T_hi) { return T_hi; }),
+                      Catch::Matchers::ContainsSubstring("boils at"));
 
     // An enthalpy that belongs to 400 K has no liquid state at 1 atm; the
     // error says that the liquid boils, not only that there is no bracket
@@ -1358,8 +1353,11 @@ TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBack
                     CAPTURE(T);
                     try {
                         AS->update(CoolProp::PT_INPUTS, p, T);
-                    } catch (const CoolProp::CoolPropBaseError&) {
-                        continue;  // boils at Tmax at this pressure
+                    } catch (const CoolProp::CoolPropBaseError& e) {
+                        // Only a state that boils at Tmax at this pressure is skipped
+                        REQUIRE(upper);
+                        REQUIRE_THAT(std::string(e.what()), Catch::Matchers::ContainsSubstring("liquid phase only"));
+                        continue;
                     }
                     const double h = AS->hmass(), s = AS->smass();
                     CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
