@@ -10,6 +10,7 @@
 #    include <sys/stat.h>
 #endif
 
+#include <functional>
 #include <string>
 #include "CoolProp/CoolProp.h"
 
@@ -156,7 +157,12 @@ void IncompressibleBackend::update(CoolProp::input_pairs input_pair, double valu
 /// Clear all the cached values
 bool IncompressibleBackend::clear() {
     AbstractState::clear();  // Call the base class
-                             /// Additional cached elements used for the partial derivatives
+    clear_property_caches();
+    return true;
+}
+
+void IncompressibleBackend::clear_property_caches() {
+    /// Additional cached elements used for the partial derivatives
     this->_cmass.clear();
     this->_hmass.clear();
     this->_rhomass.clear();
@@ -170,8 +176,6 @@ bool IncompressibleBackend::clear() {
     this->_dhdTatPxdT.clear();
     this->_dsdpatTx.clear();
     this->_dhdpatTx.clear();
-    // Done
-    return true;
 }
 
 /// Update the reference values and clear the state
@@ -309,58 +313,67 @@ void IncompressibleBackend::check_status() {
  */
 /// Return the mass density in kg/m^3
 double IncompressibleBackend::rhomass() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_rhomass) _rhomass = calc_rhomass();
     return _rhomass;
 }
 /// Return the mass enthalpy in J/kg
 double IncompressibleBackend::hmass() {
-    drop_stale_reference_values();  // a value cached at an old reference is stale
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_hmass) _hmass = calc_hmass();
     return _hmass;
 }
 /// Return the molar entropy in J/mol/K
 double IncompressibleBackend::smass() {
-    drop_stale_reference_values();  // a value cached at an old reference is stale
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_smass) _smass = calc_smass();
     return _smass;
 }
 /// Return the molar internal energy in J/mol
 double IncompressibleBackend::umass() {
-    drop_stale_reference_values();  // a value cached at an old reference is stale
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_umass) _umass = calc_umass();
     return _umass;
 }
 /// Return the mass constant pressure specific heat in J/kg/K
 double IncompressibleBackend::cmass() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_cmass) _cmass = calc_cmass();
     return _cmass;
 }
 
 double IncompressibleBackend::drhodTatPx() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_drhodTatPx) _drhodTatPx = calc_drhodTatPx(_T, _p, _fractions[0]);
     return _drhodTatPx;
 }
 double IncompressibleBackend::dsdTatPx() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_dsdTatPx) _dsdTatPx = calc_dsdTatPx(_T, _p, _fractions[0]);
     return _dsdTatPx;
 }
 double IncompressibleBackend::dhdTatPx() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_dhdTatPx) _dhdTatPx = calc_dhdTatPx(_T, _p, _fractions[0]);
     return _dhdTatPx;
 }
 double IncompressibleBackend::dsdTatPxdT() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_dsdTatPxdT) _dsdTatPxdT = calc_dsdTatPxdT(_T, _p, _fractions[0]);
     return _dsdTatPxdT;
 }
 double IncompressibleBackend::dhdTatPxdT() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_dhdTatPxdT) _dhdTatPxdT = calc_dhdTatPxdT(_T, _p, _fractions[0]);
     return _dhdTatPxdT;
 }
 double IncompressibleBackend::dsdpatTx() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_dsdpatTx) _dsdpatTx = calc_dsdpatTx(rhomass(), drhodTatPx());
     return _dsdpatTx;
 }
 double IncompressibleBackend::dhdpatTx() {
+    drop_stale_reference_values();  // a value cached from replaced data is stale
     if (!_dhdpatTx) _dhdpatTx = calc_dhdpatTx(_T, rhomass(), drhodTatPx());
     return _dhdpatTx;
 }
@@ -587,6 +600,7 @@ CoolPropDbl IncompressibleBackend::raw_calc_smass(double T, double p, double x) 
 
 /// Calculate the first partial derivative for the desired derivative
 CoolPropDbl IncompressibleBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) {
+    drop_stale_reference_values();  // the derivatives below are cached
     // TODO: Can this be accelerated?
     if ((Of == iDmass) && (Wrt == iP)) return 0.0;  // incompressible!
     if ((Of == iDmass) && (Wrt == iHmass) && (Constant == iP)) return drhodTatPx() / dhdTatPx();
@@ -1427,43 +1441,71 @@ TEST_CASE("Flashes converge for fluids that are not valid at the reference tempe
 TEST_CASE("A default reference temperature follows a fluid replaced at runtime", "[IncompressibleBackend]") {
     // The default reference temperature depends on the fluid's range (COO-203).
     // When the fluid is replaced with another range, an existing state must
-    // move its reference the same way a new state places it, so both report
-    // the same h and s.
-    auto fluid_json = [](double T_min_K) {
+    // move its reference the same way a new state places it, and drop every
+    // property it cached from the old data, so both report the same values.
+    auto fluid_json = [](double T_min_K, double rho0_kg_m3) {
         return R"([{"name": "CatchRuntimeRefFluid", "description": "x", "reference": "x", "Tmin": )" + std::to_string(T_min_K)
                + R"(, "Tmax": 420.0, "TminPsat": 420.0, "xid": "pure",
-                    "density": {"type": "polynomial", "coeffs": [[1000.0], [-0.5]]},
+                    "density": {"type": "polynomial", "coeffs": [[)"
+               + std::to_string(rho0_kg_m3) + R"(], [-0.5]]},
                     "specific_heat": {"type": "polynomial", "coeffs": [[2000.0], [1.0]]}}])";
     };
     const ChebyshevCaloricSetting setting(false);
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(320.0)));
+    const double p_Pa = 1e6, T_K = 380.0;
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(320.0, 1000.0)));
     std::shared_ptr<CoolProp::AbstractState> old_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
     auto* old_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(old_state.get());
     REQUIRE(old_backend != nullptr);
     CHECK(old_backend->T_ref() == 320.0);
-    old_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
-    const double h_before = old_state->hmass();
-    // cache s and u as well, so the checks below see whether they are refreshed
-    const double s_before = old_state->smass(), u_before = old_state->umass();
+    old_state->update(CoolProp::PT_INPUTS, p_Pa, T_K);
 
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(350.0)));
+    // One existing state per cached property. Each is read once now, which
+    // fills its cache, and read again first after the replacement, so the
+    // check in that property's own accessor is what has to drop the stale
+    // value. Through AbstractState, hmass() and smass() are recomputed on
+    // every call, so they are read through the backend.
+    using Reader = std::function<double(CoolProp::AbstractState&)>;
+    auto backend_of = [](CoolProp::AbstractState& AS) -> CoolProp::IncompressibleBackend& {
+        return dynamic_cast<CoolProp::IncompressibleBackend&>(AS);
+    };
+    const std::vector<std::pair<std::string, Reader>> readers = {
+      {"hmass", [&](CoolProp::AbstractState& AS) { return backend_of(AS).hmass(); }},
+      {"smass", [&](CoolProp::AbstractState& AS) { return backend_of(AS).smass(); }},
+      {"umass", [&](CoolProp::AbstractState& AS) { return backend_of(AS).umass(); }},
+      {"rhomass", [&](CoolProp::AbstractState& AS) { return backend_of(AS).rhomass(); }},
+      {"cpmass", [](CoolProp::AbstractState& AS) { return AS.cpmass(); }},
+      {"dH/dT|P", [](CoolProp::AbstractState& AS) { return AS.first_partial_deriv(CoolProp::iHmass, CoolProp::iT, CoolProp::iP); }},
+      {"dS/dT|P", [](CoolProp::AbstractState& AS) { return AS.first_partial_deriv(CoolProp::iSmass, CoolProp::iT, CoolProp::iP); }},
+    };
+    std::vector<std::shared_ptr<CoolProp::AbstractState>> cached_states;
+    std::vector<double> values_before;
+    for (const auto& reader : readers) {
+        cached_states.emplace_back(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
+        cached_states.back()->update(CoolProp::PT_INPUTS, p_Pa, T_K);
+        values_before.push_back(reader.second(*cached_states.back()));
+    }
+
+    // Replace it with another range and another density
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(350.0, 1100.0)));
     std::shared_ptr<CoolProp::AbstractState> new_state(CoolProp::AbstractState::factory("INCOMP", "CatchRuntimeRefFluid"));
     auto* new_backend = dynamic_cast<CoolProp::IncompressibleBackend*>(new_state.get());
     REQUIRE(new_backend != nullptr);
     CHECK(new_backend->T_ref() == 350.0);
-    new_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
-    // h, s and u cached before the replacement must not be returned at the
-    // new reference: read them again without an update()
+    new_state->update(CoolProp::PT_INPUTS, p_Pa, T_K);
+    // Each existing state reads its property first, without update()
+    for (std::size_t i = 0; i < readers.size(); ++i) {
+        CAPTURE(readers[i].first);
+        const double value = readers[i].second(*cached_states[i]);
+        CHECK(value == readers[i].second(*new_state));
+        CHECK(value != values_before[i]);
+    }
+    CHECK(old_backend->T_ref() == 350.0);
+    // and through AbstractState after an update
+    old_state->update(CoolProp::PT_INPUTS, p_Pa, T_K);
     CHECK(old_state->hmass() == new_state->hmass());
     CHECK(old_state->smass() == new_state->smass());
     CHECK(old_state->umass() == new_state->umass());
-    CHECK(old_state->smass() != s_before);
-    CHECK(old_state->umass() != u_before);
-    CHECK(old_backend->T_ref() == 350.0);
-    old_state->update(CoolProp::PT_INPUTS, 1e6, 380.0);
-    CHECK(old_state->hmass() == new_state->hmass());
-    CHECK(old_state->smass() == new_state->smass());
-    CHECK(old_state->hmass() != h_before);
+
     // A range changed through the setter alone, without validate(), moves the
     // default reference too
     CoolProp::get_incompressible_fluid("CatchRuntimeRefFluid").setTmin(365.0);
@@ -1471,7 +1513,7 @@ TEST_CASE("A default reference temperature follows a fluid replaced at runtime",
     CHECK(new_backend->T_ref() == 365.0);
     // a reference temperature set explicitly stays where it was set
     new_backend->set_reference_state(360.0, 101325.0, 0.0, 0.0, 0.0);
-    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(355.0)));
+    REQUIRE_NOTHROW(CoolProp::add_fluids_as_JSON("INCOMP", fluid_json(355.0, 1100.0)));
     CHECK(new_backend->T_ref() == 360.0);
 }
 
