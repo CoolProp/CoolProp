@@ -444,3 +444,93 @@ recorded history of finished or abandoned work were dropped (they remain in
   `CMAKE_ARGS="-DCPM_SOURCE_CACHE=$PWD/.cpm_cache"` (plus the valijson
   source if downloads are blocked) or Eigen is fetched again (gitlab
   returns 429 quickly).
+
+## R wrapper
+
+- **Stray `NULL` lines in the R example output** are not a wrapper bug.
+  Void C++ methods (`AbstractState::update`, `set_mole_fractions`) return
+  `NULL` visibly in R, and `Rscript` echoes every visible top-level
+  expression. The R generator in `dev/scripts/examples/example_generator.py`
+  now wraps bare method statements in `invisible()`. Check for this first if
+  another SWIG language shows odd extra lines.
+- **The R example is guarded for missing REFPROP.** The two REFPROP blocks
+  are wrapped in `tryCatch()` that prints the real condition message (not a
+  fixed "REFPROP not available"). Without the guard `ctest`'s `R_test`
+  fails on any machine without REFPROP.
+- **`R_BIN` is mandatory** (`dev/cmake/Modules/FindR.cmake` stops without
+  it), so `wsl-test.sh r configure` alone fails. Configure with
+  `-DR_BIN=/usr/bin` through the `run` stage, then use `build`.
+- Verified on Ubuntu 26.04 (R 4.5.2, SWIG 4.4.0, GCC 15.2): the documented
+  build works as written, and `Rscript` loads `methods` by default.
+
+## R and PHP wrapper binaries: history
+
+Researched 2026-11-24 from the CoolProp/CoolProp issue tracker (GitHub search by
+keyword; no Discussions found), the git history, and Jeff's SourceForge download
+counts. Nothing here was written down by the maintainers as a decision. The
+reasons below are what maintainers said in issue comments.
+
+### Facts
+
+| Item | R | PHP |
+|---|---|---|
+| Last SourceForge binaries | 6.4.1, released 2020-08-03 | 6.1.0, released 2016-10-24 |
+| Platforms in that release | Darwin_64bit, Windows_64bit (no Linux) | Linux `.so`, plus a cross-platform `.php` file |
+| All-time downloads of those files | 115 Windows, 19 Darwin | 76 (`.so`), 71 (`.php`) |
+| Whole release, all packages | 117,964 downloads (6.4.1) | 55,292 downloads (6.1.0) |
+
+Note: the Linear titles for COO-166 and COO-167 say "circa 2018" and "circa
+2016". The 2018 figure for R is wrong; the dates above are from the git tags.
+
+### Why the binaries stopped
+
+* The old buildbot (`dev/buildbot/master/master.cfg`, deleted in PR #2632,
+  2025-10-11) built PHP on Linux only and R on macOS and Windows only. Its loop
+  contained `# No linux builds`. Buildbot commits continue to 2020-06, so there
+  was no 2018 cutover; the 6.4.1 R files came from the buildbot.
+* The GitHub Actions release workflow (`release_all_files.yml`) was never given
+  R or PHP jobs. It builds C#, Java, JavaScript, LibreOffice, and the shared
+  library. No document records why; the likely reason is volunteer time.
+* Maintainer statements:
+  * Issue #2021 (R on Linux, 2021-05): Ian Bell, "Yes, we dropped the linux
+    binaries. It is very hard to keep up with the binaries on linux given the
+    variety of different options. Had to prioritize the most important
+    binaries. If you wanted to dedicate a machine to building binaries and
+    commit to keeping it operational, we could consider to add it back."
+    He added that Linux users can build from source. The requester moved to
+    Python through `reticulate`.
+  * Issue #2254 (C#, 2023): Ian, "Keeping binary wrappers up-to-date is a
+    major maintenance headache." Jorrit Wronski, "I removed many of the
+    language specific things since I cannot maintain them."
+  * Issue #1771 (PHP, 2018 to 2020): Ian does not use PHP and cannot support
+    it; "CoolProp is a volunteer supported project."
+
+### Has anyone asked for the binaries back?
+
+No enhancement request exists for R or PHP binaries. Related reports:
+
+* #2021: R on Linux (above). Answered with "build from source".
+* #1771: the 6.1.0 PHP `.so` did not load on PHP 5.4 or 7.2. Binaries are tied
+  to the PHP module API version ("Module compiled with module API=20170718, PHP
+  compiled with module API=20180731"). A user compiled their own on Ubuntu 18.04
+  with SWIG 4.0.2 and PHP 7.2, then 7.3. SWIG needed `-php7` for PHP 7 at the
+  time (`#error These bindings need PHP5`).
+* #1635: PHP on Windows (XAMPP). Ian: the PHP shared library was only ever
+  provided for Linux (the 6.1.0 folder); build your own.
+* #1174: PHP module docs; CMake quoting problems in the PHP block (fixed in
+  `e21a27d5`, 2016-08).
+* #2246: PHP extension build in Docker on an M1 Mac (2023). Never diagnosed.
+* #1862: R on Windows 10 with RStudio (2019). The prebuilt DLL failed; a
+  rebuild with TDM-GCC 5.1 failed with undefined `Rf_*` references (R import
+  library problem). Ian suggested MinGW-w64 over TDM-GCC (last release 2015).
+  Users fell back to `reticulate` or `PythonInR`.
+* #1689 (2018): vector inputs from R; Ian pointed to the Python wrapper called
+  from R.
+* #3530 (open): "Wrapper Documentation Inconsistent with SourceForge Builds".
+  Covers SMath so far; the natural tracking issue for R and PHP.
+
+### What users did instead
+
+R: Python CoolProp through `reticulate` or `PythonInR` (one user reported it
+about 10 percent faster than `dyn.load()`). PHP: compile the extension against
+the exact PHP version in use, with SWIG 4.
