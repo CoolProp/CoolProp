@@ -1509,70 +1509,28 @@ if(COOLPROP_OCTAVE_MODULE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
   install(TARGETS ${app_name} DESTINATION "${COOLPROP_OCTAVE_INSTALL_DIR}")
 
-  # Copy the append helper into the build tree so the generated install
-  # script depends on CMAKE_CURRENT_BINARY_DIR, not on the source tree
-  # still being present when `cmake --install` is later run (e.g. from a
-  # packaging step working off a copied/relocated build tree).
+  # Octave's own site .oct directory is frequently root-owned (a Linux distro
+  # package, the Windows installer's Program Files), so instead of needing
+  # elevated privileges to land there, ~/.octaverc is pointed at this install
+  # dir. The logic lives in a helper run as a child process so that a failure
+  # to register only produces a warning. The helper is copied into the build
+  # tree so `cmake --install` does not depend on the source tree still being
+  # present.
   configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/append_text_to_file.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/append_text_to_file.cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/register_octave_path.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/register_octave_path.cmake"
     COPYONLY
   )
-
-  # Octave's own site .oct directory is frequently root-owned (a Linux
-  # distro package, the Windows installer's Program Files), so rather than
-  # need elevated privileges to land there, point ~/.octaverc at this
-  # install dir instead -- Octave reads it automatically on every startup.
-  # HOME/USERPROFILE are resolved inside install(CODE ...) below, not here,
-  # so they're read from the installing user's environment (cmake --install
-  # may run later, as a different user, than the cmake .. that configured
-  # the build) -- same reasoning as deferring CMAKE_INSTALL_PREFIX below.
   install(CODE "
-    set(prefix \"\${CMAKE_INSTALL_PREFIX}\")
-    string(REPLACE \"'\" \"''\" prefix \"\${prefix}\")
-    set(line \"addpath('\${prefix}/${COOLPROP_OCTAVE_INSTALL_DIR}');\")
-    set(rc_dir \"\")
-    if(DEFINED ENV{HOME})
-      file(TO_CMAKE_PATH \"\$ENV{HOME}\" rc_dir)
-    elseif(DEFINED ENV{USERPROFILE})
-      file(TO_CMAKE_PATH \"\$ENV{USERPROFILE}\" rc_dir)
-    endif()
-    if(\"\${rc_dir}\" STREQUAL \"\")
-      message(WARNING \"Neither HOME nor USERPROFILE is set; CoolProp.oct was installed, but ~/.octaverc could not be updated to register it with Octave. Add this line to Octave's startup file by hand: \${line}\")
-    elseif(NOT IS_DIRECTORY \"\${rc_dir}\")
-      message(WARNING \"\${rc_dir} (from HOME/USERPROFILE) is not a directory; CoolProp.oct was installed, but ~/.octaverc could not be updated to register it with Octave. Add this line to Octave's startup file by hand: \${line}\")
-    else()
-      set(rc \"\${rc_dir}/.octaverc\")
-      if(DEFINED ENV{DESTDIR} AND NOT \"\$ENV{DESTDIR}\" STREQUAL \"\")
-        message(STATUS \"DESTDIR staging detected (\$ENV{DESTDIR}); skipping ~/.octaverc registration\")
-      else()
-        set(existing \"\")
-        if(EXISTS \"\${rc}\")
-          file(READ \"\${rc}\" existing)
-        endif()
-        string(FIND \"\${existing}\" \"\${line}\" pos)
-        if(pos EQUAL -1)
-          set(sep \"\")
-          if(existing AND NOT existing MATCHES \"\n$\")
-            set(sep \"\n\")
-          endif()
-          execute_process(
-            COMMAND \"\${CMAKE_COMMAND}\"
-                    \"-DTARGET_FILE=\${rc}\"
-                    \"-DSEP=\${sep}\"
-                    \"-DLINE=\${line}\"
-                    -P \"${CMAKE_CURRENT_BINARY_DIR}/append_text_to_file.cmake\"
-            RESULT_VARIABLE append_result
-            OUTPUT_QUIET
-            ERROR_VARIABLE append_error
-          )
-          if(NOT append_result EQUAL 0)
-            message(WARNING \"Could not write to \${rc} (\${append_error}); add this line to Octave's startup file by hand: \${line}\")
-          else()
-            message(STATUS \"Added CoolProp to \${rc}\")
-          endif()
-        endif()
-      endif()
+    execute_process(
+      COMMAND \"\${CMAKE_COMMAND}\"
+              \"-DPREFIX=\${CMAKE_INSTALL_PREFIX}\"
+              \"-DSUBDIR=${COOLPROP_OCTAVE_INSTALL_DIR}\"
+              -P \"${CMAKE_CURRENT_BINARY_DIR}/register_octave_path.cmake\"
+      RESULT_VARIABLE octave_register_result
+    )
+    if(NOT octave_register_result EQUAL 0)
+      message(WARNING \"CoolProp.oct was installed, but ~/.octaverc could not be updated (see above). Add the addpath line printed above to Octave's startup file by hand.\")
     endif()
   ")
 endif()
