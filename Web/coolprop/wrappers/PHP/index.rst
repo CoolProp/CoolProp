@@ -53,7 +53,7 @@ Linux
 
 5. Check that the module loads and returns a value (the full path to the module is given, so nothing needs to be installed)::
 
-    php -d extension=$PWD/CoolPropPHP.so -r 'echo PropsSI("T","P",101325,"Q",1.0,"Water"), "\n";'
+    php -d extension="$PWD/CoolPropPHP.so" -r 'echo PropsSI("T","P",101325,"Q",1.0,"Water"), "\n";'
 
    The expected output is ``373.12429584767`` (the normal boiling point of water, in K).
 
@@ -66,9 +66,9 @@ PHP loads the module through the ``extension`` setting.  Any of the following wo
 
 * **A user-owned configuration file.**  Create a file ``coolprop.ini`` containing the single line ``extension=/full/path/to/CoolPropPHP.so`` and start PHP with ``php -n -c coolprop.ini script.php``.  Note that ``-n`` skips the system ``php.ini`` and its ``conf.d`` folder, so other extensions are not loaded unless they are listed in this file as well.
 
-* **An additional scan directory.**  Put ``coolprop.ini`` (as above) in a folder of the user's choice and set ``PHP_INI_SCAN_DIR`` to that folder followed by the system's own scan directory, so the other extensions stay enabled::
+* **An additional scan directory.**  Put ``coolprop.ini`` (as above) in a folder of the user's choice and set ``PHP_INI_SCAN_DIR`` to that folder followed by the existing ``PHP_INI_SCAN_DIR`` value if one is set, or else the system's own scan directory, so the other extensions stay enabled::
 
-    PHP_INI_SCAN_DIR=$HOME/php-ini:$(php -r 'echo PHP_CONFIG_FILE_SCAN_DIR;') php script.php
+    PHP_INI_SCAN_DIR="$HOME/php-ini:${PHP_INI_SCAN_DIR:-$(php -r 'echo PHP_CONFIG_FILE_SCAN_DIR;')}" php script.php
 
 * **System-wide, for a web server.**  Copy the module into PHP's extension directory and enable it in the ``php.ini`` that the server uses::
 
