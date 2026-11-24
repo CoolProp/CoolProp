@@ -1309,6 +1309,7 @@ TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBack
     // The flash rebuilds the unshifted h or s from the reported value, which
     // rounds: for a state at Tmax the target could lie one ulp beyond the value
     // at Tmax, so the bracket showed no sign change and the flash failed.
+    int n_tested_lower = 0, n_tested_upper = 0;  // states that reach the flash checks
     for (const bool chebyshev : {false, true}) {
         CAPTURE(chebyshev);
         ChebyshevCaloricSetting setting(chebyshev);
@@ -1334,6 +1335,7 @@ TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBack
                         REQUIRE_THAT(std::string(e.what()), Catch::Matchers::ContainsSubstring("liquid phase only"));
                         continue;
                     }
+                    ++(upper ? n_tested_upper : n_tested_lower);
                     const double h = AS->hmass(), s = AS->smass();
                     CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, h, p));
                     CHECK(std::abs(AS->T() - T) < 1e-9);
@@ -1343,6 +1345,9 @@ TEST_CASE("Flashes return states at the ends of the range", "[IncompressibleBack
             }
         }
     }
+    // Skipping the states that boil must not leave an end untested
+    CHECK(n_tested_lower > 0);
+    CHECK(n_tested_upper > 0);
 }
 
 TEST_CASE("Flashes reject infinite and huge inputs", "[IncompressibleBackend]") {
