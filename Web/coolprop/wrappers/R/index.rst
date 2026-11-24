@@ -92,23 +92,27 @@ The commands are the same as for Linux, with ``R_BIN`` pointing to the folder th
 Windows
 -------
 
-You must install the MINGW compiler suite.  The `TDM suite <https://jmeubank.github.io/tdm-gcc/>`_ is recommended.
+The R wrapper is built with the **MSYS2 UCRT64** toolchain.  Current R for Windows (4.2 and later, from https://cran.r-project.org/bin/windows/base/) is itself built for the UCRT runtime, so the wrapper has to be built with a UCRT toolchain too.  The older TDM-GCC and generic MinGW-w64 toolchains (which used the old ``msvcrt`` runtime) are not recommended.  The Visual Studio generators are not supported (CMake stops with an error).
 
-Windows (32-bit and 64-bit)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Install `MSYS2 <https://www.msys2.org/>`_, then, from an *MSYS2 UCRT64* shell, install the tools::
 
-You need to just slightly modify the building procedure::
+    pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-swig mingw-w64-ucrt-x86_64-python git
+
+``R_BIN`` is the folder of CRAN's R that holds ``R.exe`` and ``R.dll`` (use forward slashes), here ``C:/Program Files/R/R-4.6.2/bin/x64``.  Still in the UCRT64 shell::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp
-    # Move into the folder you just created
     cd CoolProp
     # Make a build folder
     mkdir build && cd build
-    # Build the makefile using CMake (Must use MINGW since R is built with MINGW)
-    cmake .. -DCOOLPROP_R_MODULE=ON -G "MinGW Makefiles" -DR_BIN="c:\Program Files\R\R-3.2.1\bin\x64" -DCMAKE_BUILD_TYPE=Release
+    # Build the makefile using CMake
+    cmake .. -G Ninja -DCOOLPROP_R_MODULE=ON -DR_BIN="C:/Program Files/R/R-4.6.2/bin/x64" -DCMAKE_BUILD_TYPE=Release
     # Make the R shared library
     cmake --build .
+
+The shared library is ``CoolPropR.dll``, found in the ``Release`` sub-folder of the build folder (next to ``CoolProp.R`` one level up; copy it next to ``CoolProp.R`` before using the Usage steps above).  It only imports Windows system DLLs and ``R.dll``, so it loads in a plain R without the MSYS2 folders on the ``PATH``.
+
+These steps were tested with MSYS2 GCC 16.2, CMake 4.4, SWIG 4.5.1, and CRAN R 4.6.2 (``R.version$crt`` is ``ucrt``), which printed ``373.1243`` for ``PropsSI("T","P",101325,"Q",0,"Water")``.  Building against the R from MSYS2's own ``mingw-w64-ucrt-x86_64-r`` package has not been tested.
 
 .. _r_example:
 

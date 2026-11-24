@@ -1736,6 +1736,16 @@ if(COOLPROP_R_MODULE)
   coolprop_hide_json_symbols(CoolProp)
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME "CoolPropR")
 
+  # With MinGW (MSYS2 UCRT64) the module would otherwise import libstdc++-6.dll,
+  # libgcc_s_seh-1.dll and libwinpthread-1.dll, which R does not find unless the
+  # MSYS2 bin folder is on PATH.  Link them statically so that CoolPropR.dll
+  # loads in a plain CRAN R.
+  if(WIN32 AND MINGW)
+    target_link_options(CoolProp PRIVATE -static-libgcc -static-libstdc++)
+    target_link_libraries(CoolProp -Wl,-Bstatic -lwinpthread
+                          -Wl,-Bdynamic)
+  endif()
+
   # No lib prefix for the shared library
   set_target_properties(CoolProp PROPERTIES PREFIX "")
 

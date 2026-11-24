@@ -460,6 +460,11 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **`R_BIN` is mandatory** (`dev/cmake/Modules/FindR.cmake` stops without
   it), so `wsl-test.sh r configure` alone fails. Configure with
   `-DR_BIN=/usr/bin` through the `run` stage, then use `build`.
+- **Windows R wrapper (MSYS2 UCRT64, CRAN R 4.6.2):** linking straight to `R.dll` works,
+  so issue #1862 (undefined `Rf_*`, TDM-GCC) does not recur and no import
+  library or `gendef` is needed. The module did NOT load in a plain R until
+  `libstdc++`, `libgcc` and `libwinpthread` were linked statically (CMake R
+  block, `WIN32 AND MINGW`); check `objdump -p CoolPropR.dll` imports.
 - Verified on Ubuntu 26.04 (R 4.5.2, SWIG 4.4.0, GCC 15.2): the documented
   build works as written, and `Rscript` loads `methods` by default.
 
