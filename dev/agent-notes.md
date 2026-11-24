@@ -458,8 +458,8 @@ recorded history of finished or abandoned work were dropped (they remain in
   fixed "REFPROP not available"). Without the guard `ctest`'s `R_test`
   fails on any machine without REFPROP.
 - **`R_BIN` is mandatory** (`dev/cmake/Modules/FindR.cmake` stops without
-  it), so `wsl-test.sh r configure` alone fails. Configure with
-  `-DR_BIN=/usr/bin` through the `run` stage, then use `build`.
+  it), so a bare `cmake -DCOOLPROP_R_MODULE=ON` fails. Pass it
+  explicitly (`-DR_BIN=/usr/bin` on Ubuntu).
 - **Windows R wrapper (MSYS2 UCRT64, CRAN R 4.6.2):** linking straight to `R.dll` works,
   so issue #1862 (undefined `Rf_*`, TDM-GCC) does not recur and no import
   library or `gendef` is needed. The module did NOT load in a plain R until
@@ -471,7 +471,7 @@ recorded history of finished or abandoned work were dropped (they remain in
 ## R and PHP wrapper binaries: history
 
 Researched 2026-11-24 from the CoolProp/CoolProp issue tracker (GitHub search by
-keyword; no Discussions found), the git history, and Jeff's SourceForge download
+keyword; no Discussions found), the git history, and SourceForge download
 counts. Nothing here was written down by the maintainers as a decision. The
 reasons below are what maintainers said in issue comments.
 

@@ -78,7 +78,7 @@ The build folder then holds ``CoolPropR.so``, ``CoolProp.R``, and ``Example.R``.
 
 .. note::
 
-    The ``ctest`` example calls REFPROP in its last blocks.  Without REFPROP installed those blocks print a "REFPROP example skipped" message and the rest of the example still runs.
+    The ``ctest`` example calls REFPROP in its last blocks.  Without REFPROP installed those blocks are skipped with a "REFPROP example skipped" message and the rest of the example still runs.
 
 OSX
 ^^^
@@ -110,7 +110,7 @@ Install `MSYS2 <https://www.msys2.org/>`_, then, from an *MSYS2 UCRT64* shell, i
     # Make the R shared library
     cmake --build .
 
-The shared library is ``CoolPropR.dll``, found in the ``Release`` sub-folder of the build folder (next to ``CoolProp.R`` one level up; copy it next to ``CoolProp.R`` before using the Usage steps above).  It only imports Windows system DLLs and ``R.dll``, so it loads in a plain R without the MSYS2 folders on the ``PATH``.
+The shared library is ``CoolPropR.dll``, found in the ``Release`` sub-folder of the build folder (next to ``CoolProp.R`` one level up; copy it next to ``CoolProp.R`` before using the Usage steps above; ``ctest`` is not set up for this layout on Windows, so run ``Example.R`` by hand).  It only imports Windows system DLLs and ``R.dll``, so it loads in a plain R without the MSYS2 folders on the ``PATH``.
 
 These steps were tested with MSYS2 GCC 16.2, CMake 4.4, SWIG 4.5.1, and CRAN R 4.6.2 (``R.version$crt`` is ``ucrt``), which printed ``373.1243`` for ``PropsSI("T","P",101325,"Q",0,"Water")``.  Building against the R from MSYS2's own ``mingw-w64-ucrt-x86_64-r`` package has not been tested.
 
