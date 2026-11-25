@@ -120,6 +120,9 @@ inline void balance_matrix(const Matrix& A, Matrix& Aprime, Matrix& D) {
 
 inline void companion_matrix_transposed(const Eigen::ArrayXd& coeffs, Eigen::MatrixXd& A) {
     auto N = coeffs.size() - 1;  // degree
+    if (N < 2) {
+        throw std::invalid_argument("companion matrix needs a degree of at least 2");
+    }
     if (A.rows() != N) {
         throw std::invalid_argument("A.rows() != N");
     }
@@ -512,15 +515,27 @@ struct ChebyshevApproximation1D
             // Get the coefficients of the derivative's expansion (for x in [-1, 1])
             auto cd = expan.do_derivs(1);
             // First, right-trim the coefficients that are equal to zero
-            int ilastnonzero = static_cast<int>(cd.size()) - 1;
+            int ilastnonzero = -1;
             for (int i = static_cast<int>(cd.size()) - 1; i >= 0; --i) {
                 if (std::abs(cd[i]) != 0) {
                     ilastnonzero = i;
                     break;
                 }
             }
+            if (ilastnonzero < 1) {
+                // The derivative is a constant (or zero), so there is no extremum
+                continue;
+            }
             if (ilastnonzero != static_cast<int>(cd.size() - 1)) {
-                cd = head(cd, ilastnonzero);
+                cd = head(cd, ilastnonzero + 1);
+            }
+            if (ilastnonzero == 1) {
+                // Linear derivative c0 + c1*x, whose root needs no companion matrix (that one needs a degree of at least 2)
+                auto re_n11 = -cd[0] / cd[1];
+                if (re_n11 >= -1 && re_n11 <= 1) {
+                    x_at_extrema.push_back(((expan.xmax() - expan.xmin()) * re_n11 + (expan.xmax() + expan.xmin())) / 2.0);
+                }
+                continue;
             }
             // Then do eigenvalue rootfinding after balancing
             // Define working buffers here to avoid allocations all over the place

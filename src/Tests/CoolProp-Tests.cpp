@@ -4823,6 +4823,44 @@ class PropertyLimitsFixture
     }
 };
 
+TEST_CASE("Chebyshev extrema of expansions whose derivative has degree below 2 or trailing zeros", "[superanc]") {
+    using Expansion = superancillary::ChebyshevExpansion<std::vector<double>>;
+    using Approximation = superancillary::ChebyshevApproximation1D<std::vector<double>>;
+    auto make = [](std::vector<double> coeffs) {
+        std::vector<Expansion> expansions{Expansion(2.0, 6.0, coeffs)};
+        return Approximation(std::move(expansions));
+    };
+    SECTION("T2, whose derivative 4*T1 has degree 1, has its extremum at the middle of the interval") {
+        const auto approx = make({0, 0, 1});
+        REQUIRE(approx.get_x_at_extrema().size() == 1);
+        CHECK(approx.get_x_at_extrema()[0] == Catch::Approx(4.0).margin(1e-14));
+        CHECK(approx.get_monotonic_intervals().size() == 2);
+    }
+    SECTION("T2 padded with a zero coefficient: trimming the derivative keeps its last nonzero coefficient") {
+        const auto approx = make({0, 0, 1, 0});
+        REQUIRE(approx.get_x_at_extrema().size() == 1);
+        CHECK(approx.get_x_at_extrema()[0] == Catch::Approx(4.0).margin(1e-14));
+        CHECK(approx.get_monotonic_intervals().size() == 2);
+    }
+    SECTION("A straight line padded with a zero coefficient has a constant derivative and no extrema") {
+        const auto approx = make({1, 2, 0});
+        CHECK(approx.get_x_at_extrema().empty());
+        CHECK(approx.is_monotonic());
+    }
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "MD3M saturation at 1 atm through the superancillary matches the EOS", "[superanc]") {
+    // Building MD3M's T(ln p) inverse used to read out of bounds while locating its extrema (SIGSEGV on macOS)
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "MD3M"));
+    AS->update(CoolProp::PQ_INPUTS, 101325, 0);
+    const double T_superanc = AS->T();
+    CoolProp::set_config_bool(ENABLE_SUPERANCILLARIES, false);
+    shared_ptr<CoolProp::AbstractState> AS_eos(CoolProp::AbstractState::factory("HEOS", "MD3M"));
+    AS_eos->update(CoolProp::PQ_INPUTS, 101325, 0);
+    CAPTURE(T_superanc, AS_eos->T());
+    CHECK(T_superanc == Catch::Approx(AS_eos->T()).epsilon(1e-8));
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
 
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
