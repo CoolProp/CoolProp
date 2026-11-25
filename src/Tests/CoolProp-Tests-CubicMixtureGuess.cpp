@@ -28,7 +28,7 @@ namespace {
 // A cubic backend that counts its critical-point searches, including those of the states derived from it (SatL, SatV,
 // the critical-point and transient states), which share the counter through get_copy().
 template <class Backend>
-class CountingCubic : public Backend
+class CountingCubic final : public Backend
 {
    private:
     std::shared_ptr<int> m_searches;
@@ -223,7 +223,7 @@ TEST_CASE("Cubic mixture: with three real roots but one physical, every guess re
 
 TEMPLATE_TEST_CASE("Cubic mixture: PT and HP flashes of a superheated gas do not search for critical points", "[cubic][cubic_mixture_guess]",
                    SRKBackend, PengRobinsonBackend) {
-    const std::string backend = std::is_same<TestType, SRKBackend>::value ? "SRK" : "PR";
+    const std::string backend = std::is_same_v<TestType, SRKBackend> ? "SRK" : "PR";
     const double p = 1e5;
     for (const auto& state : two_root_gas_states()) {
         const double T = state.T;
