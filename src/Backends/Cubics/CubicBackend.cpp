@@ -881,11 +881,11 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
             }
         }
     } else if (Nsoln == 3 && !is_pure_or_pseudopure && ValidNumber(rho_guess) && rho_guess > 0) {
-        // A mixture with a guess density: follow the guess, as HEOS does, to the nearest (in log density) of the
-        // mechanically stable physical roots, i.e. the least and the most dense one in the physical domain
-        // (0, 1/(b - c)).  The branch below would ignore the guess and call p_critical(), which for a mixture is a full
-        // critical-point search on every density solve (GitHub #3597: the PT flash's recovery pass, which solves
-        // both phases without an imposed phase, took 0.1 to 5 s per flash).
+        // A mixture with a guess density: take the nearer (in log density) of the mechanically stable physical roots,
+        // i.e. the least and the most dense one in the physical domain (0, 1/(b - c)).  The branch below would ignore
+        // the guess and call p_critical(), which for a mixture is a full critical-point search on every density solve.
+        // The PT flash's recovery pass solves both phases without an imposed phase: it took from about 0.1 s (2
+        // components) to several seconds (6) per flash, and lost the split where that search threw (GitHub #3597).
         const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
         std::array<double, 3> phys{};
         std::size_t n_phys = 0;
@@ -894,8 +894,8 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 phys[n_phys++] = r;
             }
         }
-        // For p > 0 the physical domain holds one or three roots (p runs from 0 to infinity across it); for p <= 0
-        // none or two, the lighter of them unstable.
+        // For p > 0 the physical domain holds one or three roots (p runs from 0 to infinity across it; at p ~ 1e-6 Pa
+        // the closed-form gas root can round to zero); for p <= 0 none or two, the lighter of them unstable.
         if (n_phys != 1 && n_phys != 3) {
             throw ValueError(format("Cubic has %d physical density roots at T: %g K, p: %g Pa", static_cast<int>(n_phys), T, p));
         }

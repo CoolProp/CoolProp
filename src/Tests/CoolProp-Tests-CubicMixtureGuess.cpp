@@ -2,7 +2,8 @@
 //
 // With three density roots AbstractCubicBackend::solver_rho_Tp used to ignore the guess and call p_critical(), which
 // for a mixture is a full critical-point search.  The recovery pass of the mixture PT flash solves both phases that
-// way, so a PT flash of a superheated gas took 0.1 to 5 s wherever the feed also has a liquid root.
+// way, so a PT flash of a superheated gas took from about 0.1 s (2 components) to several seconds (6) wherever the
+// feed also has a liquid root, and a split was lost where the critical-point search threw.
 
 #if defined(ENABLE_CATCH)
 
@@ -164,16 +165,105 @@ TEST_CASE("Cubic mixture: the density solve follows its guess when no phase is i
 }
 
 TEST_CASE("Cubic mixture: an unusable guess is treated as no guess", "[cubic][cubic_mixture_guess]") {
-    // The no-guess root of a superheated gas is the gas root; only a usable liquid guess may select the liquid one
+    // Without a guess the root is the gas one above the dew point and the liquid one below the bubble point (86.5 K).
+    // Both states are needed: a followed -1 or 0 always selects the gas root and a followed NaN or infinity the liquid
+    // one, so each is wrong in only one of them.
     const std::string backend = GENERATE("PR", "SRK");
-    const double p = 1e5, T = 127.4;
+    const double p = 1e5;
     const Mixture mix = nitrogen_methane();
-    const double rho_gas = branch_density(backend, mix, iphase_gas, p, T);
     auto AS = make_state(backend, mix);
-    for (const double guess : {-1.0, 0.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
-        CAPTURE(backend, guess);
-        as_heos(*AS).update_TP_guessrho(T, p, guess);
-        CHECK(AS->rhomolar() == Catch::Approx(rho_gas).epsilon(1e-12));
+    for (const bool liquid : {false, true}) {
+        const double T = liquid ? 75.0 : 127.4;
+        const double rho_gas = branch_density(backend, mix, iphase_gas, p, T);
+        const double rho_liq = branch_density(backend, mix, iphase_liquid, p, T);
+        REQUIRE(rho_liq > 5 * rho_gas);
+        for (const double guess : {-1.0, 0.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+            CAPTURE(backend, T, guess);
+            as_heos(*AS).update_TP_guessrho(T, p, guess);
+            CHECK(AS->rhomolar() == Catch::Approx(liquid ? rho_liq : rho_gas).epsilon(1e-12));
+        }
+    }
+}
+
+TEST_CASE("Cubic mixture: the physical domain of a translated cubic ends at 1/(b - c)", "[cubic][cubic_mixture_guess]") {
+    // The translation is large enough that the liquid is denser than 1/b, so a root filter that forgot c would drop it
+    const std::string backend = GENERATE("PR", "SRK");
+    const double p = 1e5, T = 75;
+    const Mixture mix = nitrogen_methane();
+    auto translated = [&]() {
+        auto state = make_state(backend, mix);
+        auto* ACB = dynamic_cast<AbstractCubicBackend*>(state.get());
+        REQUIRE(ACB != nullptr);
+        const double b = ACB->get_cubic()->bm_term(mix.z);
+        for (std::size_t i = 0; i < mix.z.size(); ++i) {
+            state->set_fluid_parameter_double(i, "cm", 0.2 * b);
+        }
+        return state;
+    };
+    std::vector<double> rho;
+    for (const phases ph : {iphase_gas, iphase_liquid}) {
+        auto state = translated();
+        state->specify_phase(ph);
+        state->update(PT_INPUTS, p, T);
+        rho.push_back(state->rhomolar());
+    }
+    auto AS = translated();
+    auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(ACB != nullptr);
+    const double b = ACB->get_cubic()->bm_term(mix.z), c = ACB->get_cubic()->cm_term(mix.z);
+    CAPTURE(backend, rho[0], rho[1], b, c);
+    REQUIRE(rho[1] > 5 * rho[0]);
+    REQUIRE(rho[1] * b > 1);
+    REQUIRE(rho[1] * (b - c) < 1);
+    auto& eos = as_heos(*AS);
+    for (const double factor : {0.9, 1.0, 1.1}) {
+        CAPTURE(factor);
+        eos.update_TP_guessrho(T, p, factor * rho[0]);
+        CHECK(eos.rhomolar() == Catch::Approx(rho[0]).epsilon(1e-12));
+        eos.update_TP_guessrho(T, p, factor * rho[1]);
+        CHECK(eos.rhomolar() == Catch::Approx(rho[1]).epsilon(1e-12));
+    }
+}
+
+TEST_CASE("Cubic mixture: a guess does not select a root at negative pressure", "[cubic][cubic_mixture_guess]") {
+    // Of the two physical roots there the lighter is mechanically unstable; the solve refuses rather than choose
+    const std::string backend = GENERATE("PR", "SRK");
+    const double p = -1e5, T = 75;
+    auto AS = make_state(backend, nitrogen_methane());
+    auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(ACB != nullptr);
+    int Nsoln = 0;
+    double r0 = 0, r1 = 0, r2 = 0;
+    ACB->rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+    CAPTURE(backend, Nsoln, r0, r1, r2);
+    REQUIRE(Nsoln == 3);
+    REQUIRE(r0 < 0);
+    REQUIRE(r1 > 0);
+    for (const double guess : {r1, r2}) {
+        CHECK_THROWS_WITH(as_heos(*AS).update_TP_guessrho(T, p, guess), Catch::Matchers::ContainsSubstring("2 physical density roots"));
+    }
+}
+
+TEST_CASE("Pure cubic: a guess does not override the choice of the stable root", "[cubic][cubic_mixture_guess]") {
+    // A pure SRK/PR picks its root from the superancillary's saturation pressure; only mixtures follow the guess
+    const std::string backend = GENERATE("PR", "SRK");
+    const Mixture propane = {{"n-Propane"}, {1.0}};
+    const double T = 300;
+    auto sat = make_state(backend, propane);
+    sat->update(QT_INPUTS, 0, T);
+    const double psat = sat->p();
+    for (const double ratio : {0.9, 1.1}) {
+        const double p = ratio * psat;
+        const double rho_gas = branch_density(backend, propane, iphase_gas, p, T);
+        const double rho_liq = branch_density(backend, propane, iphase_liquid, p, T);
+        CAPTURE(backend, ratio, rho_gas, rho_liq);
+        REQUIRE(rho_liq > 5 * rho_gas);
+        auto AS = make_state(backend, propane);
+        for (const double guess : {rho_gas, rho_liq}) {
+            CAPTURE(guess);
+            as_heos(*AS).update_TP_guessrho(T, p, guess);
+            CHECK(AS->rhomolar() == Catch::Approx(ratio < 1 ? rho_gas : rho_liq).epsilon(1e-12));
+        }
     }
 }
 

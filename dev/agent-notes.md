@@ -171,13 +171,18 @@ recorded history of finished or abandoned work were dropped (they remain in
 - **Cubic `solver_rho_Tp_global` obeys an imposed phase; the HEOS one does
   not.**  `SatL` always has liquid imposed, so the stability test evaluates a
   gas feed with two roots at its metastable liquid root, calls it unstable, and
-  only the split solver's fallback recovers the gas (#3597; still open).  The
-  obvious fixes lose real splits.  Of 8800 PQ-to-PT dome states master misses
-  273; solving the feed unimposed misses 1633 (the liquid-like trial then stays
-  on the gas branch), and ignoring the imposed phase altogether misses 284
-  (CO2/ethane and R410A: `SatV`'s imposed gas phase stands in for the
-  opposite-branch trials, which need Chebyshev roots and skip cubics).  Feed unimposed plus liquid imposed on the liquid-like
-  Wilson trial misses 111.  Judge such a change by a dome sweep, not timings.
+  only the split solver's fallback recovers the gas (COO-205).  The obvious
+  fixes lose real splits.  Of 8800 PQ-to-PT dome states 8.1.0 misses 273 (205
+  before #3451); solving the feed unimposed misses 1633 (the liquid-like trial
+  then stays on the gas branch), and ignoring the imposed phase altogether
+  misses 284 (CO2/ethane and R410A: `SatV`'s imposed gas phase stands in for
+  the opposite-branch trials, which need Chebyshev roots and skip cubics).
+  Feed unimposed plus liquid imposed on the liquid-like Wilson trial misses
+  111.  Judge such a change by a dome sweep, not timings.
+- **"Results unchanged" needs asymmetric mixtures in the sweep.**  #3597's fix
+  agreed with master on 14300 PT states of 11 mixtures, yet turns 0.3 % of
+  random PT states of other, asymmetric mixtures (CO2/nC10, CH4/H2S, N2/nC4,
+  CH4/H2O) with random compositions from single phase to two-phase.
 - **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
   (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
   `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
