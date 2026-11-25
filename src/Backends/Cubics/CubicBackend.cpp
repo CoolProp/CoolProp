@@ -880,6 +880,27 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 throw ValueError(format("No physical density root at T = %g K, p = %g Pa", T, p));
             }
         }
+    } else if (Nsoln == 3 && !is_pure_or_pseudopure && ValidNumber(rho_guess) && rho_guess > 0) {
+        // A mixture with a guess density: follow the guess, as HEOS does, to the nearest (in log density) of the
+        // mechanically stable physical roots, i.e. the least and the most dense one in the physical domain
+        // (0, 1/(b - c)).  The branch below would ignore the guess and call p_critical(), which for a mixture is a full
+        // critical-point search on every density solve (GitHub #3597: the PT flash's recovery pass, which solves
+        // both phases without an imposed phase, took 0.1 to 5 s per flash).
+        const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
+        std::array<double, 3> phys{};
+        std::size_t n_phys = 0;
+        for (double r : {rho0, rho1, rho2}) {
+            if (r > 0 && r * b_minus_c < 1) {
+                phys[n_phys++] = r;
+            }
+        }
+        // For p > 0 the physical domain holds one or three roots (p runs from 0 to infinity across it); for p <= 0
+        // none or two, the lighter of them unstable.
+        if (n_phys != 1 && n_phys != 3) {
+            throw ValueError(format("Cubic has %d physical density roots at T: %g K, p: %g Pa", static_cast<int>(n_phys), T, p));
+        }
+        const double rho_light = phys[0], rho_dense = phys[n_phys - 1];
+        rho = (rho_guess * rho_guess < rho_light * rho_dense) ? rho_light : rho_dense;
     } else if (Nsoln == 3) {
         if (p < p_critical()) {
             // Gas root: the smallest positive one, which must lie below the saturated-vapour density.

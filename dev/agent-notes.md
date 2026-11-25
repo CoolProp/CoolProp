@@ -162,6 +162,22 @@ recorded history of finished or abandoned work were dropped (they remain in
   pair needing saturation reaches it: the cubic one (#2739) sat unused for
   Q,T and P,Q because `AbstractCubicBackend::update` intercepts both.
   Direct `get_superanc()` callers that remain are listed in COO-146.
+- **Cubic mixtures: never solve a density with neither a phase nor a guess.**
+  With three roots the cubic `solver_rho_Tp` then calls `p_critical()`, a full
+  critical-point search (about 7 ms for 2 components, steeply more with N).  #3451's
+  recovery pass hit it on every density solve (#3597); a guess is now followed.
+  Tests should count `calc_all_critical_points` calls
+  (`CoolProp-Tests-CubicMixtureGuess.cpp`), not time them.
+- **Cubic `solver_rho_Tp_global` obeys an imposed phase; the HEOS one does
+  not.**  `SatL` always has liquid imposed, so the stability test evaluates a
+  gas feed with two roots at its metastable liquid root, calls it unstable, and
+  only the split solver's fallback recovers the gas (#3597; still open).  The
+  obvious fixes lose real splits.  Of 8800 PQ-to-PT dome states master misses
+  273; solving the feed unimposed misses 1633 (the liquid-like trial then stays
+  on the gas branch), and ignoring the imposed phase altogether misses 284
+  (CO2/ethane and R410A: `SatV`'s imposed gas phase stands in for the
+  opposite-branch trials, which need Chebyshev roots and skip cubics).  Feed unimposed plus liquid imposed on the liquid-like
+  Wilson trial misses 111.  Judge such a change by a dome sweep, not timings.
 - **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
   (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
   `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
