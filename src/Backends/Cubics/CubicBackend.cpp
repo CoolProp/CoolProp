@@ -885,7 +885,8 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         // i.e. the least and the most dense one in the physical domain (0, 1/(b - c)).  The branch below would ignore
         // the guess and call p_critical(), which for a mixture is a full critical-point search on every density solve.
         // The PT flash's recovery pass solves both phases without an imposed phase: it took from about 0.1 s (2
-        // components) to several seconds (6) per flash, and lost the split where that search threw (GitHub #3597).
+        // components) to several seconds (6) per flash, and lost the split where that search, or the bubble-point solve
+        // after it, threw (GitHub #3597).
         const double b_minus_c = cubic->bm_term(mole_fractions) - cubic->cm_term(mole_fractions);
         std::array<double, 3> phys{};
         std::size_t n_phys = 0;

@@ -244,6 +244,20 @@ TEST_CASE("Cubic mixture: a guess does not select a root at negative pressure", 
     }
 }
 
+TEST_CASE("Cubic mixture: a guess is refused where no root is physical", "[cubic][cubic_mixture_guess]") {
+    // Hot and at negative pressure: three real roots, all outside (0, 1/(b - c)).  (PR only: SRK has no such state here.)
+    const double p = -1e5, T = 500;
+    auto AS = make_state("PR", nitrogen_methane());
+    auto* ACB = dynamic_cast<AbstractCubicBackend*>(AS.get());
+    REQUIRE(ACB != nullptr);
+    int Nsoln = 0;
+    double r0 = 0, r1 = 0, r2 = 0;
+    ACB->rho_Tp_cubic(T, p, Nsoln, r0, r1, r2);
+    CAPTURE(Nsoln, r0, r1, r2);
+    REQUIRE(Nsoln == 3);
+    CHECK_THROWS_WITH(as_heos(*AS).update_TP_guessrho(T, p, 100.0), Catch::Matchers::ContainsSubstring("0 physical density roots"));
+}
+
 TEST_CASE("Pure cubic: a guess does not override the choice of the stable root", "[cubic][cubic_mixture_guess]") {
     // A pure SRK/PR picks its root from the superancillary's saturation pressure; only mixtures follow the guess
     const std::string backend = GENERATE("PR", "SRK");

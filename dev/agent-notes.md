@@ -179,10 +179,12 @@ recorded history of finished or abandoned work were dropped (they remain in
   the opposite-branch trials, which need Chebyshev roots and skip cubics).
   Feed unimposed plus liquid imposed on the liquid-like Wilson trial misses
   111.  Judge such a change by a dome sweep, not timings.
-- **"Results unchanged" needs asymmetric mixtures in the sweep.**  #3597's fix
-  agreed with master on 14300 PT states of 11 mixtures, yet turns 0.3 % of
-  random PT states of other, asymmetric mixtures (CO2/nC10, CH4/H2S, N2/nC4,
-  CH4/H2O) with random compositions from single phase to two-phase.
+- **"Results unchanged" needs cold states and random compositions in the
+  sweep.**  #3597's fix agreed with master on 14300 PT states of 11 mixtures at
+  one composition each, yet turns some cold ones from single phase to two-phase
+  (lower Gibbs energy; the old recovery had thrown in `p_critical()`): of random
+  states and compositions of CO2/CH4, CO2/H2O, N2/C1/C2(/C3) and others, 0.6 %
+  at 60-130 K, 2 of 3600 at 130-250 K, none of 3600 above.
 - **Cubic gaps a Helmholtz-fluid path assumes away.**  No triple point
   (`triple_liquid.rhomolar` is +inf: seed with `calc_rhomolar_max_bound()`);
   `rhomolar_critical()` must be the EOS's own (Z_c R Tc/pc), not a
