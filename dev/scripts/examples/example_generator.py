@@ -843,6 +843,61 @@ class R(BaseParser):
     def header(self):
         return 'dyn.load(paste("CoolPropR", .Platform$dynlib.ext, sep=""))\nlibrary(methods) # See http://stackoverflow.com/a/19468533\nsource("CoolProp.R")\ncacheMetaData(1)\n'
 
+    def parse(self):
+        # Two R-specific fixes to the shared spec:
+        #
+        # 1. A bare method call such as TAB$update(...) is a top-level
+        #    expression whose value is NULL (the C++ method returns void).
+        #    Rscript prints the value of every visible top-level expression,
+        #    so each one showed up as a stray "NULL" line in the output.
+        #    Wrapping those statements in invisible() suppresses the echo.
+        #
+        # 2. The REFPROP-dependent blocks are only flagged with a comment in
+        #    the shared spec, so on a machine without REFPROP the script
+        #    would stop with an error.  Wrap those blocks in tryCatch(), print
+        #    the real error message, and re-raise unless REFPROP_version
+        #    reports "n/a" (REFPROP not installed), so a real failure still
+        #    fails the test.
+        refprop_markers = (
+            "If you don't have REFPROP installed, disable the following lines",
+            "If you don't have REFPROP installed, disable the following block",
+        )
+
+        def render(item):
+            line = item if isinstance(item, str) else self.dict2string(item)
+            if isinstance(item, dict) and item.get('type') == 'class_dereference' and line:
+                line = 'invisible(' + line + ')'
+            return line
+
+        lines = []
+        guarded = None
+        for item in self.pieces:
+            if isinstance(item, dict) and item.get('type') == 'comment' and item.get('comment') in refprop_markers:
+                if guarded:
+                    lines.append(self._guard(guarded))
+                lines.append(self.dict2string(item))
+                guarded = []
+                continue
+            if guarded is not None and item == "":
+                # a blank entry in the spec ends the REFPROP block
+                if guarded:
+                    lines.append(self._guard(guarded))
+                guarded = None
+                continue
+            (guarded if guarded is not None else lines).append(render(item))
+        if guarded:
+            lines.append(self._guard(guarded))
+        return ''.join(self.header()) + '\n'.join([self.indentation + line for line in lines if line]) + ''.join(self.footer())
+
+    @staticmethod
+    def _guard(block):
+        body = '\n'.join('  ' + l for l in block if l)
+        return ('tryCatch({\n' + body + '\n}, error = function(e) {\n'
+                '  # skip only when REFPROP is not installed; any other failure is real\n'
+                '  if (get_global_param_string("REFPROP_version") != "n/a") stop(e)\n'
+                '  writeLines(paste("REFPROP example skipped:", conditionMessage(e)))\n'
+                '})')
+
 
 class MATLAB(BaseParser):
 
