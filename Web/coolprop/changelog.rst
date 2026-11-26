@@ -19,6 +19,7 @@ New features:
 
 Performance:
 
+* The PT and HP flashes of cubic mixtures (PR, SRK) are fast again for gas states where the feed also has a liquid density root: in 8.1.0 every such PT flash searched for the mixture's critical points several times.  PR at 1 bar, 0.1 K above the dew point: 72 to 0.25 ms for 2 components and 3.5 s to 7 ms for 6, with the HP flash down from 0.37 s to 1.3 ms and from 18 s to 39 ms.  Some states that 8.1.0 reported as single phase, mostly below 200 K, are now found to be two-phase, with a lower Gibbs energy (for example PR methane/hydrogen sulfide 45/55 mol% at 100 K and 2.9 bar); other PT results are unchanged to round-off.  H,P, P,S and P,U flashes follow these changes, and a few of them converge or fail differently (`#3597 <https://github.com/CoolProp/CoolProp/issues/3597>`__).
 * **Incompressible fluids are about 3 times faster than in 8.1.0 on the default fits.**  Measured from C++ on ``INCOMP::MEG[0.35]`` with the default Chebyshev fits, a ``T,p`` update with density, heat capacity, enthalpy, entropy, viscosity and conductivity takes 0.61 microseconds in 8.1.0 and 0.19 now, an ``h,p`` flash 1.31 and 0.29, and a ``p,s`` flash 2.14 and 0.61.  The classic polynomial fits (``INCOMP_PREFER_CHEBYSHEV_CALORIC`` false) gain 1.6 times on the full set and 2 times on the flashes.  Where the time went:
 
   * A state puts its composition into each fit once, when the composition is set, so every later evaluation is a sum over temperature only.
