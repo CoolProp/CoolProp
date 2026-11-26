@@ -141,13 +141,19 @@ TEST_CASE("Cubic mixture: the density solve follows its guess when no phase is i
             CHECK(eos.rhomolar() == Catch::Approx(rho_liq).epsilon(1e-12));
             CHECK(eos.p() == Catch::Approx(p).epsilon(1e-6));
         }
-        // A guess between the two roots never returns the mechanically unstable middle root
-        for (const double w : {0.1, 0.3, 0.5, 0.7, 0.9}) {
+        // A guess between the two roots returns the nearer one in log density, never the mechanically unstable middle
+        // root.  At w = 0.5 the guess is the geometric mean up to round-off, so only the second is checked there.
+        for (const double w : {0.1, 0.3, 0.45, 0.5, 0.55, 0.7, 0.9}) {
             CAPTURE(w);
             eos.update_TP_guessrho(T, p, std::exp((1 - w) * std::log(rho_gas) + w * std::log(rho_liq)));
             const bool on_gas = eos.rhomolar() == Catch::Approx(rho_gas).epsilon(1e-12);
             const bool on_liq = eos.rhomolar() == Catch::Approx(rho_liq).epsilon(1e-12);
             CHECK((on_gas || on_liq));
+            if (w < 0.5) {
+                CHECK(on_gas);
+            } else if (w > 0.5) {
+                CHECK(on_liq);
+            }
         }
         // Extreme but finite guesses: squaring them underflows or overflows
         eos.update_TP_guessrho(T, p, 1e-200);
@@ -296,7 +302,7 @@ TEST_CASE("Cubic mixture: a guess does not change a state with a single root", "
     }
 }
 
-TEST_CASE("Cubic mixture: with three real roots but one physical, every guess returns the physical one", "[cubic][cubic_mixture_guess]") {
+TEST_CASE("Cubic mixture: every guess returns the one physical root of three real roots", "[cubic][cubic_mixture_guess]") {
     // Hot and compressed, the cubic in density can have three real roots of which only one lies in the physical
     // domain; the others are negative or past the 1/(b - c) pole and must not be taken for a liquid.
     const std::string backend = GENERATE("PR", "SRK");
